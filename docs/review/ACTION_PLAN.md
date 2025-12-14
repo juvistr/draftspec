@@ -53,18 +53,18 @@ Prioritized work items from the comprehensive review, organized into phases.
 
 **Goal:** Improve extensibility and separation of concerns
 
-**Status:** Complete (commit e7d2ba6) - A1/A2 deferred to Phase 3
+**Status:** Complete (commit e7d2ba6, 77c361c)
 
 ### Architecture
 
-- [ ] **A1: Extract IReporter interface** *(deferred to Phase 3)*
-  - Files: Create `src/DraftSpec/Reporting/IReporter.cs`, `ConsoleReporter.cs`, `JsonReporter.cs`
-  - Action: Extract reporting from Dsl.cs
+- [x] **A1: Unify output systems with IFormatter** *(commit 77c361c)*
+  - Files: `IConsoleFormatter.cs`, `ConsoleFormatter.cs`, `SpecReportBuilder.cs`
+  - Action: Unified internal Dsl.cs output with IFormatter architecture
   - See: [ARCHITECTURE.md](./ARCHITECTURE.md#1-reporting-layer-currently-embedded-in-dslcs)
 
 - [ ] **A2: Split Dsl.cs (God object)** *(deferred to Phase 3)*
-  - File: `src/DraftSpec/Dsl.cs` (460 lines)
-  - Action: Extract context management, execution, reporting
+  - File: `src/DraftSpec/Dsl.cs` (272 lines, reduced from 460)
+  - Action: Further extract context management
   - See: [CODE_QUALITY.md](./CODE_QUALITY.md#1-god-object-dslcs-460-lines)
 
 - [x] **A3: Add ISpecRunner interface**
@@ -231,18 +231,18 @@ Prioritized work items from the comprehensive review, organized into phases.
 | Category | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Total | Done |
 |----------|---------|---------|---------|---------|-------|------|
 | Security | 3 | 0 | 2 | 0 | 5 | 3 ✅ |
-| Architecture | 0 | 4 | 4 | 0 | 8 | 2 ✅ |
+| Architecture | 0 | 4 | 4 | 0 | 8 | 3 ✅ |
 | Code Quality | 2 | 0 | 2 | 0 | 4 | 2 ✅ |
 | Performance | 0 | 3 | 0 | 3 | 6 | 3 ✅ |
 | Testing | 2 | 2 | 3 | 0 | 7 | 4 ✅ |
 | Documentation | 0 | 0 | 0 | 3 | 3 | 0 |
 | Features | 0 | 0 | 0 | 3 | 3 | 0 |
-| **Total** | **7** | **9** | **11** | **9** | **36** | **14** |
+| **Total** | **7** | **9** | **11** | **9** | **36** | **15** |
 
 ## Progress
 
 - **Phase 1:** ✅ Complete (7/7 items)
-- **Phase 2:** ✅ Complete (7/9 items, 2 deferred)
+- **Phase 2:** ✅ Complete (8/9 items, A2 deferred)
 - **Phase 3:** Not started
 - **Phase 4:** Not started
 
@@ -260,7 +260,7 @@ Prioritized work items from the comprehensive review, organized into phases.
 
 | Metric | Initial | After Phase 1 | After Phase 2 | Target |
 |--------|---------|---------------|---------------|--------|
-| Test Count | 9 | 111 | 155 | 200+ |
+| Test Count | 9 | 111 | 165 | 200+ |
 | Security Issues (High) | 3 | 0 ✅ | 0 ✅ | 0 |
-| Extension Points | 2 | 2 | 4 | 8+ |
+| Extension Points | 2 | 2 | 5 | 8+ |
 | Perf Optimizations | 0 | 0 | 3 ✅ | 6 |

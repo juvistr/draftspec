@@ -2,103 +2,107 @@
 
 Prioritized work items from the comprehensive review, organized into phases.
 
-## Phase 1: Critical Fixes
+## Phase 1: Critical Fixes ✅
 
 **Goal:** Address security vulnerabilities and critical bugs
 
+**Status:** Complete (commit f7aebfd)
+
 ### Security (Must Fix)
 
-- [ ] **S1: Fix path traversal vulnerability**
+- [x] **S1: Fix path traversal vulnerability**
   - File: `src/DraftSpec.Cli/SpecFinder.cs`
   - Action: Validate paths are within project directory
   - See: [SECURITY.md](./SECURITY.md#h-2-path-traversal-in-spec-file-discovery)
 
-- [ ] **S2: Fix command injection risk**
+- [x] **S2: Fix command injection risk**
   - File: `src/DraftSpec.Cli/ProcessHelper.cs`
   - Action: Use ArgumentList instead of Arguments string
   - See: [SECURITY.md](./SECURITY.md#h-1-command-injection-via-unvalidated-file-paths)
 
-- [ ] **S3: Secure temp file handling**
+- [x] **S3: Secure temp file handling**
   - File: `src/DraftSpec.Cli/SpecFileRunner.cs`
   - Action: Use cryptographically random temp file names
   - See: [SECURITY.md](./SECURITY.md#h-3-insecure-temporary-file-handling)
 
 ### Testing (Critical)
 
-- [ ] **T1: Add expectation API tests** (~40 tests)
-  - Files: Create `tests/DraftSpec.Tests/Expectations/*.cs`
+- [x] **T1: Add expectation API tests** (~83 tests)
+  - Files: `tests/DraftSpec.Tests/Expectations/*.cs`
   - Action: Test toBe, toContain, toThrow, etc.
   - See: [TEST_COVERAGE.md](./TEST_COVERAGE.md#1-expectation-api-0-coverage)
 
-- [ ] **T2: Add basic runner tests** (~15 tests)
-  - File: Create `tests/DraftSpec.Tests/Runner/SpecRunnerTests.cs`
+- [x] **T2: Add basic runner tests** (~19 tests)
+  - File: `tests/DraftSpec.Tests/Runner/SpecRunnerTests.cs`
   - Action: Test execution, exception capture, duration
   - See: [TEST_COVERAGE.md](./TEST_COVERAGE.md#3-core-infrastructure-0-coverage)
 
 ### Code Quality (High Priority)
 
-- [ ] **C1: Add validation to SpecContext**
+- [x] **C1: Add validation to SpecContext**
   - File: `src/DraftSpec/SpecContext.cs`
   - Action: Validate description is not null/empty
   - See: [CODE_QUALITY.md](./CODE_QUALITY.md#3-missing-validation-in-speccontext)
 
-- [ ] **C2: Fix string replacement fragility**
+- [x] **C2: Fix string replacement fragility**
   - File: `src/DraftSpec.Cli/SpecFileRunner.cs`
   - Action: Use regex with word boundaries
   - See: [CODE_QUALITY.md](./CODE_QUALITY.md#2-string-replacement-fragility)
 
-## Phase 2: Architecture Refactoring
+## Phase 2: Architecture Refactoring ✅
 
 **Goal:** Improve extensibility and separation of concerns
 
+**Status:** Complete (commit e7d2ba6) - A1/A2 deferred to Phase 3
+
 ### Architecture
 
-- [ ] **A1: Extract IReporter interface**
+- [ ] **A1: Extract IReporter interface** *(deferred to Phase 3)*
   - Files: Create `src/DraftSpec/Reporting/IReporter.cs`, `ConsoleReporter.cs`, `JsonReporter.cs`
   - Action: Extract reporting from Dsl.cs
   - See: [ARCHITECTURE.md](./ARCHITECTURE.md#1-reporting-layer-currently-embedded-in-dslcs)
 
-- [ ] **A2: Split Dsl.cs (God object)**
+- [ ] **A2: Split Dsl.cs (God object)** *(deferred to Phase 3)*
   - File: `src/DraftSpec/Dsl.cs` (460 lines)
   - Action: Extract context management, execution, reporting
   - See: [CODE_QUALITY.md](./CODE_QUALITY.md#1-god-object-dslcs-460-lines)
 
-- [ ] **A3: Add ISpecRunner interface**
-  - File: `src/DraftSpec/SpecRunner.cs`
+- [x] **A3: Add ISpecRunner interface**
+  - File: `src/DraftSpec/ISpecRunner.cs`
   - Action: Extract interface for testability
   - See: [ARCHITECTURE.md](./ARCHITECTURE.md#recommended-architecture-evolution)
 
-- [ ] **A4: Make collections immutable**
+- [x] **A4: Make collections immutable**
   - File: `src/DraftSpec/SpecContext.cs`
   - Action: Return IReadOnlyList instead of List
   - See: [CODE_QUALITY.md](./CODE_QUALITY.md#7-mutable-public-collections)
 
 ### Performance
 
-- [ ] **P1: Fix O(n²) JSON algorithm**
-  - File: `src/DraftSpec/Dsl.cs:383-425`
+- [x] **P1: Fix O(n²) JSON algorithm**
+  - File: `src/DraftSpec/Dsl.cs`
   - Action: Use Dictionary lookup instead of FirstOrDefault
   - See: [PERFORMANCE.md](./PERFORMANCE.md#1-on²-json-tree-building-algorithm)
 
-- [ ] **P2: Cache hook chains**
-  - File: `src/DraftSpec/SpecRunner.cs`
-  - Action: Cache during tree construction
+- [x] **P2: Cache hook chains**
+  - File: `src/DraftSpec/SpecContext.cs`
+  - Action: Cache hook chains lazily in SpecContext
   - See: [PERFORMANCE.md](./PERFORMANCE.md#2-hook-chain-reconstruction-per-spec)
 
-- [ ] **P3: Add early exit to focus detection**
-  - File: `src/DraftSpec/SpecRunner.cs:22-28`
+- [x] **P3: Add early exit to focus detection**
+  - File: `src/DraftSpec/SpecRunner.cs`
   - Action: Return immediately when focused spec found
   - See: [PERFORMANCE.md](./PERFORMANCE.md#3-focus-detection-full-tree-scan)
 
 ### Testing
 
-- [ ] **T3: Add DSL tests** (~20 tests)
-  - Files: Create `tests/DraftSpec.Tests/Dsl/*.cs`
+- [x] **T3: Add DSL tests** (~27 tests)
+  - Files: `tests/DraftSpec.Tests/Dsl/DslTests.cs`
   - Action: Test describe/it/context/hooks
   - See: [TEST_COVERAGE.md](./TEST_COVERAGE.md#2-dsl-20-coverage)
 
-- [ ] **T4: Add output tests** (~15 tests)
-  - Files: Create `tests/DraftSpec.Tests/Output/*.cs`
+- [x] **T4: Add output tests** (~17 tests)
+  - Files: `tests/DraftSpec.Tests/Output/OutputTests.cs`
   - Action: Test console formatting, JSON structure
   - See: [TEST_COVERAGE.md](./TEST_COVERAGE.md#4-output-0-coverage)
 
@@ -224,32 +228,39 @@ Prioritized work items from the comprehensive review, organized into phases.
 
 ## Summary by Category
 
-| Category | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Total |
-|----------|---------|---------|---------|---------|-------|
-| Security | 3 | 0 | 2 | 0 | 5 |
-| Architecture | 0 | 4 | 4 | 0 | 8 |
-| Code Quality | 2 | 0 | 2 | 0 | 4 |
-| Performance | 0 | 3 | 0 | 3 | 6 |
-| Testing | 2 | 2 | 3 | 0 | 7 |
-| Documentation | 0 | 0 | 0 | 3 | 3 |
-| Features | 0 | 0 | 0 | 3 | 3 |
-| **Total** | **7** | **9** | **11** | **9** | **36** |
+| Category | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Total | Done |
+|----------|---------|---------|---------|---------|-------|------|
+| Security | 3 | 0 | 2 | 0 | 5 | 3 ✅ |
+| Architecture | 0 | 4 | 4 | 0 | 8 | 2 ✅ |
+| Code Quality | 2 | 0 | 2 | 0 | 4 | 2 ✅ |
+| Performance | 0 | 3 | 0 | 3 | 6 | 3 ✅ |
+| Testing | 2 | 2 | 3 | 0 | 7 | 4 ✅ |
+| Documentation | 0 | 0 | 0 | 3 | 3 | 0 |
+| Features | 0 | 0 | 0 | 3 | 3 | 0 |
+| **Total** | **7** | **9** | **11** | **9** | **36** | **14** |
+
+## Progress
+
+- **Phase 1:** ✅ Complete (7/7 items)
+- **Phase 2:** ✅ Complete (7/9 items, 2 deferred)
+- **Phase 3:** Not started
+- **Phase 4:** Not started
 
 ## Quick Reference
 
 ### Files Most Needing Work
 
-1. `src/DraftSpec/Dsl.cs` - Split into smaller classes
-2. `src/DraftSpec.Cli/SpecFileRunner.cs` - Security fixes
-3. `src/DraftSpec.Cli/SpecFinder.cs` - Path validation
-4. `src/DraftSpec/SpecRunner.cs` - Performance + interface
-5. `tests/DraftSpec.Tests/*` - Add 120+ tests
+1. ~~`src/DraftSpec.Cli/SpecFileRunner.cs` - Security fixes~~ ✅
+2. ~~`src/DraftSpec.Cli/SpecFinder.cs` - Path validation~~ ✅
+3. ~~`src/DraftSpec/SpecRunner.cs` - Performance + interface~~ ✅
+4. `src/DraftSpec/Dsl.cs` - Split into smaller classes (A1/A2)
+5. `tests/DraftSpec.Tests/*` - Continue adding tests
 
 ### Metrics to Track
 
-| Metric | Current | Phase 1 | Phase 2 | Phase 3 | Target |
-|--------|---------|---------|---------|---------|--------|
-| Test Coverage | ~15% | 40% | 60% | 85% | 85%+ |
-| Security Issues | 7 | 0 High | 0 Medium | 0 | 0 |
-| Extension Points | 2 | 2 | 5 | 8+ | 8+ |
-| Perf (10K specs) | 5-20s | 5-20s | <2s | <1s | <1s |
+| Metric | Initial | After Phase 1 | After Phase 2 | Target |
+|--------|---------|---------------|---------------|--------|
+| Test Count | 9 | 111 | 155 | 200+ |
+| Security Issues (High) | 3 | 0 ✅ | 0 ✅ | 0 |
+| Extension Points | 2 | 2 | 4 | 8+ |
+| Perf Optimizations | 0 | 0 | 3 ✅ | 6 |

@@ -46,6 +46,53 @@ describe("StringCalculator", () =>
             expect(ex.Message).toContain("-2");
             expect(ex.Message).toContain("-4");
         });
+
+        // Unimplemented features - these will fail (TDD red phase)
+        describe("large numbers", () =>
+        {
+            it("ignores numbers greater than 1000", () =>
+            {
+                expect(calc.Add("2,1001")).toBe(2);
+            });
+
+            it("includes 1000 itself", () =>
+            {
+                expect(calc.Add("1000,2")).toBe(1002);
+            });
+        });
+
+        describe("multi-character delimiters", () =>
+        {
+            it("supports delimiters of any length", () =>
+            {
+                expect(calc.Add("//[***]\n1***2***3")).toBe(6);
+            });
+
+            it("supports multiple delimiters", () =>
+            {
+                expect(calc.Add("//[*][%]\n1*2%3")).toBe(6);
+            });
+
+            it("supports multiple multi-char delimiters", () =>
+            {
+                expect(calc.Add("//[**][%%]\n1**2%%3")).toBe(6);
+            });
+        });
+    });
+
+    // Pending specs - features we're planning but haven't designed yet
+    describe("Subtract", () =>
+    {
+        it("returns 0 for empty string");
+        it("returns the number for a single number");
+        it("returns difference of numbers left to right");
+    });
+
+    // Skipped specs - features we're deferring
+    describe("Multiply", () =>
+    {
+        xit("returns 1 for empty string");
+        xit("returns product of numbers");
     });
 });
 

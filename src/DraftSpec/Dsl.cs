@@ -251,10 +251,20 @@ public static class Dsl
         var skipped = results.Count(r => r.Status == SpecStatus.Skipped);
 
         Console.Write($"{results.Count} specs: ");
-        if (passed > 0) { Console.ForegroundColor = ConsoleColor.Green; Console.Write($"{passed} passed"); Console.ResetColor(); }
-        if (failed > 0) { Console.Write(", "); Console.ForegroundColor = ConsoleColor.Red; Console.Write($"{failed} failed"); Console.ResetColor(); }
-        if (pending > 0) { Console.Write(", "); Console.ForegroundColor = ConsoleColor.Yellow; Console.Write($"{pending} pending"); Console.ResetColor(); }
-        if (skipped > 0) { Console.Write(", "); Console.ForegroundColor = ConsoleColor.DarkGray; Console.Write($"{skipped} skipped"); Console.ResetColor(); }
+        var first = true;
+        void WriteStat(int count, string label, ConsoleColor color)
+        {
+            if (count == 0) return;
+            if (!first) Console.Write(", ");
+            first = false;
+            Console.ForegroundColor = color;
+            Console.Write($"{count} {label}");
+            Console.ResetColor();
+        }
+        WriteStat(passed, "passed", ConsoleColor.Green);
+        WriteStat(failed, "failed", ConsoleColor.Red);
+        WriteStat(pending, "pending", ConsoleColor.Yellow);
+        WriteStat(skipped, "skipped", ConsoleColor.DarkGray);
         Console.WriteLine();
     }
 }

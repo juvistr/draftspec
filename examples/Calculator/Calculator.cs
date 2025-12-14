@@ -21,6 +21,9 @@ public class StringCalculator
         var parts = numbers.Split(delimiters.ToArray(), StringSplitOptions.RemoveEmptyEntries);
         var values = parts.Select(int.Parse).ToList();
 
+        // filter out numbers > 1000
+        values = values.Where(v => v <= 1000).ToList();
+
         var negatives = values.Where(v => v < 0).ToList();
         if (negatives.Count > 0)
             throw new ArgumentException($"Negatives not allowed: {string.Join(", ", negatives)}");

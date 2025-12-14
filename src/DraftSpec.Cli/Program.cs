@@ -27,6 +27,8 @@ static async Task<int> Run(string[] args)
         {
             "run" => RunSpecs(options),
             "watch" => await WatchSpecs(options.Path),
+            "init" => InitSpecs(options),
+            "new" => NewSpec(options),
             _ => ShowUsage($"Unknown command: {options.Command}")
         };
     }
@@ -79,6 +81,10 @@ static CliOptions ParseArgs(string[] args)
             }
             options.CssUrl = args[++i];
         }
+        else if (arg == "--force")
+        {
+            options.Force = true;
+        }
         else if (!arg.StartsWith('-'))
         {
             positional.Add(arg);
@@ -93,7 +99,15 @@ static CliOptions ParseArgs(string[] args)
     if (positional.Count > 0)
         options.Command = positional[0].ToLowerInvariant();
     if (positional.Count > 1)
-        options.Path = positional[1];
+    {
+        // For 'new' command, second arg is the spec name
+        if (options.Command == "new")
+            options.SpecName = positional[1];
+        else
+            options.Path = positional[1];
+    }
+    if (positional.Count > 2 && options.Command == "new")
+        options.Path = positional[2];
 
     return options;
 }
@@ -113,11 +127,14 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("Usage:");
     Console.WriteLine("  draftspec run <path> [options]   Run specs once and exit");
     Console.WriteLine("  draftspec watch <path>           Watch for changes and re-run");
+    Console.WriteLine("  draftspec init [path]            Initialize spec infrastructure");
+    Console.WriteLine("  draftspec new <name> [path]      Create a new spec file");
     Console.WriteLine();
     Console.WriteLine("Options:");
     Console.WriteLine("  --format, -f <format>  Output format: console, json, markdown, html");
     Console.WriteLine("  --output, -o <file>    Write output to file instead of stdout");
     Console.WriteLine("  --css-url <url>        Custom CSS URL for HTML output");
+    Console.WriteLine("  --force                Overwrite existing files (for init)");
     Console.WriteLine();
     Console.WriteLine("Path can be:");
     Console.WriteLine("  - A directory (runs all *.spec.csx files recursively)");
@@ -125,9 +142,10 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("  - Omitted (defaults to current directory)");
     Console.WriteLine();
     Console.WriteLine("Examples:");
+    Console.WriteLine("  draftspec init");
+    Console.WriteLine("  draftspec new Calculator");
     Console.WriteLine("  draftspec run ./specs");
     Console.WriteLine("  draftspec run ./specs --format markdown -o report.md");
-    Console.WriteLine("  draftspec run ./specs --format html --css-url https://example.com/style.css");
     Console.WriteLine("  draftspec watch .");
 
     return error != null ? 1 : 0;
@@ -321,6 +339,166 @@ static async Task<int> WatchSpecs(string path)
     return lastSummary?.Success == true ? 0 : 1;
 }
 
+static int InitSpecs(CliOptions options)
+{
+    var resolver = new ProjectResolver();
+    var directory = Path.GetFullPath(options.Path);
+
+    if (!Directory.Exists(directory))
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Directory not found: {directory}");
+        Console.ResetColor();
+        return 1;
+    }
+
+    // Find project
+    var csproj = resolver.FindProject(directory);
+    ProjectResolver.ProjectInfo? info = null;
+
+    if (csproj == null)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("No .csproj found. Creating spec_helper without project reference.");
+        Console.ResetColor();
+    }
+    else
+    {
+        info = resolver.GetProjectInfo(csproj);
+        if (info == null)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Could not get project info for {Path.GetFileName(csproj)}");
+            Console.ResetColor();
+        }
+    }
+
+    // Generate spec_helper.csx
+    var specHelperPath = Path.Combine(directory, "spec_helper.csx");
+    if (File.Exists(specHelperPath) && !options.Force)
+    {
+        Console.WriteLine("spec_helper.csx already exists (use --force to overwrite)");
+    }
+    else
+    {
+        var specHelper = GenerateSpecHelper(info, directory);
+        File.WriteAllText(specHelperPath, specHelper);
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("Created spec_helper.csx");
+        Console.ResetColor();
+    }
+
+    // Generate omnisharp.json
+    var omnisharpPath = Path.Combine(directory, "omnisharp.json");
+    if (File.Exists(omnisharpPath) && !options.Force)
+    {
+        Console.WriteLine("omnisharp.json already exists (use --force to overwrite)");
+    }
+    else
+    {
+        var omnisharp = GenerateOmnisharp(info?.TargetFramework ?? "net10.0");
+        File.WriteAllText(omnisharpPath, omnisharp);
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("Created omnisharp.json");
+        Console.ResetColor();
+    }
+
+    return 0;
+}
+
+static string GenerateSpecHelper(ProjectResolver.ProjectInfo? info, string directory)
+{
+    var sb = new System.Text.StringBuilder();
+    sb.AppendLine("#r \"nuget: DraftSpec\"");
+
+    if (info != null)
+    {
+        // Make the path relative to the directory
+        var relativePath = Path.GetRelativePath(directory, info.TargetPath);
+        sb.AppendLine($"#r \"{relativePath}\"");
+    }
+
+    sb.AppendLine();
+    sb.AppendLine("using static DraftSpec.Dsl;");
+    sb.AppendLine();
+    sb.AppendLine("// Add shared fixtures below:");
+
+    return sb.ToString();
+}
+
+static string GenerateOmnisharp(string targetFramework)
+{
+    return $$"""
+        {
+          "script": {
+            "enableScriptNuGetReferences": true,
+            "defaultTargetFramework": "{{targetFramework}}"
+          }
+        }
+        """;
+}
+
+static int NewSpec(CliOptions options)
+{
+    var name = options.SpecName;
+    if (string.IsNullOrEmpty(name))
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine("Usage: draftspec new <Name>");
+        Console.ResetColor();
+        return 1;
+    }
+
+    var directory = Path.GetFullPath(options.Path);
+
+    if (!Directory.Exists(directory))
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Directory not found: {directory}");
+        Console.ResetColor();
+        return 1;
+    }
+
+    var specHelperPath = Path.Combine(directory, "spec_helper.csx");
+    if (!File.Exists(specHelperPath))
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("Warning: spec_helper.csx not found. Run 'draftspec init' first.");
+        Console.ResetColor();
+    }
+
+    var specPath = Path.Combine(directory, $"{name}.spec.csx");
+    if (File.Exists(specPath))
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"{name}.spec.csx already exists");
+        Console.ResetColor();
+        return 1;
+    }
+
+    var specContent = GenerateSpec(name);
+    File.WriteAllText(specPath, specContent);
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.WriteLine($"Created {name}.spec.csx");
+    Console.ResetColor();
+
+    return 0;
+}
+
+static string GenerateSpec(string name)
+{
+    return $$"""
+        #load "spec_helper.csx"
+        using static DraftSpec.Dsl;
+
+        describe("{{name}}", () => {
+            it("works", () => pending());
+        });
+
+        run();
+        """;
+}
+
 class CliOptions
 {
     public string Command { get; set; } = "";
@@ -330,4 +508,6 @@ class CliOptions
     public string? CssUrl { get; set; }
     public bool ShowHelp { get; set; }
     public string? Error { get; set; }
+    public bool Force { get; set; }
+    public string? SpecName { get; set; }
 }

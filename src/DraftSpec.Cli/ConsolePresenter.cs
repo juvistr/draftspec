@@ -17,10 +17,11 @@ public class ConsolePresenter
         }
     }
 
-    public void ShowHeader(IReadOnlyList<string> specFiles)
+    public void ShowHeader(IReadOnlyList<string> specFiles, bool parallel = false)
     {
         Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {specFiles.Count} spec file(s)...");
+        var mode = parallel && specFiles.Count > 1 ? " in parallel" : "";
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {specFiles.Count} spec file(s){mode}...");
         Console.ResetColor();
     }
 

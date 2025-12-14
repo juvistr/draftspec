@@ -85,6 +85,10 @@ static CliOptions ParseArgs(string[] args)
         {
             options.Force = true;
         }
+        else if (arg is "--parallel" or "-p")
+        {
+            options.Parallel = true;
+        }
         else if (!arg.StartsWith('-'))
         {
             positional.Add(arg);
@@ -133,6 +137,7 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("Options:");
     Console.WriteLine("  --format, -f <format>  Output format: console, json, markdown, html");
     Console.WriteLine("  --output, -o <file>    Write output to file instead of stdout");
+    Console.WriteLine("  --parallel, -p         Run spec files in parallel");
     Console.WriteLine("  --css-url <url>        Custom CSS URL for HTML output");
     Console.WriteLine("  --force                Overwrite existing files (for init)");
     Console.WriteLine();
@@ -167,9 +172,9 @@ static int RunSpecs(CliOptions options)
         runner.OnBuildCompleted += presenter.ShowBuildResult;
 
         var specFiles = finder.FindSpecs(options.Path);
-        presenter.ShowHeader(specFiles);
+        presenter.ShowHeader(specFiles, options.Parallel);
 
-        var summary = runner.RunAll(specFiles);
+        var summary = runner.RunAll(specFiles, options.Parallel);
 
         presenter.ShowSpecsStarting();
         foreach (var result in summary.Results)
@@ -510,4 +515,5 @@ class CliOptions
     public string? Error { get; set; }
     public bool Force { get; set; }
     public string? SpecName { get; set; }
+    public bool Parallel { get; set; }
 }

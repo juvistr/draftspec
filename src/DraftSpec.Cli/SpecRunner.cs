@@ -66,12 +66,11 @@ public class SpecRunner
             stopwatch.Elapsed);
     }
 
-    public RunSummary RunAll(IReadOnlyList<string> specFiles)
+    public RunSummary RunAll(IReadOnlyList<string> specFiles, bool parallel = false)
     {
         var stopwatch = Stopwatch.StartNew();
-        var results = new List<SpecRunResult>();
 
-        // Collect unique directories and build each once
+        // Collect unique directories and build each once (always sequential)
         var directories = specFiles
             .Select(f => Path.GetDirectoryName(Path.GetFullPath(f))!)
             .Distinct()
@@ -82,9 +81,27 @@ public class SpecRunner
             BuildProjects(dir);
         }
 
-        foreach (var specFile in specFiles)
+        List<SpecRunResult> results;
+        if (parallel && specFiles.Count > 1)
         {
-            results.Add(RunSpec(specFile));
+            // Run specs in parallel
+            var resultsBag = new System.Collections.Concurrent.ConcurrentDictionary<int, SpecRunResult>();
+            Parallel.ForEach(
+                specFiles.Select((file, index) => (file, index)),
+                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                item => resultsBag[item.index] = RunSpec(item.file));
+
+            // Restore original order
+            results = resultsBag.OrderBy(kv => kv.Key).Select(kv => kv.Value).ToList();
+        }
+        else
+        {
+            // Run specs sequentially
+            results = new List<SpecRunResult>();
+            foreach (var specFile in specFiles)
+            {
+                results.Add(RunSpec(specFile));
+            }
         }
 
         stopwatch.Stop();

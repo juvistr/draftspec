@@ -44,10 +44,24 @@ public static class Dsl
                 CurrentContext = null;
             }
         }
+        else if (CurrentContext is null)
+        {
+            // Another top-level describe - add as child of root
+            var context = new SpecContext(description, RootContext);
+            CurrentContext = context;
+            try
+            {
+                body();
+            }
+            finally
+            {
+                CurrentContext = null;
+            }
+        }
         else
         {
             // Nested describe
-            var parent = CurrentContext!;
+            var parent = CurrentContext;
             var context = new SpecContext(description, parent);
             CurrentContext = context;
             try
@@ -171,6 +185,30 @@ public static class Dsl
         Action action,
         [CallerArgumentExpression("action")] string? expr = null)
         => new ActionExpectation(action, expr);
+
+    /// <summary>
+    /// Create an expectation for an array.
+    /// </summary>
+    public static CollectionExpectation<T> expect<T>(
+        T[] actual,
+        [CallerArgumentExpression("actual")] string? expr = null)
+        => new CollectionExpectation<T>(actual, expr);
+
+    /// <summary>
+    /// Create an expectation for a list.
+    /// </summary>
+    public static CollectionExpectation<T> expect<T>(
+        List<T> actual,
+        [CallerArgumentExpression("actual")] string? expr = null)
+        => new CollectionExpectation<T>(actual, expr);
+
+    /// <summary>
+    /// Create an expectation for a collection.
+    /// </summary>
+    public static CollectionExpectation<T> expect<T>(
+        IList<T> actual,
+        [CallerArgumentExpression("actual")] string? expr = null)
+        => new CollectionExpectation<T>(actual, expr);
 
     /// <summary>
     /// Run all collected specs and output results.

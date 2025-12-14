@@ -172,6 +172,7 @@ public static class Dsl
 
     /// <summary>
     /// Run all collected specs and output results.
+    /// Sets Environment.ExitCode to 1 if any specs failed.
     /// </summary>
     public static void run()
     {
@@ -185,6 +186,13 @@ public static class Dsl
         var results = runner.Run(RootContext);
 
         OutputResults(results);
+
+        // Set exit code based on failures
+        var failed = results.Count(r => r.Status == SpecStatus.Failed);
+        if (failed > 0)
+        {
+            Environment.ExitCode = 1;
+        }
 
         // Reset for next run
         RootContext = null;

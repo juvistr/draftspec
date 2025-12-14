@@ -12,52 +12,39 @@ describe("StringCalculator", () =>
     {
         it("returns 0 for empty string", () =>
         {
-            var result = calc.Add("");
-            if (result != 0) throw new Exception($"Expected 0, got {result}");
+            expect(calc.Add("")).toBe(0);
         });
 
         it("returns the number for a single number", () =>
         {
-            var result = calc.Add("1");
-            if (result != 1) throw new Exception($"Expected 1, got {result}");
+            expect(calc.Add("1")).toBe(1);
         });
 
         it("returns sum of two numbers", () =>
         {
-            var result = calc.Add("1,2");
-            if (result != 3) throw new Exception($"Expected 3, got {result}");
+            expect(calc.Add("1,2")).toBe(3);
         });
 
         it("handles multiple numbers", () =>
         {
-            var result = calc.Add("1,2,3,4,5");
-            if (result != 15) throw new Exception($"Expected 15, got {result}");
+            expect(calc.Add("1,2,3,4,5")).toBe(15);
         });
 
         it("handles newlines as delimiters", () =>
         {
-            var result = calc.Add("1\n2,3");
-            if (result != 6) throw new Exception($"Expected 6, got {result}");
+            expect(calc.Add("1\n2,3")).toBe(6);
         });
 
         it("supports custom delimiters", () =>
         {
-            var result = calc.Add("//;\n1;2");
-            if (result != 3) throw new Exception($"Expected 3, got {result}");
+            expect(calc.Add("//;\n1;2")).toBe(3);
         });
 
         it("throws on negative numbers", () =>
         {
-            try
-            {
-                calc.Add("1,-2,3,-4");
-                throw new Exception("Expected ArgumentException");
-            }
-            catch (ArgumentException ex)
-            {
-                if (!ex.Message.Contains("-2") || !ex.Message.Contains("-4"))
-                    throw new Exception($"Expected message to contain negatives, got: {ex.Message}");
-            }
+            var ex = expect(() => calc.Add("1,-2,3,-4")).toThrow<ArgumentException>();
+            expect(ex.Message).toContain("-2");
+            expect(ex.Message).toContain("-4");
         });
     });
 });

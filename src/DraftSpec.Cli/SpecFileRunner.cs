@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace DraftSpec.Cli;
 
@@ -39,7 +40,7 @@ public class SpecFileRunner
         BuildProjects(workingDir);
 
         var stopwatch = Stopwatch.StartNew();
-        var result = ProcessHelper.RunDotnet($"script \"{fileName}\" --no-cache", workingDir);
+        var result = ProcessHelper.RunDotnet(["script", fileName, "--no-cache"], workingDir);
         stopwatch.Stop();
 
         return new SpecRunResult(
@@ -99,7 +100,7 @@ public class SpecFileRunner
         {
             OnBuildStarted?.Invoke(project);
 
-            var result = ProcessHelper.RunDotnet($"build \"{project}\" --nologo -v q", directory);
+            var result = ProcessHelper.RunDotnet(["build", project, "--nologo", "-v", "q"], directory);
 
             OnBuildCompleted?.Invoke(new BuildResult(result.Success, result.Output, result.Error));
         }
@@ -112,7 +113,7 @@ public class SpecFileRunner
         var fileName = Path.GetFileName(fullPath);
 
         var stopwatch = Stopwatch.StartNew();
-        var result = ProcessHelper.RunDotnet($"script \"{fileName}\" --no-cache", workingDir);
+        var result = ProcessHelper.RunDotnet(["script", fileName, "--no-cache"], workingDir);
         stopwatch.Stop();
 
         return new SpecRunResult(
@@ -131,22 +132,24 @@ public class SpecFileRunner
     {
         var fullPath = Path.GetFullPath(specFile);
         var workingDir = Path.GetDirectoryName(fullPath)!;
-        var fileName = Path.GetFileName(fullPath);
 
-        // Read the script and modify run() to run(json: true)
+        // Read the script and modify run() to run(json: true) using regex for safety
         var scriptContent = File.ReadAllText(fullPath);
-        var modifiedScript = scriptContent
-            .Replace("run();", "run(json: true);")
-            .Replace("run()", "run(json: true)");
+        var modifiedScript = Regex.Replace(
+            scriptContent,
+            @"\brun\s*\(\s*\)\s*;?",
+            "run(json: true);",
+            RegexOptions.None);
 
-        // Write to temp file
-        var tempFile = Path.Combine(workingDir, $".{Path.GetFileNameWithoutExtension(fileName)}.json.csx");
+        // Write to secure temp file with random name
+        var tempFileName = $".draftspec-{Guid.NewGuid():N}.csx";
+        var tempFile = Path.Combine(workingDir, tempFileName);
         File.WriteAllText(tempFile, modifiedScript);
 
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            var result = ProcessHelper.RunDotnet($"script \"{Path.GetFileName(tempFile)}\" --no-cache", workingDir);
+            var result = ProcessHelper.RunDotnet(["script", tempFileName, "--no-cache"], workingDir);
             stopwatch.Stop();
 
             return new SpecRunResult(
@@ -158,10 +161,18 @@ public class SpecFileRunner
         }
         finally
         {
-            // Clean up temp file
-            if (File.Exists(tempFile))
+            // Clean up temp file with robust error handling
+            try
             {
-                File.Delete(tempFile);
+                if (File.Exists(tempFile))
+                {
+                    File.SetAttributes(tempFile, FileAttributes.Normal);
+                    File.Delete(tempFile);
+                }
+            }
+            catch
+            {
+                // Best-effort cleanup - don't fail the operation if cleanup fails
             }
         }
     }

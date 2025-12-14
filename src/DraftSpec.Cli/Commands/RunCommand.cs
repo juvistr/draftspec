@@ -106,7 +106,7 @@ public static class RunCommand
         var projects = Directory.GetFiles(directory, "*.csproj");
         foreach (var project in projects)
         {
-            ProcessHelper.RunDotnet($"build \"{project}\" --nologo -v q", directory);
+            ProcessHelper.RunDotnet(["build", project, "--nologo", "-v", "q"], directory);
         }
     }
 }

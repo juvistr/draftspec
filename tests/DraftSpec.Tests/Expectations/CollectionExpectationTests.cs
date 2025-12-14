@@ -1,0 +1,207 @@
+namespace DraftSpec.Tests.Expectations;
+
+/// <summary>
+/// Tests for CollectionExpectation assertions.
+/// </summary>
+public class CollectionExpectationTests
+{
+    #region toContain
+
+    [Test]
+    public async Task toContain_WhenContains_Passes()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+        expectation.toContain(2);
+    }
+
+    [Test]
+    public async Task toContain_WhenDoesNotContain_Throws()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toContain(5));
+
+        await Assert.That(ex.Message).Contains("to contain 5");
+        await Assert.That(ex.Message).Contains("Contents:");
+    }
+
+    #endregion
+
+    #region toNotContain
+
+    [Test]
+    public async Task toNotContain_WhenDoesNotContain_Passes()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+        expectation.toNotContain(5);
+    }
+
+    [Test]
+    public async Task toNotContain_WhenContains_Throws()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toNotContain(2));
+
+        await Assert.That(ex.Message).Contains("to not contain 2");
+    }
+
+    #endregion
+
+    #region toContainAll
+
+    [Test]
+    public async Task toContainAll_WhenContainsAll_Passes()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3, 4, 5], "list");
+        expectation.toContainAll(1, 3, 5);
+    }
+
+    [Test]
+    public async Task toContainAll_WhenMissingSome_Throws()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toContainAll(1, 5, 7));
+
+        await Assert.That(ex.Message).Contains("to contain all");
+        await Assert.That(ex.Message).Contains("missing");
+        await Assert.That(ex.Message).Contains("5");
+        await Assert.That(ex.Message).Contains("7");
+    }
+
+    #endregion
+
+    #region toHaveCount
+
+    [Test]
+    public async Task toHaveCount_WithCorrectCount_Passes()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+        expectation.toHaveCount(3);
+    }
+
+    [Test]
+    public async Task toHaveCount_WithWrongCount_Throws()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toHaveCount(5));
+
+        await Assert.That(ex.Message).Contains("to have count 5");
+        await Assert.That(ex.Message).Contains("but was 3");
+    }
+
+    [Test]
+    public async Task toHaveCount_WithEmptyCollection_PassesForZero()
+    {
+        var expectation = new CollectionExpectation<int>([], "list");
+        expectation.toHaveCount(0);
+    }
+
+    #endregion
+
+    #region toBeEmpty / toNotBeEmpty
+
+    [Test]
+    public async Task toBeEmpty_WithEmptyCollection_Passes()
+    {
+        var expectation = new CollectionExpectation<int>([], "list");
+        expectation.toBeEmpty();
+    }
+
+    [Test]
+    public async Task toBeEmpty_WithNonEmptyCollection_Throws()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeEmpty());
+
+        await Assert.That(ex.Message).Contains("to be empty");
+    }
+
+    [Test]
+    public async Task toNotBeEmpty_WithNonEmptyCollection_Passes()
+    {
+        var expectation = new CollectionExpectation<int>([1], "list");
+        expectation.toNotBeEmpty();
+    }
+
+    [Test]
+    public async Task toNotBeEmpty_WithEmptyCollection_Throws()
+    {
+        var expectation = new CollectionExpectation<int>([], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toNotBeEmpty());
+
+        await Assert.That(ex.Message).Contains("to not be empty");
+    }
+
+    #endregion
+
+    #region toBe (sequence equality)
+
+    [Test]
+    public async Task toBe_WithEqualSequence_Passes()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+        expectation.toBe([1, 2, 3]);
+    }
+
+    [Test]
+    public async Task toBe_WithDifferentSequence_Throws()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBe([1, 2, 4]));
+
+        await Assert.That(ex.Message).Contains("to be [1, 2, 4]");
+        await Assert.That(ex.Message).Contains("but was [1, 2, 3]");
+    }
+
+    [Test]
+    public async Task toBe_WithDifferentLength_Throws()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2], "list");
+
+        Assert.Throws<AssertionException>(() => expectation.toBe([1, 2, 3]));
+    }
+
+    [Test]
+    public async Task toBe_WithBothEmpty_Passes()
+    {
+        var expectation = new CollectionExpectation<int>([], "list");
+        expectation.toBe([]);
+    }
+
+    [Test]
+    public async Task toBe_WithParamsOverload_Passes()
+    {
+        var expectation = new CollectionExpectation<string>(["a", "b"], "list");
+        expectation.toBe("a", "b");
+    }
+
+    #endregion
+
+    #region String collections
+
+    [Test]
+    public async Task toContain_WithStrings_Passes()
+    {
+        var expectation = new CollectionExpectation<string>(["apple", "banana", "cherry"], "fruits");
+        expectation.toContain("banana");
+    }
+
+    [Test]
+    public async Task toBe_WithStrings_FormatsCorrectly()
+    {
+        var expectation = new CollectionExpectation<string>(["a", "b"], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBe(["x", "y"]));
+
+        await Assert.That(ex.Message).Contains("\"x\"");
+        await Assert.That(ex.Message).Contains("\"a\"");
+    }
+
+    #endregion
+}

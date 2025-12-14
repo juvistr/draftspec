@@ -33,7 +33,7 @@ public class ProjectResolver
     private string? GetMSBuildProperty(string csprojPath, string property)
     {
         var result = ProcessHelper.RunDotnet(
-            $"msbuild \"{csprojPath}\" -getProperty:{property}",
+            ["msbuild", csprojPath, $"-getProperty:{property}"],
             Path.GetDirectoryName(csprojPath));
 
         var output = result.Output.Trim();

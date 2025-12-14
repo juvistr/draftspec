@@ -15,8 +15,17 @@ public class SpecContext
     public Action? BeforeEach { get; set; }
     public Action? AfterEach { get; set; }
 
+    /// <summary>
+    /// Creates a new spec context.
+    /// </summary>
+    /// <param name="description">Description for this context block (cannot be empty)</param>
+    /// <param name="parent">Optional parent context</param>
+    /// <exception cref="ArgumentException">Thrown when description is null or empty</exception>
     public SpecContext(string description, SpecContext? parent = null)
     {
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException("Description cannot be null or empty", nameof(description));
+
         Description = description;
         Parent = parent;
         parent?.Children.Add(this);

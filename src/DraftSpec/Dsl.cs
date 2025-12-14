@@ -346,6 +346,14 @@ public static class Dsl
         Console.WriteLine();
     }
 
+    // Static options for JSON serialization (reused for performance)
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
     private static void OutputJson(SpecContext rootContext, List<SpecResult> results)
     {
         var passed = results.Count(r => r.Status == SpecStatus.Passed);
@@ -354,6 +362,11 @@ public static class Dsl
         var skipped = results.Count(r => r.Status == SpecStatus.Skipped);
 
         var totalDuration = results.Sum(r => r.Duration.TotalMilliseconds);
+
+        // Build O(1) lookup dictionary for results (fixes O(n²) algorithm)
+        var resultLookup = results.ToDictionary(
+            r => (r.Spec, string.Join("/", r.ContextPath)),
+            r => r);
 
         var report = new JsonReport
         {
@@ -367,40 +380,35 @@ public static class Dsl
                 Skipped = skipped,
                 DurationMs = totalDuration
             },
-            Contexts = BuildContextTree(rootContext, results)
+            Contexts = BuildContextTree(rootContext, resultLookup)
         };
 
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
-
-        Console.WriteLine(JsonSerializer.Serialize(report, options));
+        Console.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
     }
 
-    private static List<JsonContext> BuildContextTree(SpecContext context, List<SpecResult> allResults)
+    private static List<JsonContext> BuildContextTree(
+        SpecContext context,
+        Dictionary<(SpecDefinition Spec, string Path), SpecResult> resultLookup)
     {
         var contextList = new List<JsonContext>();
-        BuildContextTreeRecursive(context, allResults, contextList, []);
+        BuildContextTreeRecursive(context, resultLookup, contextList, []);
         return contextList;
     }
 
     private static void BuildContextTreeRecursive(
         SpecContext context,
-        List<SpecResult> allResults,
+        Dictionary<(SpecDefinition Spec, string Path), SpecResult> resultLookup,
         List<JsonContext> targetList,
         List<string> currentPath)
     {
         var jsonContext = new JsonContext { Description = context.Description };
         currentPath.Add(context.Description);
+        var pathKey = string.Join("/", currentPath);
 
-        // Find specs that belong to this context
+        // Find specs that belong to this context - O(1) lookup per spec
         foreach (var spec in context.Specs)
         {
-            var result = allResults.FirstOrDefault(r =>
-                r.Spec == spec && r.ContextPath.SequenceEqual(currentPath));
+            resultLookup.TryGetValue((spec, pathKey), out var result);
 
             jsonContext.Specs.Add(new JsonSpec
             {
@@ -414,7 +422,7 @@ public static class Dsl
         // Recursively process child contexts
         foreach (var child in context.Children)
         {
-            BuildContextTreeRecursive(child, allResults, jsonContext.Contexts, [.. currentPath]);
+            BuildContextTreeRecursive(child, resultLookup, jsonContext.Contexts, [.. currentPath]);
         }
 
         // Only add if there are specs or nested contexts

@@ -5,7 +5,7 @@ namespace DraftSpec;
 /// <summary>
 /// Simple spec runner that walks the tree and executes specs.
 /// </summary>
-public class SpecRunner
+public class SpecRunner : ISpecRunner
 {
     public List<SpecResult> Run(Spec spec) => Run(spec.RootContext);
 
@@ -24,7 +24,14 @@ public class SpecRunner
         if (context.Specs.Any(s => s.IsFocused))
             return true;
 
-        return context.Children.Any(HasFocusedSpecs);
+        // Explicit loop with early exit for better performance
+        foreach (var child in context.Children)
+        {
+            if (HasFocusedSpecs(child))
+                return true;
+        }
+
+        return false;
     }
 
     private void RunContext(
@@ -109,29 +116,19 @@ public class SpecRunner
 
     private static void RunBeforeEachHooks(SpecContext context)
     {
-        var contexts = new Stack<SpecContext>();
-        var current = context;
-        while (current != null)
+        // Use cached hook chain for better performance
+        foreach (var hook in context.GetBeforeEachChain())
         {
-            contexts.Push(current);
-            current = current.Parent;
-        }
-
-        // Run parent to child
-        while (contexts.Count > 0)
-        {
-            contexts.Pop().BeforeEach?.Invoke();
+            hook.Invoke();
         }
     }
 
     private static void RunAfterEachHooks(SpecContext context)
     {
-        // Run child to parent
-        var current = context;
-        while (current != null)
+        // Use cached hook chain for better performance
+        foreach (var hook in context.GetAfterEachChain())
         {
-            current.AfterEach?.Invoke();
-            current = current.Parent;
+            hook.Invoke();
         }
     }
 }

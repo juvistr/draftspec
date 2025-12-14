@@ -75,7 +75,7 @@ public class HtmlFormatter : IFormatter
         return sb.ToString();
     }
 
-    private void FormatContext(StringBuilder sb, SpecContext context, int level)
+    private void FormatContext(StringBuilder sb, SpecContextReport context, int level)
     {
         var tag = level switch
         {

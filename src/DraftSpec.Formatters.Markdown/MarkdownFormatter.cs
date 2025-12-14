@@ -40,7 +40,7 @@ public class MarkdownFormatter : IFormatter
         return sb.ToString();
     }
 
-    private void FormatContext(StringBuilder sb, SpecContext context, int level)
+    private void FormatContext(StringBuilder sb, SpecContextReport context, int level)
     {
         // Context heading
         var heading = new string('#', Math.Min(level, 6));

@@ -1,8 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj" />
-    <ProjectReference Include="..\DraftSpec.Formatters.Console\DraftSpec.Formatters.Console.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

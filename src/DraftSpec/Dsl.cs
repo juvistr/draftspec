@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DraftSpec.Formatters;
+using DraftSpec.Formatters.Console;
 
 namespace DraftSpec;
 
@@ -210,6 +212,14 @@ public static class Dsl
         [CallerArgumentExpression("actual")] string? expr = null)
         => new CollectionExpectation<T>(actual, expr);
 
+    // Static options for JSON serialization (reused for performance)
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
     /// <summary>
     /// Run all collected specs and output results.
     /// Sets Environment.ExitCode to 1 if any specs failed.
@@ -229,14 +239,21 @@ public static class Dsl
         var runner = new SpecRunner();
         var results = runner.Run(RootContext);
 
+        // Build unified report
+        var report = SpecReportBuilder.Build(RootContext, results);
+
         if (json)
-            OutputJson(RootContext, results);
+        {
+            Console.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
+        }
         else
-            OutputConsole(results);
+        {
+            var formatter = new ConsoleFormatter();
+            formatter.Format(report, Console.Out);
+        }
 
         // Set exit code based on failures
-        var failed = results.Count(r => r.Status == SpecStatus.Failed);
-        if (failed > 0)
+        if (report.Summary.Failed > 0)
         {
             Environment.ExitCode = 1;
         }
@@ -252,216 +269,4 @@ public static class Dsl
             throw new InvalidOperationException("Must be called inside a describe() block");
     }
 
-    private static string FormatDuration(TimeSpan duration)
-    {
-        if (duration.TotalMilliseconds < 1)
-            return $"{duration.TotalMicroseconds:F0}µs";
-        if (duration.TotalMilliseconds < 1000)
-            return $"{duration.TotalMilliseconds:F0}ms";
-        return $"{duration.TotalSeconds:F2}s";
-    }
-
-    private static void OutputConsole(List<SpecResult> results)
-    {
-        Console.WriteLine();
-
-        var printedPaths = new HashSet<string>();
-
-        foreach (var result in results)
-        {
-            // Print context path segments
-            for (int i = 0; i < result.ContextPath.Count; i++)
-            {
-                var pathKey = string.Join("/", result.ContextPath.Take(i + 1));
-                if (!printedPaths.Contains(pathKey))
-                {
-                    printedPaths.Add(pathKey);
-                    var indent = new string(' ', i * 2);
-                    Console.WriteLine($"{indent}{result.ContextPath[i]}");
-                }
-            }
-
-            // Print spec with status
-            var specIndent = new string(' ', result.ContextPath.Count * 2);
-            var (symbol, color) = result.Status switch
-            {
-                SpecStatus.Passed => ("✓", ConsoleColor.Green),
-                SpecStatus.Failed => ("✗", ConsoleColor.Red),
-                SpecStatus.Pending => ("○", ConsoleColor.Yellow),
-                SpecStatus.Skipped => ("-", ConsoleColor.DarkGray),
-                _ => ("?", ConsoleColor.White)
-            };
-
-            Console.ForegroundColor = color;
-            Console.Write($"{specIndent}{symbol} ");
-            Console.ResetColor();
-            Console.Write(result.Spec.Description);
-
-            // Show duration for specs that ran
-            if (result.Status is SpecStatus.Passed or SpecStatus.Failed && result.Duration.TotalMilliseconds > 0)
-            {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.Write($" ({FormatDuration(result.Duration)})");
-                Console.ResetColor();
-            }
-            Console.WriteLine();
-
-            if (result.Status == SpecStatus.Failed && result.Exception != null)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"{specIndent}  {result.Exception.Message}");
-                Console.ResetColor();
-            }
-        }
-
-        // Summary
-        Console.WriteLine();
-        Console.WriteLine(new string('-', 50));
-
-        var passed = results.Count(r => r.Status == SpecStatus.Passed);
-        var failed = results.Count(r => r.Status == SpecStatus.Failed);
-        var pending = results.Count(r => r.Status == SpecStatus.Pending);
-        var skipped = results.Count(r => r.Status == SpecStatus.Skipped);
-
-        Console.Write($"{results.Count} specs: ");
-        var first = true;
-        void WriteStat(int count, string label, ConsoleColor color)
-        {
-            if (count == 0) return;
-            if (!first) Console.Write(", ");
-            first = false;
-            Console.ForegroundColor = color;
-            Console.Write($"{count} {label}");
-            Console.ResetColor();
-        }
-        WriteStat(passed, "passed", ConsoleColor.Green);
-        WriteStat(failed, "failed", ConsoleColor.Red);
-        WriteStat(pending, "pending", ConsoleColor.Yellow);
-        WriteStat(skipped, "skipped", ConsoleColor.DarkGray);
-
-        var totalDuration = TimeSpan.FromMilliseconds(results.Sum(r => r.Duration.TotalMilliseconds));
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.Write($" in {FormatDuration(totalDuration)}");
-        Console.ResetColor();
-        Console.WriteLine();
-    }
-
-    // Static options for JSON serialization (reused for performance)
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    private static void OutputJson(SpecContext rootContext, List<SpecResult> results)
-    {
-        var passed = results.Count(r => r.Status == SpecStatus.Passed);
-        var failed = results.Count(r => r.Status == SpecStatus.Failed);
-        var pending = results.Count(r => r.Status == SpecStatus.Pending);
-        var skipped = results.Count(r => r.Status == SpecStatus.Skipped);
-
-        var totalDuration = results.Sum(r => r.Duration.TotalMilliseconds);
-
-        // Build O(1) lookup dictionary for results (fixes O(n²) algorithm)
-        var resultLookup = results.ToDictionary(
-            r => (r.Spec, string.Join("/", r.ContextPath)),
-            r => r);
-
-        var report = new JsonReport
-        {
-            Timestamp = DateTime.UtcNow,
-            Summary = new JsonSummary
-            {
-                Total = results.Count,
-                Passed = passed,
-                Failed = failed,
-                Pending = pending,
-                Skipped = skipped,
-                DurationMs = totalDuration
-            },
-            Contexts = BuildContextTree(rootContext, resultLookup)
-        };
-
-        Console.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
-    }
-
-    private static List<JsonContext> BuildContextTree(
-        SpecContext context,
-        Dictionary<(SpecDefinition Spec, string Path), SpecResult> resultLookup)
-    {
-        var contextList = new List<JsonContext>();
-        BuildContextTreeRecursive(context, resultLookup, contextList, []);
-        return contextList;
-    }
-
-    private static void BuildContextTreeRecursive(
-        SpecContext context,
-        Dictionary<(SpecDefinition Spec, string Path), SpecResult> resultLookup,
-        List<JsonContext> targetList,
-        List<string> currentPath)
-    {
-        var jsonContext = new JsonContext { Description = context.Description };
-        currentPath.Add(context.Description);
-        var pathKey = string.Join("/", currentPath);
-
-        // Find specs that belong to this context - O(1) lookup per spec
-        foreach (var spec in context.Specs)
-        {
-            resultLookup.TryGetValue((spec, pathKey), out var result);
-
-            jsonContext.Specs.Add(new JsonSpec
-            {
-                Description = spec.Description,
-                Status = result?.Status.ToString().ToLowerInvariant() ?? "unknown",
-                DurationMs = result?.Duration.TotalMilliseconds,
-                Error = result?.Exception?.Message
-            });
-        }
-
-        // Recursively process child contexts
-        foreach (var child in context.Children)
-        {
-            BuildContextTreeRecursive(child, resultLookup, jsonContext.Contexts, [.. currentPath]);
-        }
-
-        // Only add if there are specs or nested contexts
-        if (jsonContext.Specs.Count > 0 || jsonContext.Contexts.Count > 0)
-        {
-            targetList.Add(jsonContext);
-        }
-    }
-}
-
-// JSON output models
-internal class JsonReport
-{
-    public DateTime Timestamp { get; set; }
-    public JsonSummary Summary { get; set; } = new();
-    public List<JsonContext> Contexts { get; set; } = [];
-}
-
-internal class JsonSummary
-{
-    public int Total { get; set; }
-    public int Passed { get; set; }
-    public int Failed { get; set; }
-    public int Pending { get; set; }
-    public int Skipped { get; set; }
-    public double DurationMs { get; set; }
-}
-
-internal class JsonContext
-{
-    public string Description { get; set; } = "";
-    public List<JsonSpec> Specs { get; set; } = [];
-    public List<JsonContext> Contexts { get; set; } = [];
-}
-
-internal class JsonSpec
-{
-    public string Description { get; set; } = "";
-    public string Status { get; set; } = "";
-    public double? DurationMs { get; set; }
-    public string? Error { get; set; }
 }

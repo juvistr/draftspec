@@ -11,7 +11,7 @@ public class SpecReport
     public DateTime Timestamp { get; set; }
     public string? Source { get; set; }
     public SpecSummary Summary { get; set; } = new();
-    public List<SpecContext> Contexts { get; set; } = [];
+    public List<SpecContextReport> Contexts { get; set; } = [];
 
     /// <summary>
     /// Parse a JSON report string into a SpecReport object.
@@ -37,6 +37,7 @@ public class SpecSummary
     public int Failed { get; set; }
     public int Pending { get; set; }
     public int Skipped { get; set; }
+    public double DurationMs { get; set; }
 
     public bool Success => Failed == 0;
 }
@@ -44,20 +45,21 @@ public class SpecSummary
 /// <summary>
 /// A context (describe block) containing specs and nested contexts.
 /// </summary>
-public class SpecContext
+public class SpecContextReport
 {
     public string Description { get; set; } = "";
-    public List<SpecResult> Specs { get; set; } = [];
-    public List<SpecContext> Contexts { get; set; } = [];
+    public List<SpecResultReport> Specs { get; set; } = [];
+    public List<SpecContextReport> Contexts { get; set; } = [];
 }
 
 /// <summary>
 /// Result of a single spec (it block).
 /// </summary>
-public class SpecResult
+public class SpecResultReport
 {
     public string Description { get; set; } = "";
     public string Status { get; set; } = "";
+    public double? DurationMs { get; set; }
     public string? Error { get; set; }
 
     [JsonIgnore]

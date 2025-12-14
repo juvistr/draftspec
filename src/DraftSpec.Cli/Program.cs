@@ -67,11 +67,15 @@ static int RunSpecs(string path)
     var runner = new SpecRunner();
     var presenter = new ConsolePresenter(watchMode: false);
 
+    runner.OnBuildStarted += presenter.ShowBuilding;
+    runner.OnBuildCompleted += presenter.ShowBuildResult;
+
     var specFiles = finder.FindSpecs(path);
     presenter.ShowHeader(specFiles);
 
     var summary = runner.RunAll(specFiles);
 
+    presenter.ShowSpecsStarting();
     foreach (var result in summary.Results)
     {
         presenter.ShowResult(result, path);
@@ -87,6 +91,9 @@ static async Task<int> WatchSpecs(string path)
     var finder = new SpecFinder();
     var runner = new SpecRunner();
     var presenter = new ConsolePresenter(watchMode: true);
+
+    runner.OnBuildStarted += presenter.ShowBuilding;
+    runner.OnBuildCompleted += presenter.ShowBuildResult;
 
     var runRequested = new TaskCompletionSource();
     var cts = new CancellationTokenSource();
@@ -110,6 +117,7 @@ static async Task<int> WatchSpecs(string path)
 
             lastSummary = runner.RunAll(specFiles);
 
+            presenter.ShowSpecsStarting();
             foreach (var result in lastSummary.Results)
             {
                 presenter.ShowResult(result, path);

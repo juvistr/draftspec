@@ -22,13 +22,21 @@ public record RunSummary(
     public int Failed => Results.Count(r => !r.Success);
 }
 
+public record BuildResult(bool Success, string Output, string Error);
+
 public class SpecRunner
 {
+    public event Action<string>? OnBuildStarted;
+    public event Action<BuildResult>? OnBuildCompleted;
+
     public SpecRunResult Run(string specFile)
     {
         var fullPath = Path.GetFullPath(specFile);
         var workingDir = Path.GetDirectoryName(fullPath)!;
         var fileName = Path.GetFileName(fullPath);
+
+        // Build any projects in the spec's directory first
+        BuildProjects(workingDir);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -63,12 +71,84 @@ public class SpecRunner
         var stopwatch = Stopwatch.StartNew();
         var results = new List<SpecRunResult>();
 
+        // Collect unique directories and build each once
+        var directories = specFiles
+            .Select(f => Path.GetDirectoryName(Path.GetFullPath(f))!)
+            .Distinct()
+            .ToList();
+
+        foreach (var dir in directories)
+        {
+            BuildProjects(dir);
+        }
+
         foreach (var specFile in specFiles)
         {
-            results.Add(Run(specFile));
+            results.Add(RunSpec(specFile));
         }
 
         stopwatch.Stop();
         return new RunSummary(results, stopwatch.Elapsed);
+    }
+
+    private void BuildProjects(string directory)
+    {
+        var projects = Directory.GetFiles(directory, "*.csproj");
+        foreach (var project in projects)
+        {
+            OnBuildStarted?.Invoke(project);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = $"build \"{project}\" --nologo -v q",
+                WorkingDirectory = directory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(psi)!;
+            var output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            OnBuildCompleted?.Invoke(new BuildResult(process.ExitCode == 0, output, error));
+        }
+    }
+
+    private SpecRunResult RunSpec(string specFile)
+    {
+        var fullPath = Path.GetFullPath(specFile);
+        var workingDir = Path.GetDirectoryName(fullPath)!;
+        var fileName = Path.GetFileName(fullPath);
+
+        var stopwatch = Stopwatch.StartNew();
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            Arguments = $"script \"{fileName}\" --no-cache",
+            WorkingDirectory = workingDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(psi)!;
+        var output = process.StandardOutput.ReadToEnd();
+        var error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        stopwatch.Stop();
+
+        return new SpecRunResult(
+            specFile,
+            output,
+            error,
+            process.ExitCode,
+            stopwatch.Elapsed);
     }
 }

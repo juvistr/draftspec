@@ -22,6 +22,35 @@ public class ConsolePresenter
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {specFiles.Count} spec file(s)...");
         Console.ResetColor();
+    }
+
+    public void ShowBuilding(string project)
+    {
+        var name = Path.GetFileNameWithoutExtension(project);
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.Write($"  Building {name}... ");
+        Console.ResetColor();
+    }
+
+    public void ShowBuildResult(BuildResult result)
+    {
+        if (result.Success)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("ok");
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("failed");
+            if (!string.IsNullOrWhiteSpace(result.Error))
+                Console.WriteLine(result.Error);
+        }
+        Console.ResetColor();
+    }
+
+    public void ShowSpecsStarting()
+    {
         Console.WriteLine();
     }
 

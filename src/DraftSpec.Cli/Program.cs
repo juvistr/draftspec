@@ -159,7 +159,7 @@ static int ShowUsage(string? error = null)
 static int RunSpecs(CliOptions options)
 {
     var finder = new SpecFinder();
-    var runner = new SpecRunner();
+    var runner = new SpecFileRunner();
 
     // For non-console formats, we need JSON output from specs
     var needsJson = options.Format is "json" or "markdown" or "html";
@@ -275,7 +275,7 @@ static void BuildProjects(string directory)
 static async Task<int> WatchSpecs(string path)
 {
     var finder = new SpecFinder();
-    var runner = new SpecRunner();
+    var runner = new SpecFileRunner();
     var presenter = new ConsolePresenter(watchMode: true);
 
     runner.OnBuildStarted += presenter.ShowBuilding;

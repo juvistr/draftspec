@@ -24,7 +24,7 @@ public record RunSummary(
 
 public record BuildResult(bool Success, string Output, string Error);
 
-public class SpecRunner
+public class SpecFileRunner
 {
     public event Action<string>? OnBuildStarted;
     public event Action<BuildResult>? OnBuildCompleted;

@@ -1,4 +1,6 @@
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DraftSpec;
 
@@ -174,18 +176,25 @@ public static class Dsl
     /// Run all collected specs and output results.
     /// Sets Environment.ExitCode to 1 if any specs failed.
     /// </summary>
-    public static void run()
+    /// <param name="json">If true, output JSON instead of console format</param>
+    public static void run(bool json = false)
     {
         if (RootContext is null)
         {
-            Console.WriteLine("No specs defined.");
+            if (json)
+                Console.WriteLine("{}");
+            else
+                Console.WriteLine("No specs defined.");
             return;
         }
 
         var runner = new SpecRunner();
         var results = runner.Run(RootContext);
 
-        OutputResults(results);
+        if (json)
+            OutputJson(RootContext, results);
+        else
+            OutputConsole(results);
 
         // Set exit code based on failures
         var failed = results.Count(r => r.Status == SpecStatus.Failed);
@@ -205,7 +214,7 @@ public static class Dsl
             throw new InvalidOperationException("Must be called inside a describe() block");
     }
 
-    private static void OutputResults(List<SpecResult> results)
+    private static void OutputConsole(List<SpecResult> results)
     {
         Console.WriteLine();
 
@@ -275,4 +284,109 @@ public static class Dsl
         WriteStat(skipped, "skipped", ConsoleColor.DarkGray);
         Console.WriteLine();
     }
+
+    private static void OutputJson(SpecContext rootContext, List<SpecResult> results)
+    {
+        var passed = results.Count(r => r.Status == SpecStatus.Passed);
+        var failed = results.Count(r => r.Status == SpecStatus.Failed);
+        var pending = results.Count(r => r.Status == SpecStatus.Pending);
+        var skipped = results.Count(r => r.Status == SpecStatus.Skipped);
+
+        var report = new JsonReport
+        {
+            Timestamp = DateTime.UtcNow,
+            Summary = new JsonSummary
+            {
+                Total = results.Count,
+                Passed = passed,
+                Failed = failed,
+                Pending = pending,
+                Skipped = skipped
+            },
+            Contexts = BuildContextTree(rootContext, results)
+        };
+
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
+        Console.WriteLine(JsonSerializer.Serialize(report, options));
+    }
+
+    private static List<JsonContext> BuildContextTree(SpecContext context, List<SpecResult> allResults)
+    {
+        var contextList = new List<JsonContext>();
+        BuildContextTreeRecursive(context, allResults, contextList, []);
+        return contextList;
+    }
+
+    private static void BuildContextTreeRecursive(
+        SpecContext context,
+        List<SpecResult> allResults,
+        List<JsonContext> targetList,
+        List<string> currentPath)
+    {
+        var jsonContext = new JsonContext { Description = context.Description };
+        currentPath.Add(context.Description);
+
+        // Find specs that belong to this context
+        foreach (var spec in context.Specs)
+        {
+            var result = allResults.FirstOrDefault(r =>
+                r.Spec == spec && r.ContextPath.SequenceEqual(currentPath));
+
+            jsonContext.Specs.Add(new JsonSpec
+            {
+                Description = spec.Description,
+                Status = result?.Status.ToString().ToLowerInvariant() ?? "unknown",
+                Error = result?.Exception?.Message
+            });
+        }
+
+        // Recursively process child contexts
+        foreach (var child in context.Children)
+        {
+            BuildContextTreeRecursive(child, allResults, jsonContext.Contexts, [.. currentPath]);
+        }
+
+        // Only add if there are specs or nested contexts
+        if (jsonContext.Specs.Count > 0 || jsonContext.Contexts.Count > 0)
+        {
+            targetList.Add(jsonContext);
+        }
+    }
+}
+
+// JSON output models
+internal class JsonReport
+{
+    public DateTime Timestamp { get; set; }
+    public JsonSummary Summary { get; set; } = new();
+    public List<JsonContext> Contexts { get; set; } = [];
+}
+
+internal class JsonSummary
+{
+    public int Total { get; set; }
+    public int Passed { get; set; }
+    public int Failed { get; set; }
+    public int Pending { get; set; }
+    public int Skipped { get; set; }
+}
+
+internal class JsonContext
+{
+    public string Description { get; set; } = "";
+    public List<JsonSpec> Specs { get; set; } = [];
+    public List<JsonContext> Contexts { get; set; } = [];
+}
+
+internal class JsonSpec
+{
+    public string Description { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string? Error { get; set; }
 }

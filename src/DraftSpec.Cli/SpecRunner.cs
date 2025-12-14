@@ -151,4 +151,63 @@ public class SpecRunner
             process.ExitCode,
             stopwatch.Elapsed);
     }
+
+    /// <summary>
+    /// Run a spec file with JSON output mode.
+    /// Modifies the script to call run(json: true) instead of run().
+    /// </summary>
+    public SpecRunResult RunWithJson(string specFile)
+    {
+        var fullPath = Path.GetFullPath(specFile);
+        var workingDir = Path.GetDirectoryName(fullPath)!;
+        var fileName = Path.GetFileName(fullPath);
+
+        // Read the script and modify run() to run(json: true)
+        var scriptContent = File.ReadAllText(fullPath);
+        var modifiedScript = scriptContent
+            .Replace("run();", "run(json: true);")
+            .Replace("run()", "run(json: true)");
+
+        // Write to temp file
+        var tempFile = Path.Combine(workingDir, $".{Path.GetFileNameWithoutExtension(fileName)}.json.csx");
+        File.WriteAllText(tempFile, modifiedScript);
+
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = $"script \"{Path.GetFileName(tempFile)}\" --no-cache",
+                WorkingDirectory = workingDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(psi)!;
+            var output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            stopwatch.Stop();
+
+            return new SpecRunResult(
+                specFile,
+                output,
+                error,
+                process.ExitCode,
+                stopwatch.Elapsed);
+        }
+        finally
+        {
+            // Clean up temp file
+            if (File.Exists(tempFile))
+            {
+                File.Delete(tempFile);
+            }
+        }
+    }
 }

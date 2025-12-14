@@ -252,6 +252,15 @@ public static class Dsl
             throw new InvalidOperationException("Must be called inside a describe() block");
     }
 
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalMilliseconds < 1)
+            return $"{duration.TotalMicroseconds:F0}µs";
+        if (duration.TotalMilliseconds < 1000)
+            return $"{duration.TotalMilliseconds:F0}ms";
+        return $"{duration.TotalSeconds:F2}s";
+    }
+
     private static void OutputConsole(List<SpecResult> results)
     {
         Console.WriteLine();
@@ -286,7 +295,16 @@ public static class Dsl
             Console.ForegroundColor = color;
             Console.Write($"{specIndent}{symbol} ");
             Console.ResetColor();
-            Console.WriteLine(result.Spec.Description);
+            Console.Write(result.Spec.Description);
+
+            // Show duration for specs that ran
+            if (result.Status is SpecStatus.Passed or SpecStatus.Failed && result.Duration.TotalMilliseconds > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($" ({FormatDuration(result.Duration)})");
+                Console.ResetColor();
+            }
+            Console.WriteLine();
 
             if (result.Status == SpecStatus.Failed && result.Exception != null)
             {
@@ -320,6 +338,11 @@ public static class Dsl
         WriteStat(failed, "failed", ConsoleColor.Red);
         WriteStat(pending, "pending", ConsoleColor.Yellow);
         WriteStat(skipped, "skipped", ConsoleColor.DarkGray);
+
+        var totalDuration = TimeSpan.FromMilliseconds(results.Sum(r => r.Duration.TotalMilliseconds));
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.Write($" in {FormatDuration(totalDuration)}");
+        Console.ResetColor();
         Console.WriteLine();
     }
 
@@ -330,6 +353,8 @@ public static class Dsl
         var pending = results.Count(r => r.Status == SpecStatus.Pending);
         var skipped = results.Count(r => r.Status == SpecStatus.Skipped);
 
+        var totalDuration = results.Sum(r => r.Duration.TotalMilliseconds);
+
         var report = new JsonReport
         {
             Timestamp = DateTime.UtcNow,
@@ -339,7 +364,8 @@ public static class Dsl
                 Passed = passed,
                 Failed = failed,
                 Pending = pending,
-                Skipped = skipped
+                Skipped = skipped,
+                DurationMs = totalDuration
             },
             Contexts = BuildContextTree(rootContext, results)
         };
@@ -380,6 +406,7 @@ public static class Dsl
             {
                 Description = spec.Description,
                 Status = result?.Status.ToString().ToLowerInvariant() ?? "unknown",
+                DurationMs = result?.Duration.TotalMilliseconds,
                 Error = result?.Exception?.Message
             });
         }
@@ -413,6 +440,7 @@ internal class JsonSummary
     public int Failed { get; set; }
     public int Pending { get; set; }
     public int Skipped { get; set; }
+    public double DurationMs { get; set; }
 }
 
 internal class JsonContext
@@ -426,5 +454,6 @@ internal class JsonSpec
 {
     public string Description { get; set; } = "";
     public string Status { get; set; } = "";
+    public double? DurationMs { get; set; }
     public string? Error { get; set; }
 }

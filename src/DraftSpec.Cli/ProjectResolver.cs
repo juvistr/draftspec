@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace DraftSpec.Cli;
 
 /// <summary>
@@ -34,24 +32,11 @@ public class ProjectResolver
 
     private string? GetMSBuildProperty(string csprojPath, string property)
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"msbuild \"{csprojPath}\" -getProperty:{property}",
-            WorkingDirectory = Path.GetDirectoryName(csprojPath),
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        var result = ProcessHelper.RunDotnet(
+            $"msbuild \"{csprojPath}\" -getProperty:{property}",
+            Path.GetDirectoryName(csprojPath));
 
-        using var process = Process.Start(psi);
-        if (process == null)
-            return null;
-
-        var output = process.StandardOutput.ReadToEnd().Trim();
-        process.WaitForExit();
-
-        return process.ExitCode == 0 && !string.IsNullOrEmpty(output) ? output : null;
+        var output = result.Output.Trim();
+        return result.Success && !string.IsNullOrEmpty(output) ? output : null;
     }
 }

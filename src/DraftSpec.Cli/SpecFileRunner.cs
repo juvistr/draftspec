@@ -39,30 +39,14 @@ public class SpecFileRunner
         BuildProjects(workingDir);
 
         var stopwatch = Stopwatch.StartNew();
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"script \"{fileName}\" --no-cache",
-            WorkingDirectory = workingDir,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        using var process = Process.Start(psi)!;
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
+        var result = ProcessHelper.RunDotnet($"script \"{fileName}\" --no-cache", workingDir);
         stopwatch.Stop();
 
         return new SpecRunResult(
             specFile,
-            output,
-            error,
-            process.ExitCode,
+            result.Output,
+            result.Error,
+            result.ExitCode,
             stopwatch.Elapsed);
     }
 
@@ -115,23 +99,9 @@ public class SpecFileRunner
         {
             OnBuildStarted?.Invoke(project);
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = "dotnet",
-                Arguments = $"build \"{project}\" --nologo -v q",
-                WorkingDirectory = directory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
+            var result = ProcessHelper.RunDotnet($"build \"{project}\" --nologo -v q", directory);
 
-            using var process = Process.Start(psi)!;
-            var output = process.StandardOutput.ReadToEnd();
-            var error = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-
-            OnBuildCompleted?.Invoke(new BuildResult(process.ExitCode == 0, output, error));
+            OnBuildCompleted?.Invoke(new BuildResult(result.Success, result.Output, result.Error));
         }
     }
 
@@ -142,30 +112,14 @@ public class SpecFileRunner
         var fileName = Path.GetFileName(fullPath);
 
         var stopwatch = Stopwatch.StartNew();
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"script \"{fileName}\" --no-cache",
-            WorkingDirectory = workingDir,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        using var process = Process.Start(psi)!;
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
+        var result = ProcessHelper.RunDotnet($"script \"{fileName}\" --no-cache", workingDir);
         stopwatch.Stop();
 
         return new SpecRunResult(
             specFile,
-            output,
-            error,
-            process.ExitCode,
+            result.Output,
+            result.Error,
+            result.ExitCode,
             stopwatch.Elapsed);
     }
 
@@ -192,30 +146,14 @@ public class SpecFileRunner
         try
         {
             var stopwatch = Stopwatch.StartNew();
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = "dotnet",
-                Arguments = $"script \"{Path.GetFileName(tempFile)}\" --no-cache",
-                WorkingDirectory = workingDir,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(psi)!;
-            var output = process.StandardOutput.ReadToEnd();
-            var error = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-
+            var result = ProcessHelper.RunDotnet($"script \"{Path.GetFileName(tempFile)}\" --no-cache", workingDir);
             stopwatch.Stop();
 
             return new SpecRunResult(
                 specFile,
-                output,
-                error,
-                process.ExitCode,
+                result.Output,
+                result.Error,
+                result.ExitCode,
                 stopwatch.Elapsed);
         }
         finally

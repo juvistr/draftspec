@@ -256,19 +256,7 @@ static void BuildProjects(string directory)
     var projects = Directory.GetFiles(directory, "*.csproj");
     foreach (var project in projects)
     {
-        var psi = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"build \"{project}\" --nologo -v q",
-            WorkingDirectory = directory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        using var process = System.Diagnostics.Process.Start(psi)!;
-        process.WaitForExit();
+        ProcessHelper.RunDotnet($"build \"{project}\" --nologo -v q", directory);
     }
 }
 

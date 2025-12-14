@@ -7,12 +7,14 @@ namespace DraftSpec;
 /// </summary>
 public class SpecRunner
 {
-    public List<SpecResult> Run(Spec spec)
+    public List<SpecResult> Run(Spec spec) => Run(spec.RootContext);
+
+    public List<SpecResult> Run(SpecContext rootContext)
     {
         var results = new List<SpecResult>();
-        var hasFocused = HasFocusedSpecs(spec.RootContext);
+        var hasFocused = HasFocusedSpecs(rootContext);
 
-        RunContext(spec.RootContext, [], results, hasFocused);
+        RunContext(rootContext, [], results, hasFocused);
 
         return results;
     }

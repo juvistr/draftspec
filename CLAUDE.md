@@ -4,24 +4,65 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DraftSpec is an early-stage project to build an expressive spec-first testing framework for .NET 10, inspired by RSpec/Jasmine. The goal is to fill the gap left by abandoned frameworks like NSpec by leveraging modern C# 14 features.
+DraftSpec is an RSpec-inspired testing framework for .NET 10, filling the gap left by abandoned frameworks like NSpec.
 
-## Key C# 14/.NET 10 Features Under Consideration
+## Build and Test Commands
 
-- **Extension members**: Enable property-based assertion syntax (not just methods)
-- **CallerArgumentExpression**: Capture source expressions for meaningful assertion failures
-- **Source generators with interceptors**: Reflection-free test discovery for Native AOT
-- **params collections**: Zero-allocation variadic methods via `params Span<T>`
+```bash
+dotnet build                                          # Build all projects
+dotnet run --project src/DraftSpec.Scratchpad         # Run DSL scratchpad
+dotnet run --project tests/DraftSpec.Tests            # Run TUnit tests
+```
 
-## Design Goals
+## Project Structure
 
-- RSpec-style nesting with `describe/context/it` hierarchy
-- First-class pending specs (document intent before implementation)
-- Focus (`fit`/`fdescribe`) and skip (`xit`/`xdescribe`) mechanisms
-- Let-style memoization
-- AOT compatibility via source generators
-- Rich CLI output (Spectre.Console)
+```
+DraftSpec.sln
+src/
+  DraftSpec/                      # Core library
+    Spec.cs                       # Base class: describe/context/it/fit/xit, hooks
+    SpecContext.cs                # Nested block with children, specs, hooks
+    SpecDefinition.cs             # Single spec: description, body, flags
+    SpecResult.cs                 # Execution result with ContextPath
+    SpecRunner.cs                 # Tree walker, executes specs
+  DraftSpec.Scratchpad/           # Console app for DSL experimentation
+    PatientRecordSpec.cs          # Example spec
+    Program.cs                    # Hierarchical output renderer
+tests/
+  DraftSpec.Tests/                # TUnit tests for internals
+    HookOrderingTests.cs          # Verifies before/after hook order
+    FocusModeTests.cs             # Verifies fit/xit behavior
+```
 
-## Related Research
+## Current DSL
 
-See `docs/RESEARCH.md` for detailed analysis of existing frameworks, C# 14 features, and architectural options. Note that specific syntax patterns in that document are suggestions to evaluate, not decisions.
+```csharp
+public class MySpec : Spec
+{
+    public MySpec()
+    {
+        describe("feature", () =>
+        {
+            before = () => { /* runs before each spec */ };
+            after = () => { /* runs after each spec */ };
+            beforeAll = () => { /* runs once before all specs in context */ };
+            afterAll = () => { /* runs once after all specs in context */ };
+
+            it("does something", () => { /* assertion */ });
+            it("pending spec");                              // no body = pending
+            fit("focused", () => { });                       // only focused specs run
+            xit("skipped", () => { });                       // explicitly skipped
+        });
+    }
+}
+```
+
+## Key Behaviors
+
+- **Hook order**: beforeAll → beforeEach (parent→child) → spec → afterEach (child→parent) → afterAll
+- **Focus mode**: Any `fit` causes all non-focused specs to skip
+- **Pending**: `it("description")` without body marks spec as pending
+
+## Research
+
+See `docs/research/INITIAL.md` for analysis of C# 14 features and framework landscape.

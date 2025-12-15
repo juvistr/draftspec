@@ -13,7 +13,7 @@ dotnet build                                          # Build all projects
 dotnet run --project tests/DraftSpec.Tests            # Run TUnit tests
 
 # Run CSX specs
-cd examples/Calculator && dotnet script Calculator.spec.csx
+cd examples/TodoApi && dotnet script Specs/features_showcase.spec.csx
 ```
 
 ## Project Structure
@@ -24,16 +24,21 @@ src/
   DraftSpec/                      # Core library
     Dsl.cs                        # Static DSL for CSX: describe/it/expect
     Spec.cs                       # Class-based DSL (alternative)
-    Expect.cs                     # Jest-style assertions
-    AssertionException.cs         # Assertion failure exception
+    Expectations/                 # Jest-style assertions (Expectation<T>, etc.)
     SpecContext.cs                # Nested block with children, specs, hooks
     SpecDefinition.cs             # Single spec: description, body, flags
     SpecResult.cs                 # Execution result with ContextPath
     SpecRunner.cs                 # Tree walker, executes specs
+  DraftSpec.Cli/                  # CLI tool (dotnet tool)
+  DraftSpec.Formatters.*/         # Output formatters (Console, Html, Markdown)
 examples/
-  Calculator/                     # Example project with CSX specs
-    Calculator.cs                 # StringCalculator implementation
-    Calculator.spec.csx           # Specs using expect() API
+  TodoApi/                        # Comprehensive example project
+    spec_helper.csx               # Shared setup + fixtures
+    Specs/
+      features_showcase.spec.csx  # Systematic feature demo
+      TodoService.spec.csx        # Real-world usage patterns
+      async_specs.spec.csx        # Async/await patterns
+      hooks_demo.spec.csx         # Hook execution order
 tests/
   DraftSpec.Tests/                # TUnit tests for internals
 ```
@@ -41,19 +46,18 @@ tests/
 ## CSX Specs (Recommended)
 
 ```csharp
-// Calculator.spec.csx
-#r "path/to/DraftSpec.dll"
-#r "bin/Debug/net10.0/MyProject.dll"
+// TodoService.spec.csx
+#load "../spec_helper.csx"
 using static DraftSpec.Dsl;
 
-describe("Calculator", () =>
+describe("TodoService", () =>
 {
-    before(() => { /* runs before each spec */ });
-    after(() => { /* runs after each spec */ });
+    before(() => { service = CreateService(); });
 
-    it("adds numbers", () =>
+    it("creates a todo", async () =>
     {
-        expect(calc.Add("1,2")).toBe(3);
+        var todo = await service.CreateAsync("Buy milk");
+        expect(todo.Title).toBe("Buy milk");
     });
 
     it("pending spec");  // no body = pending
@@ -65,7 +69,7 @@ describe("Calculator", () =>
 run();
 ```
 
-Run with: `dotnet script Calculator.spec.csx`
+Run with: `dotnet script Specs/TodoService.spec.csx`
 
 ## Assertions (expect API)
 
@@ -78,13 +82,15 @@ expect(flag).toBeFalse();
 expect(str).toContain("substring");     // string
 expect(str).toStartWith("prefix");
 expect(str).toEndWith("suffix");
+expect(items).toContain(item);          // collections
+expect(items).toHaveCount(3);
 expect(() => action()).toThrow<T>();    // exceptions
 expect(() => action()).toNotThrow();
 ```
 
 Failures auto-capture the expression:
 ```
-Expected calc.Add("1,2") to be 5, but was 3
+Expected todo.Title to be "Buy milk", but was "Buy bread"
 ```
 
 ## Key Behaviors

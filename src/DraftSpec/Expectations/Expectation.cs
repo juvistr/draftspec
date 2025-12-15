@@ -1,3 +1,5 @@
+using DraftSpec.Expectations;
+
 namespace DraftSpec;
 
 /// <summary>
@@ -21,7 +23,7 @@ public class Expectation<T>
     {
         if (!Equals(_actual, expected))
             throw new AssertionException(
-                $"Expected {_expr} to be {Format(expected)}, but was {Format(_actual)}");
+                $"Expected {_expr} to be {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(_actual)}");
     }
 
     /// <summary>
@@ -31,7 +33,7 @@ public class Expectation<T>
     {
         if (_actual is not null)
             throw new AssertionException(
-                $"Expected {_expr} to be null, but was {Format(_actual)}");
+                $"Expected {_expr} to be null, but was {ExpectationHelpers.Format(_actual)}");
     }
 
     /// <summary>
@@ -55,7 +57,7 @@ public class Expectation<T>
 
         if (comparable.CompareTo(expected) <= 0)
             throw new AssertionException(
-                $"Expected {_expr} to be greater than {Format(expected)}, but was {Format(_actual)}");
+                $"Expected {_expr} to be greater than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(_actual)}");
     }
 
     /// <summary>
@@ -69,7 +71,7 @@ public class Expectation<T>
 
         if (comparable.CompareTo(expected) >= 0)
             throw new AssertionException(
-                $"Expected {_expr} to be less than {Format(expected)}, but was {Format(_actual)}");
+                $"Expected {_expr} to be less than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(_actual)}");
     }
 
     /// <summary>
@@ -83,7 +85,7 @@ public class Expectation<T>
 
         if (comparable.CompareTo(expected) < 0)
             throw new AssertionException(
-                $"Expected {_expr} to be at least {Format(expected)}, but was {Format(_actual)}");
+                $"Expected {_expr} to be at least {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(_actual)}");
     }
 
     /// <summary>
@@ -97,7 +99,7 @@ public class Expectation<T>
 
         if (comparable.CompareTo(expected) > 0)
             throw new AssertionException(
-                $"Expected {_expr} to be at most {Format(expected)}, but was {Format(_actual)}");
+                $"Expected {_expr} to be at most {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(_actual)}");
     }
 
     /// <summary>
@@ -111,7 +113,7 @@ public class Expectation<T>
 
         if (comparable.CompareTo(min) < 0 || comparable.CompareTo(max) > 0)
             throw new AssertionException(
-                $"Expected {_expr} to be in range [{Format(min)}, {Format(max)}], but was {Format(_actual)}");
+                $"Expected {_expr} to be in range [{ExpectationHelpers.Format(min)}, {ExpectationHelpers.Format(max)}], but was {ExpectationHelpers.Format(_actual)}");
     }
 
     /// <summary>
@@ -129,7 +131,7 @@ public class Expectation<T>
 
         if (diff.Value > tol.Value)
             throw new AssertionException(
-                $"Expected {_expr} to be close to {Format(expected)} (±{Format(tolerance)}), but was {Format(_actual)} (diff: {diff.Value})");
+                $"Expected {_expr} to be close to {ExpectationHelpers.Format(expected)} (±{ExpectationHelpers.Format(tolerance)}), but was {ExpectationHelpers.Format(_actual)} (diff: {diff.Value})");
     }
 
     private static double? GetNumericDifference(T? a, T? b)
@@ -159,13 +161,4 @@ public class Expectation<T>
         };
     }
 
-    private static string Format(object? value)
-    {
-        return value switch
-        {
-            null => "null",
-            string s => $"\"{s}\"",
-            _ => value.ToString() ?? "null"
-        };
-    }
 }

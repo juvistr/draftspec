@@ -1,3 +1,5 @@
+using DraftSpec.Expectations;
+
 namespace DraftSpec;
 
 /// <summary>
@@ -21,7 +23,7 @@ public class CollectionExpectation<T>
     {
         if (!_actual.Contains(expected))
             throw new AssertionException(
-                $"Expected {_expr} to contain {Format(expected)}, but it did not. Contents: [{FormatCollection()}]");
+                $"Expected {_expr} to contain {ExpectationHelpers.Format(expected)}, but it did not. Contents: [{FormatCollection()}]");
     }
 
     /// <summary>
@@ -31,7 +33,7 @@ public class CollectionExpectation<T>
     {
         if (_actual.Contains(expected))
             throw new AssertionException(
-                $"Expected {_expr} to not contain {Format(expected)}, but it did");
+                $"Expected {_expr} to not contain {ExpectationHelpers.Format(expected)}, but it did");
     }
 
     /// <summary>
@@ -42,7 +44,7 @@ public class CollectionExpectation<T>
         var missing = expected.Where(e => !_actual.Contains(e)).ToList();
         if (missing.Count > 0)
             throw new AssertionException(
-                $"Expected {_expr} to contain all of [{string.Join(", ", expected.Select(e => Format(e)))}], but was missing [{string.Join(", ", missing.Select(e => Format(e)))}]");
+                $"Expected {_expr} to contain all of [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was missing [{string.Join(", ", missing.Select(e => ExpectationHelpers.Format(e)))}]");
     }
 
     /// <summary>
@@ -83,7 +85,7 @@ public class CollectionExpectation<T>
     {
         if (!_actual.SequenceEqual(expected))
             throw new AssertionException(
-                $"Expected {_expr} to be [{string.Join(", ", expected.Select(e => Format(e)))}], but was [{FormatCollection()}]");
+                $"Expected {_expr} to be [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was [{FormatCollection()}]");
     }
 
     /// <summary>
@@ -96,20 +98,10 @@ public class CollectionExpectation<T>
 
     private string FormatCollection()
     {
-        var items = _actual.Take(10).Select(e => Format(e));
+        var items = _actual.Take(10).Select(e => ExpectationHelpers.Format(e));
         var result = string.Join(", ", items);
         if (_actual.Count() > 10)
             result += ", ...";
         return result;
-    }
-
-    private static string Format(object? value)
-    {
-        return value switch
-        {
-            null => "null",
-            string s => $"\"{s}\"",
-            _ => value.ToString() ?? "null"
-        };
     }
 }

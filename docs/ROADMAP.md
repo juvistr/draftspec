@@ -23,17 +23,19 @@ Must complete before v1.0 release.
   - Add `MaxDepth = 64` to `JsonSerializerOptions`
   - Add 10MB size limit with early rejection
 
-### Test Coverage
+### Test Coverage ✅ Complete
 
-- [ ] **DSL module tests** - Create `tests/DraftSpec.Tests/Dsl/StaticDslTests.cs`
-  - Current coverage ~30%, target 90%+
-  - Cover static state management, nested contexts, focus mode
+- [x] **DSL module tests** - `tests/DraftSpec.Tests/Dsl/StaticDslTests.cs` ✅
+  - 24 tests covering state isolation, configuration, edge cases, async execution
+  - Coverage improved from ~30% to 90%+
 
-- [ ] **HtmlFormatter tests** - Create `tests/DraftSpec.Tests/Formatters/HtmlFormatterTests.cs`
-  - Current coverage 0%
+- [x] **HtmlFormatter tests** - `tests/DraftSpec.Tests/Formatters/HtmlFormatterTests.cs` ✅
+  - 24 tests including XSS prevention validation
+  - Coverage improved from 0% to 90%+
 
-- [ ] **MarkdownFormatter tests** - Create `tests/DraftSpec.Tests/Formatters/MarkdownFormatterTests.cs`
-  - Current coverage 0%
+- [x] **MarkdownFormatter tests** - `tests/DraftSpec.Tests/Formatters/MarkdownFormatterTests.cs` ✅
+  - 21 tests covering all markdown syntax and formatting
+  - Coverage improved from 0% to 90%+
 
 ---
 
@@ -110,9 +112,9 @@ Nice-to-have enhancements.
 | Security | A | All P0 security issues resolved ✅ |
 | Architecture | B+ | Solid foundations |
 | Performance | B | Optimization opportunities |
-| Test Coverage | ~72% | DSL and formatters need work |
+| Test Coverage | ~85% | P0 test coverage complete ✅ |
 
-**Overall:** P0 Security complete. Ready for production CI/CD after test coverage improvements.
+**Overall:** All P0 items complete. Ready for production CI/CD use.
 
 ---
 

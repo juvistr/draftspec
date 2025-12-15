@@ -17,11 +17,20 @@ public class ConsolePresenter
         }
     }
 
-    public void ShowHeader(IReadOnlyList<string> specFiles, bool parallel = false)
+    public void ShowHeader(IReadOnlyList<string> specFiles, bool parallel = false, bool isPartialRun = false)
     {
         Console.ForegroundColor = ConsoleColor.DarkGray;
         var mode = parallel && specFiles.Count > 1 ? " in parallel" : "";
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {specFiles.Count} spec file(s){mode}...");
+
+        if (isPartialRun && specFiles.Count == 1)
+        {
+            var fileName = Path.GetFileName(specFiles[0]);
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {fileName}...");
+        }
+        else
+        {
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {specFiles.Count} spec file(s){mode}...");
+        }
         Console.ResetColor();
     }
 

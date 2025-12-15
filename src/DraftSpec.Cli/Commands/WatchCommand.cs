@@ -21,15 +21,15 @@ public static class WatchCommand
         };
 
         RunSummary? lastSummary = null;
+        IReadOnlyList<string>? allSpecFiles = null;
 
-        void RunOnce()
+        void RunSpecs(IReadOnlyList<string> specFiles, bool isPartialRun = false)
         {
             presenter.Clear();
 
             try
             {
-                var specFiles = finder.FindSpecs(path);
-                presenter.ShowHeader(specFiles);
+                presenter.ShowHeader(specFiles, isPartialRun: isPartialRun);
 
                 lastSummary = runner.RunAll(specFiles);
 
@@ -49,14 +49,36 @@ public static class WatchCommand
             presenter.ShowWatching();
         }
 
+        void RunAll()
+        {
+            allSpecFiles = finder.FindSpecs(path);
+            RunSpecs(allSpecFiles);
+        }
+
         // Initial run
-        RunOnce();
+        RunAll();
 
         // Set up watcher
-        using var watcher = new FileWatcher(path, () =>
+        using var watcher = new FileWatcher(path, change =>
         {
             presenter.ShowRerunning();
-            RunOnce();
+
+            // Selective re-run: if only one spec file changed, run just that one
+            if (change.IsSpecFile && change.FilePath != null)
+            {
+                // Verify the changed file is in our spec list
+                var changedSpec = allSpecFiles?.FirstOrDefault(f =>
+                    string.Equals(Path.GetFullPath(f), change.FilePath, StringComparison.OrdinalIgnoreCase));
+
+                if (changedSpec != null)
+                {
+                    RunSpecs([changedSpec], isPartialRun: true);
+                    return;
+                }
+            }
+
+            // Full run: source file changed, multiple files changed, or file not in list
+            RunAll();
         });
 
         // Wait for cancellation

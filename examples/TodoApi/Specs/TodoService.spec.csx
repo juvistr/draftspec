@@ -230,6 +230,15 @@ describe("TodoService", () =>
         });
     });
 
+    describe("RemoveTagAsync", () =>
+    {
+        it("removes the specified tag");
+
+        it("does nothing if tag not present");
+
+        it("is case-insensitive");
+    });
+
     describe("GetOverdueAsync", () =>
     {
         before(async () =>

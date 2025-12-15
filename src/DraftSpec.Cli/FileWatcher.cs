@@ -1,14 +1,22 @@
 namespace DraftSpec.Cli;
 
+/// <summary>
+/// Information about a file change event.
+/// </summary>
+/// <param name="FilePath">The changed file path, or null if multiple files changed</param>
+/// <param name="IsSpecFile">True if a single spec file changed, false if source or multiple files changed</param>
+public record FileChangeInfo(string? FilePath, bool IsSpecFile);
+
 public class FileWatcher : IDisposable
 {
     private readonly List<FileSystemWatcher> _watchers = [];
-    private readonly Action _onChange;
+    private readonly Action<FileChangeInfo> _onChange;
     private readonly int _debounceMs;
     private Timer? _debounceTimer;
     private readonly object _lock = new();
+    private FileChangeInfo? _pendingChange;
 
-    public FileWatcher(string path, Action onChange, int debounceMs = 200)
+    public FileWatcher(string path, Action<FileChangeInfo> onChange, int debounceMs = 200)
     {
         _onChange = onChange;
         _debounceMs = debounceMs;
@@ -47,14 +55,33 @@ public class FileWatcher : IDisposable
         if (e.Name?.StartsWith(".") == true || e.Name?.EndsWith("~") == true)
             return;
 
+        var isSpecFile = e.FullPath.EndsWith(".spec.csx", StringComparison.OrdinalIgnoreCase);
+
         lock (_lock)
         {
+            // Track which file changed (for selective re-running)
+            // If multiple files change during debounce, escalate to full run
+            if (_pendingChange == null)
+            {
+                _pendingChange = new FileChangeInfo(e.FullPath, isSpecFile);
+            }
+            else if (_pendingChange.IsSpecFile && isSpecFile && _pendingChange.FilePath != e.FullPath)
+            {
+                // Multiple different spec files changed - run all
+                _pendingChange = new FileChangeInfo(null, false);
+            }
+            else if (!isSpecFile)
+            {
+                // Source file changed - run all
+                _pendingChange = new FileChangeInfo(null, false);
+            }
+
             // Reuse timer to avoid allocations on rapid file changes
             if (_debounceTimer == null)
             {
                 // First change - create timer that fires once after debounce period
                 _debounceTimer = new Timer(
-                    _ => _onChange(),
+                    _ => FireChange(),
                     state: null,
                     dueTime: _debounceMs,
                     period: Timeout.Infinite);
@@ -65,6 +92,17 @@ public class FileWatcher : IDisposable
                 _debounceTimer.Change(_debounceMs, Timeout.Infinite);
             }
         }
+    }
+
+    private void FireChange()
+    {
+        FileChangeInfo change;
+        lock (_lock)
+        {
+            change = _pendingChange ?? new FileChangeInfo(null, false);
+            _pendingChange = null;
+        }
+        _onChange(change);
     }
 
     public void Dispose()

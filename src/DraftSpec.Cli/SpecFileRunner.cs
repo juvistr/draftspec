@@ -111,11 +111,12 @@ public class SpecFileRunner
 
     private void BuildProjects(string directory)
     {
-        var projects = Directory.GetFiles(directory, "*.csproj");
+        var (projects, projectDir) = FindProjectFiles(directory);
         if (projects.Length == 0) return;
 
         // Check if rebuild is needed (incremental build support)
-        if (!NeedsRebuild(directory))
+        // Use projectDir for caching since that's where source files are
+        if (!NeedsRebuild(projectDir))
         {
             foreach (var project in projects)
             {
@@ -128,14 +129,44 @@ public class SpecFileRunner
         {
             OnBuildStarted?.Invoke(project);
 
-            var result = ProcessHelper.RunDotnet(["build", project, "--nologo", "-v", "q"], directory);
+            var result = ProcessHelper.RunDotnet(["build", project, "--nologo", "-v", "q"], projectDir);
 
             OnBuildCompleted?.Invoke(new BuildResult(result.Success, result.Output, result.Error));
         }
 
-        // Update build cache on successful build
-        _lastBuildTime[directory] = DateTime.UtcNow;
-        _lastSourceModified[directory] = GetLatestSourceModification(directory);
+        // Update build cache on successful build - use projectDir as key
+        _lastBuildTime[projectDir] = DateTime.UtcNow;
+        _lastSourceModified[projectDir] = GetLatestSourceModification(projectDir);
+    }
+
+    /// <summary>
+    /// Find .csproj files for a spec directory.
+    /// Searches the directory and parent directories up to 3 levels.
+    /// Returns the projects and the directory they were found in.
+    /// </summary>
+    private static (string[] Projects, string ProjectDirectory) FindProjectFiles(string specDirectory)
+    {
+        var currentDir = specDirectory;
+        const int maxLevels = 3;
+
+        for (int i = 0; i < maxLevels; i++)
+        {
+            var projects = Directory.GetFiles(currentDir, "*.csproj");
+            if (projects.Length > 0)
+            {
+                return (projects, currentDir);
+            }
+
+            var parentDir = Directory.GetParent(currentDir)?.FullName;
+            if (parentDir == null || parentDir == currentDir)
+            {
+                break;
+            }
+
+            currentDir = parentDir;
+        }
+
+        return ([], specDirectory);
     }
 
     /// <summary>

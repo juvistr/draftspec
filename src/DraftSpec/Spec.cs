@@ -1,3 +1,5 @@
+using DraftSpec.Internal;
+
 namespace DraftSpec;
 
 /// <summary>
@@ -24,7 +26,7 @@ public abstract class Spec
     protected void describe(string description, Action body)
     {
         var parent = CurrentContext!;
-        var context = new SpecContext(description, parent);
+        var context = ContextBuilder.CreateNestedContext(description, parent);
         CurrentContext = context;
         try
         {
@@ -42,30 +44,45 @@ public abstract class Spec
     // Spec with implementation
     protected void it(string description, Action body)
     {
-        CurrentContext!.AddSpec(new SpecDefinition(description, body));
+        ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateSpec(description, body));
     }
 
     // Pending spec - no implementation yet
     protected void it(string description)
     {
-        CurrentContext!.AddSpec(new SpecDefinition(description));
+        ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreatePendingSpec(description));
     }
 
     // Focused spec - only run focused specs when any exist
     protected void fit(string description, Action body)
     {
-        CurrentContext!.AddSpec(new SpecDefinition(description, body) { IsFocused = true });
+        ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateFocusedSpec(description, body));
     }
 
     // Skipped spec
     protected void xit(string description, Action? body = null)
     {
-        CurrentContext!.AddSpec(new SpecDefinition(description, body) { IsSkipped = true });
+        ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateSkippedSpec(description, body));
     }
 
-    // Hook setters
-    protected Action beforeAll { set => CurrentContext!.BeforeAll = value; }
-    protected Action afterAll { set => CurrentContext!.AfterAll = value; }
-    protected Action before { set => CurrentContext!.BeforeEach = value; }
-    protected Action after { set => CurrentContext!.AfterEach = value; }
+    // Hook setters - use ContextBuilder for validation
+    protected Action beforeAll
+    {
+        set => ContextBuilder.SetBeforeAll(CurrentContext, value);
+    }
+
+    protected Action afterAll
+    {
+        set => ContextBuilder.SetAfterAll(CurrentContext, value);
+    }
+
+    protected Action before
+    {
+        set => ContextBuilder.SetBeforeEach(CurrentContext, value);
+    }
+
+    protected Action after
+    {
+        set => ContextBuilder.SetAfterEach(CurrentContext, value);
+    }
 }

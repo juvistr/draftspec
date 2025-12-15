@@ -1,7 +1,7 @@
 # ADR-001: Spec Infrastructure and Reference Management
 
 **Status:** Proposed
-**Date:** 2024-12-14
+**Date:** 2025-12-14
 **Deciders:** TBD
 
 ## Context
@@ -29,6 +29,7 @@ run();
 4. **Onboarding friction** - New specs require knowing the correct path incantations
 
 We considered several alternatives:
+
 - CLI preprocessing to inject references (custom, non-standard)
 - Class-based specs with attributes (abandons the lightweight CSX approach)
 - Source generators (complex, requires compilation)
@@ -72,6 +73,7 @@ draftspec new Foo # Scaffold a new spec file with #load
 ```
 
 **`draftspec init`** will:
+
 1. Detect `.csproj` in current directory
 2. Query MSBuild for `TargetPath` to get the correct DLL path
 3. Generate `spec_helper.csx` with resolved references
@@ -79,6 +81,7 @@ draftspec new Foo # Scaffold a new spec file with #load
 5. Optionally scaffold a starter spec
 
 **`draftspec new <Name>`** will:
+
 1. Create `<Name>.spec.csx` with `#load "spec_helper.csx"`
 2. Scaffold a basic `describe`/`it` structure
 
@@ -96,6 +99,7 @@ The CLI will generate an `omnisharp.json` to enable OmniSharp features:
 ```
 
 This enables:
+
 - IntelliSense for DraftSpec DSL and loaded fixtures
 - Go to Definition across `#load` boundaries
 - Error squiggles for type mismatches
@@ -159,15 +163,18 @@ Generate spec stubs from interfaces with `[GenerateSpecs]` attributes.
 ## Implementation Plan
 
 1. Add `init` command to CLI
+
    - Detect `.csproj` and query MSBuild for output path
    - Generate `spec_helper.csx` template
    - Generate `omnisharp.json`
 
 2. Add `new` command to CLI
+
    - Accept spec name argument
    - Generate spec file with `#load` and scaffold
 
 3. Publish DraftSpec as NuGet package
+
    - Local feed initially
    - Public later when stable
 

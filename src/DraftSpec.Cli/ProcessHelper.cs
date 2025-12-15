@@ -16,8 +16,13 @@ public static class ProcessHelper
     /// <param name="fileName">The executable to run</param>
     /// <param name="arguments">Arguments to pass to the executable</param>
     /// <param name="workingDirectory">Optional working directory</param>
+    /// <param name="environmentVariables">Optional environment variables to set for the process</param>
     /// <returns>Process result with output, error, and exit code</returns>
-    public static ProcessResult Run(string fileName, IEnumerable<string> arguments, string? workingDirectory = null)
+    public static ProcessResult Run(
+        string fileName,
+        IEnumerable<string> arguments,
+        string? workingDirectory = null,
+        Dictionary<string, string>? environmentVariables = null)
     {
         var psi = new ProcessStartInfo
         {
@@ -35,6 +40,15 @@ public static class ProcessHelper
             psi.ArgumentList.Add(arg);
         }
 
+        // Add environment variables if provided
+        if (environmentVariables != null)
+        {
+            foreach (var kvp in environmentVariables)
+            {
+                psi.EnvironmentVariables[kvp.Key] = kvp.Value;
+            }
+        }
+
         using var process = Process.Start(psi)!;
         var output = process.StandardOutput.ReadToEnd();
         var error = process.StandardError.ReadToEnd();
@@ -48,9 +62,13 @@ public static class ProcessHelper
     /// </summary>
     /// <param name="arguments">Arguments to pass to dotnet</param>
     /// <param name="workingDirectory">Optional working directory</param>
+    /// <param name="environmentVariables">Optional environment variables to set for the process</param>
     /// <returns>Process result with output, error, and exit code</returns>
-    public static ProcessResult RunDotnet(IEnumerable<string> arguments, string? workingDirectory = null)
+    public static ProcessResult RunDotnet(
+        IEnumerable<string> arguments,
+        string? workingDirectory = null,
+        Dictionary<string, string>? environmentVariables = null)
     {
-        return Run("dotnet", arguments, workingDirectory);
+        return Run("dotnet", arguments, workingDirectory, environmentVariables);
     }
 }

@@ -61,21 +61,16 @@ public static class RunCommand
         // JSON/Markdown/HTML - run with JSON output and format
         var specFilesForJson = finder.FindSpecs(options.Path);
 
-        // Build projects first (silently for formatted output)
-        foreach (var dir in specFilesForJson.Select(f => Path.GetDirectoryName(Path.GetFullPath(f))!).Distinct())
-        {
-            BuildProjects(dir);
-        }
-
-        // Run specs with JSON output and collect
+        // Run specs with JSON output via FileReporter (builds projects automatically)
         var jsonOutputs = new List<string>();
         var hasFailures = false;
 
         foreach (var specFile in specFilesForJson)
         {
-            var result = runner.RunWithJson(specFile);
+            var result = runner.RunWithJsonReporter(specFile);
             if (!string.IsNullOrWhiteSpace(result.Output))
             {
+                // Output is now clean JSON from file (not mixed with console output)
                 jsonOutputs.Add(result.Output);
             }
             if (!result.Success)
@@ -130,15 +125,6 @@ public static class RunCommand
         }
 
         return hasFailures ? 1 : 0;
-    }
-
-    private static void BuildProjects(string directory)
-    {
-        var projects = Directory.GetFiles(directory, "*.csproj");
-        foreach (var project in projects)
-        {
-            ProcessHelper.RunDotnet(["build", project, "--nologo", "-v", "q"], directory);
-        }
     }
 
     /// <summary>

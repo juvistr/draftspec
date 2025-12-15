@@ -274,4 +274,70 @@ public class SpecFileRunner
             }
         }
     }
+
+    /// <summary>
+    /// Run a spec file with JSON output via FileReporter.
+    /// Uses environment variable to trigger automatic FileReporter registration.
+    /// </summary>
+    /// <remarks>
+    /// This approach separates JSON output (written to temp file) from console output
+    /// (stays on stdout), avoiding issues where Console.WriteLine in specs corrupts JSON.
+    /// </remarks>
+    public SpecRunResult RunWithJsonReporter(string specFile)
+    {
+        var fullPath = Path.GetFullPath(specFile);
+        var workingDir = Path.GetDirectoryName(fullPath)!;
+        var fileName = Path.GetFileName(fullPath);
+
+        // Build any projects in the spec's directory first
+        BuildProjects(workingDir);
+
+        // Create temp file path for JSON output
+        var jsonOutputFile = Path.Combine(Path.GetTempPath(), $".draftspec-{Guid.NewGuid():N}.json");
+
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+
+            // Run spec with environment variable to trigger FileReporter
+            var envVars = new Dictionary<string, string>
+            {
+                ["DRAFTSPEC_JSON_OUTPUT_FILE"] = jsonOutputFile
+            };
+
+            var result = ProcessHelper.RunDotnet(
+                ["script", fileName, "--no-cache"],
+                workingDir,
+                envVars);
+
+            stopwatch.Stop();
+
+            // Read JSON from temp file (not stdout)
+            string jsonOutput = File.Exists(jsonOutputFile)
+                ? File.ReadAllText(jsonOutputFile)
+                : "{}";
+
+            return new SpecRunResult(
+                specFile,
+                jsonOutput,  // JSON from file, not process stdout
+                result.Error,
+                result.ExitCode,
+                stopwatch.Elapsed);
+        }
+        finally
+        {
+            // Clean up temp file
+            try
+            {
+                if (File.Exists(jsonOutputFile))
+                {
+                    File.Delete(jsonOutputFile);
+                }
+            }
+            catch
+            {
+                // Best-effort cleanup
+            }
+        }
+    }
 }

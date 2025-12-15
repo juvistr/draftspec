@@ -39,18 +39,22 @@ internal static class SpecExecutor
         SpecRunnerBuilder? builder = null,
         DraftSpecConfiguration? configuration = null)
     {
+        // Check if we're in CLI mode with file-based JSON output
+        var jsonOutputFile = Environment.GetEnvironmentVariable(Dsl.JsonOutputFileEnvVar);
+        var useFileReporter = !string.IsNullOrEmpty(jsonOutputFile);
+
         if (rootContext is null)
         {
-            if (json)
+            if (json && !useFileReporter)
                 Console.WriteLine("{}");
-            else
+            else if (!useFileReporter)
                 Console.WriteLine("No specs defined.");
             return;
         }
 
         var report = Execute(rootContext, builder);
 
-        // Invoke reporters' OnRunCompletedAsync
+        // Invoke reporters' OnRunCompletedAsync (includes FileReporter if configured)
         if (configuration != null)
         {
             foreach (var reporter in configuration.Reporters.All)
@@ -59,7 +63,14 @@ internal static class SpecExecutor
             }
         }
 
-        if (json)
+        // Output to console (skip JSON if using file reporter - it's already written)
+        if (useFileReporter)
+        {
+            // In file reporter mode, show console formatted output for user feedback
+            var formatter = new ConsoleFormatter();
+            formatter.Format(report, Console.Out);
+        }
+        else if (json)
         {
             Console.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
         }

@@ -70,8 +70,9 @@ High-impact improvements after v1.0 blockers.
 
 ### Testing
 
-- [ ] **CLI integration tests** - Create `tests/DraftSpec.Tests/Cli/CliIntegrationTests.cs`
-  - Current coverage ~40%
+- [x] **CLI integration tests** - `tests/DraftSpec.Tests/Cli/CliIntegrationTests.cs` ✅
+  - 30 tests covering InitCommand, NewCommand, GetFormatter, SpecFinder, CliOptions
+  - Coverage improved from ~40% to ~70%
 
 ---
 
@@ -112,12 +113,12 @@ Nice-to-have enhancements.
 | Area | Grade | Notes |
 |------|-------|-------|
 | Code Quality | A- | Modern C#, good docs |
-| Security | A | All P0 security issues resolved ✅ |
+| Security | A | All P0 + P1 security issues resolved ✅ |
 | Architecture | B+ | Solid foundations |
-| Performance | B | Optimization opportunities |
-| Test Coverage | ~85% | P0 test coverage complete ✅ |
+| Performance | B+ | Build parallelization complete ✅ |
+| Test Coverage | ~90% | 515 tests, P0 + P1 coverage complete ✅ |
 
-**Overall:** All P0 items complete. Ready for production CI/CD use.
+**Overall:** All P0 items complete. Key P1 items complete. Ready for production CI/CD use.
 
 ---
 

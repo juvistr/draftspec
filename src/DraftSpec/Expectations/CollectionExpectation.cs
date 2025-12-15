@@ -12,7 +12,7 @@ namespace DraftSpec;
 /// Extension methods can access <see cref="Actual"/> and <see cref="Expression"/>
 /// to create custom matchers.
 /// </remarks>
-public class CollectionExpectation<T>
+public readonly struct CollectionExpectation<T>
 {
     /// <summary>
     /// The actual collection being asserted.
@@ -62,7 +62,8 @@ public class CollectionExpectation<T>
     /// </summary>
     public void toContainAll(params T[] expected)
     {
-        var missing = expected.Where(e => !Actual.Contains(e)).ToList();
+        var actual = Actual; // Copy to local for lambda capture in struct
+        var missing = expected.Where(e => !actual.Contains(e)).ToList();
         if (missing.Count > 0)
             throw new AssertionException(
                 $"Expected {Expression} to contain all of [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was missing [{string.Join(", ", missing.Select(e => ExpectationHelpers.Format(e)))}]");

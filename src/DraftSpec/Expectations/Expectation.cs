@@ -26,7 +26,7 @@ namespace DraftSpec;
 /// }
 /// </code>
 /// </example>
-public class Expectation<T>
+public readonly struct Expectation<T>
 {
     /// <summary>
     /// The actual value being asserted.

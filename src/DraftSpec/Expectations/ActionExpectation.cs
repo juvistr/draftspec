@@ -9,7 +9,7 @@ namespace DraftSpec;
 /// Extension methods can access <see cref="Action"/> and <see cref="Expression"/>
 /// to create custom matchers.
 /// </remarks>
-public class ActionExpectation
+public readonly struct ActionExpectation
 {
     /// <summary>
     /// The action being asserted.

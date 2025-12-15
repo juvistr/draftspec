@@ -9,7 +9,7 @@ namespace DraftSpec;
 /// Extension methods can access <see cref="Actual"/> and <see cref="Expression"/>
 /// to create custom matchers.
 /// </remarks>
-public class StringExpectation
+public readonly struct StringExpectation
 {
     /// <summary>
     /// The actual string value being asserted.

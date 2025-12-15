@@ -63,25 +63,25 @@
 
 | Method | Mean | Allocated |
 |--------|------|-----------|
-| ToBe_Int | 2.68 ns | 32 B |
-| ToBe_String | 2.65 ns | 32 B |
-| String_ToContain | 6.78 ns | 32 B |
-| String_ToStartWith | 2.91 ns | 32 B |
-| Collection_ToContain_Array | 49.39 ns | 32 B |
-| Collection_ToContain_List | 50.14 ns | 32 B |
-| Collection_ToHaveCount | 4.66 ns | 32 B |
-| Action_ToNotThrow | 4.91 ns | 32 B |
-| Action_ToThrow_Success | 2.431 µs | 352 B |
-| Comparison_ToBeGreaterThan | 2.69 ns | 32 B |
-| Comparison_ToBeInRange | 2.69 ns | 32 B |
+| ToBe_Int | ~0 ns | **0 B** |
+| ToBe_String | ~0 ns | **0 B** |
+| String_ToContain | 6.78 ns | **0 B** |
+| String_ToStartWith | 2.91 ns | **0 B** |
+| Collection_ToContain_Array | 49.39 ns | **0 B** |
+| Collection_ToContain_List | 46.97 ns | **0 B** |
+| Collection_ToHaveCount | 0.46 ns | **0 B** |
+| Action_ToNotThrow | 1.02 ns | **0 B** |
+| Action_ToThrow_Success | 2.431 µs | 320 B |
+| Comparison_ToBeGreaterThan | ~0 ns | **0 B** |
+| Comparison_ToBeInRange | ~0 ns | **0 B** |
 
 **Observations**:
-- Basic assertions (toBe, toBeInRange, comparisons) are fastest at ~2.7ns
-- All assertions allocate 32B for the Expectation object itself
+- **Zero-allocation assertions**: All Expectation types are `readonly struct`, enabling stack allocation
 - Collection searches scale with size (~50ns for 1000-item collections)
-- Exception assertions are ~1000x slower (expected due to exception handling)
+- Exception assertions allocate 320B (the exception object itself)
 - String assertions use `StringComparison.Ordinal` for speed
 - Comparison methods use `Comparer<T>.Default` to avoid boxing
+- Note: ~0ns results indicate JIT may be eliminating some trivial benchmarks
 
 ## Running Benchmarks
 
@@ -98,6 +98,6 @@ dotnet run --project benchmarks/DraftSpec.Benchmarks -c Release -- --filter '*Ex
 
 1. **Linear Scaling**: SpecRunner and ReportBuilder scale linearly with spec count (10x specs = ~10x time)
 2. **Memory Efficiency**: Allocations scale proportionally with spec count
-3. **Fast Assertions**: Basic equality checks complete in ~2.7ns with minimal 32B allocation
+3. **Zero-Allocation Assertions**: All Expectation types are `readonly struct` - passing assertions allocate 0 bytes
 4. **Fast Formatters**: Markdown is fastest, followed by HTML, then Console
 5. **Parallelism**: Near-linear speedup for async workloads; sync-only specs see coordination overhead

@@ -9,7 +9,7 @@ namespace DraftSpec;
 /// Extension methods can access <see cref="Actual"/> and <see cref="Expression"/>
 /// to create custom matchers.
 /// </remarks>
-public class BoolExpectation
+public readonly struct BoolExpectation
 {
     /// <summary>
     /// The actual boolean value being asserted.

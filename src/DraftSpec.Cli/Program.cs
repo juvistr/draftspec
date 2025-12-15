@@ -47,10 +47,14 @@ static async Task<int> Run(string[] args)
         ShowError(ex.Message);
         return 1;
     }
-    catch (Exception)
+    catch (Exception ex)
     {
-        // Unexpected errors - generic message to avoid leaking internals
+        // Unexpected errors - show details in debug mode
+        #if DEBUG
+        ShowError($"{ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+        #else
         ShowError("An unexpected error occurred. Run with --help for usage information.");
+        #endif
         return 1;
     }
 }

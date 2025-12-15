@@ -14,13 +14,33 @@ public class SpecReport
     public List<SpecContextReport> Contexts { get; set; } = [];
 
     /// <summary>
+    /// Maximum allowed JSON payload size (10MB).
+    /// Prevents memory exhaustion from malicious payloads.
+    /// </summary>
+    private const int MaxJsonSize = 10_000_000;
+
+    /// <summary>
     /// Parse a JSON report string into a SpecReport object.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when json is null</exception>
+    /// <exception cref="InvalidOperationException">Thrown when payload exceeds size limit</exception>
+    /// <exception cref="JsonException">Thrown when JSON is invalid or exceeds depth limit</exception>
     public static SpecReport FromJson(string json)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
+        // Security: Check size BEFORE parsing to prevent memory exhaustion
+        if (json.Length > MaxJsonSize)
+        {
+            throw new InvalidOperationException(
+                $"Report too large: {json.Length:N0} bytes exceeds maximum of {MaxJsonSize:N0} bytes");
+        }
+
         var options = new JsonSerializerOptions
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            // Security: Limit nesting depth to prevent stack overflow
+            MaxDepth = 64
         };
         return JsonSerializer.Deserialize<SpecReport>(json, options)
             ?? throw new InvalidOperationException("Failed to parse JSON report");

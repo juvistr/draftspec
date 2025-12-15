@@ -2,7 +2,7 @@ namespace DraftSpec.Middleware;
 
 /// <summary>
 /// Middleware that enforces a timeout on spec execution.
-/// Uses Task.Run for true timeout enforcement.
+/// Uses Task.WhenAny for clean async timeout enforcement.
 /// </summary>
 public class TimeoutMiddleware : ISpecMiddleware
 {
@@ -27,16 +27,21 @@ public class TimeoutMiddleware : ISpecMiddleware
     {
     }
 
-    public SpecResult Execute(SpecExecutionContext context, Func<SpecExecutionContext, SpecResult> next)
+    public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
     {
         using var cts = new CancellationTokenSource();
         context.CancellationToken = cts.Token;
 
-        var task = Task.Run(() => next(context));
+        var specTask = next(context);
+        var timeoutTask = Task.Delay(_timeout, cts.Token);
 
-        if (task.Wait(_timeout))
+        var completedTask = await Task.WhenAny(specTask, timeoutTask);
+
+        if (completedTask == specTask)
         {
-            return task.Result;
+            // Spec completed before timeout
+            cts.Cancel(); // Cancel the timeout task
+            return await specTask;
         }
 
         // Timeout exceeded

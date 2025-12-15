@@ -22,14 +22,14 @@ public class SpecContext
     /// </summary>
     public IReadOnlyList<SpecDefinition> Specs => _specs;
 
-    public Action? BeforeAll { get; set; }
-    public Action? AfterAll { get; set; }
-    public Action? BeforeEach { get; set; }
-    public Action? AfterEach { get; set; }
+    public Func<Task>? BeforeAll { get; set; }
+    public Func<Task>? AfterAll { get; set; }
+    public Func<Task>? BeforeEach { get; set; }
+    public Func<Task>? AfterEach { get; set; }
 
     // Cached hook chains for performance (computed lazily)
-    private List<Action>? _beforeEachChain;
-    private List<Action>? _afterEachChain;
+    private List<Func<Task>>? _beforeEachChain;
+    private List<Func<Task>>? _afterEachChain;
 
     /// <summary>
     /// Creates a new spec context.
@@ -54,7 +54,7 @@ public class SpecContext
     /// <summary>
     /// Gets the cached beforeEach hook chain (parent to child order).
     /// </summary>
-    internal IReadOnlyList<Action> GetBeforeEachChain()
+    internal IReadOnlyList<Func<Task>> GetBeforeEachChain()
     {
         if (_beforeEachChain == null)
         {
@@ -73,7 +73,7 @@ public class SpecContext
     /// <summary>
     /// Gets the cached afterEach hook chain (child to parent order).
     /// </summary>
-    internal IReadOnlyList<Action> GetAfterEachChain()
+    internal IReadOnlyList<Func<Task>> GetAfterEachChain()
     {
         if (_afterEachChain == null)
         {

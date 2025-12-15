@@ -57,8 +57,8 @@ public class TimeoutMiddlewareTests
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
 
-        var result = middleware.Execute(context, ctx =>
-            new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath));
+        var result = await middleware.ExecuteAsync(context, ctx =>
+            Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath)));
 
         await Assert.That(result.Status).IsEqualTo(SpecStatus.Passed);
     }
@@ -70,9 +70,9 @@ public class TimeoutMiddlewareTests
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
 
-        var result = middleware.Execute(context, ctx =>
+        var result = await middleware.ExecuteAsync(context, async ctx =>
         {
-            Thread.Sleep(500);
+            await Task.Delay(500);
             return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
         });
 
@@ -88,9 +88,9 @@ public class TimeoutMiddlewareTests
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
 
-        var result = middleware.Execute(context, ctx =>
+        var result = await middleware.ExecuteAsync(context, async ctx =>
         {
-            Thread.Sleep(500);
+            await Task.Delay(500);
             return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
         });
 
@@ -109,10 +109,10 @@ public class TimeoutMiddlewareTests
         var context = CreateContext(spec);
         CancellationToken capturedToken = default;
 
-        middleware.Execute(context, ctx =>
+        await middleware.ExecuteAsync(context, ctx =>
         {
             capturedToken = ctx.CancellationToken;
-            return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
+            return Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath));
         });
 
         await Assert.That(capturedToken).IsNotEqualTo(default(CancellationToken));
@@ -126,7 +126,7 @@ public class TimeoutMiddlewareTests
         var context = CreateContext(spec);
         var cancellationSignal = new ManualResetEventSlim(false);
 
-        middleware.Execute(context, ctx =>
+        await middleware.ExecuteAsync(context, async ctx =>
         {
             // Wait in small increments, checking for cancellation
             for (int i = 0; i < 100; i++)
@@ -136,7 +136,7 @@ public class TimeoutMiddlewareTests
                     cancellationSignal.Set();
                     break;
                 }
-                Thread.Sleep(10);
+                await Task.Delay(10);
             }
 
             return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
@@ -159,9 +159,9 @@ public class TimeoutMiddlewareTests
         var context = CreateContext(spec);
         var originalException = new InvalidOperationException("original");
 
-        var result = middleware.Execute(context, ctx =>
-            new SpecResult(ctx.Spec, SpecStatus.Failed, ctx.ContextPath,
-                Exception: originalException));
+        var result = await middleware.ExecuteAsync(context, ctx =>
+            Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Failed, ctx.ContextPath,
+                Exception: originalException)));
 
         await Assert.That(result.Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(result.Exception).IsSameReferenceAs(originalException);

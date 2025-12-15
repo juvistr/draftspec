@@ -34,10 +34,10 @@ public class RetryMiddlewareTests
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
 
-        var result = middleware.Execute(context, ctx =>
+        var result = await middleware.ExecuteAsync(context, ctx =>
         {
             attempts++;
-            return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
+            return Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath));
         });
 
         await Assert.That(attempts).IsEqualTo(1);
@@ -52,13 +52,13 @@ public class RetryMiddlewareTests
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
 
-        var result = middleware.Execute(context, ctx =>
+        var result = await middleware.ExecuteAsync(context, ctx =>
         {
             attempts++;
             if (attempts < 2)
-                return new SpecResult(ctx.Spec, SpecStatus.Failed, ctx.ContextPath,
-                    Exception: new Exception("fail"));
-            return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
+                return Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Failed, ctx.ContextPath,
+                    Exception: new Exception("fail")));
+            return Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath));
         });
 
         await Assert.That(attempts).IsEqualTo(2);
@@ -73,11 +73,11 @@ public class RetryMiddlewareTests
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
 
-        var result = middleware.Execute(context, ctx =>
+        var result = await middleware.ExecuteAsync(context, ctx =>
         {
             attempts++;
-            return new SpecResult(ctx.Spec, SpecStatus.Failed, ctx.ContextPath,
-                Exception: new Exception("fail"));
+            return Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Failed, ctx.ContextPath,
+                Exception: new Exception("fail")));
         });
 
         await Assert.That(attempts).IsEqualTo(3); // 1 initial + 2 retries
@@ -92,13 +92,13 @@ public class RetryMiddlewareTests
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
 
-        var result = middleware.Execute(context, ctx =>
+        var result = await middleware.ExecuteAsync(context, ctx =>
         {
             attempts++;
             if (attempts < 3)
-                return new SpecResult(ctx.Spec, SpecStatus.Failed, ctx.ContextPath,
-                    Exception: new Exception("fail"));
-            return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
+                return Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Failed, ctx.ContextPath,
+                    Exception: new Exception("fail")));
+            return Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath));
         });
 
         await Assert.That(result.RetryInfo).IsNotNull();
@@ -113,8 +113,8 @@ public class RetryMiddlewareTests
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
 
-        var result = middleware.Execute(context, ctx =>
-            new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath));
+        var result = await middleware.ExecuteAsync(context, ctx =>
+            Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath)));
 
         await Assert.That(result.RetryInfo).IsNull();
     }
@@ -131,10 +131,10 @@ public class RetryMiddlewareTests
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
 
-        var result = middleware.Execute(context, ctx =>
+        var result = await middleware.ExecuteAsync(context, ctx =>
         {
             attempts++;
-            return new SpecResult(ctx.Spec, SpecStatus.Skipped, ctx.ContextPath);
+            return Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Skipped, ctx.ContextPath));
         });
 
         await Assert.That(attempts).IsEqualTo(1);
@@ -149,10 +149,10 @@ public class RetryMiddlewareTests
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
 
-        var result = middleware.Execute(context, ctx =>
+        var result = await middleware.ExecuteAsync(context, ctx =>
         {
             attempts++;
-            return new SpecResult(ctx.Spec, SpecStatus.Pending, ctx.ContextPath);
+            return Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Pending, ctx.ContextPath));
         });
 
         await Assert.That(attempts).IsEqualTo(1);

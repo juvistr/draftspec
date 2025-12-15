@@ -22,7 +22,7 @@ public class RetryMiddleware : ISpecMiddleware
         _delay = delay;
     }
 
-    public SpecResult Execute(SpecExecutionContext context, Func<SpecExecutionContext, SpecResult> next)
+    public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
     {
         var attempts = 0;
         SpecResult result;
@@ -30,13 +30,13 @@ public class RetryMiddleware : ISpecMiddleware
         do
         {
             attempts++;
-            result = next(context);
+            result = await next(context);
 
             if (result.Status != SpecStatus.Failed || attempts > _maxRetries)
                 break;
 
             if (_delay > TimeSpan.Zero)
-                Thread.Sleep(_delay);
+                await Task.Delay(_delay);
 
         } while (true);
 

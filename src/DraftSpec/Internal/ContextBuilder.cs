@@ -23,68 +23,138 @@ internal static class ContextBuilder
     }
 
     /// <summary>
-    /// Create a regular spec definition.
+    /// Create a regular spec definition with a sync body.
     /// </summary>
-    public static SpecDefinition CreateSpec(string description, Action body)
+    public static SpecDefinition CreateSpec(string description, Action body, IReadOnlyList<string>? tags = null)
     {
-        return new SpecDefinition(description, body);
+        return new SpecDefinition(description, body) { Tags = tags ?? [] };
+    }
+
+    /// <summary>
+    /// Create a regular spec definition with an async body.
+    /// </summary>
+    public static SpecDefinition CreateSpec(string description, Func<Task> body, IReadOnlyList<string>? tags = null)
+    {
+        return new SpecDefinition(description, body) { Tags = tags ?? [] };
     }
 
     /// <summary>
     /// Create a pending spec definition (no body).
     /// </summary>
-    public static SpecDefinition CreatePendingSpec(string description)
+    public static SpecDefinition CreatePendingSpec(string description, IReadOnlyList<string>? tags = null)
     {
-        return new SpecDefinition(description);
+        return new SpecDefinition(description) { Tags = tags ?? [] };
     }
 
     /// <summary>
-    /// Create a focused spec definition.
+    /// Create a focused spec definition with a sync body.
     /// </summary>
-    public static SpecDefinition CreateFocusedSpec(string description, Action body)
+    public static SpecDefinition CreateFocusedSpec(string description, Action body, IReadOnlyList<string>? tags = null)
     {
-        return new SpecDefinition(description, body) { IsFocused = true };
+        return new SpecDefinition(description, body) { IsFocused = true, Tags = tags ?? [] };
     }
 
     /// <summary>
-    /// Create a skipped spec definition.
+    /// Create a focused spec definition with an async body.
     /// </summary>
-    public static SpecDefinition CreateSkippedSpec(string description, Action? body)
+    public static SpecDefinition CreateFocusedSpec(string description, Func<Task> body, IReadOnlyList<string>? tags = null)
     {
-        return new SpecDefinition(description, body) { IsSkipped = true };
+        return new SpecDefinition(description, body) { IsFocused = true, Tags = tags ?? [] };
     }
 
     /// <summary>
-    /// Set the beforeEach hook on a context with validation.
+    /// Create a skipped spec definition with a sync body.
+    /// </summary>
+    public static SpecDefinition CreateSkippedSpec(string description, Action? body, IReadOnlyList<string>? tags = null)
+    {
+        return body == null
+            ? new SpecDefinition(description) { IsSkipped = true, Tags = tags ?? [] }
+            : new SpecDefinition(description, body) { IsSkipped = true, Tags = tags ?? [] };
+    }
+
+    /// <summary>
+    /// Create a skipped spec definition with an async body.
+    /// </summary>
+    public static SpecDefinition CreateSkippedSpec(string description, Func<Task>? body, IReadOnlyList<string>? tags = null)
+    {
+        return new SpecDefinition(description, body) { IsSkipped = true, Tags = tags ?? [] };
+    }
+
+    /// <summary>
+    /// Wrap a sync action in a Func&lt;Task&gt; that returns Task.CompletedTask.
+    /// </summary>
+    public static Func<Task> WrapSync(Action body)
+    {
+        return () => { body(); return Task.CompletedTask; };
+    }
+
+    /// <summary>
+    /// Set the beforeEach hook on a context with validation (sync version).
     /// </summary>
     public static void SetBeforeEach(SpecContext? context, Action hook)
+    {
+        EnsureContext(context);
+        context!.BeforeEach = WrapSync(hook);
+    }
+
+    /// <summary>
+    /// Set the beforeEach hook on a context with validation (async version).
+    /// </summary>
+    public static void SetBeforeEach(SpecContext? context, Func<Task> hook)
     {
         EnsureContext(context);
         context!.BeforeEach = hook;
     }
 
     /// <summary>
-    /// Set the afterEach hook on a context with validation.
+    /// Set the afterEach hook on a context with validation (sync version).
     /// </summary>
     public static void SetAfterEach(SpecContext? context, Action hook)
+    {
+        EnsureContext(context);
+        context!.AfterEach = WrapSync(hook);
+    }
+
+    /// <summary>
+    /// Set the afterEach hook on a context with validation (async version).
+    /// </summary>
+    public static void SetAfterEach(SpecContext? context, Func<Task> hook)
     {
         EnsureContext(context);
         context!.AfterEach = hook;
     }
 
     /// <summary>
-    /// Set the beforeAll hook on a context with validation.
+    /// Set the beforeAll hook on a context with validation (sync version).
     /// </summary>
     public static void SetBeforeAll(SpecContext? context, Action hook)
+    {
+        EnsureContext(context);
+        context!.BeforeAll = WrapSync(hook);
+    }
+
+    /// <summary>
+    /// Set the beforeAll hook on a context with validation (async version).
+    /// </summary>
+    public static void SetBeforeAll(SpecContext? context, Func<Task> hook)
     {
         EnsureContext(context);
         context!.BeforeAll = hook;
     }
 
     /// <summary>
-    /// Set the afterAll hook on a context with validation.
+    /// Set the afterAll hook on a context with validation (sync version).
     /// </summary>
     public static void SetAfterAll(SpecContext? context, Action hook)
+    {
+        EnsureContext(context);
+        context!.AfterAll = WrapSync(hook);
+    }
+
+    /// <summary>
+    /// Set the afterAll hook on a context with validation (async version).
+    /// </summary>
+    public static void SetAfterAll(SpecContext? context, Func<Task> hook)
     {
         EnsureContext(context);
         context!.AfterAll = hook;

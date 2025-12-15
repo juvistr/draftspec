@@ -204,7 +204,7 @@ public class SpecRunnerTests
     {
         var beforeAllCount = 0;
         var context = new SpecContext("test");
-        context.BeforeAll = () => beforeAllCount++;
+        context.BeforeAll = () => { beforeAllCount++; return Task.CompletedTask; };
         context.AddSpec(new SpecDefinition("spec1", () => { }));
         context.AddSpec(new SpecDefinition("spec2", () => { }));
 
@@ -219,7 +219,7 @@ public class SpecRunnerTests
     {
         var afterAllCount = 0;
         var context = new SpecContext("test");
-        context.AfterAll = () => afterAllCount++;
+        context.AfterAll = () => { afterAllCount++; return Task.CompletedTask; };
         context.AddSpec(new SpecDefinition("spec1", () => { }));
         context.AddSpec(new SpecDefinition("spec2", () => { }));
 
@@ -234,7 +234,7 @@ public class SpecRunnerTests
     {
         var afterAllRan = false;
         var context = new SpecContext("test");
-        context.AfterAll = () => afterAllRan = true;
+        context.AfterAll = () => { afterAllRan = true; return Task.CompletedTask; };
         context.AddSpec(new SpecDefinition("fails", () => throw new Exception()));
 
         var runner = new SpecRunner();

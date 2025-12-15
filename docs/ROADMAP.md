@@ -120,7 +120,10 @@ Nice-to-have enhancements.
 - [ ] **Result streaming** - Reduce memory for large test suites
 - [ ] **DI container** - Replace ad-hoc service registry
 - [ ] **Plugin discovery** - Auto-load plugins from assemblies
-- [ ] **Performance benchmarks** - BenchmarkDotNet suite for regression testing
+- [x] **Performance benchmarks** - BenchmarkDotNet suite for regression testing ✅
+  - `benchmarks/DraftSpec.Benchmarks/` project with 25 benchmarks
+  - SpecRunner, ReportBuilder, Formatter, and Expectation benchmarks
+  - Memory diagnostics enabled via `[MemoryDiagnoser]`
 
 ---
 

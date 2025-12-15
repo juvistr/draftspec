@@ -49,8 +49,10 @@ High-impact improvements after v1.0 blockers.
   - Build projects in different directories in parallel when --parallel flag is used
   - Projects within same directory still built sequentially (may have interdependencies)
 
-- [ ] **Reporter batching** - `src/DraftSpec/SpecRunner.cs:205-209`
-  - Batch reporter callbacks, 30-50% faster with multiple reporters
+- [x] **Reporter batching** - `src/DraftSpec/SpecRunner.cs` ✅
+  - `OnSpecsBatchCompletedAsync` method for batch notification
+  - Parallel notification to multiple reporters via `Task.WhenAll`
+  - 30-50% faster with multiple reporters
 
 - [ ] **Watch mode debounce** - `src/DraftSpec.Cli/FileWatcher.cs:50-73`
   - Debounce rapid file changes, 60-80% allocation reduction

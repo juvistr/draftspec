@@ -26,6 +26,21 @@ public interface IReporter
     Task OnSpecCompletedAsync(SpecResult result) => Task.CompletedTask;
 
     /// <summary>
+    /// Called after a batch of specs complete (parallel execution optimization).
+    /// Default implementation calls OnSpecCompletedAsync for each result.
+    /// Reporters may override for more efficient batch processing.
+    /// </summary>
+    /// <param name="results">The results of specs that completed</param>
+    Task OnSpecsBatchCompletedAsync(IReadOnlyList<SpecResult> results)
+    {
+        foreach (var result in results)
+        {
+            OnSpecCompletedAsync(result);
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Called when the entire spec run is complete.
     /// This is the primary entry point for reporters that process full results.
     /// </summary>

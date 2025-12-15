@@ -104,9 +104,39 @@ public class SpecRunner : ISpecRunner
     {
         if (_configuration == null) return;
 
-        foreach (var reporter in _configuration.Reporters.All)
+        var reporters = _configuration.Reporters.All.ToList();
+        if (reporters.Count <= 1)
         {
-            await reporter.OnSpecCompletedAsync(result);
+            // Single reporter - no parallelism overhead
+            foreach (var reporter in reporters)
+            {
+                await reporter.OnSpecCompletedAsync(result);
+            }
+        }
+        else
+        {
+            // Multiple reporters - notify in parallel
+            await Task.WhenAll(reporters.Select(r => r.OnSpecCompletedAsync(result)));
+        }
+    }
+
+    private async Task NotifySpecsBatchCompletedAsync(IReadOnlyList<SpecResult> results)
+    {
+        if (_configuration == null || results.Count == 0) return;
+
+        var reporters = _configuration.Reporters.All.ToList();
+        if (reporters.Count <= 1)
+        {
+            // Single reporter - call batch method directly
+            foreach (var reporter in reporters)
+            {
+                await reporter.OnSpecsBatchCompletedAsync(results);
+            }
+        }
+        else
+        {
+            // Multiple reporters - notify in parallel
+            await Task.WhenAll(reporters.Select(r => r.OnSpecsBatchCompletedAsync(results)));
         }
     }
 
@@ -201,12 +231,11 @@ public class SpecRunner : ISpecRunner
             resultArray[index] = result;
         });
 
-        // Add results in original order and notify reporters
-        foreach (var result in resultArray)
-        {
-            results.Add(result);
-            await NotifySpecCompletedAsync(result);
-        }
+        // Add results in original order
+        results.AddRange(resultArray);
+
+        // Notify reporters in batch (parallel notification to multiple reporters)
+        await NotifySpecsBatchCompletedAsync(resultArray);
     }
 
     private async Task<SpecResult> RunSpecAsync(

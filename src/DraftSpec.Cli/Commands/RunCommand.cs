@@ -1,34 +1,22 @@
 using System.Security;
+using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Formatters;
-using DraftSpec.Formatters.Html;
-using DraftSpec.Formatters.Markdown;
 
 namespace DraftSpec.Cli.Commands;
 
 public static class RunCommand
 {
-    private static readonly Dictionary<string, IFormatter> Formatters = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [OutputFormats.Json] = new JsonFormatter(),
-        [OutputFormats.Markdown] = new MarkdownFormatter()
-    };
-
     /// <summary>
-    /// Get a formatter by name, with support for built-in formatters.
+    /// Get a formatter by name using the provided registry.
+    /// Falls back to built-in formatters if registry is null.
     /// </summary>
-    public static IFormatter? GetFormatter(string name, CliOptions options)
+    public static IFormatter? GetFormatter(string name, CliOptions options, IFormatterRegistry? registry = null)
     {
-        if (name.Equals(OutputFormats.Html, StringComparison.OrdinalIgnoreCase))
-        {
-            return new HtmlFormatter(new HtmlOptions
-            {
-                CssUrl = options.CssUrl ?? "https://cdnjs.cloudflare.com/ajax/libs/simpledotcss/2.3.7/simple.min.css"
-            });
-        }
-        return Formatters.GetValueOrDefault(name);
+        registry ??= new FormatterRegistry();
+        return registry.GetFormatter(name, options);
     }
 
-    public static int Execute(CliOptions options)
+    public static int Execute(CliOptions options, IFormatterRegistry? formatterRegistry = null)
     {
         var finder = new SpecFinder();
         var runner = new SpecFileRunner();
@@ -89,7 +77,7 @@ public static class RunCommand
         }
         else
         {
-            var formatter = GetFormatter(options.Format, options)
+            var formatter = GetFormatter(options.Format, options, formatterRegistry)
                 ?? throw new ArgumentException($"Unknown format: {options.Format}");
             output = formatter.Format(combinedReport);
         }

@@ -113,7 +113,7 @@ Structural improvements for maintainability.
 
 ---
 
-## Future (P3)
+## Future (P3) ✅ Complete
 
 Nice-to-have enhancements.
 
@@ -121,8 +121,14 @@ Nice-to-have enhancements.
   - `StreamingStats` class for progressive statistic tracking
   - `StreamingConsoleReporter` outputs dots/symbols as specs complete
   - Thread-safe tracking via `Interlocked` operations
-- [ ] **DI container** - Replace ad-hoc service registry
-- [ ] **Plugin discovery** - Auto-load plugins from assemblies
+- [x] **DI container** - Replace ad-hoc service registry ✅
+  - `Microsoft.Extensions.DependencyInjection` integration in CLI
+  - `IFormatterRegistry` for name-based formatter lookup
+  - `ServiceCollectionExtensions.AddDraftSpec()` for easy setup
+- [x] **Plugin discovery** - Auto-load plugins from assemblies ✅
+  - `PluginLoader` scans `DraftSpec.*.dll` files in plugins directory
+  - `[DraftSpecPlugin("name")]` attribute for marking discoverable plugins
+  - Isolated `AssemblyLoadContext` for plugin loading
 - [x] **Performance benchmarks** - BenchmarkDotNet suite for regression testing ✅
   - `benchmarks/DraftSpec.Benchmarks/` project with 26 benchmarks
   - SpecRunner, ReportBuilder, Formatter, and Expectation benchmarks
@@ -137,11 +143,11 @@ Nice-to-have enhancements.
 |------|-------|-------|
 | Code Quality | A | Modern C#, good docs, clean layering |
 | Security | A | All P0 + P1 security issues resolved ✅ |
-| Architecture | A- | P2 improvements complete, proper layering ✅ |
-| Performance | A- | Build parallelization + incremental builds ✅ |
-| Test Coverage | ~90% | 515 tests, P0 + P1 coverage complete ✅ |
+| Architecture | A | P2 + P3 complete, DI container + plugin discovery ✅ |
+| Performance | A | Zero-allocation assertions, benchmarks, streaming ✅ |
+| Test Coverage | ~90% | 515 tests, comprehensive coverage ✅ |
 
-**Overall:** P0, P1, and P2 complete. Production ready with clean architecture.
+**Overall:** P0, P1, P2, and P3 complete. Production ready with extensible plugin architecture.
 
 ---
 

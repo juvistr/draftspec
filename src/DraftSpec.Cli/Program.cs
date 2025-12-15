@@ -1,6 +1,8 @@
 using System.Security;
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 return await Run(args);
 
@@ -20,11 +22,22 @@ static async Task<int> Run(string[] args)
     if (options.Error != null)
         return ShowUsage(options.Error);
 
+    // Set up dependency injection
+    var services = new ServiceCollection();
+    services.AddDraftSpec();
+
+    // Load plugins from default directory
+    var pluginLoader = new PluginLoader();
+    using var serviceProvider = services.BuildServiceProvider();
+
+    var formatterRegistry = serviceProvider.GetRequiredService<IFormatterRegistry>();
+    pluginLoader.RegisterFormatters(formatterRegistry);
+
     try
     {
         return options.Command switch
         {
-            "run" => RunCommand.Execute(options),
+            "run" => RunCommand.Execute(options, formatterRegistry),
             "watch" => await WatchCommand.ExecuteAsync(options.Path),
             "init" => InitCommand.Execute(options),
             "new" => NewCommand.Execute(options),

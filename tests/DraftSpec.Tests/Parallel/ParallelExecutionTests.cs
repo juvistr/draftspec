@@ -32,17 +32,25 @@ public class ParallelExecutionTests
             .WithParallelExecution(4)
             .Build();
 
-        var sw = Stopwatch.StartNew();
         var results = await runner.RunAsync(context);
-        sw.Stop();
 
         await Assert.That(results).HasCount(10);
         await Assert.That(results.All(r => r.Status == SpecStatus.Passed)).IsTrue();
 
-        // With 4 parallel threads and 10 specs of 50ms each:
-        // Sequential: ~500ms, Parallel: ~150ms (3 batches)
-        // Allow generous margin for CI variability
-        await Assert.That(sw.ElapsedMilliseconds).IsLessThan(400);
+        // Verify concurrency by checking that execution times overlap
+        // If specs ran concurrently, some will have overlapping time ranges
+        var times = executionTimes.OrderBy(t => t.Start).ToList();
+        var overlaps = 0;
+        for (int i = 0; i < times.Count - 1; i++)
+        {
+            // Check if spec[i] overlaps with spec[i+1] (started before previous ended)
+            if (times[i + 1].Start < times[i].End)
+                overlaps++;
+        }
+
+        // With 4 parallel threads and 10 specs, we should have significant overlap
+        // At minimum, 3+ specs should overlap (running 4 at a time)
+        await Assert.That(overlaps).IsGreaterThanOrEqualTo(3);
     }
 
     [Test]

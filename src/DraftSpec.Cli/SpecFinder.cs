@@ -18,9 +18,20 @@ public class SpecFinder
         var fullPath = Path.GetFullPath(path);
 
         // Security: Validate path is within base directory to prevent path traversal
-        if (!fullPath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
+        // IMPORTANT: Add trailing separator to prevent prefix bypass attacks
+        // e.g., "/var/app/specs-evil" should NOT pass check for base "/var/app/specs"
+        var normalizedBase = basePath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var normalizedPath = fullPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        // Use platform-appropriate case sensitivity
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        if (!normalizedPath.StartsWith(normalizedBase, comparison))
         {
-            throw new SecurityException($"Path must be within the base directory: {path}");
+            // Generic error message to avoid leaking internal paths
+            throw new SecurityException("Path must be within the base directory");
         }
 
         if (File.Exists(fullPath))

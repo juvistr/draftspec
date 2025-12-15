@@ -70,8 +70,11 @@ High-impact improvements after v1.0 blockers.
   - Uses same pattern as SpecFinder (trailing separator, platform-aware)
   - 14 tests in `tests/DraftSpec.Tests/Reporters/FileReporterTests.cs`
 
-- [ ] **Safe error messages** - Multiple files
-  - Sanitize stack traces and paths in user-facing errors
+- [x] **Safe error messages** - `src/DraftSpec.Cli/Program.cs`, `RunCommand.cs` ✅
+  - Generic catch-all prevents stack trace leakage
+  - SecurityException handling added
+  - Platform-aware path validation (case-sensitive on Unix)
+  - Error messages use user-provided paths, not internal paths
 
 ### Testing
 

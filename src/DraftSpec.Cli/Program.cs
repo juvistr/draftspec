@@ -1,3 +1,4 @@
+using System.Security;
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 
@@ -32,11 +33,33 @@ static async Task<int> Run(string[] args)
     }
     catch (ArgumentException ex)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"Error: {ex.Message}");
-        Console.ResetColor();
+        ShowError(ex.Message);
         return 1;
     }
+    catch (SecurityException ex)
+    {
+        ShowError(ex.Message);
+        return 1;
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    {
+        // File system errors - show message without internal details
+        ShowError(ex.Message);
+        return 1;
+    }
+    catch (Exception)
+    {
+        // Unexpected errors - generic message to avoid leaking internals
+        ShowError("An unexpected error occurred. Run with --help for usage information.");
+        return 1;
+    }
+}
+
+static void ShowError(string message)
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine($"Error: {message}");
+    Console.ResetColor();
 }
 
 static CliOptions ParseArgs(string[] args)

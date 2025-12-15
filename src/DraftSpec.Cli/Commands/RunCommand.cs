@@ -103,11 +103,22 @@ public static class RunCommand
         if (!string.IsNullOrEmpty(options.OutputFile))
         {
             // Security: Validate output path is within current directory
+            // Uses same pattern as SpecFinder: trailing separator + platform-aware comparison
             var outputFullPath = Path.GetFullPath(options.OutputFile);
             var currentDir = Directory.GetCurrentDirectory();
-            if (!outputFullPath.StartsWith(currentDir, StringComparison.OrdinalIgnoreCase))
+            var normalizedBase = currentDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var outputDir = Path.GetDirectoryName(outputFullPath) ?? currentDir;
+            var normalizedOutput = outputDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+            // Use platform-appropriate case sensitivity
+            var comparison = OperatingSystem.IsWindows()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+
+            if (!normalizedOutput.StartsWith(normalizedBase, comparison))
             {
-                throw new SecurityException($"Output file must be within current directory: {options.OutputFile}");
+                // Generic error - don't expose internal directory structure
+                throw new SecurityException("Output file must be within current directory");
             }
 
             File.WriteAllText(outputFullPath, output);

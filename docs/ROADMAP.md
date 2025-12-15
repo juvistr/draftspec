@@ -117,13 +117,17 @@ Structural improvements for maintainability.
 
 Nice-to-have enhancements.
 
-- [ ] **Result streaming** - Reduce memory for large test suites
+- [x] **Result streaming** - Reduce memory for large test suites ✅
+  - `StreamingStats` class for progressive statistic tracking
+  - `StreamingConsoleReporter` outputs dots/symbols as specs complete
+  - Thread-safe tracking via `Interlocked` operations
 - [ ] **DI container** - Replace ad-hoc service registry
 - [ ] **Plugin discovery** - Auto-load plugins from assemblies
 - [x] **Performance benchmarks** - BenchmarkDotNet suite for regression testing ✅
-  - `benchmarks/DraftSpec.Benchmarks/` project with 25 benchmarks
+  - `benchmarks/DraftSpec.Benchmarks/` project with 26 benchmarks
   - SpecRunner, ReportBuilder, Formatter, and Expectation benchmarks
   - Memory diagnostics enabled via `[MemoryDiagnoser]`
+  - Baseline captured in `docs/BENCHMARK_BASELINE.md`
 
 ---
 

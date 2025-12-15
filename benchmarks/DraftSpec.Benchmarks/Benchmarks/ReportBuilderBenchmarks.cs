@@ -8,7 +8,6 @@ namespace DraftSpec.Benchmarks.Benchmarks;
 /// Benchmarks for SpecReportBuilder.Build() performance.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net90)]
 public class ReportBuilderBenchmarks
 {
     private (SpecContext Context, List<SpecResult> Results) _small;

@@ -8,7 +8,6 @@ namespace DraftSpec.Benchmarks.Benchmarks;
 /// Benchmarks for SpecRunner execution performance.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net90)]
 public class SpecRunnerBenchmarks
 {
     private SpecContext _smallTree = null!;

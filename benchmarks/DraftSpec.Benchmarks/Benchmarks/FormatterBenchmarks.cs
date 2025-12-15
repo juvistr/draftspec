@@ -12,7 +12,6 @@ namespace DraftSpec.Benchmarks.Benchmarks;
 /// Benchmarks for formatter performance.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net90)]
 [GroupBenchmarksBy(BenchmarkDotNet.Configs.BenchmarkLogicalGroupRule.ByCategory)]
 public class FormatterBenchmarks
 {

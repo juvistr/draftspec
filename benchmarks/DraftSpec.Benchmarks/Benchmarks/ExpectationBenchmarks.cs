@@ -8,7 +8,6 @@ namespace DraftSpec.Benchmarks.Benchmarks;
 /// Goal: Zero allocations for passing assertions.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net90)]
 public class ExpectationBenchmarks
 {
     private const int N = 1000;

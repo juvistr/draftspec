@@ -50,6 +50,16 @@ public class ConsolePresenter
         Console.ResetColor();
     }
 
+    public void ShowBuildSkipped(string project)
+    {
+        var name = Path.GetFileNameWithoutExtension(project);
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.Write($"  Building {name}... ");
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.WriteLine("skipped (no changes)");
+        Console.ResetColor();
+    }
+
     public void ShowSpecsStarting()
     {
         Console.WriteLine();

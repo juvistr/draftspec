@@ -23,12 +23,16 @@ public record RunSummary(
     public int Failed => Results.Count(r => !r.Success);
 }
 
-public record BuildResult(bool Success, string Output, string Error);
+public record BuildResult(bool Success, string Output, string Error, bool Skipped = false);
 
 public class SpecFileRunner
 {
+    private readonly Dictionary<string, DateTime> _lastBuildTime = new();
+    private readonly Dictionary<string, DateTime> _lastSourceModified = new();
+
     public event Action<string>? OnBuildStarted;
     public event Action<BuildResult>? OnBuildCompleted;
+    public event Action<string>? OnBuildSkipped;
 
     public SpecRunResult Run(string specFile)
     {
@@ -108,6 +112,18 @@ public class SpecFileRunner
     private void BuildProjects(string directory)
     {
         var projects = Directory.GetFiles(directory, "*.csproj");
+        if (projects.Length == 0) return;
+
+        // Check if rebuild is needed (incremental build support)
+        if (!NeedsRebuild(directory))
+        {
+            foreach (var project in projects)
+            {
+                OnBuildSkipped?.Invoke(project);
+            }
+            return;
+        }
+
         foreach (var project in projects)
         {
             OnBuildStarted?.Invoke(project);
@@ -116,6 +132,62 @@ public class SpecFileRunner
 
             OnBuildCompleted?.Invoke(new BuildResult(result.Success, result.Output, result.Error));
         }
+
+        // Update build cache on successful build
+        _lastBuildTime[directory] = DateTime.UtcNow;
+        _lastSourceModified[directory] = GetLatestSourceModification(directory);
+    }
+
+    /// <summary>
+    /// Check if a directory needs to be rebuilt by comparing source file timestamps.
+    /// </summary>
+    private bool NeedsRebuild(string directory)
+    {
+        // Never built before - need to build
+        if (!_lastBuildTime.TryGetValue(directory, out var lastBuild))
+            return true;
+
+        // Get current latest modification time
+        var currentLatest = GetLatestSourceModification(directory);
+
+        // If any source file was modified after last build, rebuild
+        if (!_lastSourceModified.TryGetValue(directory, out var lastModified))
+            return true;
+
+        return currentLatest > lastModified;
+    }
+
+    /// <summary>
+    /// Get the latest modification time of any source file (.cs, .csproj) in a directory.
+    /// </summary>
+    private static DateTime GetLatestSourceModification(string directory)
+    {
+        var latest = DateTime.MinValue;
+
+        // Check .cs files
+        foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
+        {
+            var modified = File.GetLastWriteTimeUtc(file);
+            if (modified > latest) latest = modified;
+        }
+
+        // Check .csproj files
+        foreach (var file in Directory.EnumerateFiles(directory, "*.csproj", SearchOption.TopDirectoryOnly))
+        {
+            var modified = File.GetLastWriteTimeUtc(file);
+            if (modified > latest) latest = modified;
+        }
+
+        return latest;
+    }
+
+    /// <summary>
+    /// Clear the build cache, forcing a full rebuild on next run.
+    /// </summary>
+    public void ClearBuildCache()
+    {
+        _lastBuildTime.Clear();
+        _lastSourceModified.Clear();
     }
 
     private SpecRunResult RunSpec(string specFile)

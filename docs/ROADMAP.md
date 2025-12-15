@@ -55,8 +55,10 @@ High-impact improvements after v1.0 blockers.
 - [ ] **Watch mode debounce** - `src/DraftSpec.Cli/FileWatcher.cs:50-73`
   - Debounce rapid file changes, 60-80% allocation reduction
 
-- [ ] **Incremental builds** - `src/DraftSpec.Cli/SpecFileRunner.cs`
-  - Skip unchanged files in watch mode, 80-95% faster rebuilds
+- [x] **Incremental builds** - `src/DraftSpec.Cli/SpecFileRunner.cs` ✅
+  - Track source file modification times per directory
+  - Skip rebuilds when no .cs or .csproj changes detected
+  - OnBuildSkipped event for UI feedback in watch mode
 
 ### Security
 
@@ -115,7 +117,7 @@ Nice-to-have enhancements.
 | Code Quality | A- | Modern C#, good docs |
 | Security | A | All P0 + P1 security issues resolved ✅ |
 | Architecture | B+ | Solid foundations |
-| Performance | B+ | Build parallelization complete ✅ |
+| Performance | A- | Build parallelization + incremental builds ✅ |
 | Test Coverage | ~90% | 515 tests, P0 + P1 coverage complete ✅ |
 
 **Overall:** All P0 items complete. Key P1 items complete. Ready for production CI/CD use.

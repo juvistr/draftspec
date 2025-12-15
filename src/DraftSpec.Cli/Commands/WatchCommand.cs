@@ -10,6 +10,7 @@ public static class WatchCommand
 
         runner.OnBuildStarted += presenter.ShowBuilding;
         runner.OnBuildCompleted += presenter.ShowBuildResult;
+        runner.OnBuildSkipped += presenter.ShowBuildSkipped;
 
         var cts = new CancellationTokenSource();
 

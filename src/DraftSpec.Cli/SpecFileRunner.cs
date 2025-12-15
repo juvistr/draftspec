@@ -128,6 +128,12 @@ public class SpecFileRunner
     /// Run a spec file with JSON output mode.
     /// Modifies the script to call run(json: true) instead of run().
     /// </summary>
+    /// <remarks>
+    /// Security: Uses atomic file creation (FileMode.CreateNew) to prevent
+    /// symlink race condition attacks (CWE-367 TOCTOU). If an attacker
+    /// pre-creates a symlink at the temp path, the operation fails safely
+    /// instead of following the symlink.
+    /// </remarks>
     public SpecRunResult RunWithJson(string specFile)
     {
         var fullPath = Path.GetFullPath(specFile);
@@ -141,13 +147,21 @@ public class SpecFileRunner
             "run(json: true);",
             RegexOptions.None);
 
-        // Write to secure temp file with random name
+        // Security: Create temp file with atomic operation
+        // FileMode.CreateNew fails if file already exists (prevents symlink attack)
+        // FileShare.None ensures exclusive access during write
         var tempFileName = $".draftspec-{Guid.NewGuid():N}.csx";
         var tempFile = Path.Combine(workingDir, tempFileName);
-        File.WriteAllText(tempFile, modifiedScript);
 
         try
         {
+            // Atomic file creation - fails if any file (including symlink) exists at path
+            using (var fs = new FileStream(tempFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(fs))
+            {
+                writer.Write(modifiedScript);
+            }
+
             var stopwatch = Stopwatch.StartNew();
             var result = ProcessHelper.RunDotnet(["script", tempFileName, "--no-cache"], workingDir);
             stopwatch.Stop();

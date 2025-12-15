@@ -27,7 +27,18 @@
 | LargeTree_Parallel (2) | 353.232 µs | 1,524,310 B |
 | LargeTree_Parallel (4) | 923.505 µs | 1,599,390 B |
 
-**Note**: Parallel execution shows overhead because synthetic benchmarks have no real async work. Real-world async specs would benefit from parallelism.
+**Note**: Sync-only benchmarks show parallelism overhead. See async benchmarks below for real speedup.
+
+### Async Parallelism (20 specs × 10ms delay)
+
+| Method | Mean | Speedup | Allocated |
+|--------|------|---------|-----------|
+| AsyncSpecs_Sequential | 217.87 ms | 1.0x | 38 KB |
+| AsyncSpecs_Parallel (2) | 109.02 ms | **2.0x** | 41.5 KB |
+| AsyncSpecs_Parallel (4) | 54.72 ms | **4.0x** | 41.6 KB |
+| AsyncSpecs_Parallel (8) | 32.92 ms | **6.6x** | 42.1 KB |
+
+**Key Finding**: Near-linear scaling with async workloads. Theoretical minimum is 25ms (20÷8×10ms); actual 32.9ms shows ~24% overhead for coordination.
 
 ### ReportBuilder Benchmarks
 
@@ -83,3 +94,4 @@ dotnet run --project benchmarks/DraftSpec.Benchmarks -c Release -- --filter '*Ex
 2. **Memory Efficiency**: Allocations scale proportionally with spec count
 3. **Zero-Overhead Assertions**: Simple equality checks are optimized away by JIT
 4. **Fast Formatters**: Markdown is fastest, followed by HTML, then Console
+5. **Parallelism**: Near-linear speedup for async workloads; sync-only specs see coordination overhead

@@ -50,4 +50,32 @@ public class SpecRunnerBenchmarks
         var runner = new SpecRunner([], null, parallelism);
         return runner.Run(_largeTree);
     }
+
+    // --- Async benchmarks to demonstrate parallelism benefit ---
+    // 20 specs × 10ms delay each = 200ms sequential, ~50ms with parallelism=4
+
+    private SpecContext _asyncTree = null!;
+
+    [GlobalSetup(Target = nameof(AsyncSpecs_Sequential))]
+    public void SetupAsync() => _asyncTree = SpecTreeGenerator.CreateAsyncTree(20, 10);
+
+    [GlobalSetup(Target = nameof(AsyncSpecs_Parallel))]
+    public void SetupAsyncParallel() => _asyncTree = SpecTreeGenerator.CreateAsyncTree(20, 10);
+
+    [Benchmark]
+    public List<SpecResult> AsyncSpecs_Sequential()
+    {
+        var runner = new SpecRunner([], null, maxDegreeOfParallelism: 1);
+        return runner.Run(_asyncTree);
+    }
+
+    [Benchmark]
+    [Arguments(2)]
+    [Arguments(4)]
+    [Arguments(8)]
+    public List<SpecResult> AsyncSpecs_Parallel(int parallelism)
+    {
+        var runner = new SpecRunner([], null, parallelism);
+        return runner.Run(_asyncTree);
+    }
 }

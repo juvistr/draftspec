@@ -8,6 +8,21 @@ public static class SpecTreeGenerator
     private static readonly Action NoOpAction = () => { };
 
     /// <summary>
+    /// Creates a flat tree with N async specs, each with a fixed delay.
+    /// </summary>
+    public static SpecContext CreateAsyncTree(int specCount, int delayMs)
+    {
+        var root = new SpecContext("Async Root");
+        for (int i = 0; i < specCount; i++)
+        {
+            root.AddSpec(new SpecDefinition(
+                $"async spec {i}",
+                async () => await Task.Delay(delayMs)));
+        }
+        return root;
+    }
+
+    /// <summary>
     /// Creates a flat tree with N specs in a single context.
     /// </summary>
     public static SpecContext CreateFlatTree(int specCount)

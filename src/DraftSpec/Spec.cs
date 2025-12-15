@@ -25,7 +25,11 @@ namespace DraftSpec;
 /// </example>
 public abstract class Spec
 {
-    private static readonly AsyncLocal<SpecContext?> CurrentContextLocal = new();
+    /// <summary>
+    /// The currently active context during spec definition.
+    /// Instance field provides isolation between Spec instances.
+    /// </summary>
+    private SpecContext? _currentContext;
 
     /// <summary>
     /// The root context for this spec class, named after the class type.
@@ -35,10 +39,10 @@ public abstract class Spec
     /// <summary>
     /// The currently active context during spec definition.
     /// </summary>
-    protected static SpecContext? CurrentContext
+    protected SpecContext? CurrentContext
     {
-        get => CurrentContextLocal.Value;
-        private set => CurrentContextLocal.Value = value;
+        get => _currentContext;
+        private set => _currentContext = value;
     }
 
     /// <summary>
@@ -47,7 +51,7 @@ public abstract class Spec
     protected Spec()
     {
         RootContext = new SpecContext(GetType().Name);
-        CurrentContext = RootContext;
+        _currentContext = RootContext;
     }
 
     /// <summary>

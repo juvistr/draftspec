@@ -106,9 +106,10 @@ Structural improvements for maintainability.
   - `src/DraftSpec.Cli/ISpecFileRunner.cs` - Full runner interface with events
   - Enables dependency injection and testing
 
-- [ ] **AsyncLocal state management** - `src/DraftSpec/Dsl.cs:13-26`
-  - Current approach limits parallelism within a single spec file
-  - Deferred: works well for current use cases
+- [x] **AsyncLocal state management** - `src/DraftSpec/Spec.cs` ✅
+  - Static `Dsl` keeps AsyncLocal (necessary for CSX scripts)
+  - `Spec` class refactored to instance fields for clean isolation
+  - No API changes - internal improvement only
 
 ---
 

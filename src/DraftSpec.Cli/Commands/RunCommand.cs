@@ -8,8 +8,8 @@ public static class RunCommand
 {
     private static readonly Dictionary<string, IFormatter> Formatters = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["json"] = new JsonFormatter(),
-        ["markdown"] = new MarkdownFormatter()
+        [OutputFormats.Json] = new JsonFormatter(),
+        [OutputFormats.Markdown] = new MarkdownFormatter()
     };
 
     /// <summary>
@@ -17,7 +17,7 @@ public static class RunCommand
     /// </summary>
     public static IFormatter? GetFormatter(string name, CliOptions options)
     {
-        if (name.Equals("html", StringComparison.OrdinalIgnoreCase))
+        if (name.Equals(OutputFormats.Html, StringComparison.OrdinalIgnoreCase))
         {
             return new HtmlFormatter(new HtmlOptions
             {
@@ -33,7 +33,7 @@ public static class RunCommand
         var runner = new SpecFileRunner();
 
         // For non-console formats, we need JSON output from specs
-        var needsJson = options.Format is "json" or "markdown" or "html";
+        var needsJson = options.Format is OutputFormats.Json or OutputFormats.Markdown or OutputFormats.Html;
 
         if (!needsJson)
         {
@@ -88,7 +88,7 @@ public static class RunCommand
         var jsonReport = jsonOutputs.FirstOrDefault() ?? "{}";
 
         string output;
-        if (options.Format == "json")
+        if (options.Format == OutputFormats.Json)
         {
             output = jsonReport;
         }

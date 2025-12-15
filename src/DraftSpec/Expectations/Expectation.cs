@@ -83,6 +83,9 @@ public class Expectation<T>
                 $"Expected {Expression} to not be null");
     }
 
+    // Cached comparer to avoid repeated lookups - uses optimized paths for primitives
+    private static readonly Comparer<T> _comparer = Comparer<T>.Default;
+
     /// <summary>
     /// Assert that the actual value is greater than the expected value.
     /// </summary>
@@ -91,11 +94,7 @@ public class Expectation<T>
         if (expected is null)
             throw new AssertionException("Expected value cannot be null for comparison");
 
-        if (Actual is not IComparable<T> comparable)
-            throw new AssertionException(
-                $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
-
-        if (comparable.CompareTo(expected) <= 0)
+        if (_comparer.Compare(Actual, expected) <= 0)
             throw new AssertionException(
                 $"Expected {Expression ?? "value"} to be greater than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
@@ -108,11 +107,7 @@ public class Expectation<T>
         if (expected is null)
             throw new AssertionException("Expected value cannot be null for comparison");
 
-        if (Actual is not IComparable<T> comparable)
-            throw new AssertionException(
-                $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
-
-        if (comparable.CompareTo(expected) >= 0)
+        if (_comparer.Compare(Actual, expected) >= 0)
             throw new AssertionException(
                 $"Expected {Expression ?? "value"} to be less than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
@@ -125,11 +120,7 @@ public class Expectation<T>
         if (expected is null)
             throw new AssertionException("Expected value cannot be null for comparison");
 
-        if (Actual is not IComparable<T> comparable)
-            throw new AssertionException(
-                $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
-
-        if (comparable.CompareTo(expected) < 0)
+        if (_comparer.Compare(Actual, expected) < 0)
             throw new AssertionException(
                 $"Expected {Expression ?? "value"} to be at least {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
@@ -142,11 +133,7 @@ public class Expectation<T>
         if (expected is null)
             throw new AssertionException("Expected value cannot be null for comparison");
 
-        if (Actual is not IComparable<T> comparable)
-            throw new AssertionException(
-                $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
-
-        if (comparable.CompareTo(expected) > 0)
+        if (_comparer.Compare(Actual, expected) > 0)
             throw new AssertionException(
                 $"Expected {Expression ?? "value"} to be at most {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
@@ -159,11 +146,7 @@ public class Expectation<T>
         if (min is null || max is null)
             throw new AssertionException("Range bounds cannot be null for comparison");
 
-        if (Actual is not IComparable<T> comparable)
-            throw new AssertionException(
-                $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
-
-        if (comparable.CompareTo(min) < 0 || comparable.CompareTo(max) > 0)
+        if (_comparer.Compare(Actual, min) < 0 || _comparer.Compare(Actual, max) > 0)
             throw new AssertionException(
                 $"Expected {Expression ?? "value"} to be in range [{ExpectationHelpers.Format(min)}, {ExpectationHelpers.Format(max)}], but was {ExpectationHelpers.Format(Actual)}");
     }

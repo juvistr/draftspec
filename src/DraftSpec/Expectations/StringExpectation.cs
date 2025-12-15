@@ -49,7 +49,7 @@ public class StringExpectation
     /// </summary>
     public void toContain(string substring)
     {
-        if (Actual is null || !Actual.Contains(substring))
+        if (Actual is null || !Actual.Contains(substring, StringComparison.Ordinal))
             throw new AssertionException(
                 $"Expected {Expression} to contain \"{substring}\", but was \"{Actual}\"");
     }
@@ -59,7 +59,7 @@ public class StringExpectation
     /// </summary>
     public void toStartWith(string prefix)
     {
-        if (Actual is null || !Actual.StartsWith(prefix))
+        if (Actual is null || !Actual.StartsWith(prefix, StringComparison.Ordinal))
             throw new AssertionException(
                 $"Expected {Expression} to start with \"{prefix}\", but was \"{Actual}\"");
     }
@@ -69,7 +69,7 @@ public class StringExpectation
     /// </summary>
     public void toEndWith(string suffix)
     {
-        if (Actual is null || !Actual.EndsWith(suffix))
+        if (Actual is null || !Actual.EndsWith(suffix, StringComparison.Ordinal))
             throw new AssertionException(
                 $"Expected {Expression} to end with \"{suffix}\", but was \"{Actual}\"");
     }

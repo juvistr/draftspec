@@ -63,23 +63,25 @@
 
 | Method | Mean | Allocated |
 |--------|------|-----------|
-| ToBe_Int | 2.72 ns | 32 B |
+| ToBe_Int | 2.68 ns | 32 B |
 | ToBe_String | 2.65 ns | 32 B |
-| String_ToContain | 6.70 ns | 32 B |
-| String_ToStartWith | 9.35 ns | 32 B |
-| Collection_ToContain_Array | 49.46 ns | 32 B |
-| Collection_ToContain_List | 50.55 ns | 32 B |
-| Collection_ToHaveCount | 4.58 ns | 32 B |
-| Action_ToNotThrow | 4.92 ns | 32 B |
-| Action_ToThrow_Success | 2.356 µs | 352 B |
-| Comparison_ToBeGreaterThan | 5.05 ns | 56 B |
-| Comparison_ToBeInRange | 2.66 ns | 32 B |
+| String_ToContain | 6.78 ns | 32 B |
+| String_ToStartWith | 2.91 ns | 32 B |
+| Collection_ToContain_Array | 49.39 ns | 32 B |
+| Collection_ToContain_List | 50.14 ns | 32 B |
+| Collection_ToHaveCount | 4.66 ns | 32 B |
+| Action_ToNotThrow | 4.91 ns | 32 B |
+| Action_ToThrow_Success | 2.431 µs | 352 B |
+| Comparison_ToBeGreaterThan | 2.69 ns | 32 B |
+| Comparison_ToBeInRange | 2.69 ns | 32 B |
 
 **Observations**:
-- Basic assertions (toBe, toBeInRange) are fastest at ~2.7ns
+- Basic assertions (toBe, toBeInRange, comparisons) are fastest at ~2.7ns
 - All assertions allocate 32B for the Expectation object itself
 - Collection searches scale with size (~50ns for 1000-item collections)
 - Exception assertions are ~1000x slower (expected due to exception handling)
+- String assertions use `StringComparison.Ordinal` for speed
+- Comparison methods use `Comparer<T>.Default` to avoid boxing
 
 ## Running Benchmarks
 

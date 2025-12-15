@@ -5,7 +5,7 @@ public class FileWatcher : IDisposable
     private readonly List<FileSystemWatcher> _watchers = [];
     private readonly Action _onChange;
     private readonly int _debounceMs;
-    private CancellationTokenSource? _debounceCts;
+    private Timer? _debounceTimer;
     private readonly object _lock = new();
 
     public FileWatcher(string path, Action onChange, int debounceMs = 200)
@@ -49,26 +49,21 @@ public class FileWatcher : IDisposable
 
         lock (_lock)
         {
-            // Cancel any pending debounce
-            _debounceCts?.Cancel();
-            _debounceCts = new CancellationTokenSource();
-
-            var token = _debounceCts.Token;
-            Task.Run(async () =>
+            // Reuse timer to avoid allocations on rapid file changes
+            if (_debounceTimer == null)
             {
-                try
-                {
-                    await Task.Delay(_debounceMs, token);
-                    if (!token.IsCancellationRequested)
-                    {
-                        _onChange();
-                    }
-                }
-                catch (TaskCanceledException)
-                {
-                    // Debounce was cancelled by new change
-                }
-            });
+                // First change - create timer that fires once after debounce period
+                _debounceTimer = new Timer(
+                    _ => _onChange(),
+                    state: null,
+                    dueTime: _debounceMs,
+                    period: Timeout.Infinite);
+            }
+            else
+            {
+                // Subsequent change - reset timer to debounce again
+                _debounceTimer.Change(_debounceMs, Timeout.Infinite);
+            }
         }
     }
 
@@ -79,6 +74,6 @@ public class FileWatcher : IDisposable
             watcher.EnableRaisingEvents = false;
             watcher.Dispose();
         }
-        _debounceCts?.Dispose();
+        _debounceTimer?.Dispose();
     }
 }

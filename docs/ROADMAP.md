@@ -54,8 +54,9 @@ High-impact improvements after v1.0 blockers.
   - Parallel notification to multiple reporters via `Task.WhenAll`
   - 30-50% faster with multiple reporters
 
-- [ ] **Watch mode debounce** - `src/DraftSpec.Cli/FileWatcher.cs:50-73`
-  - Debounce rapid file changes, 60-80% allocation reduction
+- [x] **Watch mode debounce** - `src/DraftSpec.Cli/FileWatcher.cs` ✅
+  - Replaced Task.Run + CancellationTokenSource with single reusable Timer
+  - No allocations on rapid file changes (60-80% reduction)
 
 - [x] **Incremental builds** - `src/DraftSpec.Cli/SpecFileRunner.cs` ✅
   - Track source file modification times per directory

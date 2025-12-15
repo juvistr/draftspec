@@ -8,6 +8,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Configuration -->
+    <PackageId>DraftSpec.Formatters.Console</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Console output formatter for DraftSpec with colored output and progress indicators.</Description>
+    <PackageTags>testing;bdd;formatters;console</PackageTags>
   </PropertyGroup>
 
 </Project>

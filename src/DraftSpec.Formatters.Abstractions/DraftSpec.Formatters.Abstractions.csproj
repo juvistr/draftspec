@@ -4,6 +4,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Configuration -->
+    <PackageId>DraftSpec.Formatters.Abstractions</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Abstractions for DraftSpec formatters. Use this to create custom output formatters for test results.</Description>
+    <PackageTags>testing;bdd;formatters;abstractions</PackageTags>
   </PropertyGroup>
 
 </Project>

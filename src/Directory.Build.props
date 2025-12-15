@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <!-- Shared NuGet metadata -->
+    <Authors>Julia</Authors>
+    <Company>jvstr</Company>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/jvstr/draftspec</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/jvstr/draftspec</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Copyright>Copyright (c) 2024 Julia</Copyright>
+
+    <!-- Shared build settings -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+</Project>

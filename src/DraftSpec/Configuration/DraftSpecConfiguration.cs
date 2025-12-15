@@ -22,6 +22,12 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
         _pluginContext = new PluginContext(this);
     }
 
+    /// <summary>
+    /// Console formatter for outputting results to the terminal.
+    /// Set this to enable colored console output during spec execution.
+    /// </summary>
+    public IConsoleFormatter? ConsoleFormatter { get; set; }
+
     /// <inheritdoc />
     public IFormatterRegistry Formatters => _formatterRegistry;
 

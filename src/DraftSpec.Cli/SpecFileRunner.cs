@@ -25,7 +25,7 @@ public record RunSummary(
 
 public record BuildResult(bool Success, string Output, string Error, bool Skipped = false);
 
-public class SpecFileRunner
+public class SpecFileRunner : ISpecFileRunner
 {
     private readonly Dictionary<string, DateTime> _lastBuildTime = new();
     private readonly Dictionary<string, DateTime> _lastSourceModified = new();

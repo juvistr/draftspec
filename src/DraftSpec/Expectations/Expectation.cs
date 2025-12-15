@@ -88,13 +88,16 @@ public class Expectation<T>
     /// </summary>
     public void toBeGreaterThan(T expected)
     {
+        if (expected is null)
+            throw new AssertionException("Expected value cannot be null for comparison");
+
         if (Actual is not IComparable<T> comparable)
             throw new AssertionException(
                 $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
 
         if (comparable.CompareTo(expected) <= 0)
             throw new AssertionException(
-                $"Expected {Expression} to be greater than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
+                $"Expected {Expression ?? "value"} to be greater than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -102,13 +105,16 @@ public class Expectation<T>
     /// </summary>
     public void toBeLessThan(T expected)
     {
+        if (expected is null)
+            throw new AssertionException("Expected value cannot be null for comparison");
+
         if (Actual is not IComparable<T> comparable)
             throw new AssertionException(
                 $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
 
         if (comparable.CompareTo(expected) >= 0)
             throw new AssertionException(
-                $"Expected {Expression} to be less than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
+                $"Expected {Expression ?? "value"} to be less than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -116,13 +122,16 @@ public class Expectation<T>
     /// </summary>
     public void toBeAtLeast(T expected)
     {
+        if (expected is null)
+            throw new AssertionException("Expected value cannot be null for comparison");
+
         if (Actual is not IComparable<T> comparable)
             throw new AssertionException(
                 $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
 
         if (comparable.CompareTo(expected) < 0)
             throw new AssertionException(
-                $"Expected {Expression} to be at least {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
+                $"Expected {Expression ?? "value"} to be at least {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -130,13 +139,16 @@ public class Expectation<T>
     /// </summary>
     public void toBeAtMost(T expected)
     {
+        if (expected is null)
+            throw new AssertionException("Expected value cannot be null for comparison");
+
         if (Actual is not IComparable<T> comparable)
             throw new AssertionException(
                 $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
 
         if (comparable.CompareTo(expected) > 0)
             throw new AssertionException(
-                $"Expected {Expression} to be at most {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
+                $"Expected {Expression ?? "value"} to be at most {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -144,13 +156,16 @@ public class Expectation<T>
     /// </summary>
     public void toBeInRange(T min, T max)
     {
+        if (min is null || max is null)
+            throw new AssertionException("Range bounds cannot be null for comparison");
+
         if (Actual is not IComparable<T> comparable)
             throw new AssertionException(
                 $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
 
         if (comparable.CompareTo(min) < 0 || comparable.CompareTo(max) > 0)
             throw new AssertionException(
-                $"Expected {Expression} to be in range [{ExpectationHelpers.Format(min)}, {ExpectationHelpers.Format(max)}], but was {ExpectationHelpers.Format(Actual)}");
+                $"Expected {Expression ?? "value"} to be in range [{ExpectationHelpers.Format(min)}, {ExpectationHelpers.Format(max)}], but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>

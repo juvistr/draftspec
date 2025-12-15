@@ -2,7 +2,7 @@ using System.Security;
 
 namespace DraftSpec.Cli;
 
-public class SpecFinder
+public class SpecFinder : ISpecFinder
 {
     /// <summary>
     /// Find spec files at the given path.

@@ -36,18 +36,19 @@ public class MarkdownFormatter : IFormatter
         sb.AppendLine();
         sb.Append($"**{report.Summary.Total} specs**: ");
 
-        var parts = new List<string>();
-        if (report.Summary.Passed > 0) parts.Add($"{report.Summary.Passed} passed");
-        if (report.Summary.Failed > 0) parts.Add($"{report.Summary.Failed} failed");
-        if (report.Summary.Pending > 0) parts.Add($"{report.Summary.Pending} pending");
-        if (report.Summary.Skipped > 0) parts.Add($"{report.Summary.Skipped} skipped");
-        sb.AppendLine(string.Join(", ", parts));
+        // Inline stats without intermediate List allocation
+        var first = true;
+        if (report.Summary.Passed > 0) { sb.Append($"{report.Summary.Passed} passed"); first = false; }
+        if (report.Summary.Failed > 0) { if (!first) sb.Append(", "); sb.Append($"{report.Summary.Failed} failed"); first = false; }
+        if (report.Summary.Pending > 0) { if (!first) sb.Append(", "); sb.Append($"{report.Summary.Pending} pending"); first = false; }
+        if (report.Summary.Skipped > 0) { if (!first) sb.Append(", "); sb.Append($"{report.Summary.Skipped} skipped"); }
+        sb.AppendLine();
 
         sb.AppendLine();
-        var footer = new List<string> { $"Generated {report.Timestamp:yyyy-MM-dd HH:mm:ss} UTC" };
+        sb.Append($"*Generated {report.Timestamp:yyyy-MM-dd HH:mm:ss} UTC");
         if (!string.IsNullOrEmpty(report.Source))
-            footer.Add($"from `{report.Source}`");
-        sb.AppendLine($"*{string.Join(" ", footer)}*");
+            sb.Append($" from `{report.Source}`");
+        sb.AppendLine("*");
 
         return sb.ToString();
     }

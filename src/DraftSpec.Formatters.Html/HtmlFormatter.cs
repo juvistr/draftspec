@@ -72,20 +72,21 @@ public class HtmlFormatter : IFormatter
 
         // Summary
         sb.AppendLine("  <div class=\"summary\">");
-        sb.AppendLine($"    <p><strong>{report.Summary.Total} specs</strong>: ");
+        sb.Append($"    <p><strong>{report.Summary.Total} specs</strong>: ");
 
-        var parts = new List<string>();
-        if (report.Summary.Passed > 0) parts.Add($"<span class=\"passed\">{report.Summary.Passed} passed</span>");
-        if (report.Summary.Failed > 0) parts.Add($"<span class=\"failed\">{report.Summary.Failed} failed</span>");
-        if (report.Summary.Pending > 0) parts.Add($"<span class=\"pending\">{report.Summary.Pending} pending</span>");
-        if (report.Summary.Skipped > 0) parts.Add($"<span class=\"skipped\">{report.Summary.Skipped} skipped</span>");
-        sb.AppendLine(string.Join(", ", parts));
+        // Inline stats without intermediate List allocation
+        var first = true;
+        if (report.Summary.Passed > 0) { sb.Append($"<span class=\"passed\">{report.Summary.Passed} passed</span>"); first = false; }
+        if (report.Summary.Failed > 0) { if (!first) sb.Append(", "); sb.Append($"<span class=\"failed\">{report.Summary.Failed} failed</span>"); first = false; }
+        if (report.Summary.Pending > 0) { if (!first) sb.Append(", "); sb.Append($"<span class=\"pending\">{report.Summary.Pending} pending</span>"); first = false; }
+        if (report.Summary.Skipped > 0) { if (!first) sb.Append(", "); sb.Append($"<span class=\"skipped\">{report.Summary.Skipped} skipped</span>"); }
+        sb.AppendLine();
 
         sb.AppendLine("    </p>");
-        var footerParts = new List<string> { $"Generated {report.Timestamp:yyyy-MM-dd HH:mm:ss} UTC" };
+        sb.Append($"    <p><small>Generated {report.Timestamp:yyyy-MM-dd HH:mm:ss} UTC");
         if (!string.IsNullOrEmpty(report.Source))
-            footerParts.Add($"from <code>{Escape(report.Source)}</code>");
-        sb.AppendLine($"    <p><small>{string.Join(" ", footerParts)}</small></p>");
+            sb.Append($" from <code>{Escape(report.Source)}</code>");
+        sb.AppendLine("</small></p>");
         sb.AppendLine("  </div>");
 
         sb.AppendLine("</body>");

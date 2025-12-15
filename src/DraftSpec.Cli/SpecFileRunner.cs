@@ -55,15 +55,27 @@ public class SpecFileRunner
     {
         var stopwatch = Stopwatch.StartNew();
 
-        // Collect unique directories and build each once (always sequential)
+        // Collect unique directories and build each once
         var directories = specFiles
             .Select(f => Path.GetDirectoryName(Path.GetFullPath(f))!)
             .Distinct()
             .ToList();
 
-        foreach (var dir in directories)
+        if (parallel && directories.Count > 1)
         {
-            BuildProjects(dir);
+            // Build directories in parallel (projects within each directory still sequential)
+            Parallel.ForEach(
+                directories,
+                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                dir => BuildProjects(dir));
+        }
+        else
+        {
+            // Build directories sequentially
+            foreach (var dir in directories)
+            {
+                BuildProjects(dir);
+            }
         }
 
         List<SpecRunResult> results;

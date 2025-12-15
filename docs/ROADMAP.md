@@ -45,8 +45,9 @@ High-impact improvements after v1.0 blockers.
 
 ### Performance
 
-- [ ] **Build parallelization** - `src/DraftSpec.Cli/SpecFileRunner.cs:58-67`
-  - Parallel project resolution, 50-70% faster builds
+- [x] **Build parallelization** - `src/DraftSpec.Cli/SpecFileRunner.cs:64-79` ✅
+  - Build projects in different directories in parallel when --parallel flag is used
+  - Projects within same directory still built sequentially (may have interdependencies)
 
 - [ ] **Reporter batching** - `src/DraftSpec/SpecRunner.cs:205-209`
   - Batch reporter callbacks, 30-50% faster with multiple reporters

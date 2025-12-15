@@ -63,19 +63,23 @@
 
 | Method | Mean | Allocated |
 |--------|------|-----------|
-| ToBe_Int | ~0 ns | 0 B |
-| ToBe_String | ~0 ns | 0 B |
-| String_ToContain | 7.566 ns | 0 B |
-| String_ToStartWith | 6.978 ns | 0 B |
-| Collection_ToContain_Array | 47.862 ns | 32 B |
-| Collection_ToContain_List | 49.710 ns | 32 B |
-| Collection_ToHaveCount | 0.804 ns | 0 B |
-| Action_ToNotThrow | 3.836 ns | 32 B |
-| Action_ToThrow_Success | 2.397 µs | 352 B |
-| Comparison_ToBeGreaterThan | 2.113 ns | 24 B |
-| Comparison_ToBeInRange | ~0 ns | 0 B |
+| ToBe_Int | 2.72 ns | 32 B |
+| ToBe_String | 2.65 ns | 32 B |
+| String_ToContain | 6.70 ns | 32 B |
+| String_ToStartWith | 9.35 ns | 32 B |
+| Collection_ToContain_Array | 49.46 ns | 32 B |
+| Collection_ToContain_List | 50.55 ns | 32 B |
+| Collection_ToHaveCount | 4.58 ns | 32 B |
+| Action_ToNotThrow | 4.92 ns | 32 B |
+| Action_ToThrow_Success | 2.356 µs | 352 B |
+| Comparison_ToBeGreaterThan | 5.05 ns | 56 B |
+| Comparison_ToBeInRange | 2.66 ns | 32 B |
 
-**Key Achievement**: Most passing assertions achieve near-zero overhead and zero allocations.
+**Observations**:
+- Basic assertions (toBe, toBeInRange) are fastest at ~2.7ns
+- All assertions allocate 32B for the Expectation object itself
+- Collection searches scale with size (~50ns for 1000-item collections)
+- Exception assertions are ~1000x slower (expected due to exception handling)
 
 ## Running Benchmarks
 
@@ -92,6 +96,6 @@ dotnet run --project benchmarks/DraftSpec.Benchmarks -c Release -- --filter '*Ex
 
 1. **Linear Scaling**: SpecRunner and ReportBuilder scale linearly with spec count (10x specs = ~10x time)
 2. **Memory Efficiency**: Allocations scale proportionally with spec count
-3. **Zero-Overhead Assertions**: Simple equality checks are optimized away by JIT
+3. **Fast Assertions**: Basic equality checks complete in ~2.7ns with minimal 32B allocation
 4. **Fast Formatters**: Markdown is fastest, followed by HTML, then Console
 5. **Parallelism**: Near-linear speedup for async workloads; sync-only specs see coordination overhead

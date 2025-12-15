@@ -37,6 +37,9 @@ coverage*/
 *.coverage
 *.coveragexml
 
+# Benchmark results
+BenchmarkDotNet.Artifacts/
+
 # Build artifacts
 project.lock.json
 project.fragment.lock.json

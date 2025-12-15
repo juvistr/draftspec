@@ -40,7 +40,7 @@ public class HtmlFormatter : IFormatter
         sb.AppendLine("    ul { list-style: none; padding-left: 1rem; }");
         if (!string.IsNullOrEmpty(_options.CustomCss))
         {
-            sb.AppendLine(_options.CustomCss);
+            sb.AppendLine(SanitizeCss(_options.CustomCss));
         }
         sb.AppendLine("  </style>");
         sb.AppendLine("</head>");
@@ -124,4 +124,19 @@ public class HtmlFormatter : IFormatter
     }
 
     private static string Escape(string text) => HttpUtility.HtmlEncode(text);
+
+    /// <summary>
+    /// Sanitize CSS to prevent XSS via style tag escape.
+    /// Removes closing style tags and script tags that could break out of CSS context.
+    /// </summary>
+    private static string SanitizeCss(string css)
+    {
+        // Remove any attempts to close the style tag or inject scripts
+        return css
+            .Replace("</style>", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("</style", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("<script", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("<link", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("<import", "", StringComparison.OrdinalIgnoreCase);
+    }
 }

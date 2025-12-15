@@ -3,12 +3,24 @@ using System.Text;
 namespace DraftSpec.Formatters.Markdown;
 
 /// <summary>
-/// Formats spec reports as Markdown.
+/// Formats spec reports as Markdown with nested headings and list items.
 /// </summary>
+/// <remarks>
+/// Uses GitHub-flavored Markdown syntax with checkmarks, strikethrough for skipped specs,
+/// and blockquotes for error messages.
+/// </remarks>
 public class MarkdownFormatter : IFormatter
 {
+    /// <summary>
+    /// The file extension for Markdown output.
+    /// </summary>
     public string FileExtension => ".md";
 
+    /// <summary>
+    /// Formats the spec report as a Markdown document.
+    /// </summary>
+    /// <param name="report">The spec report to format.</param>
+    /// <returns>A Markdown-formatted string.</returns>
     public string Format(SpecReport report)
     {
         var sb = new StringBuilder();

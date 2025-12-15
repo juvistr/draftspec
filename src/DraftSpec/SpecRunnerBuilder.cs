@@ -11,6 +11,7 @@ public class SpecRunnerBuilder
 {
     private readonly List<ISpecMiddleware> _middleware = [];
     private DraftSpecConfiguration? _configuration;
+    private int _maxDegreeOfParallelism;
 
     /// <summary>
     /// Add a middleware to the pipeline.
@@ -106,9 +107,36 @@ public class SpecRunnerBuilder
     }
 
     /// <summary>
+    /// Enable parallel execution of specs within contexts.
+    /// </summary>
+    /// <param name="maxDegreeOfParallelism">
+    /// Maximum number of specs to execute concurrently.
+    /// 0 or negative uses Environment.ProcessorCount.
+    /// 1 disables parallel execution.
+    /// </param>
+    /// <remarks>
+    /// Parallel execution runs specs within the same context concurrently.
+    /// BeforeAll/AfterAll hooks are still executed sequentially at context boundaries.
+    /// BeforeEach/AfterEach hooks run per-spec (each spec gets its own hook execution).
+    /// Results maintain original declaration order regardless of execution order.
+    /// </remarks>
+    public SpecRunnerBuilder WithParallelExecution(int maxDegreeOfParallelism = 0)
+    {
+        _maxDegreeOfParallelism = maxDegreeOfParallelism <= 0
+            ? Environment.ProcessorCount
+            : maxDegreeOfParallelism;
+        return this;
+    }
+
+    /// <summary>
     /// Get the current configuration, or null if not set.
     /// </summary>
     internal DraftSpecConfiguration? Configuration => _configuration;
+
+    /// <summary>
+    /// Get the maximum degree of parallelism. 0 means sequential execution.
+    /// </summary>
+    internal int MaxDegreeOfParallelism => _maxDegreeOfParallelism;
 
     /// <summary>
     /// Build the configured SpecRunner.
@@ -122,6 +150,6 @@ public class SpecRunnerBuilder
             _configuration.InitializeMiddleware(this);
         }
 
-        return new SpecRunner(_middleware, _configuration);
+        return new SpecRunner(_middleware, _configuration, _maxDegreeOfParallelism);
     }
 }

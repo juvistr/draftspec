@@ -7,17 +7,19 @@ namespace DraftSpec;
 
 /// <summary>
 /// Spec runner that walks the tree and executes specs through a middleware pipeline.
+/// Supports both sequential and parallel execution of specs.
 /// </summary>
 public class SpecRunner : ISpecRunner
 {
     private readonly IReadOnlyList<ISpecMiddleware> _middleware;
     private readonly Func<SpecExecutionContext, Task<SpecResult>> _pipeline;
     private readonly DraftSpecConfiguration? _configuration;
+    private readonly int _maxDegreeOfParallelism;
 
     /// <summary>
     /// Create a SpecRunner with no middleware (default behavior).
     /// </summary>
-    public SpecRunner() : this([], null)
+    public SpecRunner() : this([], null, 0)
     {
     }
 
@@ -26,10 +28,15 @@ public class SpecRunner : ISpecRunner
     /// </summary>
     /// <param name="middleware">Middleware executed in order (first wraps last)</param>
     /// <param name="configuration">Optional configuration for reporters and formatters</param>
-    public SpecRunner(IEnumerable<ISpecMiddleware> middleware, DraftSpecConfiguration? configuration = null)
+    /// <param name="maxDegreeOfParallelism">Maximum parallel spec execution (0 = sequential)</param>
+    public SpecRunner(
+        IEnumerable<ISpecMiddleware> middleware,
+        DraftSpecConfiguration? configuration = null,
+        int maxDegreeOfParallelism = 0)
     {
         _middleware = middleware.ToList();
         _configuration = configuration;
+        _maxDegreeOfParallelism = maxDegreeOfParallelism;
         _pipeline = BuildPipeline();
     }
 
@@ -128,21 +135,23 @@ public class SpecRunner : ISpecRunner
         if (!string.IsNullOrEmpty(context.Description))
             descriptions.Add(context.Description);
 
-        // Run beforeAll
+        // Run beforeAll (always sequential)
         if (context.BeforeAll != null)
             await context.BeforeAll();
 
         try
         {
-            // Run specs in this context
-            foreach (var spec in context.Specs)
+            // Run specs in this context (parallel or sequential)
+            if (_maxDegreeOfParallelism > 1 && context.Specs.Count > 1)
             {
-                var result = await RunSpecAsync(spec, context, descriptions, hasFocused);
-                results.Add(result);
-                await NotifySpecCompletedAsync(result);
+                await RunSpecsParallelAsync(context, descriptions, results, hasFocused);
+            }
+            else
+            {
+                await RunSpecsSequentialAsync(context, descriptions, results, hasFocused);
             }
 
-            // Recurse into children
+            // Recurse into children (always sequential to maintain context isolation)
             foreach (var child in context.Children)
             {
                 await RunContextAsync(child, descriptions, results, hasFocused);
@@ -150,9 +159,53 @@ public class SpecRunner : ISpecRunner
         }
         finally
         {
-            // Run afterAll
+            // Run afterAll (always sequential)
             if (context.AfterAll != null)
                 await context.AfterAll();
+        }
+    }
+
+    private async Task RunSpecsSequentialAsync(
+        SpecContext context,
+        List<string> descriptions,
+        List<SpecResult> results,
+        bool hasFocused)
+    {
+        foreach (var spec in context.Specs)
+        {
+            var result = await RunSpecAsync(spec, context, descriptions, hasFocused);
+            results.Add(result);
+            await NotifySpecCompletedAsync(result);
+        }
+    }
+
+    private async Task RunSpecsParallelAsync(
+        SpecContext context,
+        List<string> descriptions,
+        List<SpecResult> results,
+        bool hasFocused)
+    {
+        // Create indexed list to preserve order
+        var indexedSpecs = context.Specs.Select((spec, index) => (spec, index)).ToList();
+        var resultArray = new SpecResult[indexedSpecs.Count];
+
+        var options = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = _maxDegreeOfParallelism
+        };
+
+        await Parallel.ForEachAsync(indexedSpecs, options, async (item, _) =>
+        {
+            var (spec, index) = item;
+            var result = await RunSpecAsync(spec, context, descriptions, hasFocused);
+            resultArray[index] = result;
+        });
+
+        // Add results in original order and notify reporters
+        foreach (var result in resultArray)
+        {
+            results.Add(result);
+            await NotifySpecCompletedAsync(result);
         }
     }
 
@@ -190,26 +243,43 @@ public class SpecRunner : ISpecRunner
     /// </summary>
     private async Task<SpecResult> ExecuteCoreAsync(SpecExecutionContext ctx)
     {
-        // Run beforeEach hooks (walk up the tree)
+        // Time beforeEach hooks
+        var beforeSw = Stopwatch.StartNew();
         await RunBeforeEachHooksAsync(ctx.Context);
+        beforeSw.Stop();
+        var beforeEachDuration = beforeSw.Elapsed;
 
-        var sw = Stopwatch.StartNew();
+        // Time spec body
+        var specSw = Stopwatch.StartNew();
+        SpecStatus status;
+        Exception? exception = null;
+
         try
         {
             await ctx.Spec.Body!.Invoke();
-            sw.Stop();
-            return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath, sw.Elapsed);
+            specSw.Stop();
+            status = SpecStatus.Passed;
         }
         catch (Exception ex)
         {
-            sw.Stop();
-            return new SpecResult(ctx.Spec, SpecStatus.Failed, ctx.ContextPath, sw.Elapsed, ex);
+            specSw.Stop();
+            status = SpecStatus.Failed;
+            exception = ex;
         }
-        finally
+
+        var specDuration = specSw.Elapsed;
+
+        // Time afterEach hooks (always run, even on failure)
+        var afterSw = Stopwatch.StartNew();
+        await RunAfterEachHooksAsync(ctx.Context);
+        afterSw.Stop();
+        var afterEachDuration = afterSw.Elapsed;
+
+        return new SpecResult(ctx.Spec, status, ctx.ContextPath, specDuration, exception)
         {
-            // Run afterEach hooks (walk up the tree, child to parent)
-            await RunAfterEachHooksAsync(ctx.Context);
-        }
+            BeforeEachDuration = beforeEachDuration,
+            AfterEachDuration = afterEachDuration
+        };
     }
 
     private static async Task RunBeforeEachHooksAsync(SpecContext context)

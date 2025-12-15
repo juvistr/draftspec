@@ -3,13 +3,23 @@ using DraftSpec.Expectations;
 namespace DraftSpec;
 
 /// <summary>
-/// Expectation wrapper for fluent assertions.
+/// Expectation wrapper for fluent assertions on values of type <typeparamref name="T"/>.
 /// </summary>
+/// <typeparam name="T">The type of value being asserted.</typeparam>
+/// <remarks>
+/// Created via <c>expect(value)</c>. Provides assertions like <c>toBe()</c>,
+/// <c>toBeNull()</c>, <c>toBeGreaterThan()</c>, etc.
+/// </remarks>
 public class Expectation<T>
 {
     private readonly T _actual;
     private readonly string? _expr;
 
+    /// <summary>
+    /// Creates an expectation for the specified value.
+    /// </summary>
+    /// <param name="actual">The actual value to assert against.</param>
+    /// <param name="expr">The expression text (for error messages).</param>
     public Expectation(T actual, string? expr)
     {
         _actual = actual;
@@ -17,8 +27,10 @@ public class Expectation<T>
     }
 
     /// <summary>
-    /// Assert that the actual value equals the expected value.
+    /// Asserts that the actual value equals the expected value.
     /// </summary>
+    /// <param name="expected">The expected value.</param>
+    /// <exception cref="AssertionException">Thrown when values are not equal.</exception>
     public void toBe(T expected)
     {
         if (!Equals(_actual, expected))

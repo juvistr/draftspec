@@ -6,19 +6,38 @@ namespace DraftSpec.Formatters.Html;
 /// <summary>
 /// Formats spec reports as HTML with CDN-based styling.
 /// </summary>
+/// <remarks>
+/// Uses Simple.css by default for minimal, clean styling. Custom CSS can be
+/// injected via <see cref="HtmlOptions.CustomCss"/> (sanitized to prevent XSS).
+/// </remarks>
 public class HtmlFormatter : IFormatter
 {
     private readonly HtmlOptions _options;
 
+    /// <summary>
+    /// Creates an HTML formatter with default options.
+    /// </summary>
     public HtmlFormatter() : this(new HtmlOptions()) { }
 
+    /// <summary>
+    /// Creates an HTML formatter with custom options.
+    /// </summary>
+    /// <param name="options">Formatting options including CSS customization.</param>
     public HtmlFormatter(HtmlOptions options)
     {
         _options = options;
     }
 
+    /// <summary>
+    /// The file extension for HTML output.
+    /// </summary>
     public string FileExtension => ".html";
 
+    /// <summary>
+    /// Formats the spec report as an HTML document.
+    /// </summary>
+    /// <param name="report">The spec report to format.</param>
+    /// <returns>A complete HTML document string.</returns>
     public string Format(SpecReport report)
     {
         var sb = new StringBuilder();

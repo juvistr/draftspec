@@ -1,11 +1,26 @@
 namespace DraftSpec;
 
 /// <summary>
-/// Represents a describe/context block containing specs and nested contexts.
+/// Represents a describe/context block containing specs, nested contexts, and lifecycle hooks.
 /// </summary>
+/// <remarks>
+/// SpecContext forms a tree structure where each node can contain:
+/// <list type="bullet">
+/// <item><description>Child contexts (nested describe blocks)</description></item>
+/// <item><description>Specs (it blocks)</description></item>
+/// <item><description>Lifecycle hooks (beforeAll, afterAll, beforeEach, afterEach)</description></item>
+/// </list>
+/// </remarks>
 public class SpecContext
 {
+    /// <summary>
+    /// The description text for this context block.
+    /// </summary>
     public string Description { get; }
+
+    /// <summary>
+    /// The parent context, or null if this is the root context.
+    /// </summary>
     public SpecContext? Parent { get; }
 
     // Internal mutable lists
@@ -13,18 +28,33 @@ public class SpecContext
     private readonly List<SpecDefinition> _specs = [];
 
     /// <summary>
-    /// Child contexts (read-only view).
+    /// Child contexts (read-only view). Use <see cref="AddChild"/> to add.
     /// </summary>
     public IReadOnlyList<SpecContext> Children => _children;
 
     /// <summary>
-    /// Specs in this context (read-only view).
+    /// Specs in this context (read-only view). Use <see cref="AddSpec"/> to add.
     /// </summary>
     public IReadOnlyList<SpecDefinition> Specs => _specs;
 
+    /// <summary>
+    /// Hook that runs once before any spec in this context. Runs after parent's BeforeAll.
+    /// </summary>
     public Func<Task>? BeforeAll { get; set; }
+
+    /// <summary>
+    /// Hook that runs once after all specs in this context. Runs before parent's AfterAll.
+    /// </summary>
     public Func<Task>? AfterAll { get; set; }
+
+    /// <summary>
+    /// Hook that runs before each spec. Runs after parent's BeforeEach.
+    /// </summary>
     public Func<Task>? BeforeEach { get; set; }
+
+    /// <summary>
+    /// Hook that runs after each spec. Runs before parent's AfterEach.
+    /// </summary>
     public Func<Task>? AfterEach { get; set; }
 
     // Cached hook chains for performance (computed lazily)
@@ -47,8 +77,16 @@ public class SpecContext
         parent?._children.Add(this);
     }
 
+    /// <summary>
+    /// Adds a spec to this context.
+    /// </summary>
+    /// <param name="spec">The spec definition to add.</param>
     public void AddSpec(SpecDefinition spec) => _specs.Add(spec);
 
+    /// <summary>
+    /// Adds a child context to this context.
+    /// </summary>
+    /// <param name="child">The child context to add.</param>
     public void AddChild(SpecContext child) => _children.Add(child);
 
     /// <summary>

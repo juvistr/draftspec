@@ -1,13 +1,22 @@
 namespace DraftSpec;
 
 /// <summary>
-/// Expectation wrapper for string values.
+/// Expectation wrapper for string values with string-specific assertions.
 /// </summary>
+/// <remarks>
+/// Created via <c>expect(stringValue)</c>. Provides assertions like <c>toContain()</c>,
+/// <c>toStartWith()</c>, <c>toEndWith()</c>, etc.
+/// </remarks>
 public class StringExpectation
 {
     private readonly string? _actual;
     private readonly string? _expr;
 
+    /// <summary>
+    /// Creates an expectation for the specified string value.
+    /// </summary>
+    /// <param name="actual">The actual string value to assert against.</param>
+    /// <param name="expr">The expression text (for error messages).</param>
     public StringExpectation(string? actual, string? expr)
     {
         _actual = actual;

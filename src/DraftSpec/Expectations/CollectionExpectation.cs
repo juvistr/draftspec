@@ -3,13 +3,23 @@ using DraftSpec.Expectations;
 namespace DraftSpec;
 
 /// <summary>
-/// Expectation wrapper for collections.
+/// Expectation wrapper for collections with collection-specific assertions.
 /// </summary>
+/// <typeparam name="T">The type of elements in the collection.</typeparam>
+/// <remarks>
+/// Created via <c>expect(collection)</c>. Provides assertions like <c>toContain()</c>,
+/// <c>toHaveCount()</c>, <c>toBeEmpty()</c>, etc.
+/// </remarks>
 public class CollectionExpectation<T>
 {
     private readonly IEnumerable<T> _actual;
     private readonly string? _expr;
 
+    /// <summary>
+    /// Creates an expectation for the specified collection.
+    /// </summary>
+    /// <param name="actual">The actual collection to assert against.</param>
+    /// <param name="expr">The expression text (for error messages).</param>
     public CollectionExpectation(IEnumerable<T> actual, string? expr)
     {
         _actual = actual;

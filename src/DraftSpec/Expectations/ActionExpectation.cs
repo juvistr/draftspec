@@ -1,13 +1,22 @@
 namespace DraftSpec;
 
 /// <summary>
-/// Expectation wrapper for actions (exception testing).
+/// Expectation wrapper for actions, used for testing exception behavior.
 /// </summary>
+/// <remarks>
+/// Created via <c>expect(() => action())</c>. Provides assertions like <c>toThrow&lt;T&gt;()</c>
+/// and <c>toNotThrow()</c>.
+/// </remarks>
 public class ActionExpectation
 {
     private readonly Action _action;
     private readonly string? _expr;
 
+    /// <summary>
+    /// Creates an expectation for the specified action.
+    /// </summary>
+    /// <param name="action">The action to execute and assert against.</param>
+    /// <param name="expr">The expression text (for error messages).</param>
     public ActionExpectation(Action action, string? expr)
     {
         _action = action;

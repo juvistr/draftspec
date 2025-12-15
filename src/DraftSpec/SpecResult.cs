@@ -2,17 +2,40 @@ using DraftSpec.Middleware;
 
 namespace DraftSpec;
 
+/// <summary>
+/// Represents the execution status of a spec.
+/// </summary>
 public enum SpecStatus
 {
+    /// <summary>
+    /// The spec executed successfully without throwing an exception.
+    /// </summary>
     Passed,
+
+    /// <summary>
+    /// The spec threw an exception during execution.
+    /// </summary>
     Failed,
+
+    /// <summary>
+    /// The spec has no body defined (placeholder for future implementation).
+    /// </summary>
     Pending,
+
+    /// <summary>
+    /// The spec was skipped due to filtering, focus mode, or explicit skip.
+    /// </summary>
     Skipped
 }
 
 /// <summary>
-/// The result of executing a single spec.
+/// The result of executing a single spec, including status, timing, and error information.
 /// </summary>
+/// <param name="Spec">The spec definition that was executed.</param>
+/// <param name="Status">The execution outcome (Passed, Failed, Pending, or Skipped).</param>
+/// <param name="ContextPath">The breadcrumb trail of context descriptions from root to the spec's parent.</param>
+/// <param name="Duration">The time taken to execute the spec body (excludes hooks).</param>
+/// <param name="Exception">The exception that caused failure, if Status is Failed.</param>
 public sealed record SpecResult(
     SpecDefinition Spec,
     SpecStatus Status,
@@ -25,6 +48,21 @@ public sealed record SpecResult(
     /// Null if no retry middleware was configured or no retries occurred.
     /// </summary>
     public RetryInfo? RetryInfo { get; init; }
+
+    /// <summary>
+    /// Time spent executing beforeEach hooks (from all ancestor contexts).
+    /// </summary>
+    public TimeSpan BeforeEachDuration { get; init; }
+
+    /// <summary>
+    /// Time spent executing afterEach hooks (from all ancestor contexts).
+    /// </summary>
+    public TimeSpan AfterEachDuration { get; init; }
+
+    /// <summary>
+    /// Total execution time including hooks and spec body.
+    /// </summary>
+    public TimeSpan TotalDuration => BeforeEachDuration + Duration + AfterEachDuration;
 
     /// <summary>
     /// Full description including context path and spec description, space-separated.

@@ -1,8 +1,11 @@
+using System.Collections.Concurrent;
+
 namespace DraftSpec.Middleware;
 
 /// <summary>
 /// Context passed through the middleware pipeline.
 /// Contains all information needed to execute a spec.
+/// Thread-safe for use with parallel execution.
 /// </summary>
 public class SpecExecutionContext
 {
@@ -33,8 +36,9 @@ public class SpecExecutionContext
     public CancellationToken CancellationToken { get; set; } = CancellationToken.None;
 
     /// <summary>
-    /// Mutable bag for middleware to share state.
+    /// Thread-safe mutable bag for middleware to share state.
     /// Key: middleware type name, Value: arbitrary data.
+    /// Uses ConcurrentDictionary for safe parallel access.
     /// </summary>
-    public Dictionary<string, object> Items { get; } = [];
+    public ConcurrentDictionary<string, object> Items { get; } = new();
 }

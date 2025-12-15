@@ -3,26 +3,58 @@ using DraftSpec.Internal;
 namespace DraftSpec;
 
 /// <summary>
-/// Base class for spec definitions. Inherit from this to define specs.
+/// Base class for class-based spec definitions. Inherit from this to define specs.
 /// </summary>
+/// <remarks>
+/// This is an alternative to the static <see cref="Dsl"/> API. It provides instance methods
+/// for defining specs, which may be preferred in traditional test projects.
+/// </remarks>
+/// <example>
+/// <code>
+/// public class CalculatorSpecs : Spec
+/// {
+///     public override void Define()
+///     {
+///         describe("Calculator", () =>
+///         {
+///             it("adds numbers", () => expect(1 + 1).toBe(2));
+///         });
+///     }
+/// }
+/// </code>
+/// </example>
 public abstract class Spec
 {
     private static readonly AsyncLocal<SpecContext?> CurrentContextLocal = new();
 
+    /// <summary>
+    /// The root context for this spec class, named after the class type.
+    /// </summary>
     public SpecContext RootContext { get; }
 
+    /// <summary>
+    /// The currently active context during spec definition.
+    /// </summary>
     protected static SpecContext? CurrentContext
     {
         get => CurrentContextLocal.Value;
         private set => CurrentContextLocal.Value = value;
     }
 
+    /// <summary>
+    /// Initializes the spec with a root context named after the class.
+    /// </summary>
     protected Spec()
     {
         RootContext = new SpecContext(GetType().Name);
         CurrentContext = RootContext;
     }
 
+    /// <summary>
+    /// Defines a context block for grouping related specs.
+    /// </summary>
+    /// <param name="description">Description of what this context covers.</param>
+    /// <param name="body">Action that defines the specs and nested contexts.</param>
     protected void describe(string description, Action body)
     {
         var parent = CurrentContext!;
@@ -38,49 +70,79 @@ public abstract class Spec
         }
     }
 
-    // Alias for describe - used for sub-groupings
+    /// <summary>
+    /// Alias for <see cref="describe"/> - used for sub-groupings within a describe block.
+    /// </summary>
+    /// <param name="description">Description of the sub-context.</param>
+    /// <param name="body">Action that defines the specs and nested contexts.</param>
     protected void context(string description, Action body) => describe(description, body);
 
-    // Spec with implementation
+    /// <summary>
+    /// Defines a spec with an implementation.
+    /// </summary>
+    /// <param name="description">What the spec tests.</param>
+    /// <param name="body">The test implementation.</param>
     protected void it(string description, Action body)
     {
         ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateSpec(description, body));
     }
 
-    // Pending spec - no implementation yet
+    /// <summary>
+    /// Defines a pending spec (no implementation yet).
+    /// </summary>
+    /// <param name="description">What the spec will test.</param>
     protected void it(string description)
     {
         ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreatePendingSpec(description));
     }
 
-    // Focused spec - only run focused specs when any exist
+    /// <summary>
+    /// Defines a focused spec. When any focused specs exist, only focused specs run.
+    /// </summary>
+    /// <param name="description">What the spec tests.</param>
+    /// <param name="body">The test implementation.</param>
     protected void fit(string description, Action body)
     {
         ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateFocusedSpec(description, body));
     }
 
-    // Skipped spec
+    /// <summary>
+    /// Defines a skipped spec that will not be executed.
+    /// </summary>
+    /// <param name="description">What the spec would test.</param>
+    /// <param name="body">Optional body (will not be executed).</param>
     protected void xit(string description, Action? body = null)
     {
         ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateSkippedSpec(description, body));
     }
 
-    // Hook setters - use ContextBuilder for validation
+    /// <summary>
+    /// Sets a hook that runs once before any spec in the current context.
+    /// </summary>
     protected Action beforeAll
     {
         set => ContextBuilder.SetBeforeAll(CurrentContext, value);
     }
 
+    /// <summary>
+    /// Sets a hook that runs once after all specs in the current context.
+    /// </summary>
     protected Action afterAll
     {
         set => ContextBuilder.SetAfterAll(CurrentContext, value);
     }
 
+    /// <summary>
+    /// Sets a hook that runs before each spec in the current context.
+    /// </summary>
     protected Action before
     {
         set => ContextBuilder.SetBeforeEach(CurrentContext, value);
     }
 
+    /// <summary>
+    /// Sets a hook that runs after each spec in the current context.
+    /// </summary>
     protected Action after
     {
         set => ContextBuilder.SetAfterEach(CurrentContext, value);

@@ -113,9 +113,10 @@ Prioritized work items from the comprehensive review, organized into phases.
 
 ### Architecture
 
-- [ ] **A5: Add execution pipeline with middleware**
-  - Files: Create `src/DraftSpec/Execution/IExecutionPipeline.cs`, `ISpecMiddleware.cs`
-  - Action: Enable retry, timeout, parallel execution
+- [x] **A5: Add execution pipeline with middleware** *(commit pending)*
+  - Files: `src/DraftSpec/Middleware/ISpecMiddleware.cs`, `SpecExecutionContext.cs`, `RetryMiddleware.cs`, `TimeoutMiddleware.cs`
+  - Files: `src/DraftSpec/SpecRunnerBuilder.cs`, `Dsl.Configuration.cs`
+  - Action: Added middleware pipeline with retry and timeout support
   - See: [ARCHITECTURE.md](./ARCHITECTURE.md#2-execution-pipeline-no-extension-points)
 
 - [ ] **A6: Add spec filtering API**
@@ -232,19 +233,19 @@ Prioritized work items from the comprehensive review, organized into phases.
 | Category | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Total | Done |
 |----------|---------|---------|---------|---------|-------|------|
 | Security | 3 | 0 | 2 | 0 | 5 | 3 ✅ |
-| Architecture | 0 | 4 | 4 | 0 | 8 | 4 ✅ |
+| Architecture | 0 | 4 | 4 | 0 | 8 | 5 ✅ |
 | Code Quality | 2 | 0 | 2 | 0 | 4 | 2 ✅ |
 | Performance | 0 | 3 | 0 | 3 | 6 | 3 ✅ |
 | Testing | 2 | 2 | 3 | 0 | 7 | 4 ✅ |
 | Documentation | 0 | 0 | 0 | 3 | 3 | 0 |
 | Features | 0 | 0 | 0 | 3 | 3 | 0 |
-| **Total** | **7** | **9** | **11** | **9** | **36** | **16** |
+| **Total** | **7** | **9** | **11** | **9** | **36** | **17** |
 
 ## Progress
 
 - **Phase 1:** ✅ Complete (7/7 items)
 - **Phase 2:** ✅ Complete (9/9 items)
-- **Phase 3:** Not started
+- **Phase 3:** In progress (1/11 items)
 - **Phase 4:** Not started
 
 ## Quick Reference
@@ -259,9 +260,9 @@ Prioritized work items from the comprehensive review, organized into phases.
 
 ### Metrics to Track
 
-| Metric | Initial | After Phase 1 | After Phase 2 | Target |
-|--------|---------|---------------|---------------|--------|
-| Test Count | 9 | 111 | 192 | 200+ |
-| Security Issues (High) | 3 | 0 ✅ | 0 ✅ | 0 |
-| Extension Points | 2 | 2 | 6 | 8+ |
-| Perf Optimizations | 0 | 0 | 3 ✅ | 6 |
+| Metric | Initial | After Phase 1 | After Phase 2 | After Phase 3 | Target |
+|--------|---------|---------------|---------------|---------------|--------|
+| Test Count | 9 | 111 | 192 | 220 | 200+ ✅ |
+| Security Issues (High) | 3 | 0 ✅ | 0 ✅ | 0 ✅ | 0 |
+| Extension Points | 2 | 2 | 6 | 8 | 8+ ✅ |
+| Perf Optimizations | 0 | 0 | 3 ✅ | 3 ✅ | 6 |

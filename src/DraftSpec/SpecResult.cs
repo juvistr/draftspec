@@ -1,3 +1,5 @@
+using DraftSpec.Middleware;
+
 namespace DraftSpec;
 
 public enum SpecStatus
@@ -11,34 +13,21 @@ public enum SpecStatus
 /// <summary>
 /// The result of executing a single spec.
 /// </summary>
-public class SpecResult
+public sealed record SpecResult(
+    SpecDefinition Spec,
+    SpecStatus Status,
+    IReadOnlyList<string> ContextPath,
+    TimeSpan Duration = default,
+    Exception? Exception = null)
 {
-    public SpecDefinition Spec { get; }
-    public SpecStatus Status { get; }
-    public TimeSpan Duration { get; }
-    public Exception? Exception { get; }
-
     /// <summary>
-    /// The path of context descriptions leading to this spec (excluding the spec's own description).
+    /// Retry information if the spec was retried.
+    /// Null if no retry middleware was configured or no retries occurred.
     /// </summary>
-    public IReadOnlyList<string> ContextPath { get; }
+    public RetryInfo? RetryInfo { get; init; }
 
     /// <summary>
     /// Full description including context path and spec description, space-separated.
     /// </summary>
     public string FullDescription => string.Join(" ", ContextPath.Append(Spec.Description));
-
-    public SpecResult(
-        SpecDefinition spec,
-        SpecStatus status,
-        IReadOnlyList<string> contextPath,
-        TimeSpan duration = default,
-        Exception? exception = null)
-    {
-        Spec = spec;
-        Status = status;
-        ContextPath = contextPath;
-        Duration = duration;
-        Exception = exception;
-    }
 }

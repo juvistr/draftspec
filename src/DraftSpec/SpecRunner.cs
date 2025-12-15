@@ -1,12 +1,53 @@
 using System.Diagnostics;
+using DraftSpec.Middleware;
 
 namespace DraftSpec;
 
 /// <summary>
-/// Simple spec runner that walks the tree and executes specs.
+/// Spec runner that walks the tree and executes specs through a middleware pipeline.
 /// </summary>
 public class SpecRunner : ISpecRunner
 {
+    private readonly IReadOnlyList<ISpecMiddleware> _middleware;
+    private readonly Func<SpecExecutionContext, SpecResult> _pipeline;
+
+    /// <summary>
+    /// Create a SpecRunner with no middleware (default behavior).
+    /// </summary>
+    public SpecRunner() : this([])
+    {
+    }
+
+    /// <summary>
+    /// Create a SpecRunner with the specified middleware.
+    /// </summary>
+    /// <param name="middleware">Middleware executed in order (first wraps last)</param>
+    public SpecRunner(IEnumerable<ISpecMiddleware> middleware)
+    {
+        _middleware = middleware.ToList();
+        _pipeline = BuildPipeline();
+    }
+
+    /// <summary>
+    /// Create a fluent builder for configuring the runner.
+    /// </summary>
+    public static SpecRunnerBuilder Create() => new();
+
+    private Func<SpecExecutionContext, SpecResult> BuildPipeline()
+    {
+        // Start with core execution
+        Func<SpecExecutionContext, SpecResult> pipeline = ExecuteCore;
+
+        // Wrap with middleware in reverse order (last added wraps first)
+        foreach (var mw in _middleware.Reverse())
+        {
+            var current = pipeline;
+            pipeline = ctx => mw.Execute(ctx, current);
+        }
+
+        return pipeline;
+    }
+
     public List<SpecResult> Run(Spec spec) => Run(spec.RootContext);
 
     public List<SpecResult> Run(SpecContext rootContext)
@@ -75,42 +116,53 @@ public class SpecRunner : ISpecRunner
         List<string> contextPath,
         bool hasFocused)
     {
-        // Skip if focused specs exist and this isn't one
+        // Quick returns for non-executable specs (bypass pipeline)
         if (hasFocused && !spec.IsFocused)
-        {
             return new SpecResult(spec, SpecStatus.Skipped, contextPath);
-        }
 
         if (spec.IsSkipped)
-        {
             return new SpecResult(spec, SpecStatus.Skipped, contextPath);
-        }
 
         if (spec.IsPending)
-        {
             return new SpecResult(spec, SpecStatus.Pending, contextPath);
-        }
 
+        // Create execution context and run through pipeline
+        var executionContext = new SpecExecutionContext
+        {
+            Spec = spec,
+            Context = context,
+            ContextPath = contextPath,
+            HasFocused = hasFocused
+        };
+
+        return _pipeline(executionContext);
+    }
+
+    /// <summary>
+    /// Core spec execution - runs hooks and spec body.
+    /// This is the terminal handler in the middleware pipeline.
+    /// </summary>
+    private SpecResult ExecuteCore(SpecExecutionContext ctx)
+    {
         // Run beforeEach hooks (walk up the tree)
-        RunBeforeEachHooks(context);
+        RunBeforeEachHooks(ctx.Context);
 
         var sw = Stopwatch.StartNew();
         try
         {
-            spec.Body!.Invoke();
+            ctx.Spec.Body!.Invoke();
             sw.Stop();
-
-            return new SpecResult(spec, SpecStatus.Passed, contextPath, sw.Elapsed);
+            return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath, sw.Elapsed);
         }
         catch (Exception ex)
         {
             sw.Stop();
-            return new SpecResult(spec, SpecStatus.Failed, contextPath, sw.Elapsed, ex);
+            return new SpecResult(ctx.Spec, SpecStatus.Failed, ctx.ContextPath, sw.Elapsed, ex);
         }
         finally
         {
             // Run afterEach hooks (walk up the tree, child to parent)
-            RunAfterEachHooks(context);
+            RunAfterEachHooks(ctx.Context);
         }
     }
 

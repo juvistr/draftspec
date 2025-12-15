@@ -21,9 +21,9 @@ internal static class SpecExecutor
     /// <summary>
     /// Execute specs and return the report.
     /// </summary>
-    public static SpecReport Execute(SpecContext rootContext)
+    public static SpecReport Execute(SpecContext rootContext, SpecRunnerBuilder? builder = null)
     {
-        var runner = new SpecRunner();
+        var runner = builder?.Build() ?? new SpecRunner();
         var results = runner.Run(rootContext);
         return SpecReportBuilder.Build(rootContext, results);
     }
@@ -31,7 +31,11 @@ internal static class SpecExecutor
     /// <summary>
     /// Execute specs and write output to console.
     /// </summary>
-    public static void ExecuteAndOutput(SpecContext? rootContext, bool json, Action resetState)
+    public static void ExecuteAndOutput(
+        SpecContext? rootContext,
+        bool json,
+        Action resetState,
+        SpecRunnerBuilder? builder = null)
     {
         if (rootContext is null)
         {
@@ -42,7 +46,7 @@ internal static class SpecExecutor
             return;
         }
 
-        var report = Execute(rootContext);
+        var report = Execute(rootContext, builder);
 
         if (json)
         {

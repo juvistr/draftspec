@@ -1,3 +1,4 @@
+using System.Security;
 using DraftSpec.Formatters;
 using DraftSpec.Formatters.Html;
 using DraftSpec.Formatters.Markdown;
@@ -83,28 +84,33 @@ public static class RunCommand
             }
         }
 
-        // Combine JSON reports (for now, just use first one if single file)
-        // TODO: Proper merging for multiple spec files
-        var jsonReport = jsonOutputs.FirstOrDefault() ?? "{}";
+        // Merge all JSON reports into a combined report
+        var combinedReport = MergeReports(jsonOutputs, Path.GetFullPath(options.Path));
 
         string output;
         if (options.Format == OutputFormats.Json)
         {
-            output = jsonReport;
+            output = combinedReport.ToJson();
         }
         else
         {
-            var report = SpecReport.FromJson(jsonReport);
-            report.Source = Path.GetFullPath(options.Path);
             var formatter = GetFormatter(options.Format, options)
                 ?? throw new ArgumentException($"Unknown format: {options.Format}");
-            output = formatter.Format(report);
+            output = formatter.Format(combinedReport);
         }
 
         // Output to file or stdout
         if (!string.IsNullOrEmpty(options.OutputFile))
         {
-            File.WriteAllText(options.OutputFile, output);
+            // Security: Validate output path is within current directory
+            var outputFullPath = Path.GetFullPath(options.OutputFile);
+            var currentDir = Directory.GetCurrentDirectory();
+            if (!outputFullPath.StartsWith(currentDir, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new SecurityException($"Output file must be within current directory: {options.OutputFile}");
+            }
+
+            File.WriteAllText(outputFullPath, output);
             Console.WriteLine($"Report written to {options.OutputFile}");
         }
         else
@@ -122,5 +128,65 @@ public static class RunCommand
         {
             ProcessHelper.RunDotnet(["build", project, "--nologo", "-v", "q"], directory);
         }
+    }
+
+    /// <summary>
+    /// Merge multiple JSON reports into a single combined report.
+    /// </summary>
+    private static SpecReport MergeReports(List<string> jsonOutputs, string source)
+    {
+        if (jsonOutputs.Count == 0)
+        {
+            return new SpecReport
+            {
+                Timestamp = DateTime.UtcNow,
+                Source = source,
+                Summary = new SpecSummary(),
+                Contexts = []
+            };
+        }
+
+        // Parse all reports
+        var reports = jsonOutputs
+            .Where(json => !string.IsNullOrWhiteSpace(json))
+            .Select(SpecReport.FromJson)
+            .ToList();
+
+        if (reports.Count == 0)
+        {
+            return new SpecReport
+            {
+                Timestamp = DateTime.UtcNow,
+                Source = source,
+                Summary = new SpecSummary(),
+                Contexts = []
+            };
+        }
+
+        // Single report - just update source
+        if (reports.Count == 1)
+        {
+            reports[0].Source = source;
+            return reports[0];
+        }
+
+        // Merge multiple reports
+        var combined = new SpecReport
+        {
+            Timestamp = reports.Min(r => r.Timestamp),
+            Source = source,
+            Contexts = reports.SelectMany(r => r.Contexts).ToList(),
+            Summary = new SpecSummary
+            {
+                Total = reports.Sum(r => r.Summary.Total),
+                Passed = reports.Sum(r => r.Summary.Passed),
+                Failed = reports.Sum(r => r.Summary.Failed),
+                Pending = reports.Sum(r => r.Summary.Pending),
+                Skipped = reports.Sum(r => r.Summary.Skipped),
+                DurationMs = reports.Sum(r => r.Summary.DurationMs)
+            }
+        };
+
+        return combined;
     }
 }

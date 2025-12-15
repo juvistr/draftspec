@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\DraftSpec\DraftSpec.csproj" />
+    <ProjectReference Include="..\..\src\DraftSpec.Cli\DraftSpec.Cli.csproj" />
   </ItemGroup>
 
 </Project>

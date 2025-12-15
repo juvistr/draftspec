@@ -9,11 +9,22 @@ namespace DraftSpec;
 /// <remarks>
 /// Created via <c>expect(collection)</c>. Provides assertions like <c>toContain()</c>,
 /// <c>toHaveCount()</c>, <c>toBeEmpty()</c>, etc.
+/// Extension methods can access <see cref="Actual"/> and <see cref="Expression"/>
+/// to create custom matchers.
 /// </remarks>
 public class CollectionExpectation<T>
 {
-    private readonly IEnumerable<T> _actual;
-    private readonly string? _expr;
+    /// <summary>
+    /// The actual collection being asserted.
+    /// Exposed for extension methods to create custom matchers.
+    /// </summary>
+    public IEnumerable<T> Actual { get; }
+
+    /// <summary>
+    /// The expression text captured from the call site (for error messages).
+    /// Exposed for extension methods to create custom matchers.
+    /// </summary>
+    public string? Expression { get; }
 
     /// <summary>
     /// Creates an expectation for the specified collection.
@@ -22,8 +33,8 @@ public class CollectionExpectation<T>
     /// <param name="expr">The expression text (for error messages).</param>
     public CollectionExpectation(IEnumerable<T> actual, string? expr)
     {
-        _actual = actual;
-        _expr = expr;
+        Actual = actual;
+        Expression = expr;
     }
 
     /// <summary>
@@ -31,9 +42,9 @@ public class CollectionExpectation<T>
     /// </summary>
     public void toContain(T expected)
     {
-        if (!_actual.Contains(expected))
+        if (!Actual.Contains(expected))
             throw new AssertionException(
-                $"Expected {_expr} to contain {ExpectationHelpers.Format(expected)}, but it did not. Contents: [{FormatCollection()}]");
+                $"Expected {Expression} to contain {ExpectationHelpers.Format(expected)}, but it did not. Contents: [{FormatCollection()}]");
     }
 
     /// <summary>
@@ -41,9 +52,9 @@ public class CollectionExpectation<T>
     /// </summary>
     public void toNotContain(T expected)
     {
-        if (_actual.Contains(expected))
+        if (Actual.Contains(expected))
             throw new AssertionException(
-                $"Expected {_expr} to not contain {ExpectationHelpers.Format(expected)}, but it did");
+                $"Expected {Expression} to not contain {ExpectationHelpers.Format(expected)}, but it did");
     }
 
     /// <summary>
@@ -51,10 +62,10 @@ public class CollectionExpectation<T>
     /// </summary>
     public void toContainAll(params T[] expected)
     {
-        var missing = expected.Where(e => !_actual.Contains(e)).ToList();
+        var missing = expected.Where(e => !Actual.Contains(e)).ToList();
         if (missing.Count > 0)
             throw new AssertionException(
-                $"Expected {_expr} to contain all of [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was missing [{string.Join(", ", missing.Select(e => ExpectationHelpers.Format(e)))}]");
+                $"Expected {Expression} to contain all of [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was missing [{string.Join(", ", missing.Select(e => ExpectationHelpers.Format(e)))}]");
     }
 
     /// <summary>
@@ -62,10 +73,10 @@ public class CollectionExpectation<T>
     /// </summary>
     public void toHaveCount(int expected)
     {
-        var count = _actual.Count();
+        var count = Actual.Count();
         if (count != expected)
             throw new AssertionException(
-                $"Expected {_expr} to have count {expected}, but was {count}");
+                $"Expected {Expression} to have count {expected}, but was {count}");
     }
 
     /// <summary>
@@ -73,9 +84,9 @@ public class CollectionExpectation<T>
     /// </summary>
     public void toBeEmpty()
     {
-        if (_actual.Any())
+        if (Actual.Any())
             throw new AssertionException(
-                $"Expected {_expr} to be empty, but had {_actual.Count()} items: [{FormatCollection()}]");
+                $"Expected {Expression} to be empty, but had {Actual.Count()} items: [{FormatCollection()}]");
     }
 
     /// <summary>
@@ -83,9 +94,9 @@ public class CollectionExpectation<T>
     /// </summary>
     public void toNotBeEmpty()
     {
-        if (!_actual.Any())
+        if (!Actual.Any())
             throw new AssertionException(
-                $"Expected {_expr} to not be empty");
+                $"Expected {Expression} to not be empty");
     }
 
     /// <summary>
@@ -93,9 +104,9 @@ public class CollectionExpectation<T>
     /// </summary>
     public void toBe(IEnumerable<T> expected)
     {
-        if (!_actual.SequenceEqual(expected))
+        if (!Actual.SequenceEqual(expected))
             throw new AssertionException(
-                $"Expected {_expr} to be [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was [{FormatCollection()}]");
+                $"Expected {Expression} to be [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was [{FormatCollection()}]");
     }
 
     /// <summary>
@@ -108,9 +119,9 @@ public class CollectionExpectation<T>
 
     private string FormatCollection()
     {
-        var items = _actual.Take(10).Select(e => ExpectationHelpers.Format(e));
+        var items = Actual.Take(10).Select(e => ExpectationHelpers.Format(e));
         var result = string.Join(", ", items);
-        if (_actual.Count() > 10)
+        if (Actual.Count() > 10)
             result += ", ...";
         return result;
     }

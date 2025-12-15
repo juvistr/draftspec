@@ -6,11 +6,22 @@ namespace DraftSpec;
 /// <remarks>
 /// Created via <c>expect(() => action())</c>. Provides assertions like <c>toThrow&lt;T&gt;()</c>
 /// and <c>toNotThrow()</c>.
+/// Extension methods can access <see cref="Action"/> and <see cref="Expression"/>
+/// to create custom matchers.
 /// </remarks>
 public class ActionExpectation
 {
-    private readonly Action _action;
-    private readonly string? _expr;
+    /// <summary>
+    /// The action being asserted.
+    /// Exposed for extension methods to create custom matchers.
+    /// </summary>
+    public Action Action { get; }
+
+    /// <summary>
+    /// The expression text captured from the call site (for error messages).
+    /// Exposed for extension methods to create custom matchers.
+    /// </summary>
+    public string? Expression { get; }
 
     /// <summary>
     /// Creates an expectation for the specified action.
@@ -19,8 +30,8 @@ public class ActionExpectation
     /// <param name="expr">The expression text (for error messages).</param>
     public ActionExpectation(Action action, string? expr)
     {
-        _action = action;
-        _expr = expr;
+        Action = action;
+        Expression = expr;
     }
 
     /// <summary>
@@ -30,7 +41,7 @@ public class ActionExpectation
     {
         try
         {
-            _action();
+            Action();
         }
         catch (TException ex)
         {
@@ -39,11 +50,11 @@ public class ActionExpectation
         catch (Exception ex)
         {
             throw new AssertionException(
-                $"Expected {_expr} to throw {typeof(TException).Name}, but threw {ex.GetType().Name}: {ex.Message}");
+                $"Expected {Expression} to throw {typeof(TException).Name}, but threw {ex.GetType().Name}: {ex.Message}");
         }
 
         throw new AssertionException(
-            $"Expected {_expr} to throw {typeof(TException).Name}, but no exception was thrown");
+            $"Expected {Expression} to throw {typeof(TException).Name}, but no exception was thrown");
     }
 
     /// <summary>
@@ -53,7 +64,7 @@ public class ActionExpectation
     {
         try
         {
-            _action();
+            Action();
         }
         catch (Exception ex)
         {
@@ -61,7 +72,7 @@ public class ActionExpectation
         }
 
         throw new AssertionException(
-            $"Expected {_expr} to throw an exception, but no exception was thrown");
+            $"Expected {Expression} to throw an exception, but no exception was thrown");
     }
 
     /// <summary>
@@ -71,12 +82,12 @@ public class ActionExpectation
     {
         try
         {
-            _action();
+            Action();
         }
         catch (Exception ex)
         {
             throw new AssertionException(
-                $"Expected {_expr} to not throw, but threw {ex.GetType().Name}: {ex.Message}");
+                $"Expected {Expression} to not throw, but threw {ex.GetType().Name}: {ex.Message}");
         }
     }
 }

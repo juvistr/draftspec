@@ -6,11 +6,22 @@ namespace DraftSpec;
 /// <remarks>
 /// Created via <c>expect(boolValue)</c>. Provides assertions like <c>toBeTrue()</c>
 /// and <c>toBeFalse()</c>.
+/// Extension methods can access <see cref="Actual"/> and <see cref="Expression"/>
+/// to create custom matchers.
 /// </remarks>
 public class BoolExpectation
 {
-    private readonly bool _actual;
-    private readonly string? _expr;
+    /// <summary>
+    /// The actual boolean value being asserted.
+    /// Exposed for extension methods to create custom matchers.
+    /// </summary>
+    public bool Actual { get; }
+
+    /// <summary>
+    /// The expression text captured from the call site (for error messages).
+    /// Exposed for extension methods to create custom matchers.
+    /// </summary>
+    public string? Expression { get; }
 
     /// <summary>
     /// Creates an expectation for the specified boolean value.
@@ -19,8 +30,8 @@ public class BoolExpectation
     /// <param name="expr">The expression text (for error messages).</param>
     public BoolExpectation(bool actual, string? expr)
     {
-        _actual = actual;
-        _expr = expr;
+        Actual = actual;
+        Expression = expr;
     }
 
     /// <summary>
@@ -28,9 +39,9 @@ public class BoolExpectation
     /// </summary>
     public void toBeTrue()
     {
-        if (!_actual)
+        if (!Actual)
             throw new AssertionException(
-                $"Expected {_expr} to be true, but was false");
+                $"Expected {Expression} to be true, but was false");
     }
 
     /// <summary>
@@ -38,9 +49,9 @@ public class BoolExpectation
     /// </summary>
     public void toBeFalse()
     {
-        if (_actual)
+        if (Actual)
             throw new AssertionException(
-                $"Expected {_expr} to be false, but was true");
+                $"Expected {Expression} to be false, but was true");
     }
 
     /// <summary>
@@ -48,8 +59,8 @@ public class BoolExpectation
     /// </summary>
     public void toBe(bool expected)
     {
-        if (_actual != expected)
+        if (Actual != expected)
             throw new AssertionException(
-                $"Expected {_expr} to be {expected}, but was {_actual}");
+                $"Expected {Expression} to be {expected}, but was {Actual}");
     }
 }

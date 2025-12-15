@@ -25,6 +25,20 @@ public class SpecReport
         return JsonSerializer.Deserialize<SpecReport>(json, options)
             ?? throw new InvalidOperationException("Failed to parse JSON report");
     }
+
+    /// <summary>
+    /// Serialize this report to a JSON string.
+    /// </summary>
+    public string ToJson()
+    {
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+        return JsonSerializer.Serialize(this, options);
+    }
 }
 
 /// <summary>

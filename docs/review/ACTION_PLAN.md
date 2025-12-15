@@ -221,18 +221,20 @@ Prioritized work items from the comprehensive review, organized into phases.
 
 ### Advanced Features
 
-- [ ] **F1: Custom matcher extension API**
-  - Files: Document or provide base classes
-  - Action: Enable domain-specific assertions
-  - See: [ARCHITECTURE.md](./ARCHITECTURE.md#3-no-extension-points-for-custom-matchers)
+- [x] **F1: Custom matcher extension API**
+  - Files: `src/DraftSpec/Expectations/*.cs`, `tests/DraftSpec.Tests/Expectations/ExtensionTests.cs`
+  - Action: Exposed `Actual` and `Expression` properties on all expectation classes for extension methods
+  - See: [ARCHITECTURE.md](../ARCHITECTURE.md#4-custom-matchers-extension-methods)
 
-- [ ] **F2: Watch mode**
-  - Action: Re-run on file changes
+- [x] **F2: Watch mode** *(Already implemented)*
+  - Files: `src/DraftSpec.Cli/Commands/WatchCommand.cs`, `src/DraftSpec.Cli/FileWatcher.cs`
+  - Action: `draftspec watch .` command with file watching and debouncing
   - See: [ARCHITECTURE.md](./ARCHITECTURE.md#phase-3-advanced-features)
 
-- [ ] **F3: Snapshot testing**
-  - Action: Compare output to saved snapshots
-  - See: [ARCHITECTURE.md](./ARCHITECTURE.md#phase-3-advanced-features)
+- [~] **F3: Snapshot testing** *(Skipped - recommend Verify library)*
+  - Status: High effort (2-4 weeks), medium value
+  - Recommendation: Use existing .NET snapshot libraries (Verify, Snapshooter)
+  - See: Cost/benefit analysis in plan file
 
 ## Summary by Category
 
@@ -244,15 +246,15 @@ Prioritized work items from the comprehensive review, organized into phases.
 | Performance | 0 | 3 | 0 | 3 | 6 | 6 ✅ |
 | Testing | 2 | 2 | 3 | 0 | 7 | 7 ✅ |
 | Documentation | 0 | 0 | 0 | 3 | 3 | 3 ✅ |
-| Features | 0 | 0 | 0 | 3 | 3 | 0 |
-| **Total** | **7** | **9** | **11** | **9** | **36** | **33** |
+| Features | 0 | 0 | 0 | 3 | 3 | 2 ✅ (1 skipped) |
+| **Total** | **7** | **9** | **11** | **9** | **36** | **35** |
 
 ## Progress
 
 - **Phase 1:** ✅ Complete (7/7 items)
 - **Phase 2:** ✅ Complete (9/9 items)
 - **Phase 3:** ✅ Complete (11/11 items)
-- **Phase 4:** ✅ Complete (6/6 items - Documentation + Performance)
+- **Phase 4:** ✅ Complete (9/9 items - Documentation, Performance, Advanced Features)
 
 ## Quick Reference
 
@@ -268,7 +270,7 @@ Prioritized work items from the comprehensive review, organized into phases.
 
 | Metric | Initial | After Phase 1 | After Phase 2 | After Phase 3 | After Phase 4 | Target |
 |--------|---------|---------------|---------------|---------------|---------------|--------|
-| Test Count | 9 | 111 | 192 | 299 | 332 | 200+ ✅ |
+| Test Count | 9 | 111 | 192 | 299 | 347 | 200+ ✅ |
 | Security Issues (High) | 3 | 0 ✅ | 0 ✅ | 0 ✅ | 0 ✅ | 0 |
-| Extension Points | 2 | 2 | 6 | 12 | 13 | 8+ ✅ |
+| Extension Points | 2 | 2 | 6 | 12 | 14 | 8+ ✅ |
 | Perf Optimizations | 0 | 0 | 3 | 3 | 6 ✅ | 6 |

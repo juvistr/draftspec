@@ -246,21 +246,84 @@ var config = new DraftSpecConfiguration();
 config.AddReporter(new SlackReporter());
 ```
 
-### 4. Custom Assertions
+### 4. Custom Matchers (Extension Methods)
 
-Extend expectation classes or create custom matchers:
+All expectation classes expose `Actual` and `Expression` properties, enabling custom matchers via extension methods:
 
+**DateTime Matcher Example:**
 ```csharp
 public static class DateExpectationExtensions
 {
-    public static void toBeWithin(this Expectation<DateTime> exp, TimeSpan tolerance, DateTime expected)
+    public static void toBeAfter(this Expectation<DateTime> exp, DateTime other)
     {
-        var diff = Math.Abs((exp.Actual - expected).TotalMilliseconds);
-        if (diff > tolerance.TotalMilliseconds)
-            throw new AssertionException($"Expected within {tolerance} of {expected}");
+        if (exp.Actual <= other)
+            throw new AssertionException(
+                $"Expected {exp.Expression} to be after {other:O}, but was {exp.Actual:O}");
+    }
+
+    public static void toBeBefore(this Expectation<DateTime> exp, DateTime other)
+    {
+        if (exp.Actual >= other)
+            throw new AssertionException(
+                $"Expected {exp.Expression} to be before {other:O}, but was {exp.Actual:O}");
     }
 }
+
+// Usage:
+expect(order.ShippedDate).toBeAfter(order.OrderDate);
 ```
+
+**String Matcher Example:**
+```csharp
+public static class StringMatcherExtensions
+{
+    public static void toBeValidEmail(this StringExpectation exp)
+    {
+        if (exp.Actual is null || !exp.Actual.Contains('@') || !exp.Actual.Contains('.'))
+            throw new AssertionException(
+                $"Expected {exp.Expression} to be a valid email, but was \"{exp.Actual}\"");
+    }
+}
+
+// Usage:
+expect(user.Email).toBeValidEmail();
+```
+
+**Collection Matcher Example:**
+```csharp
+public static class CollectionMatcherExtensions
+{
+    public static void toAllSatisfy<T>(
+        this CollectionExpectation<T> exp,
+        Func<T, bool> predicate,
+        string description)
+    {
+        var failing = exp.Actual.Where(x => !predicate(x)).ToList();
+        if (failing.Count > 0)
+            throw new AssertionException(
+                $"Expected all items in {exp.Expression} to {description}, " +
+                $"but {failing.Count} item(s) failed");
+    }
+}
+
+// Usage:
+expect(numbers).toAllSatisfy(n => n > 0, "be positive");
+```
+
+**Available Properties by Expectation Type:**
+
+| Class | Exposed Properties |
+|-------|-------------------|
+| `Expectation<T>` | `Actual`, `Expression` |
+| `StringExpectation` | `Actual`, `Expression` |
+| `BoolExpectation` | `Actual`, `Expression` |
+| `ActionExpectation` | `Action`, `Expression` |
+| `CollectionExpectation<T>` | `Actual`, `Expression` |
+
+**Best Practices:**
+- Include `exp.Expression` in error messages for clear failure output
+- Throw `AssertionException` for assertion failures
+- Use descriptive method names following the `toBe...` / `toHave...` pattern
 
 ## Hook Execution Order
 

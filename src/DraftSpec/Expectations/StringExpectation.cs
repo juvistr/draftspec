@@ -6,11 +6,22 @@ namespace DraftSpec;
 /// <remarks>
 /// Created via <c>expect(stringValue)</c>. Provides assertions like <c>toContain()</c>,
 /// <c>toStartWith()</c>, <c>toEndWith()</c>, etc.
+/// Extension methods can access <see cref="Actual"/> and <see cref="Expression"/>
+/// to create custom matchers.
 /// </remarks>
 public class StringExpectation
 {
-    private readonly string? _actual;
-    private readonly string? _expr;
+    /// <summary>
+    /// The actual string value being asserted.
+    /// Exposed for extension methods to create custom matchers.
+    /// </summary>
+    public string? Actual { get; }
+
+    /// <summary>
+    /// The expression text captured from the call site (for error messages).
+    /// Exposed for extension methods to create custom matchers.
+    /// </summary>
+    public string? Expression { get; }
 
     /// <summary>
     /// Creates an expectation for the specified string value.
@@ -19,8 +30,8 @@ public class StringExpectation
     /// <param name="expr">The expression text (for error messages).</param>
     public StringExpectation(string? actual, string? expr)
     {
-        _actual = actual;
-        _expr = expr;
+        Actual = actual;
+        Expression = expr;
     }
 
     /// <summary>
@@ -28,9 +39,9 @@ public class StringExpectation
     /// </summary>
     public void toBe(string? expected)
     {
-        if (_actual != expected)
+        if (Actual != expected)
             throw new AssertionException(
-                $"Expected {_expr} to be \"{expected}\", but was \"{_actual}\"");
+                $"Expected {Expression} to be \"{expected}\", but was \"{Actual}\"");
     }
 
     /// <summary>
@@ -38,9 +49,9 @@ public class StringExpectation
     /// </summary>
     public void toContain(string substring)
     {
-        if (_actual is null || !_actual.Contains(substring))
+        if (Actual is null || !Actual.Contains(substring))
             throw new AssertionException(
-                $"Expected {_expr} to contain \"{substring}\", but was \"{_actual}\"");
+                $"Expected {Expression} to contain \"{substring}\", but was \"{Actual}\"");
     }
 
     /// <summary>
@@ -48,9 +59,9 @@ public class StringExpectation
     /// </summary>
     public void toStartWith(string prefix)
     {
-        if (_actual is null || !_actual.StartsWith(prefix))
+        if (Actual is null || !Actual.StartsWith(prefix))
             throw new AssertionException(
-                $"Expected {_expr} to start with \"{prefix}\", but was \"{_actual}\"");
+                $"Expected {Expression} to start with \"{prefix}\", but was \"{Actual}\"");
     }
 
     /// <summary>
@@ -58,9 +69,9 @@ public class StringExpectation
     /// </summary>
     public void toEndWith(string suffix)
     {
-        if (_actual is null || !_actual.EndsWith(suffix))
+        if (Actual is null || !Actual.EndsWith(suffix))
             throw new AssertionException(
-                $"Expected {_expr} to end with \"{suffix}\", but was \"{_actual}\"");
+                $"Expected {Expression} to end with \"{suffix}\", but was \"{Actual}\"");
     }
 
     /// <summary>
@@ -68,9 +79,9 @@ public class StringExpectation
     /// </summary>
     public void toBeNullOrEmpty()
     {
-        if (!string.IsNullOrEmpty(_actual))
+        if (!string.IsNullOrEmpty(Actual))
             throw new AssertionException(
-                $"Expected {_expr} to be null or empty, but was \"{_actual}\"");
+                $"Expected {Expression} to be null or empty, but was \"{Actual}\"");
     }
 
     /// <summary>
@@ -78,8 +89,8 @@ public class StringExpectation
     /// </summary>
     public void toBeNull()
     {
-        if (_actual is not null)
+        if (Actual is not null)
             throw new AssertionException(
-                $"Expected {_expr} to be null, but was \"{_actual}\"");
+                $"Expected {Expression} to be null, but was \"{Actual}\"");
     }
 }

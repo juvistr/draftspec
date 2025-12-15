@@ -9,11 +9,36 @@ namespace DraftSpec;
 /// <remarks>
 /// Created via <c>expect(value)</c>. Provides assertions like <c>toBe()</c>,
 /// <c>toBeNull()</c>, <c>toBeGreaterThan()</c>, etc.
+/// Extension methods can access <see cref="Actual"/> and <see cref="Expression"/>
+/// to create custom matchers.
 /// </remarks>
+/// <example>
+/// Custom matcher via extension method:
+/// <code>
+/// public static class DateExpectationExtensions
+/// {
+///     public static void toBeAfter(this Expectation&lt;DateTime&gt; exp, DateTime other)
+///     {
+///         if (exp.Actual &lt;= other)
+///             throw new AssertionException(
+///                 $"Expected {exp.Expression} to be after {other}, but was {exp.Actual}");
+///     }
+/// }
+/// </code>
+/// </example>
 public class Expectation<T>
 {
-    private readonly T _actual;
-    private readonly string? _expr;
+    /// <summary>
+    /// The actual value being asserted.
+    /// Exposed for extension methods to create custom matchers.
+    /// </summary>
+    public T Actual { get; }
+
+    /// <summary>
+    /// The expression text captured from the call site (for error messages).
+    /// Exposed for extension methods to create custom matchers.
+    /// </summary>
+    public string? Expression { get; }
 
     /// <summary>
     /// Creates an expectation for the specified value.
@@ -22,8 +47,8 @@ public class Expectation<T>
     /// <param name="expr">The expression text (for error messages).</param>
     public Expectation(T actual, string? expr)
     {
-        _actual = actual;
-        _expr = expr;
+        Actual = actual;
+        Expression = expr;
     }
 
     /// <summary>
@@ -33,9 +58,9 @@ public class Expectation<T>
     /// <exception cref="AssertionException">Thrown when values are not equal.</exception>
     public void toBe(T expected)
     {
-        if (!Equals(_actual, expected))
+        if (!Equals(Actual, expected))
             throw new AssertionException(
-                $"Expected {_expr} to be {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(_actual)}");
+                $"Expected {Expression} to be {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -43,9 +68,9 @@ public class Expectation<T>
     /// </summary>
     public void toBeNull()
     {
-        if (_actual is not null)
+        if (Actual is not null)
             throw new AssertionException(
-                $"Expected {_expr} to be null, but was {ExpectationHelpers.Format(_actual)}");
+                $"Expected {Expression} to be null, but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -53,9 +78,9 @@ public class Expectation<T>
     /// </summary>
     public void toNotBeNull()
     {
-        if (_actual is null)
+        if (Actual is null)
             throw new AssertionException(
-                $"Expected {_expr} to not be null");
+                $"Expected {Expression} to not be null");
     }
 
     /// <summary>
@@ -63,13 +88,13 @@ public class Expectation<T>
     /// </summary>
     public void toBeGreaterThan(T expected)
     {
-        if (_actual is not IComparable<T> comparable)
+        if (Actual is not IComparable<T> comparable)
             throw new AssertionException(
                 $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
 
         if (comparable.CompareTo(expected) <= 0)
             throw new AssertionException(
-                $"Expected {_expr} to be greater than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(_actual)}");
+                $"Expected {Expression} to be greater than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -77,13 +102,13 @@ public class Expectation<T>
     /// </summary>
     public void toBeLessThan(T expected)
     {
-        if (_actual is not IComparable<T> comparable)
+        if (Actual is not IComparable<T> comparable)
             throw new AssertionException(
                 $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
 
         if (comparable.CompareTo(expected) >= 0)
             throw new AssertionException(
-                $"Expected {_expr} to be less than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(_actual)}");
+                $"Expected {Expression} to be less than {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -91,13 +116,13 @@ public class Expectation<T>
     /// </summary>
     public void toBeAtLeast(T expected)
     {
-        if (_actual is not IComparable<T> comparable)
+        if (Actual is not IComparable<T> comparable)
             throw new AssertionException(
                 $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
 
         if (comparable.CompareTo(expected) < 0)
             throw new AssertionException(
-                $"Expected {_expr} to be at least {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(_actual)}");
+                $"Expected {Expression} to be at least {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -105,13 +130,13 @@ public class Expectation<T>
     /// </summary>
     public void toBeAtMost(T expected)
     {
-        if (_actual is not IComparable<T> comparable)
+        if (Actual is not IComparable<T> comparable)
             throw new AssertionException(
                 $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
 
         if (comparable.CompareTo(expected) > 0)
             throw new AssertionException(
-                $"Expected {_expr} to be at most {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(_actual)}");
+                $"Expected {Expression} to be at most {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -119,13 +144,13 @@ public class Expectation<T>
     /// </summary>
     public void toBeInRange(T min, T max)
     {
-        if (_actual is not IComparable<T> comparable)
+        if (Actual is not IComparable<T> comparable)
             throw new AssertionException(
                 $"Cannot compare {typeof(T).Name} - type does not implement IComparable<{typeof(T).Name}>");
 
         if (comparable.CompareTo(min) < 0 || comparable.CompareTo(max) > 0)
             throw new AssertionException(
-                $"Expected {_expr} to be in range [{ExpectationHelpers.Format(min)}, {ExpectationHelpers.Format(max)}], but was {ExpectationHelpers.Format(_actual)}");
+                $"Expected {Expression} to be in range [{ExpectationHelpers.Format(min)}, {ExpectationHelpers.Format(max)}], but was {ExpectationHelpers.Format(Actual)}");
     }
 
     /// <summary>
@@ -134,7 +159,7 @@ public class Expectation<T>
     /// </summary>
     public void toBeCloseTo(T expected, T tolerance)
     {
-        var diff = GetNumericDifference(_actual, expected);
+        var diff = GetNumericDifference(Actual, expected);
         var tol = ConvertToDouble(tolerance);
 
         if (diff is null || tol is null)
@@ -143,7 +168,7 @@ public class Expectation<T>
 
         if (diff.Value > tol.Value)
             throw new AssertionException(
-                $"Expected {_expr} to be close to {ExpectationHelpers.Format(expected)} (±{ExpectationHelpers.Format(tolerance)}), but was {ExpectationHelpers.Format(_actual)} (diff: {diff.Value})");
+                $"Expected {Expression} to be close to {ExpectationHelpers.Format(expected)} (±{ExpectationHelpers.Format(tolerance)}), but was {ExpectationHelpers.Format(Actual)} (diff: {diff.Value})");
     }
 
     private static double? GetNumericDifference(T? a, T? b)

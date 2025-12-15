@@ -97,10 +97,11 @@ public class ReporterTests
     [Test]
     public async Task FileReporter_WritesToFile()
     {
-        var tempFile = Path.Combine(Path.GetTempPath(), $"draftspec-test-{Guid.NewGuid()}.json");
+        var tempDir = Path.GetTempPath();
+        var tempFile = Path.Combine(tempDir, $"draftspec-test-{Guid.NewGuid()}.json");
         try
         {
-            var reporter = new FileReporter(tempFile);
+            var reporter = new FileReporter(tempFile, new JsonFormatter(), tempDir);
             var report = new SpecReport
             {
                 Timestamp = DateTime.UtcNow,
@@ -123,11 +124,12 @@ public class ReporterTests
     [Test]
     public async Task FileReporter_CreatesDirectoryIfNeeded()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"draftspec-test-{Guid.NewGuid()}");
+        var tempRoot = Path.GetTempPath();
+        var tempDir = Path.Combine(tempRoot, $"draftspec-test-{Guid.NewGuid()}");
         var tempFile = Path.Combine(tempDir, "report.json");
         try
         {
-            var reporter = new FileReporter(tempFile);
+            var reporter = new FileReporter(tempFile, new JsonFormatter(), tempRoot);
             var report = new SpecReport
             {
                 Timestamp = DateTime.UtcNow,
@@ -148,7 +150,9 @@ public class ReporterTests
     [Test]
     public async Task FileReporter_Name_ContainsFileName()
     {
-        var reporter = new FileReporter("/path/to/results.json");
+        var tempDir = Path.GetTempPath();
+        var tempFile = Path.Combine(tempDir, "results.json");
+        var reporter = new FileReporter(tempFile, new JsonFormatter(), tempDir);
 
         await Assert.That(reporter.Name).Contains("results.json");
     }

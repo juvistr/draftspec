@@ -59,8 +59,10 @@ High-impact improvements after v1.0 blockers.
 
 ### Security
 
-- [ ] **FileReporter path validation** - `src/DraftSpec/Plugins/Reporters/FileReporter.cs:27-46`
+- [x] **FileReporter path validation** - `src/DraftSpec/Plugins/Reporters/FileReporter.cs` ✅
   - Validate output paths are within allowed directories
+  - Uses same pattern as SpecFinder (trailing separator, platform-aware)
+  - 14 tests in `tests/DraftSpec.Tests/Reporters/FileReporterTests.cs`
 
 - [ ] **Safe error messages** - Multiple files
   - Sanitize stack traces and paths in user-facing errors

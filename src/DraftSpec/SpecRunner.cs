@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using DraftSpec.Configuration;
 using DraftSpec.Middleware;
+using DraftSpec.Plugins;
 
 namespace DraftSpec;
 
@@ -9,12 +11,13 @@ namespace DraftSpec;
 public class SpecRunner : ISpecRunner
 {
     private readonly IReadOnlyList<ISpecMiddleware> _middleware;
-    private readonly Func<SpecExecutionContext, SpecResult> _pipeline;
+    private readonly Func<SpecExecutionContext, Task<SpecResult>> _pipeline;
+    private readonly DraftSpecConfiguration? _configuration;
 
     /// <summary>
     /// Create a SpecRunner with no middleware (default behavior).
     /// </summary>
-    public SpecRunner() : this([])
+    public SpecRunner() : this([], null)
     {
     }
 
@@ -22,9 +25,11 @@ public class SpecRunner : ISpecRunner
     /// Create a SpecRunner with the specified middleware.
     /// </summary>
     /// <param name="middleware">Middleware executed in order (first wraps last)</param>
-    public SpecRunner(IEnumerable<ISpecMiddleware> middleware)
+    /// <param name="configuration">Optional configuration for reporters and formatters</param>
+    public SpecRunner(IEnumerable<ISpecMiddleware> middleware, DraftSpecConfiguration? configuration = null)
     {
         _middleware = middleware.ToList();
+        _configuration = configuration;
         _pipeline = BuildPipeline();
     }
 
@@ -33,16 +38,16 @@ public class SpecRunner : ISpecRunner
     /// </summary>
     public static SpecRunnerBuilder Create() => new();
 
-    private Func<SpecExecutionContext, SpecResult> BuildPipeline()
+    private Func<SpecExecutionContext, Task<SpecResult>> BuildPipeline()
     {
         // Start with core execution
-        Func<SpecExecutionContext, SpecResult> pipeline = ExecuteCore;
+        Func<SpecExecutionContext, Task<SpecResult>> pipeline = ExecuteCoreAsync;
 
         // Wrap with middleware in reverse order (last added wraps first)
         foreach (var mw in _middleware.Reverse())
         {
             var current = pipeline;
-            pipeline = ctx => mw.Execute(ctx, current);
+            pipeline = ctx => mw.ExecuteAsync(ctx, current);
         }
 
         return pipeline;
@@ -52,12 +57,50 @@ public class SpecRunner : ISpecRunner
 
     public List<SpecResult> Run(SpecContext rootContext)
     {
+        return RunAsync(rootContext).GetAwaiter().GetResult();
+    }
+
+    public Task<List<SpecResult>> RunAsync(Spec spec) => RunAsync(spec.RootContext);
+
+    public async Task<List<SpecResult>> RunAsync(SpecContext rootContext)
+    {
         var results = new List<SpecResult>();
         var hasFocused = HasFocusedSpecs(rootContext);
 
-        RunContext(rootContext, [], results, hasFocused);
+        // Notify reporters that run is starting
+        var totalSpecs = CountSpecs(rootContext);
+        var startTime = DateTime.UtcNow;
+        await NotifyRunStartingAsync(totalSpecs, startTime);
+
+        await RunContextAsync(rootContext, [], results, hasFocused);
 
         return results;
+    }
+
+    private static int CountSpecs(SpecContext context)
+    {
+        return context.Specs.Count + context.Children.Sum(CountSpecs);
+    }
+
+    private async Task NotifyRunStartingAsync(int totalSpecs, DateTime startTime)
+    {
+        if (_configuration == null) return;
+
+        var startContext = new RunStartingContext(totalSpecs, startTime);
+        foreach (var reporter in _configuration.Reporters.All)
+        {
+            await reporter.OnRunStartingAsync(startContext);
+        }
+    }
+
+    private async Task NotifySpecCompletedAsync(SpecResult result)
+    {
+        if (_configuration == null) return;
+
+        foreach (var reporter in _configuration.Reporters.All)
+        {
+            await reporter.OnSpecCompletedAsync(result);
+        }
     }
 
     private static bool HasFocusedSpecs(SpecContext context)
@@ -75,7 +118,7 @@ public class SpecRunner : ISpecRunner
         return false;
     }
 
-    private void RunContext(
+    private async Task RunContextAsync(
         SpecContext context,
         List<string> parentDescriptions,
         List<SpecResult> results,
@@ -86,31 +129,34 @@ public class SpecRunner : ISpecRunner
             descriptions.Add(context.Description);
 
         // Run beforeAll
-        context.BeforeAll?.Invoke();
+        if (context.BeforeAll != null)
+            await context.BeforeAll();
 
         try
         {
             // Run specs in this context
             foreach (var spec in context.Specs)
             {
-                var result = RunSpec(spec, context, descriptions, hasFocused);
+                var result = await RunSpecAsync(spec, context, descriptions, hasFocused);
                 results.Add(result);
+                await NotifySpecCompletedAsync(result);
             }
 
             // Recurse into children
             foreach (var child in context.Children)
             {
-                RunContext(child, descriptions, results, hasFocused);
+                await RunContextAsync(child, descriptions, results, hasFocused);
             }
         }
         finally
         {
             // Run afterAll
-            context.AfterAll?.Invoke();
+            if (context.AfterAll != null)
+                await context.AfterAll();
         }
     }
 
-    private SpecResult RunSpec(
+    private async Task<SpecResult> RunSpecAsync(
         SpecDefinition spec,
         SpecContext context,
         List<string> contextPath,
@@ -135,22 +181,22 @@ public class SpecRunner : ISpecRunner
             HasFocused = hasFocused
         };
 
-        return _pipeline(executionContext);
+        return await _pipeline(executionContext);
     }
 
     /// <summary>
     /// Core spec execution - runs hooks and spec body.
     /// This is the terminal handler in the middleware pipeline.
     /// </summary>
-    private SpecResult ExecuteCore(SpecExecutionContext ctx)
+    private async Task<SpecResult> ExecuteCoreAsync(SpecExecutionContext ctx)
     {
         // Run beforeEach hooks (walk up the tree)
-        RunBeforeEachHooks(ctx.Context);
+        await RunBeforeEachHooksAsync(ctx.Context);
 
         var sw = Stopwatch.StartNew();
         try
         {
-            ctx.Spec.Body!.Invoke();
+            await ctx.Spec.Body!.Invoke();
             sw.Stop();
             return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath, sw.Elapsed);
         }
@@ -162,25 +208,25 @@ public class SpecRunner : ISpecRunner
         finally
         {
             // Run afterEach hooks (walk up the tree, child to parent)
-            RunAfterEachHooks(ctx.Context);
+            await RunAfterEachHooksAsync(ctx.Context);
         }
     }
 
-    private static void RunBeforeEachHooks(SpecContext context)
+    private static async Task RunBeforeEachHooksAsync(SpecContext context)
     {
         // Use cached hook chain for better performance
         foreach (var hook in context.GetBeforeEachChain())
         {
-            hook.Invoke();
+            await hook();
         }
     }
 
-    private static void RunAfterEachHooks(SpecContext context)
+    private static async Task RunAfterEachHooksAsync(SpecContext context)
     {
         // Use cached hook chain for better performance
         foreach (var hook in context.GetAfterEachChain())
         {
-            hook.Invoke();
+            await hook();
         }
     }
 }

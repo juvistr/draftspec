@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+using DraftSpec.Configuration;
 using DraftSpec.Middleware;
 
 namespace DraftSpec;
@@ -8,6 +10,7 @@ namespace DraftSpec;
 public class SpecRunnerBuilder
 {
     private readonly List<ISpecMiddleware> _middleware = [];
+    private DraftSpecConfiguration? _configuration;
 
     /// <summary>
     /// Add a middleware to the pipeline.
@@ -38,7 +41,87 @@ public class SpecRunnerBuilder
     }
 
     /// <summary>
+    /// Add filter middleware with a custom predicate.
+    /// </summary>
+    /// <param name="predicate">Function that returns true if the spec should run</param>
+    public SpecRunnerBuilder WithFilter(Func<SpecExecutionContext, bool> predicate)
+    {
+        return Use(new FilterMiddleware(predicate));
+    }
+
+    /// <summary>
+    /// Add filter middleware that matches spec names against a regex pattern.
+    /// Matches against the full description (context path + spec description).
+    /// </summary>
+    /// <param name="pattern">Regex pattern to match</param>
+    /// <param name="options">Regex options (default: IgnoreCase)</param>
+    public SpecRunnerBuilder WithNameFilter(string pattern, RegexOptions options = RegexOptions.IgnoreCase)
+    {
+        var regex = new Regex(pattern, options);
+        return Use(new FilterMiddleware(ctx =>
+        {
+            var fullDescription = string.Join(" ", ctx.ContextPath.Append(ctx.Spec.Description));
+            return regex.IsMatch(fullDescription);
+        }, $"does not match pattern '{pattern}'"));
+    }
+
+    /// <summary>
+    /// Add filter middleware that runs only specs with any of the specified tags.
+    /// </summary>
+    /// <param name="tags">Tags to match (spec runs if it has ANY of these tags)</param>
+    public SpecRunnerBuilder WithTagFilter(params string[] tags)
+    {
+        if (tags.Length == 0)
+            throw new ArgumentException("At least one tag must be specified", nameof(tags));
+
+        var tagSet = new HashSet<string>(tags, StringComparer.OrdinalIgnoreCase);
+        return Use(new FilterMiddleware(ctx =>
+            ctx.Spec.Tags.Any(t => tagSet.Contains(t)),
+            $"does not have tags: {string.Join(", ", tags)}"));
+    }
+
+    /// <summary>
+    /// Add filter middleware that excludes specs with any of the specified tags.
+    /// </summary>
+    /// <param name="tags">Tags to exclude (spec skipped if it has ANY of these tags)</param>
+    public SpecRunnerBuilder WithoutTags(params string[] tags)
+    {
+        if (tags.Length == 0)
+            throw new ArgumentException("At least one tag must be specified", nameof(tags));
+
+        var tagSet = new HashSet<string>(tags, StringComparer.OrdinalIgnoreCase);
+        return Use(new FilterMiddleware(ctx =>
+            !ctx.Spec.Tags.Any(t => tagSet.Contains(t)),
+            $"has excluded tags: {string.Join(", ", tags)}"));
+    }
+
+    /// <summary>
+    /// Set the configuration to use.
+    /// </summary>
+    /// <param name="configuration">The DraftSpec configuration</param>
+    public SpecRunnerBuilder WithConfiguration(DraftSpecConfiguration configuration)
+    {
+        _configuration = configuration;
+        return this;
+    }
+
+    /// <summary>
+    /// Get the current configuration, or null if not set.
+    /// </summary>
+    internal DraftSpecConfiguration? Configuration => _configuration;
+
+    /// <summary>
     /// Build the configured SpecRunner.
     /// </summary>
-    public SpecRunner Build() => new(_middleware);
+    public SpecRunner Build()
+    {
+        // Initialize configuration and let middleware plugins register
+        if (_configuration != null)
+        {
+            _configuration.Initialize();
+            _configuration.InitializeMiddleware(this);
+        }
+
+        return new SpecRunner(_middleware, _configuration);
+    }
 }

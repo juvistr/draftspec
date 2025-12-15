@@ -12,4 +12,10 @@ public class CliOptions
     public bool Force { get; set; }
     public string? SpecName { get; set; }
     public bool Parallel { get; set; }
+
+    /// <summary>
+    /// Additional reporter names to use (comma-separated).
+    /// Example: "file:results.json,slack"
+    /// </summary>
+    public string? Reporters { get; set; }
 }

@@ -113,25 +113,27 @@ Prioritized work items from the comprehensive review, organized into phases.
 
 ### Architecture
 
-- [x] **A5: Add execution pipeline with middleware** *(commit pending)*
+- [x] **A5: Add execution pipeline with middleware** *(commit b9f1333)*
   - Files: `src/DraftSpec/Middleware/ISpecMiddleware.cs`, `SpecExecutionContext.cs`, `RetryMiddleware.cs`, `TimeoutMiddleware.cs`
   - Files: `src/DraftSpec/SpecRunnerBuilder.cs`, `Dsl.Configuration.cs`
   - Action: Added middleware pipeline with retry and timeout support
   - See: [ARCHITECTURE.md](./ARCHITECTURE.md#2-execution-pipeline-no-extension-points)
 
-- [ ] **A6: Add spec filtering API**
-  - File: `src/DraftSpec/SpecRunner.cs`
-  - Action: Filter by name pattern, tags, custom predicate
+- [x] **A6: Add spec filtering API** *(commit pending)*
+  - Files: `src/DraftSpec/Middleware/FilterMiddleware.cs`, `SpecRunnerBuilder.cs`, `Dsl.Tags.cs`
+  - Action: Filter by name pattern (regex), tags, and custom predicates via middleware
   - See: [ARCHITECTURE.md](./ARCHITECTURE.md#4-no-spec-filtering-api)
 
-- [ ] **A7: Add async spec support**
-  - File: `src/DraftSpec/Dsl.cs`
-  - Action: Add Func<Task> overloads for it()
+- [x] **A7: Add async spec support** *(commit pending)*
+  - Files: `src/DraftSpec/Dsl.Specs.cs`, `Dsl.Hooks.cs`, `SpecRunner.cs`, `ISpecMiddleware.cs`
+  - Action: Async-first pipeline with `Func<Task>` overloads for specs and hooks
   - See: [CODE_QUALITY.md](./CODE_QUALITY.md#10-missing-async-support)
 
-- [ ] **A8: Plugin registration system**
-  - Files: Create `src/DraftSpec/DraftSpecConfiguration.cs`
-  - Action: Enable AddReporter, AddMiddleware configuration
+- [x] **A8: Plugin registration system** *(commit pending)*
+  - Files: `src/DraftSpec/Plugins/*.cs`, `src/DraftSpec/Configuration/*.cs`
+  - Files: `src/DraftSpec/Plugins/Reporters/FileReporter.cs`, `ConsoleReporter.cs`
+  - Files: `src/DraftSpec.Formatters.Abstractions/JsonFormatter.cs`
+  - Action: Full plugin system with IPlugin, IReporter, formatter/reporter registries
   - See: [ARCHITECTURE.md](./ARCHITECTURE.md#phase-2-extensibility-layer)
 
 ### Code Quality
@@ -233,19 +235,19 @@ Prioritized work items from the comprehensive review, organized into phases.
 | Category | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Total | Done |
 |----------|---------|---------|---------|---------|-------|------|
 | Security | 3 | 0 | 2 | 0 | 5 | 3 ✅ |
-| Architecture | 0 | 4 | 4 | 0 | 8 | 5 ✅ |
+| Architecture | 0 | 4 | 4 | 0 | 8 | 8 ✅ |
 | Code Quality | 2 | 0 | 2 | 0 | 4 | 2 ✅ |
 | Performance | 0 | 3 | 0 | 3 | 6 | 3 ✅ |
 | Testing | 2 | 2 | 3 | 0 | 7 | 4 ✅ |
 | Documentation | 0 | 0 | 0 | 3 | 3 | 0 |
 | Features | 0 | 0 | 0 | 3 | 3 | 0 |
-| **Total** | **7** | **9** | **11** | **9** | **36** | **17** |
+| **Total** | **7** | **9** | **11** | **9** | **36** | **20** |
 
 ## Progress
 
 - **Phase 1:** ✅ Complete (7/7 items)
 - **Phase 2:** ✅ Complete (9/9 items)
-- **Phase 3:** In progress (1/11 items)
+- **Phase 3:** In progress (4/11 items)
 - **Phase 4:** Not started
 
 ## Quick Reference
@@ -262,7 +264,7 @@ Prioritized work items from the comprehensive review, organized into phases.
 
 | Metric | Initial | After Phase 1 | After Phase 2 | After Phase 3 | Target |
 |--------|---------|---------------|---------------|---------------|--------|
-| Test Count | 9 | 111 | 192 | 220 | 200+ ✅ |
+| Test Count | 9 | 111 | 192 | 269 | 200+ ✅ |
 | Security Issues (High) | 3 | 0 ✅ | 0 ✅ | 0 ✅ | 0 |
-| Extension Points | 2 | 2 | 6 | 8 | 8+ ✅ |
+| Extension Points | 2 | 2 | 6 | 12 | 8+ ✅ |
 | Perf Optimizations | 0 | 0 | 3 ✅ | 3 ✅ | 6 |

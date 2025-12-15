@@ -6,6 +6,27 @@ namespace DraftSpec.Cli.Commands;
 
 public static class RunCommand
 {
+    private static readonly Dictionary<string, IFormatter> Formatters = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["json"] = new JsonFormatter(),
+        ["markdown"] = new MarkdownFormatter()
+    };
+
+    /// <summary>
+    /// Get a formatter by name, with support for built-in formatters.
+    /// </summary>
+    public static IFormatter? GetFormatter(string name, CliOptions options)
+    {
+        if (name.Equals("html", StringComparison.OrdinalIgnoreCase))
+        {
+            return new HtmlFormatter(new HtmlOptions
+            {
+                CssUrl = options.CssUrl ?? "https://cdnjs.cloudflare.com/ajax/libs/simpledotcss/2.3.7/simple.min.css"
+            });
+        }
+        return Formatters.GetValueOrDefault(name);
+    }
+
     public static int Execute(CliOptions options)
     {
         var finder = new SpecFinder();
@@ -75,15 +96,8 @@ public static class RunCommand
         {
             var report = SpecReport.FromJson(jsonReport);
             report.Source = Path.GetFullPath(options.Path);
-            IFormatter formatter = options.Format switch
-            {
-                "markdown" => new MarkdownFormatter(),
-                "html" => new HtmlFormatter(new HtmlOptions
-                {
-                    CssUrl = options.CssUrl ?? "https://cdnjs.cloudflare.com/ajax/libs/simpledotcss/2.3.7/simple.min.css"
-                }),
-                _ => throw new ArgumentException($"Unknown format: {options.Format}")
-            };
+            var formatter = GetFormatter(options.Format, options)
+                ?? throw new ArgumentException($"Unknown format: {options.Format}");
             output = formatter.Format(report);
         }
 

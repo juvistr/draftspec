@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DraftSpec.Configuration;
 using DraftSpec.Formatters;
 using DraftSpec.Formatters.Console;
 
@@ -35,7 +36,8 @@ internal static class SpecExecutor
         SpecContext? rootContext,
         bool json,
         Action resetState,
-        SpecRunnerBuilder? builder = null)
+        SpecRunnerBuilder? builder = null,
+        DraftSpecConfiguration? configuration = null)
     {
         if (rootContext is null)
         {
@@ -47,6 +49,15 @@ internal static class SpecExecutor
         }
 
         var report = Execute(rootContext, builder);
+
+        // Invoke reporters' OnRunCompletedAsync
+        if (configuration != null)
+        {
+            foreach (var reporter in configuration.Reporters.All)
+            {
+                reporter.OnRunCompletedAsync(report).GetAwaiter().GetResult();
+            }
+        }
 
         if (json)
         {

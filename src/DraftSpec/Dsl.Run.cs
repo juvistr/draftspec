@@ -11,7 +11,7 @@ public static partial class Dsl
     /// <param name="json">If true, output JSON instead of console format</param>
     public static void run(bool json = false)
     {
-        SpecExecutor.ExecuteAndOutput(RootContext, json, ResetState, RunnerBuilder);
+        SpecExecutor.ExecuteAndOutput(RootContext, json, ResetState, RunnerBuilder, Configuration);
     }
 
     private static void ResetState()
@@ -19,5 +19,7 @@ public static partial class Dsl
         RootContext = null;
         CurrentContext = null;
         RunnerBuilder = null;
+        Configuration?.Dispose();
+        Configuration = null;
     }
 }

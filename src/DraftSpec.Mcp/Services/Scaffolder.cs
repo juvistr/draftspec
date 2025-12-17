@@ -11,6 +11,11 @@ public static class Scaffolder
     private const string Indent = "    ";
 
     /// <summary>
+    /// Maximum nesting depth allowed to prevent stack overflow from malicious input.
+    /// </summary>
+    public const int MaxDepth = 32;
+
+    /// <summary>
     /// Generate DraftSpec code from a scaffold node structure.
     /// </summary>
     /// <param name="node">The root scaffold node.</param>
@@ -24,6 +29,11 @@ public static class Scaffolder
 
     private static void GenerateNode(StringBuilder sb, ScaffoldNode node, int depth)
     {
+        if (depth > MaxDepth)
+            throw new InvalidOperationException(
+                $"Scaffold nesting depth exceeds maximum of {MaxDepth}. " +
+                "This limit prevents stack overflow from deeply nested structures.");
+
         var indent = GetIndent(depth);
         var description = EscapeString(node.Description);
 

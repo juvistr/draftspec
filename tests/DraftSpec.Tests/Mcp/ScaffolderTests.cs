@@ -272,5 +272,45 @@ public class ScaffolderTests
         await Assert.That(output).DoesNotContain("\n\");");
     }
 
+    [Test]
+    public async Task Generate_WithExcessiveNesting_ThrowsInvalidOperationException()
+    {
+        // Build a structure deeper than MaxDepth
+        var root = new ScaffoldNode { Description = "level-0", Specs = [] };
+        var current = root;
+
+        for (var i = 1; i <= Scaffolder.MaxDepth + 1; i++)
+        {
+            var child = new ScaffoldNode { Description = $"level-{i}", Specs = [] };
+            current.Contexts.Add(child);
+            current = child;
+        }
+
+        await Assert.That(() => Scaffolder.Generate(root))
+            .Throws<InvalidOperationException>()
+            .WithMessageContaining($"{Scaffolder.MaxDepth}");
+    }
+
+    [Test]
+    public async Task Generate_AtMaxDepth_Succeeds()
+    {
+        // Build a structure exactly at MaxDepth (should succeed)
+        var root = new ScaffoldNode { Description = "level-0", Specs = [] };
+        var current = root;
+
+        // MaxDepth levels (0 to MaxDepth-1 = MaxDepth total levels)
+        for (var i = 1; i < Scaffolder.MaxDepth; i++)
+        {
+            var child = new ScaffoldNode { Description = $"level-{i}", Specs = ["test"] };
+            current.Contexts.Add(child);
+            current = child;
+        }
+
+        // Should not throw
+        var output = Scaffolder.Generate(root);
+
+        await Assert.That(output).Contains($"level-{Scaffolder.MaxDepth - 1}");
+    }
+
     #endregion
 }

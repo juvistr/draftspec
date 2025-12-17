@@ -93,7 +93,7 @@ public class ConfigurationTests
 
         config.UsePlugin<TestPlugin>();
 
-        await Assert.That(config.Plugins.Count()).IsGreaterThan(0);
+        await Assert.That(config.Plugins.Count).IsGreaterThan(0);
     }
 
     [Test]

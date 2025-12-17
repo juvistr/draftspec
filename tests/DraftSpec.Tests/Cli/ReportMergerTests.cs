@@ -52,7 +52,7 @@ public class ReportMergerTests
 
         var result = ReportMerger.Merge([json], "/source");
 
-        await Assert.That(result.Contexts).HasCount().EqualTo(1);
+        await Assert.That(result.Contexts.Count).IsEqualTo(1);
         await Assert.That(result.Contexts[0].Description).IsEqualTo("Calculator");
     }
 
@@ -81,7 +81,7 @@ public class ReportMergerTests
 
         var result = ReportMerger.Merge([json1, json2], "/source");
 
-        await Assert.That(result.Contexts).HasCount().EqualTo(2);
+        await Assert.That(result.Contexts.Count).IsEqualTo(2);
         var descriptions = result.Contexts.Select(c => c.Description).ToList();
         await Assert.That(descriptions).Contains("Calculator");
         await Assert.That(descriptions).Contains("Parser");

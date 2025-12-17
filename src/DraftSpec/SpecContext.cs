@@ -102,14 +102,19 @@ public class SpecContext
     {
         if (_beforeEachChain == null)
         {
-            _beforeEachChain = [];
+            // Build in child-to-parent order (O(1) per Add), then reverse once (O(n))
+            // This is O(n) total instead of O(n²) from Insert(0, ...) per item
+            var chain = new List<Func<Task>>();
             var current = this;
             while (current != null)
             {
                 if (current.BeforeEach != null)
-                    _beforeEachChain.Insert(0, current.BeforeEach);
+                    chain.Add(current.BeforeEach);
                 current = current.Parent;
             }
+
+            chain.Reverse();
+            _beforeEachChain = chain;
         }
 
         return _beforeEachChain;

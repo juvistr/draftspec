@@ -31,13 +31,12 @@ public interface IReporter
     /// Reporters may override for more efficient batch processing.
     /// </summary>
     /// <param name="results">The results of specs that completed</param>
-    Task OnSpecsBatchCompletedAsync(IReadOnlyList<SpecResult> results)
+    async Task OnSpecsBatchCompletedAsync(IReadOnlyList<SpecResult> results)
     {
         foreach (var result in results)
         {
-            OnSpecCompletedAsync(result);
+            await OnSpecCompletedAsync(result);
         }
-        return Task.CompletedTask;
     }
 
     /// <summary>

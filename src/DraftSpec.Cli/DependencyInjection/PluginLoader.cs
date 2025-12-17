@@ -15,9 +15,9 @@ public interface IPluginLoader
     IEnumerable<PluginInfo> DiscoverPlugins();
 
     /// <summary>
-    /// Registers discovered formatters with the registry.
+    /// Registers discovered formatters with the CLI registry.
     /// </summary>
-    void RegisterFormatters(IFormatterRegistry registry);
+    void RegisterFormatters(ICliFormatterRegistry registry);
 }
 
 /// <summary>
@@ -130,7 +130,7 @@ public class PluginLoader : IPluginLoader
         }
     }
 
-    public void RegisterFormatters(IFormatterRegistry registry)
+    public void RegisterFormatters(ICliFormatterRegistry registry)
     {
         foreach (var plugin in DiscoverPlugins().Where(p => p.Kind == PluginKind.Formatter))
         {

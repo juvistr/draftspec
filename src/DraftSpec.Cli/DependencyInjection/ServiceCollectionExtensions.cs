@@ -20,7 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISpecFileRunner, SpecFileRunner>();
 
         // Built-in formatters
-        services.AddSingleton<IFormatterRegistry, FormatterRegistry>();
+        services.AddSingleton<ICliFormatterRegistry, CliFormatterRegistry>();
 
         return services;
     }
@@ -40,18 +40,30 @@ public static class ServiceCollectionExtensions
 }
 
 /// <summary>
-/// Registry for formatters with name-based lookup.
+/// Registry for CLI formatters with factory-based lookup.
 /// </summary>
-public interface IFormatterRegistry
+/// <remarks>
+/// This interface differs from <see cref="DraftSpec.Plugins.IFormatterRegistry"/> in that it uses
+/// a factory pattern to support CLI-specific options (like CSS URL for HTML output).
+/// The core library's IFormatterRegistry takes formatter instances directly and is used
+/// by the scripting API and plugins. This CLI version needs access to <see cref="CliOptions"/>
+/// to configure formatters at resolution time.
+/// </remarks>
+public interface ICliFormatterRegistry
 {
     /// <summary>
-    /// Gets a formatter by name.
+    /// Gets a formatter by name, optionally configured with CLI options.
     /// </summary>
+    /// <param name="name">The formatter name (e.g., "json", "html", "markdown").</param>
+    /// <param name="options">Optional CLI options to configure the formatter.</param>
+    /// <returns>The configured formatter, or null if not found.</returns>
     IFormatter? GetFormatter(string name, CliOptions? options = null);
 
     /// <summary>
-    /// Registers a formatter with the given name.
+    /// Registers a formatter factory with the given name.
     /// </summary>
+    /// <param name="name">The formatter name.</param>
+    /// <param name="factory">A factory function that creates the formatter with optional CLI options.</param>
     void Register(string name, Func<CliOptions?, IFormatter> factory);
 
     /// <summary>
@@ -61,13 +73,13 @@ public interface IFormatterRegistry
 }
 
 /// <summary>
-/// Default implementation of IFormatterRegistry with built-in formatters.
+/// Default implementation of <see cref="ICliFormatterRegistry"/> with built-in formatters.
 /// </summary>
-public class FormatterRegistry : IFormatterRegistry
+public class CliFormatterRegistry : ICliFormatterRegistry
 {
     private readonly Dictionary<string, Func<CliOptions?, IFormatter>> _factories = new(StringComparer.OrdinalIgnoreCase);
 
-    public FormatterRegistry()
+    public CliFormatterRegistry()
     {
         // Register built-in formatters
         Register(OutputFormats.Json, _ => new JsonFormatter());

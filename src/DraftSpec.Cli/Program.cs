@@ -30,7 +30,7 @@ static async Task<int> Run(string[] args)
     var pluginLoader = new PluginLoader();
     using var serviceProvider = services.BuildServiceProvider();
 
-    var formatterRegistry = serviceProvider.GetRequiredService<IFormatterRegistry>();
+    var formatterRegistry = serviceProvider.GetRequiredService<ICliFormatterRegistry>();
     pluginLoader.RegisterFormatters(formatterRegistry);
 
     try

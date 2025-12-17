@@ -146,8 +146,8 @@ public class HtmlFormatter : IFormatter
     private static string Escape(string text) => HttpUtility.HtmlEncode(text);
 
     /// <summary>
-    /// Sanitize CSS to prevent XSS via style tag escape.
-    /// Removes closing style tags and script tags that could break out of CSS context.
+    /// Sanitize CSS to prevent XSS via style tag escape and IE/browser-specific CSS attacks.
+    /// Removes closing style tags, script tags, and dangerous CSS properties/functions.
     /// </summary>
     private static string SanitizeCss(string css)
     {
@@ -157,6 +157,10 @@ public class HtmlFormatter : IFormatter
             .Replace("</style", "", StringComparison.OrdinalIgnoreCase)
             .Replace("<script", "", StringComparison.OrdinalIgnoreCase)
             .Replace("<link", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("<import", "", StringComparison.OrdinalIgnoreCase);
+            .Replace("<import", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("expression(", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("behavior:", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("url(javascript", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("-moz-binding", "", StringComparison.OrdinalIgnoreCase);
     }
 }

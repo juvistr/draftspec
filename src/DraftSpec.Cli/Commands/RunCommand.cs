@@ -10,13 +10,13 @@ public static class RunCommand
     /// Get a formatter by name using the provided registry.
     /// Falls back to built-in formatters if registry is null.
     /// </summary>
-    public static IFormatter? GetFormatter(string name, CliOptions options, IFormatterRegistry? registry = null)
+    public static IFormatter? GetFormatter(string name, CliOptions options, ICliFormatterRegistry? registry = null)
     {
-        registry ??= new FormatterRegistry();
+        registry ??= new CliFormatterRegistry();
         return registry.GetFormatter(name, options);
     }
 
-    public static int Execute(CliOptions options, IFormatterRegistry? formatterRegistry = null)
+    public static int Execute(CliOptions options, ICliFormatterRegistry? formatterRegistry = null)
     {
         var finder = new SpecFinder();
         var runner = new SpecFileRunner();

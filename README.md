@@ -157,6 +157,8 @@ DraftSpec includes an MCP server for AI-assisted testing:
 dotnet run --project src/DraftSpec.Mcp
 ```
 
+> **Security Note:** The MCP server executes arbitrary code from spec content via `dotnet run`. Only use in trusted environments or within sandboxed containers with restricted permissions.
+
 Agents can generate and run specs with zero ceremony—just send `describe`/`it` blocks, get structured JSON results back. No boilerplate needed.
 
 ### Middleware & Plugins

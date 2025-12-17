@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace DraftSpec.Formatters;
 
@@ -8,19 +7,12 @@ namespace DraftSpec.Formatters;
 /// </summary>
 public class JsonFormatter : IFormatter
 {
-    private static readonly JsonSerializerOptions DefaultOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
     private readonly JsonSerializerOptions _options;
 
     /// <summary>
     /// Create a JsonFormatter with default options (indented, camelCase).
     /// </summary>
-    public JsonFormatter() : this(DefaultOptions)
+    public JsonFormatter() : this(JsonOptionsProvider.Default)
     {
     }
 
@@ -30,7 +22,7 @@ public class JsonFormatter : IFormatter
     /// <param name="options">Custom JSON serializer options</param>
     public JsonFormatter(JsonSerializerOptions options)
     {
-        _options = options ?? DefaultOptions;
+        _options = options ?? JsonOptionsProvider.Default;
     }
 
     public string FileExtension => ".json";

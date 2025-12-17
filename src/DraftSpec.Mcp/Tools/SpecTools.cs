@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using DraftSpec.Formatters;
 using ModelContextProtocol.Server;
 using DraftSpec.Mcp.Models;
 using DraftSpec.Mcp.Services;
@@ -12,11 +13,6 @@ namespace DraftSpec.Mcp.Tools;
 [McpServerToolType]
 public static class SpecTools
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     /// <summary>
     /// Run a DraftSpec test specification and return the results.
@@ -40,7 +36,7 @@ public static class SpecTools
             TimeSpan.FromSeconds(timeoutSeconds),
             cancellationToken);
 
-        return JsonSerializer.Serialize(result, JsonOptions);
+        return JsonSerializer.Serialize(result, JsonOptionsProvider.Default);
     }
 
     /// <summary>

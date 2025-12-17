@@ -20,6 +20,9 @@ public class FilterMiddleware : ISpecMiddleware
         _reason = reason;
     }
 
+    /// <summary>
+    /// Execute the middleware, skipping the spec if it doesn't match the filter predicate.
+    /// </summary>
     public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
     {
         if (!_predicate(context))

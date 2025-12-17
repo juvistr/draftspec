@@ -60,15 +60,28 @@ public class SpecRunner : ISpecRunner
         return pipeline;
     }
 
+    /// <summary>
+    /// Execute specs synchronously from a Spec entry point.
+    /// </summary>
     public List<SpecResult> Run(Spec spec) => Run(spec.RootContext);
 
+    /// <summary>
+    /// Execute specs synchronously from a root context.
+    /// </summary>
     public List<SpecResult> Run(SpecContext rootContext)
     {
         return RunAsync(rootContext).GetAwaiter().GetResult();
     }
 
+    /// <summary>
+    /// Execute specs asynchronously from a Spec entry point.
+    /// </summary>
     public Task<List<SpecResult>> RunAsync(Spec spec) => RunAsync(spec.RootContext);
 
+    /// <summary>
+    /// Execute specs asynchronously from a root context.
+    /// Walks the context tree, executing specs through the middleware pipeline.
+    /// </summary>
     public async Task<List<SpecResult>> RunAsync(SpecContext rootContext)
     {
         var results = new List<SpecResult>();

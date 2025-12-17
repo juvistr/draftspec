@@ -57,7 +57,7 @@ public class DslTests
         });
         run();
 
-        await Assert.That(executed).HasCount(2);
+        await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("first");
         await Assert.That(executed).Contains("second");
     }
@@ -179,7 +179,7 @@ public class DslTests
         });
         run();
 
-        await Assert.That(executed).HasCount(1);
+        await Assert.That(executed).Count().IsEqualTo(1);
         await Assert.That(executed[0]).IsEqualTo("focused");
     }
 
@@ -196,7 +196,7 @@ public class DslTests
         });
         run();
 
-        await Assert.That(executed).HasCount(2);
+        await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("focused1");
         await Assert.That(executed).Contains("focused2");
     }
@@ -217,7 +217,7 @@ public class DslTests
         });
         run();
 
-        await Assert.That(executed).HasCount(1);
+        await Assert.That(executed).Count().IsEqualTo(1);
         await Assert.That(executed[0]).IsEqualTo("focused inner");
     }
 
@@ -263,7 +263,7 @@ public class DslTests
         });
         run();
 
-        await Assert.That(executed).HasCount(2);
+        await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("first");
         await Assert.That(executed).Contains("second");
     }

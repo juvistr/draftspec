@@ -25,7 +25,7 @@ public class PerformanceTests
 
         // Baseline: should complete in under 1 second
         await Assert.That(sw.ElapsedMilliseconds).IsLessThan(1000);
-        await Assert.That(results).HasCount(1000);
+        await Assert.That(results).Count().IsEqualTo(1000);
     }
 
     [Test]
@@ -42,7 +42,7 @@ public class PerformanceTests
 
         // Baseline: should complete in under 5 seconds
         await Assert.That(sw.ElapsedMilliseconds).IsLessThan(5000);
-        await Assert.That(results).HasCount(10000);
+        await Assert.That(results).Count().IsEqualTo(10000);
     }
 
     #endregion
@@ -70,8 +70,8 @@ public class PerformanceTests
         sw.Stop();
 
         // Should complete without stack overflow
-        await Assert.That(results).HasCount(1);
-        await Assert.That(results[0].ContextPath).HasCount(50);
+        await Assert.That(results).Count().IsEqualTo(1);
+        await Assert.That(results[0].ContextPath).Count().IsEqualTo(50);
         await Assert.That(sw.ElapsedMilliseconds).IsLessThan(500);
     }
 
@@ -92,8 +92,8 @@ public class PerformanceTests
         var runner = new SpecRunner();
         var results = runner.Run(root);
 
-        await Assert.That(results).HasCount(1);
-        await Assert.That(results[0].ContextPath).HasCount(100);
+        await Assert.That(results).Count().IsEqualTo(1);
+        await Assert.That(results[0].ContextPath).Count().IsEqualTo(100);
     }
 
     #endregion
@@ -129,7 +129,7 @@ public class PerformanceTests
 
         // 10 specs * 10 beforeEach * 2 (before + after) = 200 hook calls
         await Assert.That(hookCallCount).IsEqualTo(200);
-        await Assert.That(results).HasCount(10);
+        await Assert.That(results).Count().IsEqualTo(10);
         // Should complete quickly despite many hooks
         await Assert.That(sw.ElapsedMilliseconds).IsLessThan(500);
     }
@@ -334,7 +334,7 @@ public class PerformanceTests
         var results = runner.Run(context);
 
         // After running, results should be available
-        await Assert.That(results).HasCount(100);
+        await Assert.That(results).Count().IsEqualTo(100);
 
         // Force GC
         results = null;
@@ -371,7 +371,7 @@ public class PerformanceTests
         var results = runner.Run(root);
         sw.Stop();
 
-        await Assert.That(results).HasCount(10000);
+        await Assert.That(results).Count().IsEqualTo(10000);
         // Wide tree should still complete quickly
         await Assert.That(sw.ElapsedMilliseconds).IsLessThan(5000);
     }

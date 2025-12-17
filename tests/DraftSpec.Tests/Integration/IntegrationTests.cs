@@ -45,9 +45,9 @@ public class IntegrationTests
         await Assert.That(report.Summary.Total).IsEqualTo(3);
         await Assert.That(report.Summary.Passed).IsEqualTo(3);
         await Assert.That(report.Summary.Failed).IsEqualTo(0);
-        await Assert.That(report.Contexts).HasCount().EqualTo(1);
+        await Assert.That(report.Contexts).Count().IsEqualTo(1);
         await Assert.That(report.Contexts[0].Description).IsEqualTo("Calculator");
-        await Assert.That(report.Contexts[0].Contexts).HasCount().EqualTo(2);
+        await Assert.That(report.Contexts[0].Contexts).Count().IsEqualTo(2);
     }
 
     [Test]
@@ -88,7 +88,7 @@ public class IntegrationTests
         var runner = new SpecRunnerBuilder().WithConfiguration(configuration).Build();
         runner.Run(context);
 
-        await Assert.That(specCompletedCalls).HasCount().EqualTo(2);
+        await Assert.That(specCompletedCalls).Count().IsEqualTo(2);
         await Assert.That(specCompletedCalls[0].Spec.Description).IsEqualTo("spec1");
         await Assert.That(specCompletedCalls[1].Spec.Description).IsEqualTo("spec2");
     }
@@ -107,7 +107,7 @@ public class IntegrationTests
 
         var results = runner.Run(context);
 
-        await Assert.That(results).HasCount().EqualTo(2);
+        await Assert.That(results).Count().IsEqualTo(2);
         var passedCount = results.Count(r => r.Status == SpecStatus.Passed);
         var skippedCount = results.Count(r => r.Status == SpecStatus.Skipped);
         await Assert.That(passedCount).IsEqualTo(1);

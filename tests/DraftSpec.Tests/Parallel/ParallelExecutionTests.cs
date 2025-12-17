@@ -34,7 +34,7 @@ public class ParallelExecutionTests
 
         var results = await runner.RunAsync(context);
 
-        await Assert.That(results).HasCount(10);
+        await Assert.That(results).Count().IsEqualTo(10);
         await Assert.That(results.All(r => r.Status == SpecStatus.Passed)).IsTrue();
 
         // Verify concurrency by checking that execution times overlap
@@ -102,8 +102,8 @@ public class ParallelExecutionTests
 
         var results = await runner.RunAsync(context);
 
-        await Assert.That(results).HasCount(50);
-        await Assert.That(executedSpecs).HasCount(50);
+        await Assert.That(results).Count().IsEqualTo(50);
+        await Assert.That(executedSpecs).Count().IsEqualTo(50);
     }
 
     #endregion
@@ -150,7 +150,7 @@ public class ParallelExecutionTests
 
         var results = await runner.RunAsync(context);
 
-        await Assert.That(results).HasCount(1);
+        await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
 
@@ -311,7 +311,7 @@ public class ParallelExecutionTests
 
         var results = await runner.RunAsync(context);
 
-        await Assert.That(results).HasCount(5);
+        await Assert.That(results).Count().IsEqualTo(5);
         await Assert.That(results.Count(r => r.Status == SpecStatus.Passed)).IsEqualTo(3);
         await Assert.That(results.Count(r => r.Status == SpecStatus.Failed)).IsEqualTo(2);
 
@@ -354,7 +354,7 @@ public class ParallelExecutionTests
         var results = await runner.RunAsync(context);
 
         // All specs should execute despite one failing
-        await Assert.That(executedSpecs).HasCount(10);
+        await Assert.That(executedSpecs).Count().IsEqualTo(10);
         await Assert.That(results.Count(r => r.Status == SpecStatus.Passed)).IsEqualTo(9);
         await Assert.That(results.Count(r => r.Status == SpecStatus.Failed)).IsEqualTo(1);
     }
@@ -390,8 +390,8 @@ public class ParallelExecutionTests
 
         var results = await runner.RunAsync(root);
 
-        await Assert.That(results).HasCount(6);
-        await Assert.That(executionLog).HasCount(6);
+        await Assert.That(results).Count().IsEqualTo(6);
+        await Assert.That(executionLog).Count().IsEqualTo(6);
     }
 
     #endregion

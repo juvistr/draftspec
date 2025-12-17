@@ -42,8 +42,15 @@ public class FileReporter : IReporter
         ValidatePathWithinAllowedDirectory();
     }
 
+    /// <summary>
+    /// Gets the reporter name identifier, including the output filename.
+    /// </summary>
     public string Name => $"file:{Path.GetFileName(_filePath)}";
 
+    /// <summary>
+    /// Write the spec report to the configured file when the run completes.
+    /// Creates the output directory if it doesn't exist.
+    /// </summary>
     public async Task OnRunCompletedAsync(SpecReport report)
     {
         var directory = Path.GetDirectoryName(_filePath);

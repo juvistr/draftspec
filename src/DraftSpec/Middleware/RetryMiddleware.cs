@@ -22,6 +22,9 @@ public class RetryMiddleware : ISpecMiddleware
         _delay = delay;
     }
 
+    /// <summary>
+    /// Execute the middleware, retrying failed specs up to the configured maximum.
+    /// </summary>
     public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
     {
         var attempts = 0;

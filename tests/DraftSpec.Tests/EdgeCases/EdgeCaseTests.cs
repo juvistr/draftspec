@@ -103,7 +103,7 @@ public class EdgeCaseTests
         var runner = new SpecRunner();
         var results = runner.Run(root);
 
-        await Assert.That(results).HasCount().EqualTo(1);
+        await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
 
@@ -163,7 +163,7 @@ public class EdgeCaseTests
         var runner = new SpecRunner();
         var results = runner.Run(root);
 
-        await Assert.That(results).HasCount().EqualTo(1);
+        await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
 
@@ -184,7 +184,7 @@ public class EdgeCaseTests
         var runner = new SpecRunner();
         var results = runner.Run(context);
 
-        await Assert.That(results).HasCount().EqualTo(100);
+        await Assert.That(results).Count().IsEqualTo(100);
         await Assert.That(results.All(r => r.Status == SpecStatus.Passed)).IsTrue();
     }
 
@@ -202,7 +202,7 @@ public class EdgeCaseTests
         var runner = new SpecRunner();
         var results = runner.Run(root);
 
-        await Assert.That(results).HasCount().EqualTo(50);
+        await Assert.That(results).Count().IsEqualTo(50);
     }
 
     [Test]
@@ -253,7 +253,7 @@ public class EdgeCaseTests
         var runner = new SpecRunner();
         var results = runner.Run(context);
 
-        await Assert.That(results).HasCount().EqualTo(1);
+        await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Spec.Description).IsEqualTo("");
     }
 

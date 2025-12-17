@@ -86,10 +86,10 @@ public class ReportMergingTests
         await Assert.That(restored.Summary.Total).IsEqualTo(10);
         await Assert.That(restored.Summary.Passed).IsEqualTo(7);
         await Assert.That(restored.Summary.Failed).IsEqualTo(2);
-        await Assert.That(restored.Contexts).HasCount().EqualTo(1);
+        await Assert.That(restored.Contexts).Count().IsEqualTo(1);
         await Assert.That(restored.Contexts[0].Description).IsEqualTo("Context A");
-        await Assert.That(restored.Contexts[0].Specs).HasCount().EqualTo(2);
-        await Assert.That(restored.Contexts[0].Contexts).HasCount().EqualTo(1);
+        await Assert.That(restored.Contexts[0].Specs).Count().IsEqualTo(2);
+        await Assert.That(restored.Contexts[0].Contexts).Count().IsEqualTo(1);
     }
 
     #endregion
@@ -173,7 +173,7 @@ public class ReportMergingTests
 
         await Assert.That(restored.Source).IsEqualTo("/new/path");
         await Assert.That(restored.Summary.Total).IsEqualTo(5);
-        await Assert.That(restored.Contexts).HasCount().EqualTo(1);
+        await Assert.That(restored.Contexts).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -216,7 +216,7 @@ public class ReportMergingTests
         await Assert.That(combined.Summary.Failed).IsEqualTo(1);
         await Assert.That(combined.Summary.Pending).IsEqualTo(1);
         await Assert.That(combined.Summary.DurationMs).IsEqualTo(150);
-        await Assert.That(combined.Contexts).HasCount().EqualTo(2);
+        await Assert.That(combined.Contexts).Count().IsEqualTo(2);
         await Assert.That(combined.Timestamp).IsEqualTo(new DateTime(2025, 1, 1));
     }
 

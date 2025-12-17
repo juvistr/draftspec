@@ -16,7 +16,7 @@ public class SpecRunnerTests
         var runner = new SpecRunner();
         var results = runner.Run(context);
 
-        await Assert.That(results).HasCount(1);
+        await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
 
@@ -30,7 +30,7 @@ public class SpecRunnerTests
         var runner = new SpecRunner();
         var results = runner.Run(context);
 
-        await Assert.That(results).HasCount(1);
+        await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results[0].Exception).IsNotNull();
         await Assert.That(results[0].Exception!.Message).IsEqualTo("test failure");
@@ -48,8 +48,8 @@ public class SpecRunnerTests
         var runner = new SpecRunner();
         var results = runner.Run(context);
 
-        await Assert.That(results).HasCount(3);
-        await Assert.That(executed).HasCount(3);
+        await Assert.That(results).Count().IsEqualTo(3);
+        await Assert.That(executed).Count().IsEqualTo(3);
         await Assert.That(executed[0]).IsEqualTo("first");
         await Assert.That(executed[1]).IsEqualTo("second");
         await Assert.That(executed[2]).IsEqualTo("third");
@@ -162,7 +162,7 @@ public class SpecRunnerTests
         var runner = new SpecRunner();
         var results = runner.Run(root);
 
-        await Assert.That(results[0].ContextPath).HasCount(2);
+        await Assert.That(results[0].ContextPath).Count().IsEqualTo(2);
         await Assert.That(results[0].ContextPath[0]).IsEqualTo("Calculator");
         await Assert.That(results[0].ContextPath[1]).IsEqualTo("add");
     }
@@ -191,7 +191,7 @@ public class SpecRunnerTests
         var runner = new SpecRunner();
         var results = runner.Run(level1);
 
-        await Assert.That(results[0].ContextPath).HasCount(3);
+        await Assert.That(results[0].ContextPath).Count().IsEqualTo(3);
         await Assert.That(results[0].FullDescription).IsEqualTo("Level1 Level2 Level3 deep spec");
     }
 
@@ -287,7 +287,7 @@ public class SpecRunnerTests
         var runner = new SpecRunner();
         var results = runner.Run(root);
 
-        await Assert.That(results).HasCount(2);
+        await Assert.That(results).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("root");
         await Assert.That(executed).Contains("child");
     }

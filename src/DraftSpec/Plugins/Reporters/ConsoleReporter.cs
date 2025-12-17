@@ -19,8 +19,14 @@ public class ConsoleReporter : IReporter
         _formatter = formatter;
     }
 
+    /// <summary>
+    /// Gets the reporter name identifier.
+    /// </summary>
     public string Name => "console";
 
+    /// <summary>
+    /// Write the spec report to the console when the run completes.
+    /// </summary>
     public Task OnRunCompletedAsync(SpecReport report)
     {
         _formatter.Format(report, Console.Out);

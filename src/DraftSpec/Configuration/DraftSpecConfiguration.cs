@@ -17,6 +17,9 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     private bool _initialized;
     private bool _disposed;
 
+    /// <summary>
+    /// Create a new DraftSpec configuration instance.
+    /// </summary>
     public DraftSpecConfiguration()
     {
         _pluginContext = new PluginContext(this);
@@ -151,6 +154,9 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
         }
     }
 
+    /// <summary>
+    /// Dispose all registered plugins and release resources.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed) return;

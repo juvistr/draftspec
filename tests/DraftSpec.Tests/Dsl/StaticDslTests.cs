@@ -37,7 +37,7 @@ public class StaticDslTests
 
         await Task.WhenAll(task1, task2);
 
-        await Assert.That(results).HasCount(2);
+        await Assert.That(results).Count().IsEqualTo(2);
         await Assert.That(results).Contains("task1");
         await Assert.That(results).Contains("task2");
     }
@@ -311,7 +311,7 @@ public class StaticDslTests
         });
         run();
 
-        await Assert.That(executed).HasCount(2);
+        await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("context-spec");
         await Assert.That(executed).Contains("describe-spec");
     }
@@ -437,7 +437,7 @@ public class StaticDslTests
         });
         run();
 
-        await Assert.That(order).HasCount(5);
+        await Assert.That(order).Count().IsEqualTo(5);
         await Assert.That(order[0]).IsEqualTo("beforeAll");
         await Assert.That(order[1]).IsEqualTo("before");
         await Assert.That(order[2]).IsEqualTo("spec");
@@ -462,7 +462,7 @@ public class StaticDslTests
         });
         run();
 
-        await Assert.That(executed).HasCount(2);
+        await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("sync");
         await Assert.That(executed).Contains("async");
     }
@@ -524,7 +524,7 @@ public class StaticDslTests
         // First describe is RootContext, nested describe is a child
         await Assert.That(RootContext).IsNotNull();
         await Assert.That(RootContext!.Description).IsEqualTo("parent");
-        await Assert.That(RootContext!.Children).HasCount(1);
+        await Assert.That(RootContext!.Children).Count().IsEqualTo(1);
         await Assert.That(RootContext!.Children[0].Description).IsEqualTo("child");
 
         run();

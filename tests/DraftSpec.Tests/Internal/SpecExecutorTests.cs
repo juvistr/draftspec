@@ -121,7 +121,7 @@ public class SpecExecutorTests
 
         var report = SpecExecutor.Execute(context);
 
-        await Assert.That(report.Contexts).HasCount().EqualTo(1);
+        await Assert.That(report.Contexts).Count().IsEqualTo(1);
         await Assert.That(report.Contexts[0].Description).IsEqualTo("Calculator");
     }
 }

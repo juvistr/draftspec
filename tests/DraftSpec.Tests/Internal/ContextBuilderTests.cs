@@ -98,7 +98,7 @@ public class ContextBuilderTests
 
         // Verify hook was set by checking it's in the hook chain
         var chain = context.GetBeforeEachChain();
-        await Assert.That(chain).HasCount().EqualTo(1);
+        await Assert.That(chain).Count().IsEqualTo(1);
 
         chain[0]();
         await Assert.That(called).IsTrue();
@@ -123,7 +123,7 @@ public class ContextBuilderTests
 
         // Verify hook was set by checking it's in the hook chain
         var chain = context.GetAfterEachChain();
-        await Assert.That(chain).HasCount().EqualTo(1);
+        await Assert.That(chain).Count().IsEqualTo(1);
 
         chain[0]();
         await Assert.That(called).IsTrue();

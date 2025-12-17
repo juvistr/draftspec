@@ -60,7 +60,11 @@ static async Task<int> Run(string[] args)
         ShowError(ex.Message);
         return 1;
     }
-    catch (Exception ex)
+    catch (Exception
+#if DEBUG
+        ex
+#endif
+    )
     {
         // Unexpected errors - show details in debug mode
 #if DEBUG

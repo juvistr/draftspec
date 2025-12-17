@@ -47,7 +47,7 @@ public class ContextBuilderTests
         await Assert.That(spec.Description).IsEqualTo("test spec");
         await Assert.That(spec.IsPending).IsFalse(); // Body is not null means not pending
 
-        spec.Body!();
+        await spec.Body!();
         await Assert.That(called).IsTrue();
     }
 
@@ -100,7 +100,7 @@ public class ContextBuilderTests
         var chain = context.GetBeforeEachChain();
         await Assert.That(chain).Count().IsEqualTo(1);
 
-        chain[0]();
+        await chain[0]();
         await Assert.That(called).IsTrue();
     }
 
@@ -125,7 +125,7 @@ public class ContextBuilderTests
         var chain = context.GetAfterEachChain();
         await Assert.That(chain).Count().IsEqualTo(1);
 
-        chain[0]();
+        await chain[0]();
         await Assert.That(called).IsTrue();
     }
 
@@ -147,7 +147,7 @@ public class ContextBuilderTests
         ContextBuilder.SetBeforeAll(context, hook);
 
         // Call the hook directly from the context
-        context.BeforeAll!();
+        await context.BeforeAll!();
         await Assert.That(called).IsTrue();
     }
 
@@ -169,7 +169,7 @@ public class ContextBuilderTests
         ContextBuilder.SetAfterAll(context, hook);
 
         // Call the hook directly from the context
-        context.AfterAll!();
+        await context.AfterAll!();
         await Assert.That(called).IsTrue();
     }
 

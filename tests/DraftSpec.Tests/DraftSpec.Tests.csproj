@@ -5,6 +5,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <OutputType>Exe</OutputType>
+        <!-- Suppress TUnit informational warnings that are intentional in tests -->
+        <NoWarn>$(NoWarn);TUnitAssertions0005;TUnit0055</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

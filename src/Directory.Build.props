@@ -1,5 +1,9 @@
 <Project>
   <PropertyGroup>
+    <!-- MinVer configuration - version derived from git tags -->
+    <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
+    <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
+
     <!-- Shared NuGet metadata -->
     <Authors>juvistr</Authors>
     <Company>juvistr</Company>
@@ -13,4 +17,9 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MinVer - build-time only, calculates version from git tags -->
+    <PackageReference Include="MinVer" Version="6.*" PrivateAssets="All" />
+  </ItemGroup>
 </Project>

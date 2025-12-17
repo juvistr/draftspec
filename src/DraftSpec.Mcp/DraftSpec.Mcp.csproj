@@ -6,7 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>DraftSpec.Mcp</PackageId>
-    <Version>0.1.0</Version>
     <Description>MCP server for DraftSpec - run specs from AI assistants</Description>
     <PackageTags>testing;bdd;mcp;model-context-protocol;ai</PackageTags>
   </PropertyGroup>

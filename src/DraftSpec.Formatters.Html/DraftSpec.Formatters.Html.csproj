@@ -11,7 +11,6 @@
 
     <!-- NuGet Package Configuration -->
     <PackageId>DraftSpec.Formatters.Html</PackageId>
-    <Version>0.1.0</Version>
     <Description>HTML output formatter for DraftSpec test results. Generates browser-viewable reports.</Description>
     <PackageTags>testing;bdd;formatters;html;reports</PackageTags>
   </PropertyGroup>

@@ -42,9 +42,10 @@ public readonly struct CollectionExpectation<T>
     /// </summary>
     public void toContain(T expected)
     {
-        if (!Actual.Contains(expected))
+        var materialized = Materialize();
+        if (!materialized.Contains(expected))
             throw new AssertionException(
-                $"Expected {Expression} to contain {ExpectationHelpers.Format(expected)}, but it did not. Contents: [{FormatCollection()}]");
+                $"Expected {Expression} to contain {ExpectationHelpers.Format(expected)}, but it did not. Contents: [{FormatCollection(materialized)}]");
     }
 
     /// <summary>
@@ -62,8 +63,8 @@ public readonly struct CollectionExpectation<T>
     /// </summary>
     public void toContainAll(params T[] expected)
     {
-        var actual = Actual; // Copy to local for lambda capture in struct
-        var missing = expected.Where(e => !actual.Contains(e)).ToList();
+        var materialized = Materialize();
+        var missing = expected.Where(e => !materialized.Contains(e)).ToList();
         if (missing.Count > 0)
             throw new AssertionException(
                 $"Expected {Expression} to contain all of [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was missing [{string.Join(", ", missing.Select(e => ExpectationHelpers.Format(e)))}]");
@@ -74,7 +75,8 @@ public readonly struct CollectionExpectation<T>
     /// </summary>
     public void toHaveCount(int expected)
     {
-        var count = Actual.Count();
+        var materialized = Materialize();
+        var count = materialized.Count;
         if (count != expected)
             throw new AssertionException(
                 $"Expected {Expression} to have count {expected}, but was {count}");
@@ -85,9 +87,10 @@ public readonly struct CollectionExpectation<T>
     /// </summary>
     public void toBeEmpty()
     {
-        if (Actual.Any())
+        var materialized = Materialize();
+        if (materialized.Count > 0)
             throw new AssertionException(
-                $"Expected {Expression} to be empty, but had {Actual.Count()} items: [{FormatCollection()}]");
+                $"Expected {Expression} to be empty, but had {materialized.Count} items: [{FormatCollection(materialized)}]");
     }
 
     /// <summary>
@@ -95,7 +98,8 @@ public readonly struct CollectionExpectation<T>
     /// </summary>
     public void toNotBeEmpty()
     {
-        if (!Actual.Any())
+        var materialized = Materialize();
+        if (materialized.Count == 0)
             throw new AssertionException(
                 $"Expected {Expression} to not be empty");
     }
@@ -105,9 +109,10 @@ public readonly struct CollectionExpectation<T>
     /// </summary>
     public void toBe(IEnumerable<T> expected)
     {
-        if (!Actual.SequenceEqual(expected))
+        var materialized = Materialize();
+        if (!materialized.SequenceEqual(expected))
             throw new AssertionException(
-                $"Expected {Expression} to be [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was [{FormatCollection()}]");
+                $"Expected {Expression} to be [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was [{FormatCollection(materialized)}]");
     }
 
     /// <summary>
@@ -118,11 +123,20 @@ public readonly struct CollectionExpectation<T>
         toBe((IEnumerable<T>)expected);
     }
 
-    private string FormatCollection()
+    /// <summary>
+    /// Materializes the collection to avoid multiple enumeration.
+    /// Avoids re-materializing if already a collection with O(1) Count.
+    /// </summary>
+    private IReadOnlyCollection<T> Materialize()
     {
-        var items = Actual.Take(10).Select(e => ExpectationHelpers.Format(e));
+        return Actual as IReadOnlyCollection<T> ?? Actual.ToList();
+    }
+
+    private static string FormatCollection(IReadOnlyCollection<T> collection)
+    {
+        var items = collection.Take(10).Select(e => ExpectationHelpers.Format(e));
         var result = string.Join(", ", items);
-        if (Actual.Count() > 10)
+        if (collection.Count > 10)
             result += ", ...";
         return result;
     }

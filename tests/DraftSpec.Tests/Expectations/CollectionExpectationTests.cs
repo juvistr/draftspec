@@ -1,3 +1,5 @@
+using System.Collections;
+
 namespace DraftSpec.Tests.Expectations;
 
 /// <summary>
@@ -5,6 +7,106 @@ namespace DraftSpec.Tests.Expectations;
 /// </summary>
 public class CollectionExpectationTests
 {
+    #region Single Enumeration Tests
+
+    /// <summary>
+    /// Helper that throws on second enumeration to verify single-enumeration behavior.
+    /// </summary>
+    private class SingleEnumerationSequence<T>(IEnumerable<T> source) : IEnumerable<T>
+    {
+        private bool _enumerated;
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            if (_enumerated)
+                throw new InvalidOperationException("Sequence was enumerated more than once");
+            _enumerated = true;
+            return source.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    [Test]
+    public async Task toContain_EnumeratesOnlyOnce()
+    {
+        var sequence = new SingleEnumerationSequence<int>([1, 2, 3]);
+        var expectation = new CollectionExpectation<int>(sequence, "seq");
+
+        // Should not throw - only enumerates once
+        expectation.toContain(2);
+    }
+
+    [Test]
+    public async Task toContain_WhenFails_EnumeratesOnlyOnce()
+    {
+        var sequence = new SingleEnumerationSequence<int>([1, 2, 3]);
+        var expectation = new CollectionExpectation<int>(sequence, "seq");
+
+        // Should throw AssertionException, not InvalidOperationException
+        var ex = Assert.Throws<AssertionException>(() => expectation.toContain(5));
+        await Assert.That(ex.Message).Contains("to contain 5");
+    }
+
+    [Test]
+    public async Task toContainAll_EnumeratesOnlyOnce()
+    {
+        var sequence = new SingleEnumerationSequence<int>([1, 2, 3, 4, 5]);
+        var expectation = new CollectionExpectation<int>(sequence, "seq");
+
+        expectation.toContainAll(1, 3, 5);
+    }
+
+    [Test]
+    public async Task toHaveCount_EnumeratesOnlyOnce()
+    {
+        var sequence = new SingleEnumerationSequence<int>([1, 2, 3]);
+        var expectation = new CollectionExpectation<int>(sequence, "seq");
+
+        expectation.toHaveCount(3);
+    }
+
+    [Test]
+    public async Task toBeEmpty_WhenFails_EnumeratesOnlyOnce()
+    {
+        var sequence = new SingleEnumerationSequence<int>([1, 2]);
+        var expectation = new CollectionExpectation<int>(sequence, "seq");
+
+        // Should throw AssertionException, not InvalidOperationException
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeEmpty());
+        await Assert.That(ex.Message).Contains("to be empty");
+    }
+
+    [Test]
+    public async Task toNotBeEmpty_EnumeratesOnlyOnce()
+    {
+        var sequence = new SingleEnumerationSequence<int>([1]);
+        var expectation = new CollectionExpectation<int>(sequence, "seq");
+
+        expectation.toNotBeEmpty();
+    }
+
+    [Test]
+    public async Task toBe_EnumeratesOnlyOnce()
+    {
+        var sequence = new SingleEnumerationSequence<int>([1, 2, 3]);
+        var expectation = new CollectionExpectation<int>(sequence, "seq");
+
+        expectation.toBe([1, 2, 3]);
+    }
+
+    [Test]
+    public async Task toBe_WhenFails_EnumeratesOnlyOnce()
+    {
+        var sequence = new SingleEnumerationSequence<int>([1, 2, 3]);
+        var expectation = new CollectionExpectation<int>(sequence, "seq");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBe([1, 2, 4]));
+        await Assert.That(ex.Message).Contains("to be");
+    }
+
+    #endregion
+
     #region toContain
 
     [Test]

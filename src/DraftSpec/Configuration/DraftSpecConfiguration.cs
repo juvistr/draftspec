@@ -5,14 +5,10 @@ namespace DraftSpec.Configuration;
 
 /// <summary>
 /// Main configuration class for DraftSpec.
-/// Manages plugins, formatters, reporters, and services.
+/// Acts as a facade coordinating plugins, formatters, reporters, and services.
 /// </summary>
 public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
 {
-    private readonly PluginRegistry _pluginRegistry = new();
-    private readonly FormatterRegistry _formatterRegistry = new();
-    private readonly ReporterRegistry _reporterRegistry = new();
-    private readonly Dictionary<Type, object> _services = [];
     private readonly PluginContext _pluginContext;
     private bool _initialized;
     private bool _disposed;
@@ -22,8 +18,22 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// </summary>
     public DraftSpecConfiguration()
     {
+        Services = new ServiceRegistry();
+        Plugins = new PluginManager();
+        Formatters = new FormatterRegistry();
+        Reporters = new ReporterRegistry();
         _pluginContext = new PluginContext(this);
     }
+
+    /// <summary>
+    /// Service registry for dependency injection.
+    /// </summary>
+    public ServiceRegistry Services { get; }
+
+    /// <summary>
+    /// Plugin manager for plugin lifecycle.
+    /// </summary>
+    public PluginManager Plugins { get; }
 
     /// <summary>
     /// Console formatter for outputting results to the terminal.
@@ -32,13 +42,13 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     public IConsoleFormatter? ConsoleFormatter { get; set; }
 
     /// <inheritdoc />
-    public IFormatterRegistry Formatters => _formatterRegistry;
+    public IFormatterRegistry Formatters { get; }
 
     /// <inheritdoc />
-    public IReporterRegistry Reporters => _reporterRegistry;
+    public IReporterRegistry Reporters { get; }
 
     /// <inheritdoc />
-    public IEnumerable<IPlugin> Plugins => _pluginRegistry.All;
+    IEnumerable<IPlugin> IDraftSpecConfiguration.Plugins => Plugins.All;
 
     /// <summary>
     /// Register a plugin by type.
@@ -56,7 +66,7 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     public DraftSpecConfiguration UsePlugin(IPlugin plugin)
     {
         ArgumentNullException.ThrowIfNull(plugin);
-        _pluginRegistry.Register(plugin);
+        Plugins.Register(plugin);
         return this;
     }
 
@@ -67,7 +77,7 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// <param name="configure">Configuration action</param>
     public DraftSpecConfiguration Configure<T>(Action<T> configure) where T : class, IPlugin
     {
-        var plugin = _pluginRegistry.Get<T>();
+        var plugin = Plugins.Get<T>();
         if (plugin != null) configure(plugin);
         return this;
     }
@@ -78,7 +88,7 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// <param name="reporter">The reporter to register</param>
     public DraftSpecConfiguration AddReporter(IReporter reporter)
     {
-        _reporterRegistry.Register(reporter);
+        ((ReporterRegistry)Reporters).Register(reporter);
         return this;
     }
 
@@ -89,7 +99,7 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// <param name="formatter">The formatter to register</param>
     public DraftSpecConfiguration AddFormatter(string name, IFormatter formatter)
     {
-        _formatterRegistry.Register(name, formatter);
+        ((FormatterRegistry)Formatters).Register(name, formatter);
         return this;
     }
 
@@ -100,15 +110,14 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// <param name="service">The service instance</param>
     public DraftSpecConfiguration AddService<T>(T service) where T : class
     {
-        ArgumentNullException.ThrowIfNull(service);
-        _services[typeof(T)] = service;
+        Services.Register(service);
         return this;
     }
 
     /// <inheritdoc />
     public T? GetService<T>() where T : class
     {
-        return _services.TryGetValue(typeof(T), out var service) ? service as T : null;
+        return Services.GetService<T>();
     }
 
     /// <summary>
@@ -121,14 +130,15 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
         _initialized = true;
 
         // Initialize all plugins
-        foreach (var plugin in _pluginRegistry.All) plugin.Initialize(_pluginContext);
+        foreach (var plugin in Plugins.All) plugin.Initialize(_pluginContext);
 
         // Let formatter plugins register their formatters
-        foreach (var plugin in _pluginRegistry.OfType<IFormatterPlugin>())
-            plugin.RegisterFormatters(_formatterRegistry);
+        foreach (var plugin in Plugins.OfType<IFormatterPlugin>())
+            plugin.RegisterFormatters(Formatters);
 
         // Let reporter plugins register their reporters
-        foreach (var plugin in _pluginRegistry.OfType<IReporterPlugin>()) plugin.RegisterReporters(_reporterRegistry);
+        foreach (var plugin in Plugins.OfType<IReporterPlugin>())
+            plugin.RegisterReporters(Reporters);
     }
 
     /// <summary>
@@ -137,7 +147,8 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// <param name="builder">The spec runner builder</param>
     internal void InitializeMiddleware(SpecRunnerBuilder builder)
     {
-        foreach (var plugin in _pluginRegistry.OfType<IMiddlewarePlugin>()) plugin.RegisterMiddleware(builder);
+        foreach (var plugin in Plugins.OfType<IMiddlewarePlugin>())
+            plugin.RegisterMiddleware(builder);
     }
 
     /// <summary>
@@ -147,6 +158,6 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        _pluginRegistry.Dispose();
+        Plugins.Dispose();
     }
 }

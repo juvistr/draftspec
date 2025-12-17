@@ -94,14 +94,15 @@ public class PipelineTests
         context.AddSpec(new SpecDefinition("test", async () =>
         {
             attempts++;
-            if (attempts == 1) await Task.Delay(200); // First attempt times out
+            if (attempts == 1) await Task.Delay(1000); // First attempt times out (1s >> 50ms)
             // Second attempt succeeds quickly
         }));
 
-        // Retry wraps Timeout - each attempt gets its own 100ms timeout
+        // Retry wraps Timeout - each attempt gets its own 50ms timeout
+        // Use a large gap (1000ms delay vs 50ms timeout) to avoid flakiness
         var runner = new SpecRunnerBuilder()
             .WithRetry(2)
-            .WithTimeout(100)
+            .WithTimeout(50)
             .Build();
         var results = runner.Run(context);
 

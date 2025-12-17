@@ -23,15 +23,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history for MinVer
-          fetch-tags: true  # Ensure tags are fetched for MinVer
 
-      - name: Checkout release tag
-        if: github.event_name == 'release'
+      - name: Determine version
+        id: version
         run: |
-          git checkout ${{ github.event.release.tag_name }}
-          echo "Checked out tag: $(git describe --tags --exact-match 2>/dev/null || echo 'no tag')"
+          TAG="${{ github.event.release.tag_name }}"
+          # Strip 'v' prefix (v0.1.0-alpha.3 -> 0.1.0-alpha.3)
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing version: $VERSION"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -43,12 +43,16 @@ jobs:
 
       - name: Build
         run: dotnet build --no-restore -c Release
+        env:
+          MinVerVersionOverride: ${{ steps.version.outputs.version }}
 
       - name: Run tests
         run: dotnet run --project tests/DraftSpec.Tests --no-build -c Release
 
       - name: Pack
         run: dotnet pack --no-build -c Release
+        env:
+          MinVerVersionOverride: ${{ steps.version.outputs.version }}
 
       - name: Display packages
         run: |

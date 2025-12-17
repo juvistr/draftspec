@@ -192,6 +192,56 @@ configure(runner => runner
 - **[CLI Reference](docs/cli.md)** - Command-line options
 - **[Configuration](docs/configuration.md)** - Middleware and plugins
 
+## Contributing
+
+We use a PR-based workflow with branch protection on `main`.
+
+### Development
+
+```bash
+# Clone and build
+git clone https://github.com/juvistr/draftspec.git
+cd draftspec
+dotnet build
+
+# Run tests
+dotnet run --project tests/DraftSpec.Tests
+
+# Create a branch for your changes
+git checkout -b feature/your-feature
+```
+
+### Pull Request Process
+
+1. Create a feature branch from `main`
+2. Make your changes with tests
+3. Push and open a PR
+4. CI runs automatically (build, test, pack)
+5. After review and approval, squash-merge to `main`
+
+### Releases
+
+Releases are triggered by pushing version tags:
+
+```bash
+git tag v0.1.0-alpha.1
+git push origin v0.1.0-alpha.1
+```
+
+This triggers the publish workflow which:
+- Builds and tests the code
+- Packs NuGet packages (version from tag via MinVer)
+- Publishes to nuget.org
+- Creates a GitHub Release with auto-generated notes
+
+### Branch Protection (Maintainers)
+
+Recommended settings for `main`:
+- Require PR reviews before merging
+- Require status checks (CI workflow)
+- Require linear history (squash merging)
+- No direct pushes to main
+
 ## Status
 
 **Alpha** - This is an early experiment, built in roughly a day with AI assistance. It works, but expect rough edges,

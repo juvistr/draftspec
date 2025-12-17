@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using DraftSpec.Configuration;
 using DraftSpec.Formatters;
 
@@ -11,12 +10,6 @@ namespace DraftSpec.Internal;
 /// </summary>
 internal static class SpecExecutor
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
 
     /// <summary>
     /// Execute specs and return the report.
@@ -63,7 +56,7 @@ internal static class SpecExecutor
             // In file reporter mode, show console formatted output for user feedback
             FormatToConsole(configuration, report);
         else if (json)
-            Console.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
+            Console.WriteLine(JsonSerializer.Serialize(report, JsonOptionsProvider.Default));
         else
             FormatToConsole(configuration, report);
 

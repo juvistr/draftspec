@@ -34,13 +34,8 @@ public class SpecReport
             throw new InvalidOperationException(
                 $"Report too large: {json.Length:N0} bytes exceeds maximum of {MaxJsonSize:N0} bytes");
 
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            // Security: Limit nesting depth to prevent stack overflow
-            MaxDepth = 64
-        };
-        return JsonSerializer.Deserialize<SpecReport>(json, options)
+        // Security: Use secure options with MaxDepth limit to prevent stack overflow
+        return JsonSerializer.Deserialize<SpecReport>(json, JsonOptionsProvider.Secure)
                ?? throw new InvalidOperationException("Failed to parse JSON report");
     }
 
@@ -49,13 +44,7 @@ public class SpecReport
     /// </summary>
     public string ToJson()
     {
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
-        return JsonSerializer.Serialize(this, options);
+        return JsonSerializer.Serialize(this, JsonOptionsProvider.Default);
     }
 }
 

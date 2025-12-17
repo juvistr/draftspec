@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DraftSpec.Formatters;
 
 namespace DraftSpec.Mcp.Models;
 
@@ -62,12 +63,7 @@ public class SpecReport
 
         try
         {
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                MaxDepth = 64
-            };
-            return JsonSerializer.Deserialize<SpecReport>(json, options);
+            return JsonSerializer.Deserialize<SpecReport>(json, JsonOptionsProvider.Secure);
         }
         catch
         {

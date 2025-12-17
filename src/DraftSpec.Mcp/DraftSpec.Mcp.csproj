@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>DraftSpec.Mcp</PackageId>
+    <Version>0.1.0</Version>
+    <Description>MCP server for DraftSpec - run specs from AI assistants</Description>
+    <PackageTags>testing;bdd;mcp;model-context-protocol;ai</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="0.5.0-preview.*" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.*" />
+  </ItemGroup>
+
+</Project>

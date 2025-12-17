@@ -60,7 +60,7 @@ public static class RunCommand
         }
 
         // Merge all JSON reports into a combined report
-        var combinedReport = MergeReports(jsonOutputs, Path.GetFullPath(options.Path));
+        var combinedReport = ReportMerger.Merge(jsonOutputs, Path.GetFullPath(options.Path));
 
         string output;
         if (options.Format == OutputFormats.Json)
@@ -103,61 +103,5 @@ public static class RunCommand
         }
 
         return hasFailures ? 1 : 0;
-    }
-
-    /// <summary>
-    /// Merge multiple JSON reports into a single combined report.
-    /// </summary>
-    private static SpecReport MergeReports(List<string> jsonOutputs, string source)
-    {
-        if (jsonOutputs.Count == 0)
-            return new SpecReport
-            {
-                Timestamp = DateTime.UtcNow,
-                Source = source,
-                Summary = new SpecSummary(),
-                Contexts = []
-            };
-
-        // Parse all reports
-        var reports = jsonOutputs
-            .Where(json => !string.IsNullOrWhiteSpace(json))
-            .Select(SpecReport.FromJson)
-            .ToList();
-
-        if (reports.Count == 0)
-            return new SpecReport
-            {
-                Timestamp = DateTime.UtcNow,
-                Source = source,
-                Summary = new SpecSummary(),
-                Contexts = []
-            };
-
-        // Single report - just update source
-        if (reports.Count == 1)
-        {
-            reports[0].Source = source;
-            return reports[0];
-        }
-
-        // Merge multiple reports
-        var combined = new SpecReport
-        {
-            Timestamp = reports.Min(r => r.Timestamp),
-            Source = source,
-            Contexts = reports.SelectMany(r => r.Contexts).ToList(),
-            Summary = new SpecSummary
-            {
-                Total = reports.Sum(r => r.Summary.Total),
-                Passed = reports.Sum(r => r.Summary.Passed),
-                Failed = reports.Sum(r => r.Summary.Failed),
-                Pending = reports.Sum(r => r.Summary.Pending),
-                Skipped = reports.Sum(r => r.Summary.Skipped),
-                DurationMs = reports.Sum(r => r.Summary.DurationMs)
-            }
-        };
-
-        return combined;
     }
 }

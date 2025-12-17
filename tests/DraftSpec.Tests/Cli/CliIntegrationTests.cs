@@ -180,6 +180,53 @@ public class CliIntegrationTests
 
     #endregion
 
+    #region Security Tests - Path Traversal Prevention
+
+    [Test]
+    public async Task NewCommand_NameWithPathSeparator_ReturnsError()
+    {
+        // Attempt path traversal via spec name
+        var options = new CliOptions { Path = _testDirectory, SpecName = "../../../etc/malicious" };
+
+        var result = NewCommand.Execute(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        // Verify no file was created outside the directory
+        await Assert.That(File.Exists(Path.Combine(_testDirectory, "../../../etc/malicious.spec.csx"))).IsFalse();
+    }
+
+    [Test]
+    public async Task NewCommand_NameWithBackslash_ReturnsError()
+    {
+        var options = new CliOptions { Path = _testDirectory, SpecName = "..\\..\\malicious" };
+
+        var result = NewCommand.Execute(options);
+
+        await Assert.That(result).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task NewCommand_NameWithDoubleDot_ReturnsError()
+    {
+        var options = new CliOptions { Path = _testDirectory, SpecName = ".." };
+
+        var result = NewCommand.Execute(options);
+
+        await Assert.That(result).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task NewCommand_NameStartingWithDoubleDot_ReturnsError()
+    {
+        var options = new CliOptions { Path = _testDirectory, SpecName = "..foo" };
+
+        var result = NewCommand.Execute(options);
+
+        await Assert.That(result).IsEqualTo(1);
+    }
+
+    #endregion
+
     #region RunCommand.GetFormatter Tests
 
     [Test]

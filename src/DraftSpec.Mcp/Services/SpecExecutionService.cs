@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using DraftSpec.Mcp.Models;
+using DraftSpec.Formatters;
 using Microsoft.Extensions.Logging;
 
 namespace DraftSpec.Mcp.Services;
@@ -12,6 +14,11 @@ public partial class SpecExecutionService
 {
     private readonly TempFileManager _tempFileManager;
     private readonly ILogger<SpecExecutionService> _logger;
+
+    /// <summary>
+    /// Prefix used by ProgressStreamReporter for progress lines.
+    /// </summary>
+    private const string ProgressLinePrefix = "DRAFTSPEC_PROGRESS:";
 
     /// <summary>
     /// Template for wrapping user spec content.
@@ -38,9 +45,25 @@ public partial class SpecExecutionService
     /// <summary>
     /// Execute spec content and return structured results.
     /// </summary>
+    public Task<RunSpecResult> ExecuteSpecAsync(
+        string specContent,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        return ExecuteSpecAsync(specContent, timeout, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Execute spec content and return structured results with progress notifications.
+    /// </summary>
+    /// <param name="specContent">The spec content to execute</param>
+    /// <param name="timeout">Execution timeout</param>
+    /// <param name="onProgress">Optional callback for progress notifications</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     public async Task<RunSpecResult> ExecuteSpecAsync(
         string specContent,
         TimeSpan timeout,
+        Func<SpecProgressNotification, Task>? onProgress,
         CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -59,16 +82,17 @@ public partial class SpecExecutionService
                 specFilePath,
                 jsonOutputPath,
                 timeout,
+                onProgress,
                 cancellationToken);
 
             stopwatch.Stop();
 
-            SpecReport? report = null;
+            Models.SpecReport? report = null;
             if (File.Exists(jsonOutputPath))
                 try
                 {
                     var json = await File.ReadAllTextAsync(jsonOutputPath, cancellationToken);
-                    report = SpecReport.FromJson(json);
+                    report = Models.SpecReport.FromJson(json);
                 }
                 catch (Exception ex)
                 {
@@ -146,6 +170,7 @@ public partial class SpecExecutionService
         string specFilePath,
         string jsonOutputPath,
         TimeSpan timeout,
+        Func<SpecProgressNotification, Task>? onProgress,
         CancellationToken cancellationToken)
     {
         var psi = new ProcessStartInfo
@@ -166,13 +191,22 @@ public partial class SpecExecutionService
         // Set environment variable for JSON output file
         psi.EnvironmentVariables["DRAFTSPEC_JSON_OUTPUT_FILE"] = jsonOutputPath;
 
+        // Enable progress streaming if callback is provided
+        if (onProgress != null)
+        {
+            psi.EnvironmentVariables["DRAFTSPEC_PROGRESS_STREAM"] = "true";
+        }
+
         using var process = new Process { StartInfo = psi };
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(timeout);
 
         process.Start();
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cts.Token);
+        // Read stdout with progress line handling
+        var stdoutTask = onProgress != null
+            ? ReadStdoutWithProgressAsync(process.StandardOutput, onProgress, cts.Token)
+            : process.StandardOutput.ReadToEndAsync(cts.Token);
         var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
 
         try
@@ -195,5 +229,45 @@ public partial class SpecExecutionService
 
             throw new TimeoutException($"Process timed out after {timeout.TotalSeconds}s");
         }
+    }
+
+    /// <summary>
+    /// Reads stdout line by line, parsing progress lines and invoking the callback.
+    /// Non-progress lines are collected and returned as the stdout content.
+    /// </summary>
+    private async Task<string> ReadStdoutWithProgressAsync(
+        StreamReader reader,
+        Func<SpecProgressNotification, Task> onProgress,
+        CancellationToken cancellationToken)
+    {
+        var outputLines = new List<string>();
+
+        while (await reader.ReadLineAsync(cancellationToken) is { } line)
+        {
+            if (line.StartsWith(ProgressLinePrefix))
+            {
+                // Parse and emit progress notification
+                var json = line[ProgressLinePrefix.Length..];
+                try
+                {
+                    var notification = JsonSerializer.Deserialize<SpecProgressNotification>(json, JsonOptionsProvider.Default);
+                    if (notification != null)
+                    {
+                        await onProgress(notification);
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse progress line: {Line}", line);
+                }
+            }
+            else
+            {
+                // Regular output line
+                outputLines.Add(line);
+            }
+        }
+
+        return string.Join(Environment.NewLine, outputLines);
     }
 }

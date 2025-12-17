@@ -13,15 +13,16 @@ namespace DraftSpec.Mcp.Tools;
 [McpServerToolType]
 public static class SpecTools
 {
-
     /// <summary>
     /// Run a DraftSpec test specification and return the results.
     /// </summary>
     [McpServerTool(Name = "run_spec")]
     [Description("Execute a DraftSpec test specification and return structured results. " +
-                 "Provide just the describe/it blocks - boilerplate is added automatically.")]
+                 "Provide just the describe/it blocks - boilerplate is added automatically. " +
+                 "Emits progress notifications during execution for real-time feedback.")]
     public static async Task<string> RunSpec(
         SpecExecutionService executionService,
+        McpServer server,
         [Description("The spec content using describe/it/expect syntax. " +
                      "Do NOT include #:package, using directives, or run() - these are added automatically.")]
         string specContent,
@@ -31,9 +32,34 @@ public static class SpecTools
     {
         timeoutSeconds = Math.Clamp(timeoutSeconds, 1, 60);
 
+        // Progress callback to emit MCP notifications
+        async Task OnProgress(SpecProgressNotification notification)
+        {
+            var progressData = new
+            {
+                progressToken = "spec_execution",
+                progress = notification.ProgressPercent,
+                total = 100.0,
+                message = notification.Type switch
+                {
+                    "start" => $"Starting {notification.Total} specs...",
+                    "progress" => $"[{notification.Completed}/{notification.Total}] {notification.Status}: {notification.Spec}",
+                    "complete" => $"Completed: {notification.Passed} passed, {notification.Failed} failed",
+                    _ => notification.Type
+                }
+            };
+
+            await server.SendNotificationAsync(
+                "notifications/progress",
+                progressData,
+                JsonOptionsProvider.Default,
+                cancellationToken);
+        }
+
         var result = await executionService.ExecuteSpecAsync(
             specContent,
             TimeSpan.FromSeconds(timeoutSeconds),
+            OnProgress,
             cancellationToken);
 
         return JsonSerializer.Serialize(result, JsonOptionsProvider.Default);

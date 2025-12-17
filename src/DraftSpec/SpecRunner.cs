@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using DraftSpec.Configuration;
 using DraftSpec.Middleware;
@@ -15,6 +16,7 @@ public class SpecRunner : ISpecRunner
     private readonly Func<SpecExecutionContext, Task<SpecResult>> _pipeline;
     private readonly DraftSpecConfiguration? _configuration;
     private readonly int _maxDegreeOfParallelism;
+    private readonly IReadOnlyList<IReporter> _reporters;
 
     /// <summary>
     /// Create a SpecRunner with no middleware (default behavior).
@@ -37,6 +39,7 @@ public class SpecRunner : ISpecRunner
         _middleware = middleware.ToList();
         _configuration = configuration;
         _maxDegreeOfParallelism = maxDegreeOfParallelism;
+        _reporters = configuration?.Reporters.All.ToList() ?? [];
         _pipeline = BuildPipeline();
     }
 
@@ -101,7 +104,7 @@ public class SpecRunner : ISpecRunner
         var startTime = DateTime.UtcNow;
         await NotifyRunStartingAsync(totalSpecs, startTime);
 
-        await RunContextAsync(rootContext, [], results, hasFocused);
+        await RunContextAsync(rootContext, ImmutableList<string>.Empty, results, hasFocused);
 
         return results;
     }
@@ -113,38 +116,42 @@ public class SpecRunner : ISpecRunner
 
     private async Task NotifyRunStartingAsync(int totalSpecs, DateTime startTime)
     {
-        if (_configuration == null) return;
+        if (_reporters.Count == 0) return;
 
         var startContext = new RunStartingContext(totalSpecs, startTime);
-        foreach (var reporter in _configuration.Reporters.All) await reporter.OnRunStartingAsync(startContext);
+        foreach (var reporter in _reporters) await reporter.OnRunStartingAsync(startContext);
     }
 
     private async Task NotifySpecCompletedAsync(SpecResult result)
     {
-        if (_configuration == null) return;
+        if (_reporters.Count == 0) return;
 
-        var reporters = _configuration.Reporters.All.ToList();
-        if (reporters.Count <= 1)
+        if (_reporters.Count == 1)
+        {
             // Single reporter - no parallelism overhead
-            foreach (var reporter in reporters)
-                await reporter.OnSpecCompletedAsync(result);
+            await _reporters[0].OnSpecCompletedAsync(result);
+        }
         else
+        {
             // Multiple reporters - notify in parallel
-            await Task.WhenAll(reporters.Select(r => r.OnSpecCompletedAsync(result)));
+            await Task.WhenAll(_reporters.Select(r => r.OnSpecCompletedAsync(result)));
+        }
     }
 
     private async Task NotifySpecsBatchCompletedAsync(IReadOnlyList<SpecResult> results)
     {
-        if (_configuration == null || results.Count == 0) return;
+        if (_reporters.Count == 0 || results.Count == 0) return;
 
-        var reporters = _configuration.Reporters.All.ToList();
-        if (reporters.Count <= 1)
+        if (_reporters.Count == 1)
+        {
             // Single reporter - call batch method directly
-            foreach (var reporter in reporters)
-                await reporter.OnSpecsBatchCompletedAsync(results);
+            await _reporters[0].OnSpecsBatchCompletedAsync(results);
+        }
         else
+        {
             // Multiple reporters - notify in parallel
-            await Task.WhenAll(reporters.Select(r => r.OnSpecsBatchCompletedAsync(results)));
+            await Task.WhenAll(_reporters.Select(r => r.OnSpecsBatchCompletedAsync(results)));
+        }
     }
 
     private static bool HasFocusedSpecs(SpecContext context)
@@ -162,13 +169,13 @@ public class SpecRunner : ISpecRunner
 
     private async Task RunContextAsync(
         SpecContext context,
-        List<string> parentDescriptions,
+        ImmutableList<string> parentDescriptions,
         List<SpecResult> results,
         bool hasFocused)
     {
-        var descriptions = parentDescriptions.ToList();
-        if (!string.IsNullOrEmpty(context.Description))
-            descriptions.Add(context.Description);
+        var descriptions = string.IsNullOrEmpty(context.Description)
+            ? parentDescriptions
+            : parentDescriptions.Add(context.Description);
 
         // Run beforeAll (always sequential)
         if (context.BeforeAll != null)
@@ -195,7 +202,7 @@ public class SpecRunner : ISpecRunner
 
     private async Task RunSpecsSequentialAsync(
         SpecContext context,
-        List<string> descriptions,
+        IReadOnlyList<string> descriptions,
         List<SpecResult> results,
         bool hasFocused)
     {
@@ -209,7 +216,7 @@ public class SpecRunner : ISpecRunner
 
     private async Task RunSpecsParallelAsync(
         SpecContext context,
-        List<string> descriptions,
+        IReadOnlyList<string> descriptions,
         List<SpecResult> results,
         bool hasFocused)
     {
@@ -239,7 +246,7 @@ public class SpecRunner : ISpecRunner
     private async Task<SpecResult> RunSpecAsync(
         SpecDefinition spec,
         SpecContext context,
-        List<string> contextPath,
+        IReadOnlyList<string> contextPath,
         bool hasFocused)
     {
         // Quick returns for non-executable specs (bypass pipeline)

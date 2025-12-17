@@ -30,6 +30,7 @@ public partial class SpecFileRunner : ISpecFileRunner
     private readonly Dictionary<string, DateTime> _lastBuildTime = new();
     private readonly Dictionary<string, DateTime> _lastSourceModified = new();
     private readonly bool _useFileBased;
+    private readonly bool _noCache;
 
     /// <summary>
     /// Regex to match #r "nuget: Package, Version" directives.
@@ -37,9 +38,10 @@ public partial class SpecFileRunner : ISpecFileRunner
     [GeneratedRegex(@"#r\s+""nuget:\s*([^,""]+),?\s*([^""]*)""")]
     private static partial Regex NuGetRefPattern();
 
-    public SpecFileRunner()
+    public SpecFileRunner(bool noCache = false)
     {
         _useFileBased = ProcessHelper.SupportsFileBasedApps;
+        _noCache = noCache;
     }
 
     public event Action<string>? OnBuildStarted;
@@ -264,11 +266,14 @@ public partial class SpecFileRunner : ISpecFileRunner
     /// <summary>
     /// Run spec using dotnet-script (fallback for #load directives or older SDKs).
     /// </summary>
-    private static SpecRunResult RunAsDotnetScript(string specFile, string workingDir)
+    private SpecRunResult RunAsDotnetScript(string specFile, string workingDir)
     {
         var fileName = Path.GetFileName(specFile);
         var stopwatch = Stopwatch.StartNew();
-        var result = ProcessHelper.RunDotnet(["script", fileName, "--no-cache"], workingDir);
+        var args = _noCache
+            ? new[] { "script", fileName, "--no-cache" }
+            : new[] { "script", fileName };
+        var result = ProcessHelper.RunDotnet(args, workingDir);
         stopwatch.Stop();
 
         return new SpecRunResult(
@@ -388,7 +393,10 @@ public partial class SpecFileRunner : ISpecFileRunner
             }
 
             var stopwatch = Stopwatch.StartNew();
-            var result = ProcessHelper.RunDotnet(["script", tempFileName, "--no-cache"], workingDir);
+            var args = _noCache
+                ? new[] { "script", tempFileName, "--no-cache" }
+                : new[] { "script", tempFileName };
+            var result = ProcessHelper.RunDotnet(args, workingDir);
             stopwatch.Stop();
 
             return new SpecRunResult(
@@ -492,7 +500,7 @@ public partial class SpecFileRunner : ISpecFileRunner
         }
     }
 
-    private static SpecRunResult RunAsDotnetScriptWithJson(
+    private SpecRunResult RunAsDotnetScriptWithJson(
         string specFile,
         string workingDir,
         string jsonOutputFile,
@@ -503,10 +511,10 @@ public partial class SpecFileRunner : ISpecFileRunner
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            var result = ProcessHelper.RunDotnet(
-                ["script", fileName, "--no-cache"],
-                workingDir,
-                envVars);
+            var args = _noCache
+                ? new[] { "script", fileName, "--no-cache" }
+                : new[] { "script", fileName };
+            var result = ProcessHelper.RunDotnet(args, workingDir, envVars);
 
             stopwatch.Stop();
 

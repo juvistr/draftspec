@@ -19,7 +19,7 @@ public static class RunCommand
     public static int Execute(CliOptions options, ICliFormatterRegistry? formatterRegistry = null)
     {
         var finder = new SpecFinder();
-        var runner = new SpecFileRunner();
+        var runner = new SpecFileRunner(options.NoCache);
 
         // For non-console formats, we need JSON output from specs
         var needsJson = options.Format is OutputFormats.Json or OutputFormats.Markdown or OutputFormats.Html;

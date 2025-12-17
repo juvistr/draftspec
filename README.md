@@ -1,8 +1,12 @@
 # DraftSpec
 
-RSpec-inspired testing for .NET 10.
+> ⚠️ **Alpha** - Experimental, expect breaking changes
 
-DraftSpec brings the elegant `describe`/`it`/`expect` syntax to .NET, filling the gap left by abandoned BDD frameworks like NSpec. Write expressive specs in CSX scripts or traditional test classes.
+RSpec-inspired testing for .NET.
+
+DraftSpec brings the elegant `describe`/`it`/`expect` syntax to .NET, filling the gap left by abandoned BDD frameworks like NSpec. Write expressive specs as scripts or traditional test classes.
+
+> **Requires .NET 8+** for CSX scripts via dotnet-script, or **.NET 10+** for file-based apps.
 
 ## Quick Start
 
@@ -144,6 +148,17 @@ draftspec watch .                     # Re-run on file changes
 draftspec run . --parallel
 ```
 
+### MCP Server (AI Integration)
+
+DraftSpec includes an MCP server for AI-assisted testing:
+
+```bash
+# Add to Claude Desktop, VS Code, etc.
+dotnet run --project src/DraftSpec.Mcp
+```
+
+Agents can generate and run specs with zero ceremony—just send `describe`/`it` blocks, get structured JSON results back. No boilerplate needed.
+
 ### Middleware & Plugins
 ```csharp
 configure(runner => runner
@@ -163,8 +178,10 @@ configure(runner => runner
 
 ## Status
 
-DraftSpec is pre-1.0. The API is stabilizing but breaking changes may occur in minor versions. See [ADR-005](docs/adr/005-breaking-changes.md) for versioning policy.
+**Alpha** - This is an early experiment, built in roughly a day with AI assistance. It works, but expect rough edges, missing features, and breaking changes.
+
+If you try it and hit issues, feedback is welcome via GitHub issues.
 
 ## License
 
-MIT
+[MIT](LICENSE)

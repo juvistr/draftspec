@@ -172,5 +172,105 @@ public class ScaffolderTests
         await Assert.That(output).DoesNotContain("\"\"quoted\"\"");
     }
 
+    [Test]
+    public async Task Generate_WithNewlineInDescription_EscapesNewline()
+    {
+        var input = new ScaffoldNode
+        {
+            Description = "line1\nline2",
+            Specs = []
+        };
+
+        var output = Scaffolder.Generate(input);
+
+        await Assert.That(output).Contains("line1\\nline2");
+        await Assert.That(output).DoesNotContain("line1\nline2");
+    }
+
+    [Test]
+    public async Task Generate_WithCarriageReturnInDescription_EscapesCarriageReturn()
+    {
+        var input = new ScaffoldNode
+        {
+            Description = "line1\rline2",
+            Specs = []
+        };
+
+        var output = Scaffolder.Generate(input);
+
+        await Assert.That(output).Contains("line1\\rline2");
+    }
+
+    [Test]
+    public async Task Generate_WithTabInDescription_EscapesTab()
+    {
+        var input = new ScaffoldNode
+        {
+            Description = "col1\tcol2",
+            Specs = []
+        };
+
+        var output = Scaffolder.Generate(input);
+
+        await Assert.That(output).Contains("col1\\tcol2");
+    }
+
+    [Test]
+    public async Task Generate_WithBackslashInDescription_EscapesBackslash()
+    {
+        var input = new ScaffoldNode
+        {
+            Description = "path\\to\\file",
+            Specs = []
+        };
+
+        var output = Scaffolder.Generate(input);
+
+        await Assert.That(output).Contains("path\\\\to\\\\file");
+    }
+
+    #endregion
+
+    #region Security - Code Injection Prevention
+
+    [Test]
+    public async Task Generate_WithInjectionAttempt_ProducesValidCode()
+    {
+        // Attempt to inject code via closing the string and adding code
+        var input = new ScaffoldNode
+        {
+            Description = "test\"); maliciousCode(); describe(\"pwned",
+            Specs = []
+        };
+
+        var output = Scaffolder.Generate(input);
+
+        // The output should contain escaped quotes, keeping injection as string content
+        await Assert.That(output).Contains("\\\""); // escaped quotes
+        // Verify the structure: exactly one `=> {` pattern (single describe block body)
+        var lambdaCount = output.Split("() =>").Length - 1;
+        await Assert.That(lambdaCount).IsEqualTo(1);
+        // Verify only one closing `});` pattern
+        var closingCount = output.Split("});").Length - 1;
+        await Assert.That(closingCount).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task Generate_WithNewlineInjectionAttempt_ProducesValidCode()
+    {
+        // Attempt to inject code via newline
+        var input = new ScaffoldNode
+        {
+            Description = "test\n\"); maliciousCode(); //",
+            Specs = []
+        };
+
+        var output = Scaffolder.Generate(input);
+
+        // Should escape the newline, keeping injection attempt as string content
+        await Assert.That(output).Contains("\\n");
+        await Assert.That(output).DoesNotContain("\n\");");
+    }
+
     #endregion
 }

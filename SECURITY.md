@@ -1,5 +1,36 @@
 # Security Policy
 
+## MCP Trust Model
+
+DraftSpec includes an MCP (Model Context Protocol) server that enables AI assistants to run specs and generate test scaffolds. **By design, this executes arbitrary C# code** via `dotnet script`.
+
+### Trust Assumptions
+
+The MCP server assumes:
+
+1. **Trusted AI Assistant**: Only connect DraftSpec MCP to AI assistants you trust. The assistant can execute any C# code through the `run_spec` tool.
+
+2. **Trusted Spec Files**: Spec files (`.spec.csx`) are C# scripts with full system access. Only run specs from trusted sources.
+
+3. **Local Execution**: The MCP server is designed for local development, not production or multi-tenant environments.
+
+### Security Recommendations
+
+- **Use trusted AI assistants only** - The MCP server grants code execution capabilities
+- **Review generated scaffolds** - The `scaffold_specs` tool generates code; review before execution
+- **Consider containerization** - For additional isolation, run specs in containers
+- **Keep dependencies updated** - Regularly update DraftSpec and dotnet-script
+
+### Existing Mitigations
+
+DraftSpec implements these security measures:
+
+- **Path traversal prevention**: Spec names are validated to prevent directory escape attacks (`PathValidator.ValidateFileName`)
+- **String escaping**: Generated code escapes user input to prevent injection (`Scaffolder.EscapeString`)
+- **Atomic file creation**: Temp files use `FileMode.CreateNew` to prevent TOCTOU race conditions
+- **No shell injection**: Process arguments are passed as arrays, not shell strings
+- **CSS sanitization**: HTML formatter strips XSS vectors from custom CSS
+
 ## Supported Versions
 
 | Version | Supported          |

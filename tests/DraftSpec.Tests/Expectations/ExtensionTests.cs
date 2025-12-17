@@ -127,10 +127,8 @@ public class ExtensionTests
 
         var exp = new Expectation<DateTime>(later, "orderDate");
 
-        // Should not throw
+        // Should not throw - test passes if no exception
         exp.toBeAfter(earlier);
-
-        await Assert.That(true).IsTrue(); // Test passed
     }
 
     [Test]
@@ -147,7 +145,7 @@ public class ExtensionTests
             return Task.CompletedTask;
         });
 
-        await Assert.That(exception.Message).Contains("orderDate");
+        await Assert.That(exception!.Message).Contains("orderDate");
         await Assert.That(exception.Message).Contains("to be after");
     }
 
@@ -162,7 +160,7 @@ public class ExtensionTests
         // Should not throw
         exp.toBeBefore(later);
 
-        await Assert.That(true).IsTrue(); // Test passed
+        // Test passes if no exception is thrown
     }
 
     #endregion
@@ -177,7 +175,7 @@ public class ExtensionTests
         // Should not throw
         exp.toBeValidEmail();
 
-        await Assert.That(true).IsTrue(); // Test passed
+        // Test passes if no exception is thrown
     }
 
     [Test]
@@ -191,7 +189,7 @@ public class ExtensionTests
             return Task.CompletedTask;
         });
 
-        await Assert.That(exception.Message).Contains("email");
+        await Assert.That(exception!.Message).Contains("email");
         await Assert.That(exception.Message).Contains("valid email");
     }
 
@@ -208,7 +206,7 @@ public class ExtensionTests
         // Should not throw
         exp.toAllSatisfy(n => n % 2 == 0, "be even");
 
-        await Assert.That(true).IsTrue(); // Test passed
+        // Test passes if no exception is thrown
     }
 
     [Test]
@@ -223,7 +221,7 @@ public class ExtensionTests
             return Task.CompletedTask;
         });
 
-        await Assert.That(exception.Message).Contains("numbers");
+        await Assert.That(exception!.Message).Contains("numbers");
         await Assert.That(exception.Message).Contains("2 item(s) failed");
     }
 
@@ -244,7 +242,7 @@ public class ExtensionTests
         });
 
         // The expression "order.ShippedDate" should appear in the error message
-        await Assert.That(exception.Message).Contains("order.ShippedDate");
+        await Assert.That(exception!.Message).Contains("order.ShippedDate");
     }
 
     #endregion

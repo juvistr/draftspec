@@ -259,11 +259,7 @@ public class TempFileSecurityTests
     public async Task RunWithJson_WithSymlinkAtTempPath_ShouldFailSafely()
     {
         // Skip on Windows - symlinks require admin rights
-        if (OperatingSystem.IsWindows())
-        {
-            await Assert.That(true).IsTrue();
-            return;
-        }
+        if (OperatingSystem.IsWindows()) return;
 
         // This test would require:
         // 1. Knowing the exact temp file name that will be generated
@@ -275,8 +271,8 @@ public class TempFileSecurityTests
 
         // For now, we just verify the method doesn't crash on a directory with a symlink
         // A more comprehensive test would require modifying the implementation to be testable
-
-        await Assert.That(true).IsTrue(); // Placeholder - real test requires test hooks
+        // Placeholder - real test requires test hooks
+        await Task.CompletedTask;
     }
 
     #endregion

@@ -14,6 +14,7 @@
         <Copyright>Copyright (c) 2025 juvistr</Copyright>
 
         <!-- Shared build settings -->
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>

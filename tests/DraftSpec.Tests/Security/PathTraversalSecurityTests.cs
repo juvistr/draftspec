@@ -106,20 +106,13 @@ public class PathTraversalSecurityTests
     public async Task FindSpecs_OnUnix_PathComparisonShouldBeCaseSensitive()
     {
         // Skip on Windows - case insensitive filesystem
-        if (OperatingSystem.IsWindows())
-        {
-            await Assert.That(true).IsTrue();
-            return;
-        }
+        if (OperatingSystem.IsWindows()) return;
 
         // Create directory with different case
         var differentCaseDir = _testBaseDir.Replace("draftspec", "DraftSpec");
-        if (differentCaseDir == _testBaseDir)
-        {
-            // Can't test if names are identical
-            await Assert.That(true).IsTrue();
-            return;
-        }
+
+        // Can't test if names are identical
+        if (differentCaseDir == _testBaseDir) return;
 
         // On Unix, this should be treated as a different directory
         // The test verifies case-sensitive comparison is used
@@ -127,8 +120,8 @@ public class PathTraversalSecurityTests
 
         // If we're on a case-sensitive filesystem, these are different paths
         // This behavior is correct and should not throw SecurityException
-        // since it's genuinely a different path
-        await Assert.That(true).IsTrue();
+        // since it's genuinely a different path - test passes if no exception
+        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -138,11 +131,7 @@ public class PathTraversalSecurityTests
     [Test]
     public async Task FindSpecs_OnWindows_PathComparisonShouldBeCaseInsensitive()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            await Assert.That(true).IsTrue();
-            return;
-        }
+        if (!OperatingSystem.IsWindows()) return;
 
         var finder = new SpecFinder();
 

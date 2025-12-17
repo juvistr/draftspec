@@ -176,11 +176,8 @@ public class StaticDslTests
     {
         configure(runner => runner.WithTimeout(1000));
 
-        // No describe/it calls
+        // No describe/it calls - test passes if no exception
         run();
-
-        // Should complete without error
-        await Assert.That(true).IsTrue();
     }
 
     #endregion
@@ -194,20 +191,15 @@ public class StaticDslTests
         {
             // No specs
         });
+        // Test passes if no exception
         run();
-
-        // Should complete without error
-        await Assert.That(true).IsTrue();
     }
 
     [Test]
     public async Task Run_CalledWithoutAnySpecs_Succeeds()
     {
-        // No describe, no it, just run
+        // No describe, no it - test passes if no exception
         run();
-
-        // Should complete without error
-        await Assert.That(true).IsTrue();
     }
 
     [Test]

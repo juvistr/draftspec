@@ -145,7 +145,7 @@ public class PathValidationTests
             return Task.CompletedTask;
         });
 
-        await Assert.That(exception.Message).Contains("not found");
+        await Assert.That(exception!.Message).Contains("not found");
     }
 
     #endregion
@@ -164,7 +164,7 @@ public class PathValidationTests
             return Task.CompletedTask;
         });
 
-        await Assert.That(exception.Message).Contains("within");
+        await Assert.That(exception!.Message).Contains("within");
     }
 
     #endregion

@@ -140,6 +140,83 @@ public class ConfigurationTests
         await Assert.That(plugin.DisposeCalled).IsTrue();
     }
 
+    [Test]
+    public async Task Configuration_Configure_CallsActionWithPlugin()
+    {
+        var config = new DraftSpecConfiguration();
+        var plugin = new ConfigurablePlugin();
+        config.UsePlugin(plugin);
+
+        config.Configure<ConfigurablePlugin>(p => p.ConfiguredValue = "test-value");
+
+        await Assert.That(plugin.ConfiguredValue).IsEqualTo("test-value");
+    }
+
+    [Test]
+    public async Task Configuration_Configure_DoesNothingWhenPluginNotFound()
+    {
+        var config = new DraftSpecConfiguration();
+        var wasCalled = false;
+
+        config.Configure<ConfigurablePlugin>(p => wasCalled = true);
+
+        await Assert.That(wasCalled).IsFalse();
+    }
+
+    [Test]
+    public async Task Configuration_Initialize_RegistersFormattersFromPlugins()
+    {
+        var config = new DraftSpecConfiguration();
+        var plugin = new TestFormatterPlugin();
+        config.UsePlugin(plugin);
+
+        config.Initialize();
+
+        await Assert.That(plugin.RegisterFormattersCalled).IsTrue();
+        await Assert.That(config.Formatters.Contains("test-format")).IsTrue();
+    }
+
+    [Test]
+    public async Task Configuration_Initialize_RegistersReportersFromPlugins()
+    {
+        var config = new DraftSpecConfiguration();
+        var plugin = new TestReporterPlugin();
+        config.UsePlugin(plugin);
+
+        config.Initialize();
+
+        await Assert.That(plugin.RegisterReportersCalled).IsTrue();
+        await Assert.That(config.Reporters.Get("test-reporter")).IsNotNull();
+    }
+
+    [Test]
+    public async Task Configuration_Initialize_CalledTwice_OnlyInitializesOnce()
+    {
+        var config = new DraftSpecConfiguration();
+        var plugin = new TestPlugin();
+        config.UsePlugin(plugin);
+
+        config.Initialize();
+        plugin.InitializeCalled = false; // Reset flag
+        config.Initialize(); // Second call should be no-op
+
+        await Assert.That(plugin.InitializeCalled).IsFalse();
+    }
+
+    [Test]
+    public async Task Configuration_InitializeMiddleware_RegistersMiddlewareFromPlugins()
+    {
+        var config = new DraftSpecConfiguration();
+        var plugin = new TestMiddlewarePlugin();
+        config.UsePlugin(plugin);
+        config.Initialize();
+        var builder = new SpecRunnerBuilder();
+
+        config.InitializeMiddleware(builder);
+
+        await Assert.That(plugin.RegisterMiddlewareCalled).IsTrue();
+    }
+
     #endregion
 
     #region Test Helpers
@@ -177,7 +254,7 @@ public class ConfigurationTests
     {
         public string Name => "test";
         public string Version => "1.0.0";
-        public bool InitializeCalled { get; private set; }
+        public bool InitializeCalled { get; set; }
         public bool DisposeCalled { get; private set; }
 
         public void Initialize(IPluginContext context)
@@ -193,6 +270,63 @@ public class ConfigurationTests
 
     private class TestService
     {
+    }
+
+    private class ConfigurablePlugin : IPlugin
+    {
+        public string Name => "configurable";
+        public string Version => "1.0.0";
+        public string? ConfiguredValue { get; set; }
+
+        public void Initialize(IPluginContext context) { }
+        public void Dispose() { }
+    }
+
+    private class TestFormatterPlugin : IFormatterPlugin
+    {
+        public string Name => "test-formatter";
+        public string Version => "1.0.0";
+        public bool RegisterFormattersCalled { get; private set; }
+
+        public void Initialize(IPluginContext context) { }
+        public void Dispose() { }
+
+        public void RegisterFormatters(IFormatterRegistry registry)
+        {
+            RegisterFormattersCalled = true;
+            registry.Register("test-format", new JsonFormatter());
+        }
+    }
+
+    private class TestReporterPlugin : IReporterPlugin
+    {
+        public string Name => "test-reporter-plugin";
+        public string Version => "1.0.0";
+        public bool RegisterReportersCalled { get; private set; }
+
+        public void Initialize(IPluginContext context) { }
+        public void Dispose() { }
+
+        public void RegisterReporters(IReporterRegistry registry)
+        {
+            RegisterReportersCalled = true;
+            registry.Register(new TestReporter("test-reporter"));
+        }
+    }
+
+    private class TestMiddlewarePlugin : IMiddlewarePlugin
+    {
+        public string Name => "test-middleware";
+        public string Version => "1.0.0";
+        public bool RegisterMiddlewareCalled { get; private set; }
+
+        public void Initialize(IPluginContext context) { }
+        public void Dispose() { }
+
+        public void RegisterMiddleware(SpecRunnerBuilder builder)
+        {
+            RegisterMiddlewareCalled = true;
+        }
     }
 
     #endregion

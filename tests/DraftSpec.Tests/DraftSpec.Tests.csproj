@@ -18,6 +18,7 @@
         <ProjectReference Include="..\..\src\DraftSpec.Cli\DraftSpec.Cli.csproj"/>
         <ProjectReference Include="..\..\src\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj"/>
         <ProjectReference Include="..\..\src\DraftSpec.Formatters.Console\DraftSpec.Formatters.Console.csproj"/>
+        <ProjectReference Include="..\..\src\DraftSpec.Mcp\DraftSpec.Mcp.csproj"/>
     </ItemGroup>
 
 </Project>

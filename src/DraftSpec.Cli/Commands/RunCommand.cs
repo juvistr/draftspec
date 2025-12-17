@@ -27,7 +27,7 @@ public static class RunCommand
         if (!needsJson)
         {
             // Console output - use existing presenter
-            var presenter = new ConsolePresenter(watchMode: false);
+            var presenter = new ConsolePresenter(false);
             runner.OnBuildStarted += presenter.ShowBuilding;
             runner.OnBuildCompleted += presenter.ShowBuildResult;
 
@@ -37,10 +37,7 @@ public static class RunCommand
             var summary = runner.RunAll(specFiles, options.Parallel);
 
             presenter.ShowSpecsStarting();
-            foreach (var result in summary.Results)
-            {
-                presenter.ShowResult(result, options.Path);
-            }
+            foreach (var result in summary.Results) presenter.ShowResult(result, options.Path);
 
             presenter.ShowSummary(summary);
             return summary.Success ? 0 : 1;
@@ -57,14 +54,9 @@ public static class RunCommand
         {
             var result = runner.RunWithJsonReporter(specFile);
             if (!string.IsNullOrWhiteSpace(result.Output))
-            {
                 // Output is now clean JSON from file (not mixed with console output)
                 jsonOutputs.Add(result.Output);
-            }
-            if (!result.Success)
-            {
-                hasFailures = true;
-            }
+            if (!result.Success) hasFailures = true;
         }
 
         // Merge all JSON reports into a combined report
@@ -78,7 +70,7 @@ public static class RunCommand
         else
         {
             var formatter = GetFormatter(options.Format, options, formatterRegistry)
-                ?? throw new ArgumentException($"Unknown format: {options.Format}");
+                            ?? throw new ArgumentException($"Unknown format: {options.Format}");
             output = formatter.Format(combinedReport);
         }
 
@@ -99,10 +91,8 @@ public static class RunCommand
                 : StringComparison.Ordinal;
 
             if (!normalizedOutput.StartsWith(normalizedBase, comparison))
-            {
                 // Generic error - don't expose internal directory structure
                 throw new SecurityException("Output file must be within current directory");
-            }
 
             File.WriteAllText(outputFullPath, output);
             Console.WriteLine($"Report written to {options.OutputFile}");
@@ -121,7 +111,6 @@ public static class RunCommand
     private static SpecReport MergeReports(List<string> jsonOutputs, string source)
     {
         if (jsonOutputs.Count == 0)
-        {
             return new SpecReport
             {
                 Timestamp = DateTime.UtcNow,
@@ -129,7 +118,6 @@ public static class RunCommand
                 Summary = new SpecSummary(),
                 Contexts = []
             };
-        }
 
         // Parse all reports
         var reports = jsonOutputs
@@ -138,7 +126,6 @@ public static class RunCommand
             .ToList();
 
         if (reports.Count == 0)
-        {
             return new SpecReport
             {
                 Timestamp = DateTime.UtcNow,
@@ -146,7 +133,6 @@ public static class RunCommand
                 Summary = new SpecSummary(),
                 Contexts = []
             };
-        }
 
         // Single report - just update source
         if (reports.Count == 1)

@@ -27,7 +27,7 @@ public static partial class Dsl
             // Add FileReporter for JSON output to the specified file
             var config = Configuration ?? new DraftSpecConfiguration();
             var reporter = new FileReporter(jsonOutputFile, new JsonFormatter(),
-                allowedDirectory: Path.GetTempPath());
+                Path.GetTempPath());
             config.AddReporter(reporter);
             Configuration = config;
         }

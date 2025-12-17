@@ -56,10 +56,7 @@ public class PerformanceTests
         var current = root;
 
         // Create 50 levels of nesting
-        for (var i = 1; i < 50; i++)
-        {
-            current = new SpecContext($"level-{i}", current);
-        }
+        for (var i = 1; i < 50; i++) current = new SpecContext($"level-{i}", current);
 
         // Add spec at deepest level
         current.AddSpec(new SpecDefinition("deep spec", () => { }));
@@ -82,10 +79,7 @@ public class PerformanceTests
         var current = root;
 
         // Create 100 levels of nesting
-        for (var i = 1; i < 100; i++)
-        {
-            current = new SpecContext($"level-{i}", current);
-        }
+        for (var i = 1; i < 100; i++) current = new SpecContext($"level-{i}", current);
 
         current.AddSpec(new SpecDefinition("very deep spec", () => { }));
 
@@ -111,16 +105,21 @@ public class PerformanceTests
         for (var i = 0; i < 10; i++)
         {
             var ctx = i == 0 ? root : new SpecContext($"level-{i}", current);
-            ctx.BeforeEach = () => { hookCallCount++; return Task.CompletedTask; };
-            ctx.AfterEach = () => { hookCallCount++; return Task.CompletedTask; };
+            ctx.BeforeEach = () =>
+            {
+                hookCallCount++;
+                return Task.CompletedTask;
+            };
+            ctx.AfterEach = () =>
+            {
+                hookCallCount++;
+                return Task.CompletedTask;
+            };
             current = ctx;
         }
 
         // Add 10 specs at the deepest level
-        for (var i = 0; i < 10; i++)
-        {
-            current.AddSpec(new SpecDefinition($"spec {i}", () => { }));
-        }
+        for (var i = 0; i < 10; i++) current.AddSpec(new SpecDefinition($"spec {i}", () => { }));
 
         var sw = Stopwatch.StartNew();
         var runner = new SpecRunner();
@@ -144,10 +143,7 @@ public class PerformanceTests
         child.BeforeEach = () => Task.CompletedTask;
 
         // Add many specs to same context
-        for (var i = 0; i < 100; i++)
-        {
-            child.AddSpec(new SpecDefinition($"spec {i}", () => { }));
-        }
+        for (var i = 0; i < 100; i++) child.AddSpec(new SpecDefinition($"spec {i}", () => { }));
 
         // First call builds the cache
         var chain1 = child.GetBeforeEachChain();
@@ -170,10 +166,7 @@ public class PerformanceTests
         for (var i = 0; i < 100; i++)
         {
             var child = new SpecContext($"child-{i}", root);
-            for (var j = 0; j < 100; j++)
-            {
-                child.AddSpec(new SpecDefinition($"spec {j}", () => { }));
-            }
+            for (var j = 0; j < 100; j++) child.AddSpec(new SpecDefinition($"spec {j}", () => { }));
         }
 
         // Add one focused spec at the end
@@ -195,10 +188,7 @@ public class PerformanceTests
     public async Task FocusDetection_NoFocusedSpecs_RunsAll()
     {
         var root = new SpecContext("root");
-        for (var i = 0; i < 1000; i++)
-        {
-            root.AddSpec(new SpecDefinition($"spec {i}", () => { }));
-        }
+        for (var i = 0; i < 1000; i++) root.AddSpec(new SpecDefinition($"spec {i}", () => { }));
 
         var runner = new SpecRunner();
         var results = runner.Run(root);
@@ -360,10 +350,7 @@ public class PerformanceTests
         for (var i = 0; i < 1000; i++)
         {
             var child = new SpecContext($"context-{i}", root);
-            for (var j = 0; j < 10; j++)
-            {
-                child.AddSpec(new SpecDefinition($"spec {j}", () => { }));
-            }
+            for (var j = 0; j < 10; j++) child.AddSpec(new SpecDefinition($"spec {j}", () => { }));
         }
 
         var sw = Stopwatch.StartNew();

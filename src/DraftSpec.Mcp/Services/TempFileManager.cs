@@ -12,14 +12,14 @@ public class TempFileManager
     private readonly string? _localPackagesPath;
 
     private const string NuGetConfigTemplate = """
-        <?xml version="1.0" encoding="utf-8"?>
-        <configuration>
-          <packageSources>
-            <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-            <add key="local" value="{0}" />
-          </packageSources>
-        </configuration>
-        """;
+                                               <?xml version="1.0" encoding="utf-8"?>
+                                               <configuration>
+                                                 <packageSources>
+                                                   <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+                                                   <add key="local" value="{0}" />
+                                                 </packageSources>
+                                               </configuration>
+                                               """;
 
     public TempFileManager(ILogger<TempFileManager> logger)
     {

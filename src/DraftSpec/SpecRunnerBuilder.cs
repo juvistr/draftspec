@@ -60,10 +60,10 @@ public class SpecRunnerBuilder
     {
         var regex = new Regex(pattern, options);
         return Use(new FilterMiddleware(ctx =>
-        {
-            var fullDescription = string.Join(" ", ctx.ContextPath.Append(ctx.Spec.Description));
-            return regex.IsMatch(fullDescription);
-        }, $"does not match pattern '{pattern}'"));
+            {
+                var fullDescription = string.Join(" ", ctx.ContextPath.Append(ctx.Spec.Description));
+                return regex.IsMatch(fullDescription);
+            }, $"does not match pattern '{pattern}'"));
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public class SpecRunnerBuilder
 
         var tagSet = new HashSet<string>(tags, StringComparer.OrdinalIgnoreCase);
         return Use(new FilterMiddleware(ctx =>
-            ctx.Spec.Tags.Any(t => tagSet.Contains(t)),
+                ctx.Spec.Tags.Any(t => tagSet.Contains(t)),
             $"does not have tags: {string.Join(", ", tags)}"));
     }
 
@@ -92,7 +92,7 @@ public class SpecRunnerBuilder
 
         var tagSet = new HashSet<string>(tags, StringComparer.OrdinalIgnoreCase);
         return Use(new FilterMiddleware(ctx =>
-            !ctx.Spec.Tags.Any(t => tagSet.Contains(t)),
+                !ctx.Spec.Tags.Any(t => tagSet.Contains(t)),
             $"has excluded tags: {string.Join(", ", tags)}"));
     }
 

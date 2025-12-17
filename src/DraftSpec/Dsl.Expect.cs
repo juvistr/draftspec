@@ -10,7 +10,9 @@ public static partial class Dsl
     public static Expectation<T> expect<T>(
         T actual,
         [CallerArgumentExpression("actual")] string? expr = null)
-        => new Expectation<T>(actual, expr);
+    {
+        return new Expectation<T>(actual, expr);
+    }
 
     /// <summary>
     /// Create an expectation for a boolean value.
@@ -18,7 +20,9 @@ public static partial class Dsl
     public static BoolExpectation expect(
         bool actual,
         [CallerArgumentExpression("actual")] string? expr = null)
-        => new BoolExpectation(actual, expr);
+    {
+        return new BoolExpectation(actual, expr);
+    }
 
     /// <summary>
     /// Create an expectation for a string value.
@@ -26,7 +30,9 @@ public static partial class Dsl
     public static StringExpectation expect(
         string? actual,
         [CallerArgumentExpression("actual")] string? expr = null)
-        => new StringExpectation(actual, expr);
+    {
+        return new StringExpectation(actual, expr);
+    }
 
     /// <summary>
     /// Create an expectation for an action (exception testing).
@@ -34,7 +40,9 @@ public static partial class Dsl
     public static ActionExpectation expect(
         Action action,
         [CallerArgumentExpression("action")] string? expr = null)
-        => new ActionExpectation(action, expr);
+    {
+        return new ActionExpectation(action, expr);
+    }
 
     /// <summary>
     /// Create an expectation for an array.
@@ -42,7 +50,9 @@ public static partial class Dsl
     public static CollectionExpectation<T> expect<T>(
         T[] actual,
         [CallerArgumentExpression("actual")] string? expr = null)
-        => new CollectionExpectation<T>(actual, expr);
+    {
+        return new CollectionExpectation<T>(actual, expr);
+    }
 
     /// <summary>
     /// Create an expectation for a list.
@@ -50,7 +60,9 @@ public static partial class Dsl
     public static CollectionExpectation<T> expect<T>(
         List<T> actual,
         [CallerArgumentExpression("actual")] string? expr = null)
-        => new CollectionExpectation<T>(actual, expr);
+    {
+        return new CollectionExpectation<T>(actual, expr);
+    }
 
     /// <summary>
     /// Create an expectation for a collection.
@@ -58,5 +70,7 @@ public static partial class Dsl
     public static CollectionExpectation<T> expect<T>(
         IList<T> actual,
         [CallerArgumentExpression("actual")] string? expr = null)
-        => new CollectionExpectation<T>(actual, expr);
+    {
+        return new CollectionExpectation<T>(actual, expr);
+    }
 }

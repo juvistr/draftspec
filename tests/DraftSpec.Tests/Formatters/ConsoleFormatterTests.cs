@@ -66,7 +66,7 @@ public class ConsoleFormatterTests
     {
         var report = CreateReport([
             new SpecResultReport { Description = "spec", Status = "passed" }
-        ], contextDescription: "Calculator");
+        ], "Calculator");
 
         var output = FormatToString(report);
 
@@ -164,7 +164,7 @@ public class ConsoleFormatterTests
         ]);
 
         // Should not throw when useColors = false
-        var output = FormatToString(report, useColors: false);
+        var output = FormatToString(report, false);
 
         await Assert.That(output).Contains("✓");
     }

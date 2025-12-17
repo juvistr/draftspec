@@ -13,12 +13,10 @@ public static class SpecTreeGenerator
     public static SpecContext CreateAsyncTree(int specCount, int delayMs)
     {
         var root = new SpecContext("Async Root");
-        for (int i = 0; i < specCount; i++)
-        {
+        for (var i = 0; i < specCount; i++)
             root.AddSpec(new SpecDefinition(
                 $"async spec {i}",
                 async () => await Task.Delay(delayMs)));
-        }
         return root;
     }
 
@@ -28,10 +26,7 @@ public static class SpecTreeGenerator
     public static SpecContext CreateFlatTree(int specCount)
     {
         var root = new SpecContext("Root");
-        for (int i = 0; i < specCount; i++)
-        {
-            root.AddSpec(new SpecDefinition($"spec {i}", NoOpAction));
-        }
+        for (var i = 0; i < specCount; i++) root.AddSpec(new SpecDefinition($"spec {i}", NoOpAction));
         return root;
     }
 
@@ -43,7 +38,7 @@ public static class SpecTreeGenerator
         var root = new SpecContext("Level 0");
         var current = root;
 
-        for (int i = 1; i < depth; i++)
+        for (var i = 1; i < depth; i++)
         {
             var child = new SpecContext($"Level {i}", current);
             child.AddSpec(new SpecDefinition($"spec at level {i}", NoOpAction));
@@ -63,13 +58,10 @@ public static class SpecTreeGenerator
     {
         var root = new SpecContext("Root");
 
-        for (int c = 0; c < contextCount; c++)
+        for (var c = 0; c < contextCount; c++)
         {
             var context = new SpecContext($"Context {c}", root);
-            for (int s = 0; s < specsPerContext; s++)
-            {
-                context.AddSpec(new SpecDefinition($"spec {s}", NoOpAction));
-            }
+            for (var s = 0; s < specsPerContext; s++) context.AddSpec(new SpecDefinition($"spec {s}", NoOpAction));
         }
 
         return root;
@@ -92,37 +84,30 @@ public static class SpecTreeGenerator
         var level3Count = totalSpecs - level1Count - level2Count;
 
         // Level 1 specs (directly under root)
-        for (int i = 0; i < level1Count; i++)
-        {
-            root.AddSpec(new SpecDefinition($"root spec {i}", NoOpAction));
-        }
+        for (var i = 0; i < level1Count; i++) root.AddSpec(new SpecDefinition($"root spec {i}", NoOpAction));
 
         // Distribute level 2 and 3 specs across ~5 child contexts
         var childContexts = Math.Min(5, Math.Max(1, totalSpecs / 20));
         var specsPerLevel2Context = level2Count / childContexts;
         var specsPerLevel3Context = level3Count / childContexts;
 
-        for (int c = 0; c < childContexts; c++)
+        for (var c = 0; c < childContexts; c++)
         {
             var child = new SpecContext($"Context {c}", root);
 
             // Level 2 specs
-            for (int s = 0; s < specsPerLevel2Context; s++)
-            {
+            for (var s = 0; s < specsPerLevel2Context; s++)
                 child.AddSpec(new SpecDefinition($"child {c} spec {s}", NoOpAction));
-            }
 
             // Create 2 grandchild contexts per child
             var grandchildContexts = Math.Min(2, Math.Max(1, specsPerLevel3Context / 5));
             var specsPerGrandchild = specsPerLevel3Context / grandchildContexts;
 
-            for (int g = 0; g < grandchildContexts; g++)
+            for (var g = 0; g < grandchildContexts; g++)
             {
                 var grandchild = new SpecContext($"Context {c}.{g}", child);
-                for (int s = 0; s < specsPerGrandchild; s++)
-                {
+                for (var s = 0; s < specsPerGrandchild; s++)
                     grandchild.AddSpec(new SpecDefinition($"grandchild {c}.{g} spec {s}", NoOpAction));
-                }
             }
         }
 

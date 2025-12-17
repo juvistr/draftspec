@@ -41,12 +41,10 @@ public class ParallelExecutionTests
         // If specs ran concurrently, some will have overlapping time ranges
         var times = executionTimes.OrderBy(t => t.Start).ToList();
         var overlaps = 0;
-        for (int i = 0; i < times.Count - 1; i++)
-        {
+        for (var i = 0; i < times.Count - 1; i++)
             // Check if spec[i] overlaps with spec[i+1] (started before previous ended)
             if (times[i + 1].Start < times[i].End)
                 overlaps++;
-        }
 
         // With 4 parallel threads and 10 specs, we should have significant overlap
         // At minimum, 3+ specs should overlap (running 4 at a time)
@@ -75,10 +73,7 @@ public class ParallelExecutionTests
         var results = await runner.RunAsync(context);
 
         // Results should be in declaration order regardless of execution order
-        for (var i = 0; i < 20; i++)
-        {
-            await Assert.That(results[i].Spec.Description).IsEqualTo($"spec-{i}");
-        }
+        for (var i = 0; i < 20; i++) await Assert.That(results[i].Spec.Description).IsEqualTo($"spec-{i}");
     }
 
     [Test]
@@ -90,10 +85,7 @@ public class ParallelExecutionTests
         for (var i = 0; i < 50; i++)
         {
             var name = $"spec-{i}";
-            context.AddSpec(new SpecDefinition(name, () =>
-            {
-                executedSpecs.Add(name);
-            }));
+            context.AddSpec(new SpecDefinition(name, () => { executedSpecs.Add(name); }));
         }
 
         var runner = SpecRunner.Create()
@@ -132,10 +124,7 @@ public class ParallelExecutionTests
         runner.Run(context);
 
         // Sequential execution preserves declaration order
-        for (var i = 0; i < 5; i++)
-        {
-            await Assert.That(order[i]).IsEqualTo(i);
-        }
+        for (var i = 0; i < 5; i++) await Assert.That(order[i]).IsEqualTo(i);
     }
 
     [Test]
@@ -180,10 +169,7 @@ public class ParallelExecutionTests
         runner.Run(context);
 
         // With parallelism of 1, should be sequential
-        for (var i = 0; i < 5; i++)
-        {
-            await Assert.That(order[i]).IsEqualTo(i);
-        }
+        for (var i = 0; i < 5; i++) await Assert.That(order[i]).IsEqualTo(i);
     }
 
     #endregion
@@ -201,10 +187,7 @@ public class ParallelExecutionTests
             return Task.CompletedTask;
         };
 
-        for (var i = 0; i < 10; i++)
-        {
-            context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
-        }
+        for (var i = 0; i < 10; i++) context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
 
         var runner = SpecRunner.Create()
             .WithParallelExecution(4)
@@ -226,10 +209,7 @@ public class ParallelExecutionTests
             return Task.CompletedTask;
         };
 
-        for (var i = 0; i < 10; i++)
-        {
-            context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
-        }
+        for (var i = 0; i < 10; i++) context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
 
         var runner = SpecRunner.Create()
             .WithParallelExecution(4)
@@ -251,10 +231,7 @@ public class ParallelExecutionTests
             return Task.CompletedTask;
         };
 
-        for (var i = 0; i < 10; i++)
-        {
-            context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
-        }
+        for (var i = 0; i < 10; i++) context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
 
         var runner = SpecRunner.Create()
             .WithParallelExecution(4)
@@ -276,10 +253,7 @@ public class ParallelExecutionTests
             return Task.CompletedTask;
         };
 
-        for (var i = 0; i < 10; i++)
-        {
-            context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
-        }
+        for (var i = 0; i < 10; i++) context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
 
         var runner = SpecRunner.Create()
             .WithParallelExecution(4)
@@ -331,20 +305,13 @@ public class ParallelExecutionTests
         {
             var name = $"spec-{i}";
             if (i == 5)
-            {
                 context.AddSpec(new SpecDefinition(name, () =>
                 {
                     executedSpecs.Add(name);
                     throw new Exception("intentional failure");
                 }));
-            }
             else
-            {
-                context.AddSpec(new SpecDefinition(name, () =>
-                {
-                    executedSpecs.Add(name);
-                }));
-            }
+                context.AddSpec(new SpecDefinition(name, () => { executedSpecs.Add(name); }));
         }
 
         var runner = SpecRunner.Create()

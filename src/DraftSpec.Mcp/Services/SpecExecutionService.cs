@@ -18,14 +18,14 @@ public partial class SpecExecutionService
     /// Uses .NET 10 file-based app with #:package directive.
     /// </summary>
     private const string SpecTemplate = """
-        #:package DraftSpec@*
-        #:property JsonSerializerIsReflectionEnabledByDefault=true
-        using static DraftSpec.Dsl;
+                                        #:package DraftSpec@*
+                                        #:property JsonSerializerIsReflectionEnabledByDefault=true
+                                        using static DraftSpec.Dsl;
 
-        {0}
+                                        {0}
 
-        run(json: true);
-        """;
+                                        run(json: true);
+                                        """;
 
     public SpecExecutionService(
         TempFileManager tempFileManager,
@@ -65,7 +65,6 @@ public partial class SpecExecutionService
 
             SpecReport? report = null;
             if (File.Exists(jsonOutputPath))
-            {
                 try
                 {
                     var json = await File.ReadAllTextAsync(jsonOutputPath, cancellationToken);
@@ -75,7 +74,6 @@ public partial class SpecExecutionService
                 {
                     _logger.LogWarning(ex, "Failed to parse JSON output");
                 }
-            }
 
             return new RunSpecResult
             {
@@ -180,9 +178,17 @@ public partial class SpecExecutionService
             var stderr = await stderrTask;
             return (process.ExitCode, stdout, stderr);
         }
-        catch (OperationCanceledException) when (cts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cts.IsCancellationRequested &&
+                                                 !cancellationToken.IsCancellationRequested)
         {
-            try { process.Kill(entireProcessTree: true); } catch { }
+            try
+            {
+                process.Kill(true);
+            }
+            catch
+            {
+            }
+
             throw new TimeoutException($"Process timed out after {timeout.TotalSeconds}s");
         }
     }

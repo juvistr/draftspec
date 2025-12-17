@@ -1,28 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj"/>
+    </ItemGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
 
-    <!-- NuGet Package Configuration -->
-    <PackageId>DraftSpec</PackageId>
-    <Description>RSpec-inspired testing framework for .NET 10. Write expressive specs with describe/it/expect syntax in CSX scripts or test classes.</Description>
-    <PackageTags>testing;bdd;rspec;specs;test-framework;csx;dotnet-script</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+        <!-- NuGet Package Configuration -->
+        <PackageId>DraftSpec</PackageId>
+        <Description>RSpec-inspired testing framework for .NET 10. Write expressive specs with describe/it/expect syntax in CSX scripts or test classes.</Description>
+        <PackageTags>testing;bdd;rspec;specs;test-framework;csx;dotnet-script</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="DraftSpec.Tests" />
-  </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="DraftSpec.Tests"/>
+    </ItemGroup>
 
 </Project>

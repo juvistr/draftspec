@@ -1,35 +1,35 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj" />
-    <ProjectReference Include="..\DraftSpec.Formatters.Markdown\DraftSpec.Formatters.Markdown.csproj" />
-    <ProjectReference Include="..\DraftSpec.Formatters.Html\DraftSpec.Formatters.Html.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj"/>
+        <ProjectReference Include="..\DraftSpec.Formatters.Markdown\DraftSpec.Formatters.Markdown.csproj"/>
+        <ProjectReference Include="..\DraftSpec.Formatters.Html\DraftSpec.Formatters.Html.csproj"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1"/>
+    </ItemGroup>
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
 
-    <!-- Dotnet Tool Configuration -->
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>draftspec</ToolCommandName>
-    <PackageOutputPath>./nupkg</PackageOutputPath>
+        <!-- Dotnet Tool Configuration -->
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>draftspec</ToolCommandName>
+        <PackageOutputPath>./nupkg</PackageOutputPath>
 
-    <!-- NuGet Package Configuration -->
-    <PackageId>DraftSpec.Cli</PackageId>
-    <Description>CLI tool for running DraftSpec specs. Supports watch mode, multiple output formats (console, JSON, HTML, Markdown), and parallel execution.</Description>
-    <PackageTags>testing;bdd;rspec;cli;dotnet-tool;test-runner</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-  </PropertyGroup>
+        <!-- NuGet Package Configuration -->
+        <PackageId>DraftSpec.Cli</PackageId>
+        <Description>CLI tool for running DraftSpec specs. Supports watch mode, multiple output formats (console, JSON, HTML, Markdown), and parallel execution.</Description>
+        <PackageTags>testing;bdd;rspec;cli;dotnet-tool;test-runner</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
 
 </Project>

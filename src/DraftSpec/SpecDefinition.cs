@@ -66,6 +66,10 @@ public class SpecDefinition
     public SpecDefinition(string description, Action body)
     {
         Description = description;
-        Body = () => { body(); return Task.CompletedTask; };
+        Body = () =>
+        {
+            body();
+            return Task.CompletedTask;
+        };
     }
 }

@@ -24,13 +24,19 @@ public class ReportBuilderBenchmarks
 
     [Benchmark(Baseline = true)]
     public Formatters.SpecReport Small_10Specs()
-        => SpecReportBuilder.Build(_small.Context, _small.Results);
+    {
+        return SpecReportBuilder.Build(_small.Context, _small.Results);
+    }
 
     [Benchmark]
     public Formatters.SpecReport Medium_100Specs()
-        => SpecReportBuilder.Build(_medium.Context, _medium.Results);
+    {
+        return SpecReportBuilder.Build(_medium.Context, _medium.Results);
+    }
 
     [Benchmark]
     public Formatters.SpecReport Large_1000Specs()
-        => SpecReportBuilder.Build(_large.Context, _large.Results);
+    {
+        return SpecReportBuilder.Build(_large.Context, _large.Results);
+    }
 }

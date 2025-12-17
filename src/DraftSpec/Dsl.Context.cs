@@ -55,5 +55,8 @@ public static partial class Dsl
     /// <summary>
     /// Alias for describe - used for sub-groupings.
     /// </summary>
-    public static void context(string description, Action body) => describe(description, body);
+    public static void context(string description, Action body)
+    {
+        describe(description, body);
+    }
 }

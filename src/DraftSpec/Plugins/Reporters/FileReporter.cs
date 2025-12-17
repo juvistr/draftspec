@@ -54,10 +54,7 @@ public class FileReporter : IReporter
     public async Task OnRunCompletedAsync(SpecReport report)
     {
         var directory = Path.GetDirectoryName(_filePath);
-        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory)) Directory.CreateDirectory(directory);
 
         var content = _formatter.Format(report);
         await File.WriteAllTextAsync(_filePath, content);
@@ -85,9 +82,7 @@ public class FileReporter : IReporter
             : StringComparison.Ordinal;
 
         if (!normalizedPath.StartsWith(normalizedBase, comparison))
-        {
             // Generic error message to avoid leaking internal paths
             throw new SecurityException("Output path must be within the allowed directory");
-        }
     }
 }

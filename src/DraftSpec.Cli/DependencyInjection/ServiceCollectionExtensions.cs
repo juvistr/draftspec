@@ -77,7 +77,8 @@ public interface ICliFormatterRegistry
 /// </summary>
 public class CliFormatterRegistry : ICliFormatterRegistry
 {
-    private readonly Dictionary<string, Func<CliOptions?, IFormatter>> _factories = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Func<CliOptions?, IFormatter>> _factories =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public CliFormatterRegistry()
     {

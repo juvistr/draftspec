@@ -1,18 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj"/>
+    </ItemGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
 
-    <!-- NuGet Package Configuration -->
-    <PackageId>DraftSpec.Formatters.Console</PackageId>
-    <Description>Console output formatter for DraftSpec with colored output and progress indicators.</Description>
-    <PackageTags>testing;bdd;formatters;console</PackageTags>
-  </PropertyGroup>
+        <!-- NuGet Package Configuration -->
+        <PackageId>DraftSpec.Formatters.Console</PackageId>
+        <Description>Console output formatter for DraftSpec with colored output and progress indicators.</Description>
+        <PackageTags>testing;bdd;formatters;console</PackageTags>
+    </PropertyGroup>
 
 </Project>

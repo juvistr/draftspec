@@ -49,5 +49,8 @@ public class FormatterRegistry : IFormatterRegistry
     /// </summary>
     /// <param name="name">The formatter name (case-insensitive).</param>
     /// <returns>True if a formatter with the name is registered.</returns>
-    public bool Contains(string name) => _formatters.ContainsKey(name);
+    public bool Contains(string name)
+    {
+        return _formatters.ContainsKey(name);
+    }
 }

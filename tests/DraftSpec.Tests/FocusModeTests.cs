@@ -111,10 +111,7 @@ public class FocusModeTests
             {
                 it("outer spec", () => { });
 
-                describe("inner", () =>
-                {
-                    fit("inner focused", () => { });
-                });
+                describe("inner", () => { fit("inner focused", () => { }); });
             });
         }
     }

@@ -22,10 +22,7 @@ public class CliIntegrationTests
     [After(Test)]
     public void TearDown()
     {
-        if (Directory.Exists(_testDirectory))
-        {
-            Directory.Delete(_testDirectory, recursive: true);
-        }
+        if (Directory.Exists(_testDirectory)) Directory.Delete(_testDirectory, true);
     }
 
     #region InitCommand Tests

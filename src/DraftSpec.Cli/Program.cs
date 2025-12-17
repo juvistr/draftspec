@@ -63,11 +63,11 @@ static async Task<int> Run(string[] args)
     catch (Exception ex)
     {
         // Unexpected errors - show details in debug mode
-        #if DEBUG
+#if DEBUG
         ShowError($"{ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
-        #else
+#else
         ShowError("An unexpected error occurred. Run with --help for usage information.");
-        #endif
+#endif
         return 1;
     }
 }
@@ -84,7 +84,7 @@ static CliOptions ParseArgs(string[] args)
     var options = new CliOptions();
     var positional = new List<string>();
 
-    for (int i = 0; i < args.Length; i++)
+    for (var i = 0; i < args.Length; i++)
     {
         var arg = args[i];
 
@@ -99,6 +99,7 @@ static CliOptions ParseArgs(string[] args)
                 options.Error = "--format requires a value (console, json, markdown, html)";
                 return options;
             }
+
             options.Format = args[++i].ToLowerInvariant();
         }
         else if (arg is "--output" or "-o")
@@ -108,6 +109,7 @@ static CliOptions ParseArgs(string[] args)
                 options.Error = "--output requires a file path";
                 return options;
             }
+
             options.OutputFile = args[++i];
         }
         else if (arg == "--css-url")
@@ -117,6 +119,7 @@ static CliOptions ParseArgs(string[] args)
                 options.Error = "--css-url requires a URL";
                 return options;
             }
+
             options.CssUrl = args[++i];
         }
         else if (arg == "--force")
@@ -148,6 +151,7 @@ static CliOptions ParseArgs(string[] args)
         else
             options.Path = positional[1];
     }
+
     if (positional.Count > 2 && options.Command == "new")
         options.Path = positional[2];
 

@@ -43,12 +43,15 @@ public class SpecRunner : ISpecRunner
     /// <summary>
     /// Create a fluent builder for configuring the runner.
     /// </summary>
-    public static SpecRunnerBuilder Create() => new();
+    public static SpecRunnerBuilder Create()
+    {
+        return new SpecRunnerBuilder();
+    }
 
     private Func<SpecExecutionContext, Task<SpecResult>> BuildPipeline()
     {
         // Start with core execution
-        Func<SpecExecutionContext, Task<SpecResult>> pipeline = ExecuteCoreAsync;
+        var pipeline = ExecuteCoreAsync;
 
         // Wrap with middleware in reverse order (last added wraps first)
         foreach (var mw in _middleware.Reverse())
@@ -63,7 +66,10 @@ public class SpecRunner : ISpecRunner
     /// <summary>
     /// Execute specs synchronously from a Spec entry point.
     /// </summary>
-    public List<SpecResult> Run(Spec spec) => Run(spec.RootContext);
+    public List<SpecResult> Run(Spec spec)
+    {
+        return Run(spec.RootContext);
+    }
 
     /// <summary>
     /// Execute specs synchronously from a root context.
@@ -76,7 +82,10 @@ public class SpecRunner : ISpecRunner
     /// <summary>
     /// Execute specs asynchronously from a Spec entry point.
     /// </summary>
-    public Task<List<SpecResult>> RunAsync(Spec spec) => RunAsync(spec.RootContext);
+    public Task<List<SpecResult>> RunAsync(Spec spec)
+    {
+        return RunAsync(spec.RootContext);
+    }
 
     /// <summary>
     /// Execute specs asynchronously from a root context.
@@ -107,10 +116,7 @@ public class SpecRunner : ISpecRunner
         if (_configuration == null) return;
 
         var startContext = new RunStartingContext(totalSpecs, startTime);
-        foreach (var reporter in _configuration.Reporters.All)
-        {
-            await reporter.OnRunStartingAsync(startContext);
-        }
+        foreach (var reporter in _configuration.Reporters.All) await reporter.OnRunStartingAsync(startContext);
     }
 
     private async Task NotifySpecCompletedAsync(SpecResult result)
@@ -119,18 +125,12 @@ public class SpecRunner : ISpecRunner
 
         var reporters = _configuration.Reporters.All.ToList();
         if (reporters.Count <= 1)
-        {
             // Single reporter - no parallelism overhead
             foreach (var reporter in reporters)
-            {
                 await reporter.OnSpecCompletedAsync(result);
-            }
-        }
         else
-        {
             // Multiple reporters - notify in parallel
             await Task.WhenAll(reporters.Select(r => r.OnSpecCompletedAsync(result)));
-        }
     }
 
     private async Task NotifySpecsBatchCompletedAsync(IReadOnlyList<SpecResult> results)
@@ -139,18 +139,12 @@ public class SpecRunner : ISpecRunner
 
         var reporters = _configuration.Reporters.All.ToList();
         if (reporters.Count <= 1)
-        {
             // Single reporter - call batch method directly
             foreach (var reporter in reporters)
-            {
                 await reporter.OnSpecsBatchCompletedAsync(results);
-            }
-        }
         else
-        {
             // Multiple reporters - notify in parallel
             await Task.WhenAll(reporters.Select(r => r.OnSpecsBatchCompletedAsync(results)));
-        }
     }
 
     private static bool HasFocusedSpecs(SpecContext context)
@@ -160,10 +154,8 @@ public class SpecRunner : ISpecRunner
 
         // Explicit loop with early exit for better performance
         foreach (var child in context.Children)
-        {
             if (HasFocusedSpecs(child))
                 return true;
-        }
 
         return false;
     }
@@ -186,19 +178,12 @@ public class SpecRunner : ISpecRunner
         {
             // Run specs in this context (parallel or sequential)
             if (_maxDegreeOfParallelism > 1 && context.Specs.Count > 1)
-            {
                 await RunSpecsParallelAsync(context, descriptions, results, hasFocused);
-            }
             else
-            {
                 await RunSpecsSequentialAsync(context, descriptions, results, hasFocused);
-            }
 
             // Recurse into children (always sequential to maintain context isolation)
-            foreach (var child in context.Children)
-            {
-                await RunContextAsync(child, descriptions, results, hasFocused);
-            }
+            foreach (var child in context.Children) await RunContextAsync(child, descriptions, results, hasFocused);
         }
         finally
         {
@@ -327,18 +312,12 @@ public class SpecRunner : ISpecRunner
     private static async Task RunBeforeEachHooksAsync(SpecContext context)
     {
         // Use cached hook chain for better performance
-        foreach (var hook in context.GetBeforeEachChain())
-        {
-            await hook();
-        }
+        foreach (var hook in context.GetBeforeEachChain()) await hook();
     }
 
     private static async Task RunAfterEachHooksAsync(SpecContext context)
     {
         // Use cached hook chain for better performance
-        foreach (var hook in context.GetAfterEachChain())
-        {
-            await hook();
-        }
+        foreach (var hook in context.GetAfterEachChain()) await hook();
     }
 }

@@ -28,30 +28,30 @@ public class ExecutionModelBenchmarks
 
     // Minimal spec that just runs one trivial test
     private const string MinimalSpecContent = """
-        #r "nuget: DraftSpec, *"
-        using static DraftSpec.Dsl;
+                                              #r "nuget: DraftSpec, *"
+                                              using static DraftSpec.Dsl;
 
-        describe("Minimal", () =>
-        {
-            it("passes", () => expect(1 + 1).toBe(2));
-        });
+                                              describe("Minimal", () =>
+                                              {
+                                                  it("passes", () => expect(1 + 1).toBe(2));
+                                              });
 
-        run(json: true);
-        """;
+                                              run(json: true);
+                                              """;
 
     // File-based app version using .NET 10 directives
     // See: https://devblogs.microsoft.com/dotnet/announcing-dotnet-10-preview-4/
     private const string FileBasedSpecContent = """
-        #:package DraftSpec@*
-        using static DraftSpec.Dsl;
+                                                #:package DraftSpec@*
+                                                using static DraftSpec.Dsl;
 
-        describe("Minimal", () =>
-        {
-            it("passes", () => expect(1 + 1).toBe(2));
-        });
+                                                describe("Minimal", () =>
+                                                {
+                                                    it("passes", () => expect(1 + 1).toBe(2));
+                                                });
 
-        run(json: true);
-        """;
+                                                run(json: true);
+                                                """;
 
     [GlobalSetup]
     public void Setup()
@@ -70,7 +70,7 @@ public class ExecutionModelBenchmarks
         // Check tool availability
         _dotnetScriptAvailable = CheckToolAvailable("dotnet", "script --version");
         _dotnet10Available = CheckDotnet10Available();
-        
+
         Console.WriteLine($"dotnet-script available: {_dotnetScriptAvailable}");
         Console.WriteLine($".NET 10 SDK available: {_dotnet10Available}");
     }
@@ -81,7 +81,7 @@ public class ExecutionModelBenchmarks
         try
         {
             if (Directory.Exists(_tempDir))
-                Directory.Delete(_tempDir, recursive: true);
+                Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -124,13 +124,14 @@ public class ExecutionModelBenchmarks
     public int InProcess()
     {
         var context = new SpecContext("Minimal");
-        context.AddSpec(new SpecDefinition("passes", () => { 
-            if (1 + 1 != 2) throw new Exception("Failed"); 
+        context.AddSpec(new SpecDefinition("passes", () =>
+        {
+            if (1 + 1 != 2) throw new Exception("Failed");
         }));
-        
+
         var runner = new SpecRunner();
         var results = runner.Run(context);
-        
+
         return results.Count(r => r.Status == SpecStatus.Passed);
     }
 

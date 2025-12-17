@@ -115,7 +115,7 @@ public class TimeoutMiddlewareTests
             return Task.FromResult(new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath));
         });
 
-        await Assert.That(capturedToken).IsNotEqualTo(default(CancellationToken));
+        await Assert.That(capturedToken).IsNotEqualTo(default);
     }
 
     [Test]
@@ -129,13 +129,14 @@ public class TimeoutMiddlewareTests
         await middleware.ExecuteAsync(context, async ctx =>
         {
             // Wait in small increments, checking for cancellation
-            for (int i = 0; i < 100; i++)
+            for (var i = 0; i < 100; i++)
             {
                 if (ctx.CancellationToken.IsCancellationRequested)
                 {
                     cancellationSignal.Set();
                     break;
                 }
+
                 await Task.Delay(10);
             }
 

@@ -1,25 +1,25 @@
 <Project>
-  <PropertyGroup>
-    <!-- MinVer configuration - version derived from git tags -->
-    <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
-    <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
+    <PropertyGroup>
+        <!-- MinVer configuration - version derived from git tags -->
+        <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
+        <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
 
-    <!-- Shared NuGet metadata -->
-    <Authors>juvistr</Authors>
-    <Company>juvistr</Company>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/juvistr/draftspec</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/juvistr/draftspec</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <Copyright>Copyright (c) 2025 juvistr</Copyright>
+        <!-- Shared NuGet metadata -->
+        <Authors>juvistr</Authors>
+        <Company>juvistr</Company>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/juvistr/draftspec</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/juvistr/draftspec</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <Copyright>Copyright (c) 2025 juvistr</Copyright>
 
-    <!-- Shared build settings -->
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-  </PropertyGroup>
+        <!-- Shared build settings -->
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <!-- MinVer - build-time only, calculates version from git tags -->
-    <PackageReference Include="MinVer" Version="6.*" PrivateAssets="All" />
-  </ItemGroup>
+    <ItemGroup>
+        <!-- MinVer - build-time only, calculates version from git tags -->
+        <PackageReference Include="MinVer" Version="6.*" PrivateAssets="All"/>
+    </ItemGroup>
 </Project>

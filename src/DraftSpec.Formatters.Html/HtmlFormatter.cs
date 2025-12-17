@@ -17,7 +17,9 @@ public class HtmlFormatter : IFormatter
     /// <summary>
     /// Creates an HTML formatter with default options.
     /// </summary>
-    public HtmlFormatter() : this(new HtmlOptions()) { }
+    public HtmlFormatter() : this(new HtmlOptions())
+    {
+    }
 
     /// <summary>
     /// Creates an HTML formatter with custom options.
@@ -54,21 +56,16 @@ public class HtmlFormatter : IFormatter
         sb.AppendLine("    .failed { color: #ef4444; }");
         sb.AppendLine("    .pending { color: #eab308; }");
         sb.AppendLine("    .skipped { color: #6b7280; }");
-        sb.AppendLine("    .error { background: #fef2f2; padding: 0.5rem; border-left: 3px solid #ef4444; margin: 0.5rem 0; }");
+        sb.AppendLine(
+            "    .error { background: #fef2f2; padding: 0.5rem; border-left: 3px solid #ef4444; margin: 0.5rem 0; }");
         sb.AppendLine("    .summary { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }");
         sb.AppendLine("    ul { list-style: none; padding-left: 1rem; }");
-        if (!string.IsNullOrEmpty(_options.CustomCss))
-        {
-            sb.AppendLine(SanitizeCss(_options.CustomCss));
-        }
+        if (!string.IsNullOrEmpty(_options.CustomCss)) sb.AppendLine(SanitizeCss(_options.CustomCss));
         sb.AppendLine("  </style>");
         sb.AppendLine("</head>");
         sb.AppendLine("<body>");
 
-        foreach (var context in report.Contexts)
-        {
-            FormatContext(sb, context, level: 1);
-        }
+        foreach (var context in report.Contexts) FormatContext(sb, context, 1);
 
         // Summary
         sb.AppendLine("  <div class=\"summary\">");
@@ -76,10 +73,32 @@ public class HtmlFormatter : IFormatter
 
         // Inline stats without intermediate List allocation
         var first = true;
-        if (report.Summary.Passed > 0) { sb.Append($"<span class=\"passed\">{report.Summary.Passed} passed</span>"); first = false; }
-        if (report.Summary.Failed > 0) { if (!first) sb.Append(", "); sb.Append($"<span class=\"failed\">{report.Summary.Failed} failed</span>"); first = false; }
-        if (report.Summary.Pending > 0) { if (!first) sb.Append(", "); sb.Append($"<span class=\"pending\">{report.Summary.Pending} pending</span>"); first = false; }
-        if (report.Summary.Skipped > 0) { if (!first) sb.Append(", "); sb.Append($"<span class=\"skipped\">{report.Summary.Skipped} skipped</span>"); }
+        if (report.Summary.Passed > 0)
+        {
+            sb.Append($"<span class=\"passed\">{report.Summary.Passed} passed</span>");
+            first = false;
+        }
+
+        if (report.Summary.Failed > 0)
+        {
+            if (!first) sb.Append(", ");
+            sb.Append($"<span class=\"failed\">{report.Summary.Failed} failed</span>");
+            first = false;
+        }
+
+        if (report.Summary.Pending > 0)
+        {
+            if (!first) sb.Append(", ");
+            sb.Append($"<span class=\"pending\">{report.Summary.Pending} pending</span>");
+            first = false;
+        }
+
+        if (report.Summary.Skipped > 0)
+        {
+            if (!first) sb.Append(", ");
+            sb.Append($"<span class=\"skipped\">{report.Summary.Skipped} skipped</span>");
+        }
+
         sb.AppendLine();
 
         sb.AppendLine("    </p>");
@@ -134,16 +153,17 @@ public class HtmlFormatter : IFormatter
                     sb.AppendLine($"    <li class=\"{spec.Status}\">{symbol} {Escape(spec.Description)}</li>");
                 }
             }
+
             sb.AppendLine("  </ul>");
         }
 
-        foreach (var child in context.Contexts)
-        {
-            FormatContext(sb, child, level + 1);
-        }
+        foreach (var child in context.Contexts) FormatContext(sb, child, level + 1);
     }
 
-    private static string Escape(string text) => HttpUtility.HtmlEncode(text);
+    private static string Escape(string text)
+    {
+        return HttpUtility.HtmlEncode(text);
+    }
 
     /// <summary>
     /// Sanitize CSS to prevent XSS via style tag escape and IE/browser-specific CSS attacks.

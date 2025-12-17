@@ -19,19 +19,13 @@ public class StaticDslTests
 
         var task1 = Task.Run(() =>
         {
-            describe("task1", () =>
-            {
-                it("spec1", () => results.Add("task1"));
-            });
+            describe("task1", () => { it("spec1", () => results.Add("task1")); });
             run();
         });
 
         var task2 = Task.Run(() =>
         {
-            describe("task2", () =>
-            {
-                it("spec2", () => results.Add("task2"));
-            });
+            describe("task2", () => { it("spec2", () => results.Add("task2")); });
             run();
         });
 
@@ -45,10 +39,7 @@ public class StaticDslTests
     [Test]
     public async Task Run_ResetsAllStaticState()
     {
-        describe("test", () =>
-        {
-            it("spec", () => { });
-        });
+        describe("test", () => { it("spec", () => { }); });
 
         // Before run, RootContext should be set
         await Assert.That(RootContext).IsNotNull();
@@ -66,17 +57,11 @@ public class StaticDslTests
         var secondRunExecuted = false;
 
         // First run
-        describe("first", () =>
-        {
-            it("spec1", () => firstRunExecuted = true);
-        });
+        describe("first", () => { it("spec1", () => firstRunExecuted = true); });
         run();
 
         // Second run - should not see specs from first run
-        describe("second", () =>
-        {
-            it("spec2", () => secondRunExecuted = true);
-        });
+        describe("second", () => { it("spec2", () => secondRunExecuted = true); });
         run();
 
         await Assert.That(firstRunExecuted).IsTrue();
@@ -86,10 +71,7 @@ public class StaticDslTests
     [Test]
     public async Task DescribeWithoutRun_StateRemainsUntilRun()
     {
-        describe("abandoned", () =>
-        {
-            it("never runs", () => { });
-        });
+        describe("abandoned", () => { it("never runs", () => { }); });
 
         // State exists
         await Assert.That(RootContext).IsNotNull();
@@ -139,10 +121,7 @@ public class StaticDslTests
             configureRan = true;
         });
 
-        describe("test", () =>
-        {
-            it("spec", () => { });
-        });
+        describe("test", () => { it("spec", () => { }); });
         run();
 
         await Assert.That(configureRan).IsTrue();
@@ -163,10 +142,7 @@ public class StaticDslTests
         // Second configure - add timeout (accumulates)
         configure(runner => runner.WithTimeout(10000));
 
-        describe("test", () =>
-        {
-            it("spec", () => { });
-        });
+        describe("test", () => { it("spec", () => { }); });
         run();
 
         // Filter middleware was called (proving first configure worked)
@@ -184,17 +160,11 @@ public class StaticDslTests
             return true;
         }));
 
-        describe("first", () =>
-        {
-            it("spec", () => { });
-        });
+        describe("first", () => { it("spec", () => { }); });
         run();
 
         // Second run without configure - middleware should not run
-        describe("second", () =>
-        {
-            it("spec", () => { });
-        });
+        describe("second", () => { it("spec", () => { }); });
         run();
 
         // Filter only called during first run (configuration was reset)
@@ -245,22 +215,13 @@ public class StaticDslTests
     {
         var count = 0;
 
-        describe("first", () =>
-        {
-            it("spec", () => count++);
-        });
+        describe("first", () => { it("spec", () => count++); });
         run();
 
-        describe("second", () =>
-        {
-            it("spec", () => count++);
-        });
+        describe("second", () => { it("spec", () => count++); });
         run();
 
-        describe("third", () =>
-        {
-            it("spec", () => count++);
-        });
+        describe("third", () => { it("spec", () => count++); });
         run();
 
         await Assert.That(count).IsEqualTo(3);
@@ -271,22 +232,20 @@ public class StaticDslTests
     {
         var deepestReached = false;
 
-        describe("L1", () =>
-        {
-            describe("L2", () =>
+        describe("L1",
+            () =>
             {
-                describe("L3", () =>
-                {
-                    describe("L4", () =>
+                describe("L2",
+                    () =>
                     {
-                        describe("L5", () =>
-                        {
-                            it("deep spec", () => deepestReached = true);
-                        });
+                        describe("L3",
+                            () =>
+                            {
+                                describe("L4",
+                                    () => { describe("L5", () => { it("deep spec", () => deepestReached = true); }); });
+                            });
                     });
-                });
             });
-        });
         run();
 
         await Assert.That(deepestReached).IsTrue();
@@ -299,15 +258,9 @@ public class StaticDslTests
 
         describe("feature", () =>
         {
-            context("when active", () =>
-            {
-                it("does something", () => executed.Add("context-spec"));
-            });
+            context("when active", () => { it("does something", () => executed.Add("context-spec")); });
 
-            describe("nested describe", () =>
-            {
-                it("also works", () => executed.Add("describe-spec"));
-            });
+            describe("nested describe", () => { it("also works", () => executed.Add("describe-spec")); });
         });
         run();
 
@@ -326,10 +279,7 @@ public class StaticDslTests
         // Save original
         var originalExitCode = Environment.ExitCode;
 
-        describe("test", () =>
-        {
-            it("passes", () => { });
-        });
+        describe("test", () => { it("passes", () => { }); });
         run();
 
         var exitCode = Environment.ExitCode;
@@ -346,10 +296,7 @@ public class StaticDslTests
         // Save original
         var originalExitCode = Environment.ExitCode;
 
-        describe("test", () =>
-        {
-            it("fails", () => throw new Exception("intentional"));
-        });
+        describe("test", () => { it("fails", () => throw new Exception("intentional")); });
         run();
 
         var exitCode = Environment.ExitCode;
@@ -498,10 +445,7 @@ public class StaticDslTests
     [Test]
     public async Task RootContext_AccessibleBeforeRun()
     {
-        describe("test", () =>
-        {
-            it("spec", () => { });
-        });
+        describe("test", () => { it("spec", () => { }); });
 
         // Can inspect before run - first describe IS the RootContext
         await Assert.That(RootContext).IsNotNull();
@@ -513,13 +457,7 @@ public class StaticDslTests
     [Test]
     public async Task RootContext_ReflectsNestedStructure()
     {
-        describe("parent", () =>
-        {
-            describe("child", () =>
-            {
-                it("spec", () => { });
-            });
-        });
+        describe("parent", () => { describe("child", () => { it("spec", () => { }); }); });
 
         // First describe is RootContext, nested describe is a child
         await Assert.That(RootContext).IsNotNull();
@@ -533,10 +471,7 @@ public class StaticDslTests
     [Test]
     public async Task RootContext_NullAfterRun()
     {
-        describe("test", () =>
-        {
-            it("spec", () => { });
-        });
+        describe("test", () => { it("spec", () => { }); });
 
         await Assert.That(RootContext).IsNotNull();
 

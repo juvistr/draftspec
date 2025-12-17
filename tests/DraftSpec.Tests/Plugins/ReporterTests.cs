@@ -143,7 +143,7 @@ public class ReporterTests
         finally
         {
             if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, recursive: true);
+                Directory.Delete(tempDir, true);
         }
     }
 

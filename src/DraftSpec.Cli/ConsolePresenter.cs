@@ -11,10 +11,7 @@ public class ConsolePresenter
 
     public void Clear()
     {
-        if (_watchMode)
-        {
-            Console.Clear();
-        }
+        if (_watchMode) Console.Clear();
     }
 
     public void ShowHeader(IReadOnlyList<string> specFiles, bool parallel = false, bool isPartialRun = false)
@@ -31,6 +28,7 @@ public class ConsolePresenter
         {
             Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {specFiles.Count} spec file(s){mode}...");
         }
+
         Console.ResetColor();
     }
 
@@ -56,6 +54,7 @@ public class ConsolePresenter
             if (!string.IsNullOrWhiteSpace(result.Error))
                 Console.WriteLine(result.Error);
         }
+
         Console.ResetColor();
     }
 
@@ -109,6 +108,7 @@ public class ConsolePresenter
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Write("FAIL");
         }
+
         Console.ResetColor();
 
         Console.WriteLine($"  {summary.TotalSpecs} file(s) in {summary.TotalDuration.TotalSeconds:F2}s");

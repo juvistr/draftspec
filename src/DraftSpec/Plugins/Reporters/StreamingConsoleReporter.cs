@@ -50,12 +50,10 @@ public class StreamingConsoleReporter : IReporter
 
         // Track failures for final summary
         if (result.Status == SpecStatus.Failed)
-        {
             lock (_failures)
             {
                 _failures.Add(result);
             }
-        }
 
         // Output progress symbol
         var (symbol, color) = result.Status switch
@@ -85,12 +83,10 @@ public class StreamingConsoleReporter : IReporter
             _stats.Add(result);
 
             if (result.Status == SpecStatus.Failed)
-            {
                 lock (_failures)
                 {
                     _failures.Add(result);
                 }
-            }
         }
 
         // Output batch symbols at once
@@ -135,7 +131,7 @@ public class StreamingConsoleReporter : IReporter
             Console.WriteLine("Failures:");
             Console.WriteLine();
 
-            for (int i = 0; i < _failures.Count; i++)
+            for (var i = 0; i < _failures.Count; i++)
             {
                 var failure = _failures[i];
                 Console.WriteLine($"  {i + 1}) {failure.FullDescription}");
@@ -153,6 +149,7 @@ public class StreamingConsoleReporter : IReporter
         Console.Write($"{_stats.Total} specs: ");
 
         var first = true;
+
         void WriteStat(int count, string label, ConsoleColor color)
         {
             if (count == 0) return;

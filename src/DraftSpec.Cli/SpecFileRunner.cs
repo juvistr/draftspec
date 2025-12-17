@@ -55,10 +55,7 @@ public partial class SpecFileRunner : ISpecFileRunner
         BuildProjects(workingDir);
 
         // Use file-based if: .NET 10+ AND no #load directives
-        if (_useFileBased && !UsesLoadDirective(fullPath))
-        {
-            return RunAsFileBased(fullPath, workingDir);
-        }
+        if (_useFileBased && !UsesLoadDirective(fullPath)) return RunAsFileBased(fullPath, workingDir);
 
         return RunAsDotnetScript(fullPath, workingDir);
     }
@@ -74,21 +71,15 @@ public partial class SpecFileRunner : ISpecFileRunner
             .ToList();
 
         if (parallel && directories.Count > 1)
-        {
             // Build directories in parallel (projects within each directory still sequential)
             Parallel.ForEach(
                 directories,
                 new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
                 dir => BuildProjects(dir));
-        }
         else
-        {
             // Build directories sequentially
             foreach (var dir in directories)
-            {
                 BuildProjects(dir);
-            }
-        }
 
         List<SpecRunResult> results;
         if (parallel && specFiles.Count > 1)
@@ -107,10 +98,7 @@ public partial class SpecFileRunner : ISpecFileRunner
         {
             // Run specs sequentially
             results = new List<SpecRunResult>();
-            foreach (var specFile in specFiles)
-            {
-                results.Add(RunSpec(specFile));
-            }
+            foreach (var specFile in specFiles) results.Add(RunSpec(specFile));
         }
 
         stopwatch.Stop();
@@ -126,10 +114,7 @@ public partial class SpecFileRunner : ISpecFileRunner
         // Use projectDir for caching since that's where source files are
         if (!NeedsRebuild(projectDir))
         {
-            foreach (var project in projects)
-            {
-                OnBuildSkipped?.Invoke(project);
-            }
+            foreach (var project in projects) OnBuildSkipped?.Invoke(project);
             return;
         }
 
@@ -157,19 +142,13 @@ public partial class SpecFileRunner : ISpecFileRunner
         var currentDir = specDirectory;
         const int maxLevels = 3;
 
-        for (int i = 0; i < maxLevels; i++)
+        for (var i = 0; i < maxLevels; i++)
         {
             var projects = Directory.GetFiles(currentDir, "*.csproj");
-            if (projects.Length > 0)
-            {
-                return (projects, currentDir);
-            }
+            if (projects.Length > 0) return (projects, currentDir);
 
             var parentDir = Directory.GetParent(currentDir)?.FullName;
-            if (parentDir == null || parentDir == currentDir)
-            {
-                break;
-            }
+            if (parentDir == null || parentDir == currentDir) break;
 
             currentDir = parentDir;
         }
@@ -235,10 +214,7 @@ public partial class SpecFileRunner : ISpecFileRunner
         var workingDir = Path.GetDirectoryName(fullPath)!;
 
         // Use file-based if: .NET 10+ AND no #load directives
-        if (_useFileBased && !UsesLoadDirective(fullPath))
-        {
-            return RunAsFileBased(fullPath, workingDir);
-        }
+        if (_useFileBased && !UsesLoadDirective(fullPath)) return RunAsFileBased(fullPath, workingDir);
 
         return RunAsDotnetScript(fullPath, workingDir);
     }
@@ -275,9 +251,13 @@ public partial class SpecFileRunner : ISpecFileRunner
         finally
         {
             if (tempFile != null)
-            {
-                try { File.Delete(tempFile); } catch { }
-            }
+                try
+                {
+                    File.Delete(tempFile);
+                }
+                catch
+                {
+                }
         }
     }
 
@@ -354,14 +334,14 @@ public partial class SpecFileRunner : ISpecFileRunner
             if (Directory.Exists(localPackagesPath) && !File.Exists(nugetConfigPath))
             {
                 var nugetConfig = $"""
-                    <?xml version="1.0" encoding="utf-8"?>
-                    <configuration>
-                      <packageSources>
-                        <add key="local" value="{localPackagesPath}" />
-                        <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-                      </packageSources>
-                    </configuration>
-                    """;
+                                   <?xml version="1.0" encoding="utf-8"?>
+                                   <configuration>
+                                     <packageSources>
+                                       <add key="local" value="{localPackagesPath}" />
+                                       <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+                                     </packageSources>
+                                   </configuration>
+                                   """;
                 File.WriteAllText(nugetConfigPath, nugetConfig);
             }
 
@@ -461,9 +441,7 @@ public partial class SpecFileRunner : ISpecFileRunner
 
         // Use file-based if: .NET 10+ AND no #load directives
         if (_useFileBased && !UsesLoadDirective(fullPath))
-        {
             return RunAsFileBasedWithJson(fullPath, workingDir, jsonOutputFile, envVars);
-        }
 
         return RunAsDotnetScriptWithJson(fullPath, workingDir, jsonOutputFile, envVars);
     }
@@ -482,7 +460,7 @@ public partial class SpecFileRunner : ISpecFileRunner
             var result = ProcessHelper.RunDotnet(["run", tempFile], workingDir, envVars);
             stopwatch.Stop();
 
-            string jsonOutput = File.Exists(jsonOutputFile)
+            var jsonOutput = File.Exists(jsonOutputFile)
                 ? File.ReadAllText(jsonOutputFile)
                 : "{}";
 
@@ -496,10 +474,21 @@ public partial class SpecFileRunner : ISpecFileRunner
         finally
         {
             if (tempFile != null)
+                try
+                {
+                    File.Delete(tempFile);
+                }
+                catch
+                {
+                }
+
+            try
             {
-                try { File.Delete(tempFile); } catch { }
+                if (File.Exists(jsonOutputFile)) File.Delete(jsonOutputFile);
             }
-            try { if (File.Exists(jsonOutputFile)) File.Delete(jsonOutputFile); } catch { }
+            catch
+            {
+            }
         }
     }
 
@@ -522,13 +511,13 @@ public partial class SpecFileRunner : ISpecFileRunner
             stopwatch.Stop();
 
             // Read JSON from temp file (not stdout)
-            string jsonOutput = File.Exists(jsonOutputFile)
+            var jsonOutput = File.Exists(jsonOutputFile)
                 ? File.ReadAllText(jsonOutputFile)
                 : "{}";
 
             return new SpecRunResult(
                 specFile,
-                jsonOutput,  // JSON from file, not process stdout
+                jsonOutput, // JSON from file, not process stdout
                 result.Error,
                 result.ExitCode,
                 stopwatch.Elapsed);
@@ -538,10 +527,7 @@ public partial class SpecFileRunner : ISpecFileRunner
             // Clean up temp file
             try
             {
-                if (File.Exists(jsonOutputFile))
-                {
-                    File.Delete(jsonOutputFile);
-                }
+                if (File.Exists(jsonOutputFile)) File.Delete(jsonOutputFile);
             }
             catch
             {

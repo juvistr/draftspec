@@ -41,9 +41,9 @@ public class PathTraversalSecurityTests
     public async Task Cleanup()
     {
         if (Directory.Exists(_testBaseDir))
-            Directory.Delete(_testBaseDir, recursive: true);
+            Directory.Delete(_testBaseDir, true);
         if (Directory.Exists(_siblingDir))
-            Directory.Delete(_siblingDir, recursive: true);
+            Directory.Delete(_siblingDir, true);
 
         await Task.CompletedTask;
     }
@@ -233,4 +233,3 @@ public class PathTraversalSecurityTests
 
     #endregion
 }
-

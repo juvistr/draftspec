@@ -94,12 +94,12 @@ public static class InitCommand
     private static string GenerateOmnisharp(string targetFramework)
     {
         return $$"""
-            {
-              "script": {
-                "enableScriptNuGetReferences": true,
-                "defaultTargetFramework": "{{targetFramework}}"
-              }
-            }
-            """;
+                 {
+                   "script": {
+                     "enableScriptNuGetReferences": true,
+                     "defaultTargetFramework": "{{targetFramework}}"
+                   }
+                 }
+                 """;
     }
 }

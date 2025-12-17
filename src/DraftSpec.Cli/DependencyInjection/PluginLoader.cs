@@ -92,7 +92,6 @@ public class PluginLoader : IPluginLoader
                 continue;
 
             foreach (var dllPath in Directory.GetFiles(directory, "DraftSpec.*.dll"))
-            {
                 try
                 {
                     var plugins = LoadPluginsFromAssembly(dllPath);
@@ -103,7 +102,6 @@ public class PluginLoader : IPluginLoader
                     // Log but don't fail - plugin loading should be resilient
                     Console.Error.WriteLine($"Warning: Failed to load plugin from {dllPath}: {ex.Message}");
                 }
-            }
         }
 
         return _discoveredPlugins;
@@ -133,13 +131,11 @@ public class PluginLoader : IPluginLoader
     public void RegisterFormatters(ICliFormatterRegistry registry)
     {
         foreach (var plugin in DiscoverPlugins().Where(p => p.Kind == PluginKind.Formatter))
-        {
             registry.Register(plugin.Name, _ =>
             {
                 var instance = Activator.CreateInstance(plugin.Type);
                 return (IFormatter)instance!;
             });
-        }
     }
 }
 
@@ -150,7 +146,7 @@ internal class PluginLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
 
-    public PluginLoadContext(string pluginPath) : base(isCollectible: true)
+    public PluginLoadContext(string pluginPath) : base(true)
     {
         _resolver = new AssemblyDependencyResolver(pluginPath);
     }

@@ -72,14 +72,9 @@ public static class SpecReportBuilder
 
         // Recursively process child contexts
         foreach (var child in context.Children)
-        {
             BuildContextTreeRecursive(child, resultLookup, reportContext.Contexts, [.. currentPath]);
-        }
 
         // Only add if there are specs or nested contexts
-        if (reportContext.Specs.Count > 0 || reportContext.Contexts.Count > 0)
-        {
-            targetList.Add(reportContext);
-        }
+        if (reportContext.Specs.Count > 0 || reportContext.Contexts.Count > 0) targetList.Add(reportContext);
     }
 }

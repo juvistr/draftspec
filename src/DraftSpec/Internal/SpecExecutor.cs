@@ -55,33 +55,20 @@ internal static class SpecExecutor
 
         // Invoke reporters' OnRunCompletedAsync (includes FileReporter if configured)
         if (configuration != null)
-        {
             foreach (var reporter in configuration.Reporters.All)
-            {
                 reporter.OnRunCompletedAsync(report).GetAwaiter().GetResult();
-            }
-        }
 
         // Output to console (skip JSON if using file reporter - it's already written)
         if (useFileReporter)
-        {
             // In file reporter mode, show console formatted output for user feedback
             FormatToConsole(configuration, report);
-        }
         else if (json)
-        {
             Console.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
-        }
         else
-        {
             FormatToConsole(configuration, report);
-        }
 
         // Set exit code based on failures
-        if (report.Summary.Failed > 0)
-        {
-            Environment.ExitCode = 1;
-        }
+        if (report.Summary.Failed > 0) Environment.ExitCode = 1;
 
         // Reset state for next run
         resetState();
@@ -94,14 +81,10 @@ internal static class SpecExecutor
     {
         var formatter = configuration?.ConsoleFormatter;
         if (formatter != null)
-        {
             formatter.Format(report, Console.Out);
-        }
         else
-        {
             // Simple fallback when no formatter is configured
             WritePlainTextSummary(report, Console.Out);
-        }
     }
 
     /// <summary>
@@ -109,10 +92,7 @@ internal static class SpecExecutor
     /// </summary>
     private static void WritePlainTextSummary(SpecReport report, TextWriter output)
     {
-        foreach (var context in report.Contexts)
-        {
-            WriteContext(context, output, level: 0);
-        }
+        foreach (var context in report.Contexts) WriteContext(context, output, 0);
 
         output.WriteLine();
         output.Write($"{report.Summary.Total} specs: ");
@@ -142,15 +122,9 @@ internal static class SpecExecutor
             };
             output.WriteLine($"{indent}  {status} {spec.Description}");
 
-            if (!string.IsNullOrEmpty(spec.Error))
-            {
-                output.WriteLine($"{indent}    {spec.Error}");
-            }
+            if (!string.IsNullOrEmpty(spec.Error)) output.WriteLine($"{indent}    {spec.Error}");
         }
 
-        foreach (var child in context.Contexts)
-        {
-            WriteContext(child, output, level + 1);
-        }
+        foreach (var child in context.Contexts) WriteContext(child, output, level + 1);
     }
 }

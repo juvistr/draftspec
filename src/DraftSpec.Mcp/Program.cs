@@ -7,10 +7,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 // Configure logging to stderr (stdout is reserved for MCP protocol)
 builder.Logging.ClearProviders();
-builder.Logging.AddConsole(options =>
-{
-    options.LogToStandardErrorThreshold = LogLevel.Trace;
-});
+builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; });
 
 // Register services
 builder.Services.AddSingleton<TempFileManager>();

@@ -13,13 +13,7 @@ public class TagTests
     [Test]
     public async Task Tag_AppliesTagToSpecsInBlock()
     {
-        describe("test", () =>
-        {
-            tag("slow", () =>
-            {
-                it("tagged spec", () => { });
-            });
-        });
+        describe("test", () => { tag("slow", () => { it("tagged spec", () => { }); }); });
 
         var spec = RootContext!.Specs[0];
         var tags = spec.Tags.ToList();
@@ -33,10 +27,7 @@ public class TagTests
     {
         describe("test", () =>
         {
-            tag("slow", () =>
-            {
-                it("tagged spec", () => { });
-            });
+            tag("slow", () => { it("tagged spec", () => { }); });
 
             it("untagged spec", () => { });
         });
@@ -58,16 +49,8 @@ public class TagTests
     [Test]
     public async Task NestedTags_Accumulate()
     {
-        describe("test", () =>
-        {
-            tag("slow", () =>
-            {
-                tag("integration", () =>
-                {
-                    it("doubly tagged spec", () => { });
-                });
-            });
-        });
+        describe("test",
+            () => { tag("slow", () => { tag("integration", () => { it("doubly tagged spec", () => { }); }); }); });
 
         var spec = RootContext!.Specs[0];
         var tags = spec.Tags.ToList();
@@ -82,10 +65,7 @@ public class TagTests
     {
         describe("test", () =>
         {
-            tag("slow", () =>
-            {
-                it("tagged spec", () => { });
-            });
+            tag("slow", () => { it("tagged spec", () => { }); });
 
             // After the block, tags should be reset
             it("untagged spec", () => { });
@@ -105,13 +85,7 @@ public class TagTests
     [Test]
     public async Task Tags_AppliesMultipleTagsToSpecsInBlock()
     {
-        describe("test", () =>
-        {
-            tags(["slow", "integration"], () =>
-            {
-                it("multi-tagged spec", () => { });
-            });
-        });
+        describe("test", () => { tags(["slow", "integration"], () => { it("multi-tagged spec", () => { }); }); });
 
         var spec = RootContext!.Specs[0];
         var specTags = spec.Tags.ToList();
@@ -124,16 +98,12 @@ public class TagTests
     [Test]
     public async Task Tags_CombinesWithNestedTag()
     {
-        describe("test", () =>
-        {
-            tags(["slow", "integration"], () =>
+        describe("test",
+            () =>
             {
-                tag("database", () =>
-                {
-                    it("triple tagged spec", () => { });
-                });
+                tags(["slow", "integration"],
+                    () => { tag("database", () => { it("triple tagged spec", () => { }); }); });
             });
-        });
 
         var spec = RootContext!.Specs[0];
         var specTags = spec.Tags.ToList();
@@ -151,13 +121,7 @@ public class TagTests
     [Test]
     public async Task Tag_WorksWithFocusedSpecs()
     {
-        describe("test", () =>
-        {
-            tag("slow", () =>
-            {
-                fit("focused tagged spec", () => { });
-            });
-        });
+        describe("test", () => { tag("slow", () => { fit("focused tagged spec", () => { }); }); });
 
         var spec = RootContext!.Specs[0];
         var isFocused = spec.IsFocused;
@@ -171,13 +135,7 @@ public class TagTests
     [Test]
     public async Task Tag_WorksWithSkippedSpecs()
     {
-        describe("test", () =>
-        {
-            tag("slow", () =>
-            {
-                xit("skipped tagged spec", () => { });
-            });
-        });
+        describe("test", () => { tag("slow", () => { xit("skipped tagged spec", () => { }); }); });
 
         var spec = RootContext!.Specs[0];
         var isSkipped = spec.IsSkipped;
@@ -191,13 +149,7 @@ public class TagTests
     [Test]
     public async Task Tag_WorksWithPendingSpecs()
     {
-        describe("test", () =>
-        {
-            tag("slow", () =>
-            {
-                it("pending tagged spec");
-            });
-        });
+        describe("test", () => { tag("slow", () => { it("pending tagged spec"); }); });
 
         var spec = RootContext!.Specs[0];
         var isPending = spec.IsPending;
@@ -215,16 +167,8 @@ public class TagTests
     [Test]
     public async Task Tag_WorksWithNestedDescribe()
     {
-        describe("outer", () =>
-        {
-            tag("slow", () =>
-            {
-                describe("inner", () =>
-                {
-                    it("spec in nested context", () => { });
-                });
-            });
-        });
+        describe("outer",
+            () => { tag("slow", () => { describe("inner", () => { it("spec in nested context", () => { }); }); }); });
 
         var innerContext = RootContext!.Children[0];
         var spec = innerContext.Specs[0];

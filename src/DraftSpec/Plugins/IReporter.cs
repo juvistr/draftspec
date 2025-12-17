@@ -17,13 +17,19 @@ public interface IReporter
     /// Called when the spec run is about to start.
     /// </summary>
     /// <param name="context">Information about the upcoming run</param>
-    Task OnRunStartingAsync(RunStartingContext context) => Task.CompletedTask;
+    Task OnRunStartingAsync(RunStartingContext context)
+    {
+        return Task.CompletedTask;
+    }
 
     /// <summary>
     /// Called after each spec completes (enables streaming output).
     /// </summary>
     /// <param name="result">The result of the spec that just completed</param>
-    Task OnSpecCompletedAsync(SpecResult result) => Task.CompletedTask;
+    Task OnSpecCompletedAsync(SpecResult result)
+    {
+        return Task.CompletedTask;
+    }
 
     /// <summary>
     /// Called after a batch of specs complete (parallel execution optimization).
@@ -33,10 +39,7 @@ public interface IReporter
     /// <param name="results">The results of specs that completed</param>
     async Task OnSpecsBatchCompletedAsync(IReadOnlyList<SpecResult> results)
     {
-        foreach (var result in results)
-        {
-            await OnSpecCompletedAsync(result);
-        }
+        foreach (var result in results) await OnSpecCompletedAsync(result);
     }
 
     /// <summary>

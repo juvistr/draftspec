@@ -52,14 +52,14 @@ public static class NewCommand
     private static string GenerateSpec(string name)
     {
         return $$"""
-            #load "spec_helper.csx"
-            using static DraftSpec.Dsl;
+                 #load "spec_helper.csx"
+                 using static DraftSpec.Dsl;
 
-            describe("{{name}}", () => {
-                it("works", () => pending());
-            });
+                 describe("{{name}}", () => {
+                     it("works", () => pending());
+                 });
 
-            run();
-            """;
+                 run();
+                 """;
     }
 }

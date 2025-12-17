@@ -195,5 +195,4 @@ public readonly struct Expectation<T>
             _ => null
         };
     }
-
 }

@@ -62,35 +62,25 @@ public class FileWatcher : IDisposable
             // Track which file changed (for selective re-running)
             // If multiple files change during debounce, escalate to full run
             if (_pendingChange == null)
-            {
                 _pendingChange = new FileChangeInfo(e.FullPath, isSpecFile);
-            }
             else if (_pendingChange.IsSpecFile && isSpecFile && _pendingChange.FilePath != e.FullPath)
-            {
                 // Multiple different spec files changed - run all
                 _pendingChange = new FileChangeInfo(null, false);
-            }
             else if (!isSpecFile)
-            {
                 // Source file changed - run all
                 _pendingChange = new FileChangeInfo(null, false);
-            }
 
             // Reuse timer to avoid allocations on rapid file changes
             if (_debounceTimer == null)
-            {
                 // First change - create timer that fires once after debounce period
                 _debounceTimer = new Timer(
                     _ => FireChange(),
-                    state: null,
-                    dueTime: _debounceMs,
-                    period: Timeout.Infinite);
-            }
+                    null,
+                    _debounceMs,
+                    Timeout.Infinite);
             else
-            {
                 // Subsequent change - reset timer to debounce again
                 _debounceTimer.Change(_debounceMs, Timeout.Infinite);
-            }
         }
     }
 
@@ -102,6 +92,7 @@ public class FileWatcher : IDisposable
             change = _pendingChange ?? new FileChangeInfo(null, false);
             _pendingChange = null;
         }
+
         _onChange(change);
     }
 
@@ -112,6 +103,7 @@ public class FileWatcher : IDisposable
             watcher.EnableRaisingEvents = false;
             watcher.Dispose();
         }
+
         _debounceTimer?.Dispose();
     }
 }

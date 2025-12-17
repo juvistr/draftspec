@@ -124,10 +124,7 @@ public class HookOrderingTests
                     before = () => executionOrder.Add("beforeEach:inner");
                     after = () => executionOrder.Add("afterEach:inner");
 
-                    it("runs in inner context", () =>
-                    {
-                        executionOrder.Add("spec:inner");
-                    });
+                    it("runs in inner context", () => { executionOrder.Add("spec:inner"); });
                 });
             });
         }

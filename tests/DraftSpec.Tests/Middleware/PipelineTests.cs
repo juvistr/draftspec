@@ -94,10 +94,7 @@ public class PipelineTests
         context.AddSpec(new SpecDefinition("test", async () =>
         {
             attempts++;
-            if (attempts == 1)
-            {
-                await Task.Delay(200); // First attempt times out
-            }
+            if (attempts == 1) await Task.Delay(200); // First attempt times out
             // Second attempt succeeds quickly
         }));
 
@@ -142,8 +139,16 @@ public class PipelineTests
     {
         var context = new SpecContext("test");
         var order = new List<string>();
-        context.BeforeEach = () => { order.Add("before"); return Task.CompletedTask; };
-        context.AfterEach = () => { order.Add("after"); return Task.CompletedTask; };
+        context.BeforeEach = () =>
+        {
+            order.Add("before");
+            return Task.CompletedTask;
+        };
+        context.AfterEach = () =>
+        {
+            order.Add("after");
+            return Task.CompletedTask;
+        };
         context.AddSpec(new SpecDefinition("test", () => order.Add("spec")));
 
         var runner = new SpecRunnerBuilder()
@@ -166,9 +171,13 @@ public class PipelineTests
     {
         private readonly Action _onExecute;
 
-        public TestMiddleware(Action onExecute) => _onExecute = onExecute;
+        public TestMiddleware(Action onExecute)
+        {
+            _onExecute = onExecute;
+        }
 
-        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
+        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
+            Func<SpecExecutionContext, Task<SpecResult>> next)
         {
             _onExecute();
             return await next(context);
@@ -186,7 +195,8 @@ public class PipelineTests
             _value = value;
         }
 
-        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
+        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
+            Func<SpecExecutionContext, Task<SpecResult>> next)
         {
             context.Items[_key] = _value;
             return await next(context);
@@ -204,7 +214,8 @@ public class PipelineTests
             _capture = capture;
         }
 
-        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
+        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
+            Func<SpecExecutionContext, Task<SpecResult>> next)
         {
             if (context.Items.TryGetValue(_key, out var value))
                 _capture(value as string);
@@ -223,7 +234,8 @@ public class PipelineTests
             _after = after;
         }
 
-        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
+        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
+            Func<SpecExecutionContext, Task<SpecResult>> next)
         {
             _before();
             var result = await next(context);

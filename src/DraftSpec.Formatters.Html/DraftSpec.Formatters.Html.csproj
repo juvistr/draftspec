@@ -1,18 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj"/>
+    </ItemGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
 
-    <!-- NuGet Package Configuration -->
-    <PackageId>DraftSpec.Formatters.Html</PackageId>
-    <Description>HTML output formatter for DraftSpec test results. Generates browser-viewable reports.</Description>
-    <PackageTags>testing;bdd;formatters;html;reports</PackageTags>
-  </PropertyGroup>
+        <!-- NuGet Package Configuration -->
+        <PackageId>DraftSpec.Formatters.Html</PackageId>
+        <Description>HTML output formatter for DraftSpec test results. Generates browser-viewable reports.</Description>
+        <PackageTags>testing;bdd;formatters;html;reports</PackageTags>
+    </PropertyGroup>
 
 </Project>

@@ -25,7 +25,8 @@ public class RetryMiddleware : ISpecMiddleware
     /// <summary>
     /// Execute the middleware, retrying failed specs up to the configured maximum.
     /// </summary>
-    public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
+    public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
+        Func<SpecExecutionContext, Task<SpecResult>> next)
     {
         var attempts = 0;
         SpecResult result;
@@ -40,12 +41,10 @@ public class RetryMiddleware : ISpecMiddleware
 
             if (_delay > TimeSpan.Zero)
                 await Task.Delay(_delay);
-
         } while (true);
 
         // Attach retry info if we had retries configured
         if (_maxRetries > 0)
-        {
             return result with
             {
                 RetryInfo = new RetryInfo
@@ -54,7 +53,6 @@ public class RetryMiddleware : ISpecMiddleware
                     MaxRetries = _maxRetries
                 }
             };
-        }
 
         return result;
     }

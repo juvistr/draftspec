@@ -31,10 +31,8 @@ public class SpecReport
 
         // Security: Check size BEFORE parsing to prevent memory exhaustion
         if (json.Length > MaxJsonSize)
-        {
             throw new InvalidOperationException(
                 $"Report too large: {json.Length:N0} bytes exceeds maximum of {MaxJsonSize:N0} bytes");
-        }
 
         var options = new JsonSerializerOptions
         {
@@ -43,7 +41,7 @@ public class SpecReport
             MaxDepth = 64
         };
         return JsonSerializer.Deserialize<SpecReport>(json, options)
-            ?? throw new InvalidOperationException("Failed to parse JSON report");
+               ?? throw new InvalidOperationException("Failed to parse JSON report");
     }
 
     /// <summary>
@@ -96,15 +94,11 @@ public class SpecResultReport
     public double? DurationMs { get; set; }
     public string? Error { get; set; }
 
-    [JsonIgnore]
-    public bool Passed => Status == "passed";
+    [JsonIgnore] public bool Passed => Status == "passed";
 
-    [JsonIgnore]
-    public bool Failed => Status == "failed";
+    [JsonIgnore] public bool Failed => Status == "failed";
 
-    [JsonIgnore]
-    public bool Pending => Status == "pending";
+    [JsonIgnore] public bool Pending => Status == "pending";
 
-    [JsonIgnore]
-    public bool Skipped => Status == "skipped";
+    [JsonIgnore] public bool Skipped => Status == "skipped";
 }

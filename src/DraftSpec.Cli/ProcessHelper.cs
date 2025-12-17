@@ -35,19 +35,12 @@ public static class ProcessHelper
         };
 
         // Use ArgumentList for secure argument passing
-        foreach (var arg in arguments)
-        {
-            psi.ArgumentList.Add(arg);
-        }
+        foreach (var arg in arguments) psi.ArgumentList.Add(arg);
 
         // Add environment variables if provided
         if (environmentVariables != null)
-        {
             foreach (var kvp in environmentVariables)
-            {
                 psi.EnvironmentVariables[kvp.Key] = kvp.Value;
-            }
-        }
 
         using var process = Process.Start(psi)!;
         var output = process.StandardOutput.ReadToEnd();
@@ -99,6 +92,7 @@ public static class ProcessHelper
                 // Ignore - SDK not available
             }
         }
+
         return _sdkVersion;
     }
 

@@ -35,10 +35,7 @@ internal class PluginRegistry : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        foreach (var plugin in _plugins)
-        {
-            plugin.Dispose();
-        }
+        foreach (var plugin in _plugins) plugin.Dispose();
         _plugins.Clear();
         _byType.Clear();
     }

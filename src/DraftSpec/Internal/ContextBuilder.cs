@@ -57,7 +57,8 @@ internal static class ContextBuilder
     /// <summary>
     /// Create a focused spec definition with an async body.
     /// </summary>
-    public static SpecDefinition CreateFocusedSpec(string description, Func<Task> body, IReadOnlyList<string>? tags = null)
+    public static SpecDefinition CreateFocusedSpec(string description, Func<Task> body,
+        IReadOnlyList<string>? tags = null)
     {
         return new SpecDefinition(description, body) { IsFocused = true, Tags = tags ?? [] };
     }
@@ -75,7 +76,8 @@ internal static class ContextBuilder
     /// <summary>
     /// Create a skipped spec definition with an async body.
     /// </summary>
-    public static SpecDefinition CreateSkippedSpec(string description, Func<Task>? body, IReadOnlyList<string>? tags = null)
+    public static SpecDefinition CreateSkippedSpec(string description, Func<Task>? body,
+        IReadOnlyList<string>? tags = null)
     {
         return new SpecDefinition(description, body) { IsSkipped = true, Tags = tags ?? [] };
     }
@@ -85,7 +87,11 @@ internal static class ContextBuilder
     /// </summary>
     public static Func<Task> WrapSync(Action body)
     {
-        return () => { body(); return Task.CompletedTask; };
+        return () =>
+        {
+            body();
+            return Task.CompletedTask;
+        };
     }
 
     /// <summary>

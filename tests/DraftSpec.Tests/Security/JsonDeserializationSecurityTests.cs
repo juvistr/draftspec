@@ -202,32 +202,32 @@ public class JsonDeserializationSecurityTests
     public async Task FromJson_ValidReport_ShouldParse()
     {
         var json = """
-        {
-            "timestamp": "2025-12-15T10:00:00Z",
-            "source": "test.spec.csx",
-            "summary": {
-                "total": 5,
-                "passed": 4,
-                "failed": 1,
-                "pending": 0,
-                "skipped": 0,
-                "durationMs": 123.45
-            },
-            "contexts": [
-                {
-                    "description": "Test Suite",
-                    "specs": [
-                        {
-                            "description": "should pass",
-                            "status": "passed",
-                            "durationMs": 10.5
-                        }
-                    ],
-                    "contexts": []
-                }
-            ]
-        }
-        """;
+                   {
+                       "timestamp": "2025-12-15T10:00:00Z",
+                       "source": "test.spec.csx",
+                       "summary": {
+                           "total": 5,
+                           "passed": 4,
+                           "failed": 1,
+                           "pending": 0,
+                           "skipped": 0,
+                           "durationMs": 123.45
+                       },
+                       "contexts": [
+                           {
+                               "description": "Test Suite",
+                               "specs": [
+                                   {
+                                       "description": "should pass",
+                                       "status": "passed",
+                                       "durationMs": 10.5
+                                   }
+                               ],
+                               "contexts": []
+                           }
+                       ]
+                   }
+                   """;
 
         var report = SpecReport.FromJson(json);
 
@@ -243,19 +243,19 @@ public class JsonDeserializationSecurityTests
     public async Task FromJson_EmptyReport_ShouldParse()
     {
         var json = """
-        {
-            "timestamp": "2025-12-15T10:00:00Z",
-            "summary": {
-                "total": 0,
-                "passed": 0,
-                "failed": 0,
-                "pending": 0,
-                "skipped": 0,
-                "durationMs": 0
-            },
-            "contexts": []
-        }
-        """;
+                   {
+                       "timestamp": "2025-12-15T10:00:00Z",
+                       "summary": {
+                           "total": 0,
+                           "passed": 0,
+                           "failed": 0,
+                           "pending": 0,
+                           "skipped": 0,
+                           "durationMs": 0
+                       },
+                       "contexts": []
+                   }
+                   """;
 
         var report = SpecReport.FromJson(json);
 
@@ -270,32 +270,32 @@ public class JsonDeserializationSecurityTests
     public async Task FromJson_UnicodeContent_ShouldParse()
     {
         var json = """
-        {
-            "timestamp": "2025-12-15T10:00:00Z",
-            "source": "测试.spec.csx",
-            "summary": {
-                "total": 1,
-                "passed": 1,
-                "failed": 0,
-                "pending": 0,
-                "skipped": 0,
-                "durationMs": 1.0
-            },
-            "contexts": [
-                {
-                    "description": "テスト 🧪",
-                    "specs": [
-                        {
-                            "description": "should support émojis 🎉",
-                            "status": "passed",
-                            "durationMs": 1.0
-                        }
-                    ],
-                    "contexts": []
-                }
-            ]
-        }
-        """;
+                   {
+                       "timestamp": "2025-12-15T10:00:00Z",
+                       "source": "测试.spec.csx",
+                       "summary": {
+                           "total": 1,
+                           "passed": 1,
+                           "failed": 0,
+                           "pending": 0,
+                           "skipped": 0,
+                           "durationMs": 1.0
+                       },
+                       "contexts": [
+                           {
+                               "description": "テスト 🧪",
+                               "specs": [
+                                   {
+                                       "description": "should support émojis 🎉",
+                                       "status": "passed",
+                                       "durationMs": 1.0
+                                   }
+                               ],
+                               "contexts": []
+                           }
+                       ]
+                   }
+                   """;
 
         var report = SpecReport.FromJson(json);
 
@@ -363,18 +363,13 @@ public class JsonDeserializationSecurityTests
         var sb = new StringBuilder();
 
         // Open nested contexts
-        sb.Append("{\"timestamp\":\"2025-12-15T10:00:00Z\",\"summary\":{\"total\":0,\"passed\":0,\"failed\":0,\"pending\":0,\"skipped\":0,\"durationMs\":0},\"contexts\":[");
+        sb.Append(
+            "{\"timestamp\":\"2025-12-15T10:00:00Z\",\"summary\":{\"total\":0,\"passed\":0,\"failed\":0,\"pending\":0,\"skipped\":0,\"durationMs\":0},\"contexts\":[");
 
-        for (int i = 0; i < depth; i++)
-        {
-            sb.Append("{\"description\":\"level " + i + "\",\"specs\":[],\"contexts\":[");
-        }
+        for (var i = 0; i < depth; i++) sb.Append("{\"description\":\"level " + i + "\",\"specs\":[],\"contexts\":[");
 
         // Close all contexts
-        for (int i = 0; i < depth; i++)
-        {
-            sb.Append("]}");
-        }
+        for (var i = 0; i < depth; i++) sb.Append("]}");
 
         sb.Append("]}");
 
@@ -391,14 +386,12 @@ public class JsonDeserializationSecurityTests
     {
         var sb = new StringBuilder(targetSize + 1000);
 
-        sb.Append("{\"timestamp\":\"2025-12-15T10:00:00Z\",\"summary\":{\"total\":1,\"passed\":1,\"failed\":0,\"pending\":0,\"skipped\":0,\"durationMs\":0},\"contexts\":[{\"description\":\"Test\",\"specs\":[{\"description\":\"test with padding: ");
+        sb.Append(
+            "{\"timestamp\":\"2025-12-15T10:00:00Z\",\"summary\":{\"total\":1,\"passed\":1,\"failed\":0,\"pending\":0,\"skipped\":0,\"durationMs\":0},\"contexts\":[{\"description\":\"Test\",\"specs\":[{\"description\":\"test with padding: ");
 
         // Add padding to reach target size
         var paddingNeeded = targetSize - sb.Length - 100;
-        if (paddingNeeded > 0)
-        {
-            sb.Append(new string('x', paddingNeeded));
-        }
+        if (paddingNeeded > 0) sb.Append(new string('x', paddingNeeded));
 
         sb.Append("\",\"status\":\"passed\",\"durationMs\":1}],\"contexts\":[]}]}");
 

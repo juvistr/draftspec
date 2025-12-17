@@ -17,10 +17,7 @@ public class OutputTests
     {
         var output = CaptureConsoleOutput(() =>
         {
-            describe("test", () =>
-            {
-                it("passes", () => { });
-            });
+            describe("test", () => { it("passes", () => { }); });
             run();
         });
 
@@ -33,10 +30,7 @@ public class OutputTests
     {
         var output = CaptureConsoleOutput(() =>
         {
-            describe("test", () =>
-            {
-                it("fails", () => throw new Exception("error"));
-            });
+            describe("test", () => { it("fails", () => throw new Exception("error")); });
             run();
         });
 
@@ -49,10 +43,7 @@ public class OutputTests
     {
         var output = CaptureConsoleOutput(() =>
         {
-            describe("test", () =>
-            {
-                it("pending");
-            });
+            describe("test", () => { it("pending"); });
             run();
         });
 
@@ -65,10 +56,7 @@ public class OutputTests
     {
         var output = CaptureConsoleOutput(() =>
         {
-            describe("test", () =>
-            {
-                xit("skipped", () => { });
-            });
+            describe("test", () => { xit("skipped", () => { }); });
             run();
         });
 
@@ -81,10 +69,7 @@ public class OutputTests
     {
         var output = CaptureConsoleOutput(() =>
         {
-            describe("Calculator", () =>
-            {
-                it("adds numbers", () => { });
-            });
+            describe("Calculator", () => { it("adds numbers", () => { }); });
             run();
         });
 
@@ -96,13 +81,7 @@ public class OutputTests
     {
         var output = CaptureConsoleOutput(() =>
         {
-            describe("Calculator", () =>
-            {
-                describe("add method", () =>
-                {
-                    it("returns sum", () => { });
-                });
-            });
+            describe("Calculator", () => { describe("add method", () => { it("returns sum", () => { }); }); });
             run();
         });
 
@@ -133,10 +112,8 @@ public class OutputTests
     {
         var output = CaptureConsoleOutput(() =>
         {
-            describe("test", () =>
-            {
-                it("fails", () => throw new InvalidOperationException("specific error message"));
-            });
+            describe("test",
+                () => { it("fails", () => throw new InvalidOperationException("specific error message")); });
             run();
         });
 
@@ -146,10 +123,7 @@ public class OutputTests
     [Test]
     public async Task ConsoleOutput_NoSpecs_ShowsMessage()
     {
-        var output = CaptureConsoleOutput(() =>
-        {
-            run();
-        });
+        var output = CaptureConsoleOutput(() => { run(); });
 
         await Assert.That(output).Contains("No specs defined");
     }
@@ -163,11 +137,8 @@ public class OutputTests
     {
         var json = CaptureConsoleOutput(() =>
         {
-            describe("test", () =>
-            {
-                it("spec", () => { });
-            });
-            run(json: true);
+            describe("test", () => { it("spec", () => { }); });
+            run(true);
         });
 
         var doc = JsonDocument.Parse(json);
@@ -184,7 +155,7 @@ public class OutputTests
                 it("passes", () => { });
                 it("pending");
             });
-            run(json: true);
+            run(true);
         });
 
         var doc = JsonDocument.Parse(json);
@@ -200,11 +171,8 @@ public class OutputTests
     {
         var json = CaptureConsoleOutput(() =>
         {
-            describe("Calculator", () =>
-            {
-                it("works", () => { });
-            });
-            run(json: true);
+            describe("Calculator", () => { it("works", () => { }); });
+            run(true);
         });
 
         var doc = JsonDocument.Parse(json);
@@ -219,11 +187,8 @@ public class OutputTests
     {
         var json = CaptureConsoleOutput(() =>
         {
-            describe("test", () =>
-            {
-                it("spec description", () => { });
-            });
-            run(json: true);
+            describe("test", () => { it("spec description", () => { }); });
+            run(true);
         });
 
         var doc = JsonDocument.Parse(json);
@@ -239,11 +204,8 @@ public class OutputTests
     {
         var json = CaptureConsoleOutput(() =>
         {
-            describe("test", () =>
-            {
-                it("spec", () => Thread.Sleep(5));
-            });
-            run(json: true);
+            describe("test", () => { it("spec", () => Thread.Sleep(5)); });
+            run(true);
         });
 
         var doc = JsonDocument.Parse(json);
@@ -258,11 +220,8 @@ public class OutputTests
     {
         var json = CaptureConsoleOutput(() =>
         {
-            describe("test", () =>
-            {
-                it("fails", () => throw new Exception("json error"));
-            });
-            run(json: true);
+            describe("test", () => { it("fails", () => throw new Exception("json error")); });
+            run(true);
         });
 
         var doc = JsonDocument.Parse(json);
@@ -277,14 +236,8 @@ public class OutputTests
     {
         var json = CaptureConsoleOutput(() =>
         {
-            describe("outer", () =>
-            {
-                describe("inner", () =>
-                {
-                    it("spec", () => { });
-                });
-            });
-            run(json: true);
+            describe("outer", () => { describe("inner", () => { it("spec", () => { }); }); });
+            run(true);
         });
 
         var doc = JsonDocument.Parse(json);
@@ -298,10 +251,7 @@ public class OutputTests
     [Test]
     public async Task JsonOutput_NoSpecs_ReturnsEmptyObject()
     {
-        var json = CaptureConsoleOutput(() =>
-        {
-            run(json: true);
-        });
+        var json = CaptureConsoleOutput(() => { run(true); });
 
         await Assert.That(json.Trim()).IsEqualTo("{}");
     }

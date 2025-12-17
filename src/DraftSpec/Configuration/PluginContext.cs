@@ -22,7 +22,7 @@ internal class PluginContext : IPluginContext
     public T GetRequiredService<T>() where T : class
     {
         return GetService<T>()
-            ?? throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered");
+               ?? throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered");
     }
 
     public void Log(LogLevel level, string message)

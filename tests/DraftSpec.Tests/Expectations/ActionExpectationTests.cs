@@ -37,7 +37,10 @@ public class ActionExpectationTests
     public async Task toThrow_WithNoException_Throws()
     {
         var expectation = new ActionExpectation(
-            () => { /* does nothing */ },
+            () =>
+            {
+                /* does nothing */
+            },
             "action");
 
         var ex = Assert.Throws<AssertionException>(() =>
@@ -80,7 +83,10 @@ public class ActionExpectationTests
     public async Task toThrow_AnyException_WhenNoThrow_Throws()
     {
         var expectation = new ActionExpectation(
-            () => { /* does nothing */ },
+            () =>
+            {
+                /* does nothing */
+            },
             "action");
 
         var ex = Assert.Throws<AssertionException>(() => expectation.toThrow());
@@ -97,7 +103,10 @@ public class ActionExpectationTests
     public async Task toNotThrow_WhenNoException_Passes()
     {
         var expectation = new ActionExpectation(
-            () => { /* does nothing */ },
+            () =>
+            {
+                /* does nothing */
+            },
             "action");
 
         expectation.toNotThrow(); // Should not throw

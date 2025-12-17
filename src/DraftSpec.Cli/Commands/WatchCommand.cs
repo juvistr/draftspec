@@ -6,7 +6,7 @@ public static class WatchCommand
     {
         var finder = new SpecFinder();
         var runner = new SpecFileRunner();
-        var presenter = new ConsolePresenter(watchMode: true);
+        var presenter = new ConsolePresenter(true);
 
         runner.OnBuildStarted += presenter.ShowBuilding;
         runner.OnBuildCompleted += presenter.ShowBuildResult;
@@ -34,10 +34,7 @@ public static class WatchCommand
                 lastSummary = runner.RunAll(specFiles);
 
                 presenter.ShowSpecsStarting();
-                foreach (var result in lastSummary.Results)
-                {
-                    presenter.ShowResult(result, path);
-                }
+                foreach (var result in lastSummary.Results) presenter.ShowResult(result, path);
 
                 presenter.ShowSummary(lastSummary);
             }
@@ -72,7 +69,7 @@ public static class WatchCommand
 
                 if (changedSpec != null)
                 {
-                    RunSpecs([changedSpec], isPartialRun: true);
+                    RunSpecs([changedSpec], true);
                     return;
                 }
             }

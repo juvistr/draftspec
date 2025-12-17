@@ -20,5 +20,7 @@ public class AssertionException : Exception
     /// Creates a new assertion exception with the specified message.
     /// </summary>
     /// <param name="message">A message describing what was expected vs what was found.</param>
-    public AssertionException(string message) : base(message) { }
+    public AssertionException(string message) : base(message)
+    {
+    }
 }

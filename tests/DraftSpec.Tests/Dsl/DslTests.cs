@@ -15,10 +15,7 @@ public class DslTests
     {
         var executed = false;
 
-        describe("root", () =>
-        {
-            it("spec", () => executed = true);
-        });
+        describe("root", () => { it("spec", () => executed = true); });
         run();
 
         await Assert.That(executed).IsTrue();
@@ -29,13 +26,7 @@ public class DslTests
     {
         var path = new List<string>();
 
-        describe("outer", () =>
-        {
-            describe("inner", () =>
-            {
-                it("spec", () => path.Add("executed"));
-            });
-        });
+        describe("outer", () => { describe("inner", () => { it("spec", () => path.Add("executed")); }); });
         run();
 
         await Assert.That(path).Contains("executed");
@@ -46,15 +37,9 @@ public class DslTests
     {
         var executed = new List<string>();
 
-        describe("first", () =>
-        {
-            it("spec1", () => executed.Add("first"));
-        });
+        describe("first", () => { it("spec1", () => executed.Add("first")); });
 
-        describe("second", () =>
-        {
-            it("spec2", () => executed.Add("second"));
-        });
+        describe("second", () => { it("spec2", () => executed.Add("second")); });
         run();
 
         await Assert.That(executed).Count().IsEqualTo(2);
@@ -67,19 +52,15 @@ public class DslTests
     {
         var depth = 0;
 
-        describe("level1", () =>
-        {
-            describe("level2", () =>
+        describe("level1",
+            () =>
             {
-                describe("level3", () =>
-                {
-                    describe("level4", () =>
+                describe("level2",
+                    () =>
                     {
-                        it("deep spec", () => depth = 4);
+                        describe("level3", () => { describe("level4", () => { it("deep spec", () => depth = 4); }); });
                     });
-                });
             });
-        });
         run();
 
         await Assert.That(depth).IsEqualTo(4);
@@ -94,13 +75,7 @@ public class DslTests
     {
         var executed = false;
 
-        describe("feature", () =>
-        {
-            context("when condition", () =>
-            {
-                it("behaves", () => executed = true);
-            });
-        });
+        describe("feature", () => { context("when condition", () => { it("behaves", () => executed = true); }); });
         run();
 
         await Assert.That(executed).IsTrue();
@@ -115,10 +90,7 @@ public class DslTests
     {
         var executed = false;
 
-        describe("test", () =>
-        {
-            it("runs", () => executed = true);
-        });
+        describe("test", () => { it("runs", () => executed = true); });
         run();
 
         await Assert.That(executed).IsTrue();
@@ -128,10 +100,7 @@ public class DslTests
     public async Task It_WithoutBody_CreatesPendingSpec()
     {
         // Pending specs don't execute but are tracked
-        describe("test", () =>
-        {
-            it("pending spec");
-        });
+        describe("test", () => { it("pending spec"); });
         // run() resets state; we can't easily check status from static DSL
         // This test verifies the API doesn't throw
         run();
@@ -210,10 +179,7 @@ public class DslTests
         {
             it("outer spec", () => executed.Add("outer"));
 
-            describe("inner", () =>
-            {
-                fit("focused inner", () => executed.Add("focused inner"));
-            });
+            describe("inner", () => { fit("focused inner", () => executed.Add("focused inner")); });
         });
         run();
 
@@ -230,10 +196,7 @@ public class DslTests
     {
         var executed = false;
 
-        describe("test", () =>
-        {
-            xit("skipped", () => executed = true);
-        });
+        describe("test", () => { xit("skipped", () => executed = true); });
         run();
 
         await Assert.That(executed).IsFalse();
@@ -242,10 +205,7 @@ public class DslTests
     [Test]
     public async Task Xit_WithoutBody_DoesNotThrow()
     {
-        describe("test", () =>
-        {
-            xit("skipped without body");
-        });
+        describe("test", () => { xit("skipped without body"); });
         run();
         // No assertion needed - test passes if no exception
     }
@@ -313,19 +273,13 @@ public class DslTests
     [Test]
     public async Task Before_OutsideDescribe_Throws()
     {
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-        {
-            await Task.Run(() => before(() => { }));
-        });
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => { await Task.Run(() => before(() => { })); });
     }
 
     [Test]
     public async Task After_OutsideDescribe_Throws()
     {
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-        {
-            await Task.Run(() => after(() => { }));
-        });
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => { await Task.Run(() => after(() => { })); });
     }
 
     #endregion
@@ -377,10 +331,7 @@ public class DslTests
     [Test]
     public async Task AfterAll_OutsideDescribe_Throws()
     {
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-        {
-            await Task.Run(() => afterAll(() => { }));
-        });
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => { await Task.Run(() => afterAll(() => { })); });
     }
 
     #endregion
@@ -393,16 +344,10 @@ public class DslTests
         var firstRunCount = 0;
         var secondRunCount = 0;
 
-        describe("first", () =>
-        {
-            it("spec", () => firstRunCount++);
-        });
+        describe("first", () => { it("spec", () => firstRunCount++); });
         run();
 
-        describe("second", () =>
-        {
-            it("spec", () => secondRunCount++);
-        });
+        describe("second", () => { it("spec", () => secondRunCount++); });
         run();
 
         await Assert.That(firstRunCount).IsEqualTo(1);
@@ -422,10 +367,7 @@ public class DslTests
         // Save original exit code
         var originalExitCode = Environment.ExitCode;
 
-        describe("test", () =>
-        {
-            it("fails", () => throw new Exception("failure"));
-        });
+        describe("test", () => { it("fails", () => throw new Exception("failure")); });
         run();
 
         var exitCodeAfterFailure = Environment.ExitCode;

@@ -72,7 +72,9 @@ public class HtmlFormatterTests
         var formatter = new HtmlFormatter();
         var output = formatter.Format(report);
 
-        await Assert.That(output).Contains("<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/simpledotcss/2.3.7/simple.min.css\">");
+        await Assert.That(output)
+            .Contains(
+                "<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/simpledotcss/2.3.7/simple.min.css\">");
     }
 
     [Test]

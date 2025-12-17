@@ -74,7 +74,11 @@ public class EdgeCaseTests
         outer.BeforeEach = () => throw new InvalidOperationException("First hook");
 
         var inner = new SpecContext("inner", outer);
-        inner.BeforeEach = () => { secondHookRan = true; return Task.CompletedTask; };
+        inner.BeforeEach = () =>
+        {
+            secondHookRan = true;
+            return Task.CompletedTask;
+        };
         inner.AddSpec(new SpecDefinition("spec", () => { }));
 
         var runner = new SpecRunner();
@@ -94,10 +98,7 @@ public class EdgeCaseTests
         var root = new SpecContext("level-0");
         var current = root;
 
-        for (var i = 1; i < 10; i++)
-        {
-            current = new SpecContext($"level-{i}", current);
-        }
+        for (var i = 1; i < 10; i++) current = new SpecContext($"level-{i}", current);
         current.AddSpec(new SpecDefinition("deepest spec", () => { }));
 
         var runner = new SpecRunner();
@@ -131,13 +132,25 @@ public class EdgeCaseTests
         var hookOrder = new List<string>();
 
         var l1 = new SpecContext("L1");
-        l1.BeforeEach = () => { hookOrder.Add("before-L1"); return Task.CompletedTask; };
+        l1.BeforeEach = () =>
+        {
+            hookOrder.Add("before-L1");
+            return Task.CompletedTask;
+        };
 
         var l2 = new SpecContext("L2", l1);
-        l2.BeforeEach = () => { hookOrder.Add("before-L2"); return Task.CompletedTask; };
+        l2.BeforeEach = () =>
+        {
+            hookOrder.Add("before-L2");
+            return Task.CompletedTask;
+        };
 
         var l3 = new SpecContext("L3", l2);
-        l3.BeforeEach = () => { hookOrder.Add("before-L3"); return Task.CompletedTask; };
+        l3.BeforeEach = () =>
+        {
+            hookOrder.Add("before-L3");
+            return Task.CompletedTask;
+        };
         l3.AddSpec(new SpecDefinition("spec", () => hookOrder.Add("spec")));
 
         var runner = new SpecRunner();
@@ -154,10 +167,7 @@ public class EdgeCaseTests
         var root = new SpecContext("level-0");
         var current = root;
 
-        for (var i = 1; i < 50; i++)
-        {
-            current = new SpecContext($"level-{i}", current);
-        }
+        for (var i = 1; i < 50; i++) current = new SpecContext($"level-{i}", current);
         current.AddSpec(new SpecDefinition("bottom", () => { }));
 
         var runner = new SpecRunner();
@@ -176,10 +186,7 @@ public class EdgeCaseTests
     {
         var context = new SpecContext("many specs");
 
-        for (var i = 0; i < 100; i++)
-        {
-            context.AddSpec(new SpecDefinition($"spec {i}", () => { }));
-        }
+        for (var i = 0; i < 100; i++) context.AddSpec(new SpecDefinition($"spec {i}", () => { }));
 
         var runner = new SpecRunner();
         var results = runner.Run(context);
@@ -344,7 +351,8 @@ public class EdgeCaseTests
     public async Task Spec_throwing_task_canceled_exception()
     {
         var context = new SpecContext("context");
-        context.AddSpec(new SpecDefinition("canceled", () => throw new TaskCanceledException("Operation was canceled")));
+        context.AddSpec(new SpecDefinition("canceled",
+            () => throw new TaskCanceledException("Operation was canceled")));
 
         var runner = new SpecRunner();
         var results = runner.Run(context);

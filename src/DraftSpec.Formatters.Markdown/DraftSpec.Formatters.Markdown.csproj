@@ -1,18 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj"/>
+    </ItemGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
 
-    <!-- NuGet Package Configuration -->
-    <PackageId>DraftSpec.Formatters.Markdown</PackageId>
-    <Description>Markdown output formatter for DraftSpec test results. Great for documentation and GitHub integration.</Description>
-    <PackageTags>testing;bdd;formatters;markdown</PackageTags>
-  </PropertyGroup>
+        <!-- NuGet Package Configuration -->
+        <PackageId>DraftSpec.Formatters.Markdown</PackageId>
+        <Description>Markdown output formatter for DraftSpec test results. Great for documentation and GitHub integration.</Description>
+        <PackageTags>testing;bdd;formatters;markdown</PackageTags>
+    </PropertyGroup>
 
 </Project>

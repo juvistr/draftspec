@@ -78,22 +78,13 @@ public static class ReportGenerator
         var results = new List<(SpecDefinition, List<string>)>();
         var currentPath = parentPath.ToList();
 
-        if (!string.IsNullOrEmpty(context.Description))
-        {
-            currentPath.Add(context.Description);
-        }
+        if (!string.IsNullOrEmpty(context.Description)) currentPath.Add(context.Description);
 
         // Add specs from this context
-        foreach (var spec in context.Specs)
-        {
-            results.Add((spec, currentPath.ToList()));
-        }
+        foreach (var spec in context.Specs) results.Add((spec, currentPath.ToList()));
 
         // Recurse into children
-        foreach (var child in context.Children)
-        {
-            results.AddRange(CollectAllSpecs(child, currentPath));
-        }
+        foreach (var child in context.Children) results.AddRange(CollectAllSpecs(child, currentPath));
 
         return results;
     }

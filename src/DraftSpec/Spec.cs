@@ -79,7 +79,10 @@ public abstract class Spec
     /// </summary>
     /// <param name="description">Description of the sub-context.</param>
     /// <param name="body">Action that defines the specs and nested contexts.</param>
-    protected void context(string description, Action body) => describe(description, body);
+    protected void context(string description, Action body)
+    {
+        describe(description, body);
+    }
 
     /// <summary>
     /// Defines a spec with an implementation.

@@ -146,7 +146,11 @@ public class ConfigurationTests
 
     private class TestReporter : IReporter
     {
-        public TestReporter(string name) => Name = name;
+        public TestReporter(string name)
+        {
+            Name = name;
+        }
+
         public string Name { get; }
         public List<string> Events { get; } = [];
 

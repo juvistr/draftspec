@@ -80,22 +80,24 @@ public class StreamingStats
         {
             initial = _totalDurationMs;
             computed = initial + result.Duration.TotalMilliseconds;
-        }
-        while (Interlocked.CompareExchange(ref _totalDurationMs, computed, initial) != initial);
+        } while (Interlocked.CompareExchange(ref _totalDurationMs, computed, initial) != initial);
     }
 
     /// <summary>
     /// Convert to a SpecSummary for use with formatters.
     /// </summary>
-    public SpecSummary ToSummary() => new()
+    public SpecSummary ToSummary()
     {
-        Total = _total,
-        Passed = _passed,
-        Failed = _failed,
-        Pending = _pending,
-        Skipped = _skipped,
-        DurationMs = _totalDurationMs
-    };
+        return new SpecSummary
+        {
+            Total = _total,
+            Passed = _passed,
+            Failed = _failed,
+            Pending = _pending,
+            Skipped = _skipped,
+            DurationMs = _totalDurationMs
+        };
+    }
 
     /// <summary>
     /// Reset all statistics to zero.

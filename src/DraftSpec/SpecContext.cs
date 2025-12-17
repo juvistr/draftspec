@@ -81,13 +81,19 @@ public class SpecContext
     /// Adds a spec to this context.
     /// </summary>
     /// <param name="spec">The spec definition to add.</param>
-    public void AddSpec(SpecDefinition spec) => _specs.Add(spec);
+    public void AddSpec(SpecDefinition spec)
+    {
+        _specs.Add(spec);
+    }
 
     /// <summary>
     /// Adds a child context to this context.
     /// </summary>
     /// <param name="child">The child context to add.</param>
-    public void AddChild(SpecContext child) => _children.Add(child);
+    public void AddChild(SpecContext child)
+    {
+        _children.Add(child);
+    }
 
     /// <summary>
     /// Gets the cached beforeEach hook chain (parent to child order).
@@ -105,6 +111,7 @@ public class SpecContext
                 current = current.Parent;
             }
         }
+
         return _beforeEachChain;
     }
 
@@ -124,6 +131,7 @@ public class SpecContext
                 current = current.Parent;
             }
         }
+
         return _afterEachChain;
     }
 }

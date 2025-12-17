@@ -227,7 +227,10 @@ public class IntegrationTests
             _completedSpecs = completedSpecs;
         }
 
-        public Task OnRunStartingAsync(RunStartingContext context) => Task.CompletedTask;
+        public Task OnRunStartingAsync(RunStartingContext context)
+        {
+            return Task.CompletedTask;
+        }
 
         public Task OnSpecCompletedAsync(SpecResult result)
         {
@@ -235,7 +238,10 @@ public class IntegrationTests
             return Task.CompletedTask;
         }
 
-        public Task OnRunCompletedAsync(SpecReport report) => Task.CompletedTask;
+        public Task OnRunCompletedAsync(SpecReport report)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     #endregion

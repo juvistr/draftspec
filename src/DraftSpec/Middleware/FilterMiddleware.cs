@@ -23,15 +23,14 @@ public class FilterMiddleware : ISpecMiddleware
     /// <summary>
     /// Execute the middleware, skipping the spec if it doesn't match the filter predicate.
     /// </summary>
-    public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
+    public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
+        Func<SpecExecutionContext, Task<SpecResult>> next)
     {
         if (!_predicate(context))
-        {
             return new SpecResult(
                 context.Spec,
                 SpecStatus.Skipped,
                 context.ContextPath);
-        }
 
         return await next(context);
     }

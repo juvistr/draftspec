@@ -4,18 +4,21 @@
 
 RSpec-inspired testing for .NET.
 
-DraftSpec brings the elegant `describe`/`it`/`expect` syntax to .NET, filling the gap left by abandoned BDD frameworks like NSpec. Write expressive specs as scripts or traditional test classes.
+DraftSpec brings the elegant `describe`/`it`/`expect` syntax to .NET, filling the gap left by abandoned BDD frameworks
+like NSpec. Write expressive specs as scripts or traditional test classes.
 
 > **Requires .NET 8+** for CSX scripts via dotnet-script, or **.NET 10+** for file-based apps.
 
 ## Quick Start
 
 **1. Install dotnet-script:**
+
 ```bash
 dotnet tool install -g dotnet-script
 ```
 
 **2. Create a spec file** (`Calculator.spec.csx`):
+
 ```csharp
 #r "nuget: DraftSpec, *"
 using static DraftSpec.Dsl;
@@ -37,11 +40,13 @@ run();
 ```
 
 **3. Run it:**
+
 ```bash
 dotnet script Calculator.spec.csx
 ```
 
 **Output:**
+
 ```
 Calculator
   ✓ adds numbers
@@ -53,6 +58,7 @@ Calculator
 ## Features
 
 ### Nested Contexts
+
 ```csharp
 describe("User", () =>
 {
@@ -70,6 +76,7 @@ describe("User", () =>
 ```
 
 ### Hooks
+
 ```csharp
 describe("Database", () =>
 {
@@ -84,6 +91,7 @@ describe("Database", () =>
 ```
 
 ### Async Support
+
 ```csharp
 it("fetches data", async () =>
 {
@@ -93,6 +101,7 @@ it("fetches data", async () =>
 ```
 
 ### Focus & Skip
+
 ```csharp
 fit("only this runs", () => { });     // Focus: only focused specs run
 xit("this is skipped", () => { });    // Skip: explicitly disabled
@@ -100,6 +109,7 @@ it("this is pending");                 // Pending: no body = pending
 ```
 
 ### Assertions
+
 ```csharp
 // Equality
 expect(value).toBe(expected);
@@ -131,6 +141,7 @@ expect(() => SafeOperation()).toNotThrow();
 ```
 
 ### CLI Tool
+
 ```bash
 # Run specs
 draftspec run .                       # Run all *.spec.csx in current directory
@@ -157,11 +168,14 @@ DraftSpec includes an MCP server for AI-assisted testing:
 dotnet run --project src/DraftSpec.Mcp
 ```
 
-> **Security Note:** The MCP server executes arbitrary code from spec content via `dotnet run`. Only use in trusted environments or within sandboxed containers with restricted permissions.
+> **Security Note:** The MCP server executes arbitrary code from spec content via `dotnet run`. Only use in trusted
+> environments or within sandboxed containers with restricted permissions.
 
-Agents can generate and run specs with zero ceremony—just send `describe`/`it` blocks, get structured JSON results back. No boilerplate needed.
+Agents can generate and run specs with zero ceremony—just send `describe`/`it` blocks, get structured JSON results back.
+No boilerplate needed.
 
 ### Middleware & Plugins
+
 ```csharp
 configure(runner => runner
     .WithRetry(3)                     // Retry failed specs
@@ -180,7 +194,8 @@ configure(runner => runner
 
 ## Status
 
-**Alpha** - This is an early experiment, built in roughly a day with AI assistance. It works, but expect rough edges, missing features, and breaking changes.
+**Alpha** - This is an early experiment, built in roughly a day with AI assistance. It works, but expect rough edges,
+missing features, and breaking changes.
 
 If you try it and hit issues, feedback is welcome via GitHub issues.
 

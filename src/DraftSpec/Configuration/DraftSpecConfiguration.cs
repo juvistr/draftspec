@@ -68,10 +68,7 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     public DraftSpecConfiguration Configure<T>(Action<T> configure) where T : class, IPlugin
     {
         var plugin = _pluginRegistry.Get<T>();
-        if (plugin != null)
-        {
-            configure(plugin);
-        }
+        if (plugin != null) configure(plugin);
         return this;
     }
 
@@ -124,22 +121,14 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
         _initialized = true;
 
         // Initialize all plugins
-        foreach (var plugin in _pluginRegistry.All)
-        {
-            plugin.Initialize(_pluginContext);
-        }
+        foreach (var plugin in _pluginRegistry.All) plugin.Initialize(_pluginContext);
 
         // Let formatter plugins register their formatters
         foreach (var plugin in _pluginRegistry.OfType<IFormatterPlugin>())
-        {
             plugin.RegisterFormatters(_formatterRegistry);
-        }
 
         // Let reporter plugins register their reporters
-        foreach (var plugin in _pluginRegistry.OfType<IReporterPlugin>())
-        {
-            plugin.RegisterReporters(_reporterRegistry);
-        }
+        foreach (var plugin in _pluginRegistry.OfType<IReporterPlugin>()) plugin.RegisterReporters(_reporterRegistry);
     }
 
     /// <summary>
@@ -148,10 +137,7 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// <param name="builder">The spec runner builder</param>
     internal void InitializeMiddleware(SpecRunnerBuilder builder)
     {
-        foreach (var plugin in _pluginRegistry.OfType<IMiddlewarePlugin>())
-        {
-            plugin.RegisterMiddleware(builder);
-        }
+        foreach (var plugin in _pluginRegistry.OfType<IMiddlewarePlugin>()) plugin.RegisterMiddleware(builder);
     }
 
     /// <summary>

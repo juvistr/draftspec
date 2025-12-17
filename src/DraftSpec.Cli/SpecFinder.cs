@@ -29,10 +29,8 @@ public class SpecFinder : ISpecFinder
             : StringComparison.Ordinal;
 
         if (!normalizedPath.StartsWith(normalizedBase, comparison))
-        {
             // Generic error message to avoid leaking internal paths
             throw new SecurityException("Path must be within the base directory");
-        }
 
         if (File.Exists(fullPath))
         {

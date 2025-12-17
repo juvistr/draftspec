@@ -37,16 +37,15 @@ public class TempFileSecurityTests
     public async Task Cleanup()
     {
         if (Directory.Exists(_testDir))
-        {
             try
             {
-                Directory.Delete(_testDir, recursive: true);
+                Directory.Delete(_testDir, true);
             }
             catch
             {
                 // Best effort cleanup
             }
-        }
+
         await Task.CompletedTask;
     }
 
@@ -61,16 +60,16 @@ public class TempFileSecurityTests
         // Create a minimal spec file
         var specFile = Path.Combine(_testDir, "cleanup_test.spec.csx");
         await File.WriteAllTextAsync(specFile, """
-            #r "nuget: DraftSpec, *"
-            using static DraftSpec.Dsl;
+                                               #r "nuget: DraftSpec, *"
+                                               using static DraftSpec.Dsl;
 
-            describe("cleanup test", () =>
-            {
-                it("passes", () => { });
-            });
+                                               describe("cleanup test", () =>
+                                               {
+                                                   it("passes", () => { });
+                                               });
 
-            run();
-            """);
+                                               run();
+                                               """);
 
         var runner = new SpecFileRunner();
 
@@ -99,8 +98,8 @@ public class TempFileSecurityTests
         // Create a spec that will cause an error
         var specFile = Path.Combine(_testDir, "failing_test.spec.csx");
         await File.WriteAllTextAsync(specFile, """
-            throw new System.Exception("Intentional failure");
-            """);
+                                               throw new System.Exception("Intentional failure");
+                                               """);
 
         var runner = new SpecFileRunner();
 
@@ -130,9 +129,9 @@ public class TempFileSecurityTests
         // Create a spec file
         var specFile = Path.Combine(_testDir, "location_test.spec.csx");
         await File.WriteAllTextAsync(specFile, """
-            using static DraftSpec.Dsl;
-            run();
-            """);
+                                               using static DraftSpec.Dsl;
+                                               run();
+                                               """);
 
         // We can't easily intercept the temp file creation, but we can verify
         // that the method attempts to create it in the working directory
@@ -159,19 +158,19 @@ public class TempFileSecurityTests
     {
         // Create multiple spec files
         var specFiles = new List<string>();
-        for (int i = 0; i < 5; i++)
+        for (var i = 0; i < 5; i++)
         {
             var specFile = Path.Combine(_testDir, $"concurrent_{i}.spec.csx");
             await File.WriteAllTextAsync(specFile, $$"""
-                using static DraftSpec.Dsl;
+                                                     using static DraftSpec.Dsl;
 
-                describe("concurrent test {{i}}", () =>
-                {
-                    it("has unique content", () => { });
-                });
+                                                     describe("concurrent test {{i}}", () =>
+                                                     {
+                                                         it("has unique content", () => { });
+                                                     });
 
-                run();
-                """);
+                                                     run();
+                                                     """);
             specFiles.Add(specFile);
         }
 
@@ -215,10 +214,10 @@ public class TempFileSecurityTests
         // Create a spec file
         var specFile = Path.Combine(_testDir, "preexisting_test.spec.csx");
         await File.WriteAllTextAsync(specFile, """
-            using static DraftSpec.Dsl;
-            describe("test", () => { it("passes", () => { }); });
-            run();
-            """);
+                                               using static DraftSpec.Dsl;
+                                               describe("test", () => { it("passes", () => { }); });
+                                               run();
+                                               """);
 
         // To properly test this, we'd need to intercept the GUID generation
         // or have the implementation expose a way to test atomic creation
@@ -325,4 +324,3 @@ public class TempFileSecurityTests
 
     #endregion
 }
-

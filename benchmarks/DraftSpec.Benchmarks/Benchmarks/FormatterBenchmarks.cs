@@ -37,35 +37,49 @@ public class FormatterBenchmarks
     }
 
     // Console Formatter
-    [Benchmark(Baseline = true), BenchmarkCategory("Console")]
+    [Benchmark(Baseline = true)]
+    [BenchmarkCategory("Console")]
     public void Console_Small()
     {
         using var writer = new StringWriter();
-        _consoleFormatter.Format(_smallReport, writer, useColors: false);
+        _consoleFormatter.Format(_smallReport, writer, false);
     }
 
-    [Benchmark, BenchmarkCategory("Console")]
+    [Benchmark]
+    [BenchmarkCategory("Console")]
     public void Console_Large()
     {
         using var writer = new StringWriter();
-        _consoleFormatter.Format(_largeReport, writer, useColors: false);
+        _consoleFormatter.Format(_largeReport, writer, false);
     }
 
     // HTML Formatter
-    [Benchmark(Baseline = true), BenchmarkCategory("Html")]
+    [Benchmark(Baseline = true)]
+    [BenchmarkCategory("Html")]
     public string Html_Small()
-        => _htmlFormatter.Format(_smallReport);
+    {
+        return _htmlFormatter.Format(_smallReport);
+    }
 
-    [Benchmark, BenchmarkCategory("Html")]
+    [Benchmark]
+    [BenchmarkCategory("Html")]
     public string Html_Large()
-        => _htmlFormatter.Format(_largeReport);
+    {
+        return _htmlFormatter.Format(_largeReport);
+    }
 
     // Markdown Formatter
-    [Benchmark(Baseline = true), BenchmarkCategory("Markdown")]
+    [Benchmark(Baseline = true)]
+    [BenchmarkCategory("Markdown")]
     public string Markdown_Small()
-        => _markdownFormatter.Format(_smallReport);
+    {
+        return _markdownFormatter.Format(_smallReport);
+    }
 
-    [Benchmark, BenchmarkCategory("Markdown")]
+    [Benchmark]
+    [BenchmarkCategory("Markdown")]
     public string Markdown_Large()
-        => _markdownFormatter.Format(_largeReport);
+    {
+        return _markdownFormatter.Format(_largeReport);
+    }
 }

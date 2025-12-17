@@ -21,10 +21,7 @@ public class FileReporterTests
     [After(Test)]
     public void TearDown()
     {
-        if (Directory.Exists(_testDirectory))
-        {
-            Directory.Delete(_testDirectory, recursive: true);
-        }
+        if (Directory.Exists(_testDirectory)) Directory.Delete(_testDirectory, true);
     }
 
     #region Path Validation
@@ -84,10 +81,7 @@ public class FileReporterTests
         }
         finally
         {
-            if (Directory.Exists(siblingDir))
-            {
-                Directory.Delete(siblingDir, recursive: true);
-            }
+            if (Directory.Exists(siblingDir)) Directory.Delete(siblingDir, true);
         }
     }
 

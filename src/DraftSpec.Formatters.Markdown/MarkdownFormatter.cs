@@ -25,10 +25,7 @@ public class MarkdownFormatter : IFormatter
     {
         var sb = new StringBuilder();
 
-        foreach (var context in report.Contexts)
-        {
-            FormatContext(sb, context, level: 1);
-        }
+        foreach (var context in report.Contexts) FormatContext(sb, context, 1);
 
         // Summary
         sb.AppendLine();
@@ -38,10 +35,32 @@ public class MarkdownFormatter : IFormatter
 
         // Inline stats without intermediate List allocation
         var first = true;
-        if (report.Summary.Passed > 0) { sb.Append($"{report.Summary.Passed} passed"); first = false; }
-        if (report.Summary.Failed > 0) { if (!first) sb.Append(", "); sb.Append($"{report.Summary.Failed} failed"); first = false; }
-        if (report.Summary.Pending > 0) { if (!first) sb.Append(", "); sb.Append($"{report.Summary.Pending} pending"); first = false; }
-        if (report.Summary.Skipped > 0) { if (!first) sb.Append(", "); sb.Append($"{report.Summary.Skipped} skipped"); }
+        if (report.Summary.Passed > 0)
+        {
+            sb.Append($"{report.Summary.Passed} passed");
+            first = false;
+        }
+
+        if (report.Summary.Failed > 0)
+        {
+            if (!first) sb.Append(", ");
+            sb.Append($"{report.Summary.Failed} failed");
+            first = false;
+        }
+
+        if (report.Summary.Pending > 0)
+        {
+            if (!first) sb.Append(", ");
+            sb.Append($"{report.Summary.Pending} pending");
+            first = false;
+        }
+
+        if (report.Summary.Skipped > 0)
+        {
+            if (!first) sb.Append(", ");
+            sb.Append($"{report.Summary.Skipped} skipped");
+        }
+
         sb.AppendLine();
 
         sb.AppendLine();
@@ -79,21 +98,12 @@ public class MarkdownFormatter : IFormatter
                 sb.AppendLine($"- {symbol} {spec.Description}");
             }
 
-            if (spec.Failed && !string.IsNullOrEmpty(spec.Error))
-            {
-                sb.AppendLine($"  > {spec.Error}");
-            }
+            if (spec.Failed && !string.IsNullOrEmpty(spec.Error)) sb.AppendLine($"  > {spec.Error}");
         }
 
-        if (context.Specs.Count > 0)
-        {
-            sb.AppendLine();
-        }
+        if (context.Specs.Count > 0) sb.AppendLine();
 
         // Nested contexts
-        foreach (var child in context.Contexts)
-        {
-            FormatContext(sb, child, level + 1);
-        }
+        foreach (var child in context.Contexts) FormatContext(sb, child, level + 1);
     }
 }

@@ -88,8 +88,7 @@ public class SpecSummary
     public int Skipped { get; set; }
     public double DurationMs { get; set; }
 
-    [JsonIgnore]
-    public bool Success => Failed == 0;
+    [JsonIgnore] public bool Success => Failed == 0;
 }
 
 /// <summary>

@@ -28,19 +28,27 @@ public class SpecRunnerBenchmarks
 
     [Benchmark(Baseline = true)]
     public List<SpecResult> SmallTree_10Specs()
-        => _runner.Run(_smallTree);
+    {
+        return _runner.Run(_smallTree);
+    }
 
     [Benchmark]
     public List<SpecResult> MediumTree_100Specs()
-        => _runner.Run(_mediumTree);
+    {
+        return _runner.Run(_mediumTree);
+    }
 
     [Benchmark]
     public List<SpecResult> LargeTree_1000Specs()
-        => _runner.Run(_largeTree);
+    {
+        return _runner.Run(_largeTree);
+    }
 
     [Benchmark]
     public List<SpecResult> DeepTree_50Levels()
-        => _runner.Run(_deepTree);
+    {
+        return _runner.Run(_deepTree);
+    }
 
     [Benchmark]
     [Arguments(2)]
@@ -57,15 +65,21 @@ public class SpecRunnerBenchmarks
     private SpecContext _asyncTree = null!;
 
     [GlobalSetup(Target = nameof(AsyncSpecs_Sequential))]
-    public void SetupAsync() => _asyncTree = SpecTreeGenerator.CreateAsyncTree(20, 10);
+    public void SetupAsync()
+    {
+        _asyncTree = SpecTreeGenerator.CreateAsyncTree(20, 10);
+    }
 
     [GlobalSetup(Target = nameof(AsyncSpecs_Parallel))]
-    public void SetupAsyncParallel() => _asyncTree = SpecTreeGenerator.CreateAsyncTree(20, 10);
+    public void SetupAsyncParallel()
+    {
+        _asyncTree = SpecTreeGenerator.CreateAsyncTree(20, 10);
+    }
 
     [Benchmark]
     public List<SpecResult> AsyncSpecs_Sequential()
     {
-        var runner = new SpecRunner([], null, maxDegreeOfParallelism: 1);
+        var runner = new SpecRunner([], null, 1);
         return runner.Run(_asyncTree);
     }
 

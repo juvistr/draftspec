@@ -12,10 +12,7 @@ public class ConsoleFormatter : IConsoleFormatter
     {
         output.WriteLine();
 
-        foreach (var context in report.Contexts)
-        {
-            FormatContext(context, output, useColors, level: 0);
-        }
+        foreach (var context in report.Contexts) FormatContext(context, output, useColors, 0);
 
         // Summary
         output.WriteLine();
@@ -24,6 +21,7 @@ public class ConsoleFormatter : IConsoleFormatter
         output.Write($"{report.Summary.Total} specs: ");
 
         var first = true;
+
         void WriteStat(int count, string label, ConsoleColor color)
         {
             if (count == 0) return;
@@ -78,6 +76,7 @@ public class ConsoleFormatter : IConsoleFormatter
                 output.Write($" ({FormatDuration(spec.DurationMs ?? 0)})");
                 if (useColors) System.Console.ResetColor();
             }
+
             output.WriteLine();
 
             // Show error for failed specs
@@ -90,10 +89,7 @@ public class ConsoleFormatter : IConsoleFormatter
         }
 
         // Recurse into nested contexts
-        foreach (var child in context.Contexts)
-        {
-            FormatContext(child, output, useColors, level + 1);
-        }
+        foreach (var child in context.Contexts) FormatContext(child, output, useColors, level + 1);
     }
 
     private static string FormatDuration(double durationMs)

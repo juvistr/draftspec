@@ -13,6 +13,19 @@ public static class NewCommand
             return 1;
         }
 
+        // Security: Validate spec name doesn't contain path separators
+        try
+        {
+            PathValidator.ValidateFileName(name);
+        }
+        catch (ArgumentException ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"Invalid spec name: {ex.Message}");
+            Console.ResetColor();
+            return 1;
+        }
+
         var directory = Path.GetFullPath(options.Path);
 
         if (!Directory.Exists(directory))

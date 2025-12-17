@@ -71,4 +71,39 @@ public static class ProcessHelper
     {
         return Run("dotnet", arguments, workingDirectory, environmentVariables);
     }
+
+    private static Version? _sdkVersion;
+    private static bool _sdkVersionChecked;
+
+    /// <summary>
+    /// Get the installed .NET SDK version.
+    /// </summary>
+    public static Version? GetDotnetSdkVersion()
+    {
+        if (!_sdkVersionChecked)
+        {
+            _sdkVersionChecked = true;
+            try
+            {
+                var result = Run("dotnet", ["--version"]);
+                if (result.Success)
+                {
+                    // Handle preview versions like "10.0.100-preview.1.12345"
+                    var versionStr = result.Output.Trim().Split('-')[0];
+                    if (Version.TryParse(versionStr, out var v))
+                        _sdkVersion = v;
+                }
+            }
+            catch
+            {
+                // Ignore - SDK not available
+            }
+        }
+        return _sdkVersion;
+    }
+
+    /// <summary>
+    /// Check if the installed SDK supports .NET 10 file-based apps.
+    /// </summary>
+    public static bool SupportsFileBasedApps => GetDotnetSdkVersion()?.Major >= 10;
 }

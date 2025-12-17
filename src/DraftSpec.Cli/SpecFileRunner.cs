@@ -25,10 +25,22 @@ public record RunSummary(
 
 public record BuildResult(bool Success, string Output, string Error, bool Skipped = false);
 
-public class SpecFileRunner : ISpecFileRunner
+public partial class SpecFileRunner : ISpecFileRunner
 {
     private readonly Dictionary<string, DateTime> _lastBuildTime = new();
     private readonly Dictionary<string, DateTime> _lastSourceModified = new();
+    private readonly bool _useFileBased;
+
+    /// <summary>
+    /// Regex to match #r "nuget: Package, Version" directives.
+    /// </summary>
+    [GeneratedRegex(@"#r\s+""nuget:\s*([^,""]+),?\s*([^""]*)""")]
+    private static partial Regex NuGetRefPattern();
+
+    public SpecFileRunner()
+    {
+        _useFileBased = ProcessHelper.SupportsFileBasedApps;
+    }
 
     public event Action<string>? OnBuildStarted;
     public event Action<BuildResult>? OnBuildCompleted;
@@ -38,21 +50,17 @@ public class SpecFileRunner : ISpecFileRunner
     {
         var fullPath = Path.GetFullPath(specFile);
         var workingDir = Path.GetDirectoryName(fullPath)!;
-        var fileName = Path.GetFileName(fullPath);
 
         // Build any projects in the spec's directory first
         BuildProjects(workingDir);
 
-        var stopwatch = Stopwatch.StartNew();
-        var result = ProcessHelper.RunDotnet(["script", fileName, "--no-cache"], workingDir);
-        stopwatch.Stop();
+        // Use file-based if: .NET 10+ AND no #load directives
+        if (_useFileBased && !UsesLoadDirective(fullPath))
+        {
+            return RunAsFileBased(fullPath, workingDir);
+        }
 
-        return new SpecRunResult(
-            specFile,
-            result.Output,
-            result.Error,
-            result.ExitCode,
-            stopwatch.Elapsed);
+        return RunAsDotnetScript(fullPath, workingDir);
     }
 
     public RunSummary RunAll(IReadOnlyList<string> specFiles, bool parallel = false)
@@ -225,8 +233,60 @@ public class SpecFileRunner : ISpecFileRunner
     {
         var fullPath = Path.GetFullPath(specFile);
         var workingDir = Path.GetDirectoryName(fullPath)!;
-        var fileName = Path.GetFileName(fullPath);
 
+        // Use file-based if: .NET 10+ AND no #load directives
+        if (_useFileBased && !UsesLoadDirective(fullPath))
+        {
+            return RunAsFileBased(fullPath, workingDir);
+        }
+
+        return RunAsDotnetScript(fullPath, workingDir);
+    }
+
+    /// <summary>
+    /// Check if a spec file uses #load directive (requires dotnet-script).
+    /// </summary>
+    private static bool UsesLoadDirective(string specFile)
+    {
+        var content = File.ReadAllText(specFile);
+        return content.Contains("#load ");
+    }
+
+    /// <summary>
+    /// Run spec using .NET 10 file-based app (faster, no dotnet-script dependency).
+    /// </summary>
+    private SpecRunResult RunAsFileBased(string specFile, string workingDir)
+    {
+        string? tempFile = null;
+        try
+        {
+            tempFile = TransformToFileBased(specFile);
+            var stopwatch = Stopwatch.StartNew();
+            var result = ProcessHelper.RunDotnet(["run", tempFile], workingDir);
+            stopwatch.Stop();
+
+            return new SpecRunResult(
+                specFile,
+                result.Output,
+                result.Error,
+                result.ExitCode,
+                stopwatch.Elapsed);
+        }
+        finally
+        {
+            if (tempFile != null)
+            {
+                try { File.Delete(tempFile); } catch { }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Run spec using dotnet-script (fallback for #load directives or older SDKs).
+    /// </summary>
+    private static SpecRunResult RunAsDotnetScript(string specFile, string workingDir)
+    {
+        var fileName = Path.GetFileName(specFile);
         var stopwatch = Stopwatch.StartNew();
         var result = ProcessHelper.RunDotnet(["script", fileName, "--no-cache"], workingDir);
         stopwatch.Stop();
@@ -237,6 +297,76 @@ public class SpecFileRunner : ISpecFileRunner
             result.Error,
             result.ExitCode,
             stopwatch.Elapsed);
+    }
+
+    /// <summary>
+    /// Transform a CSX spec file to .NET 10 file-based app format.
+    /// Converts #r "nuget:..." to #:package directives.
+    /// </summary>
+    private static string TransformToFileBased(string specFile)
+    {
+        var content = File.ReadAllText(specFile);
+
+        // Transform #r "nuget: Package, Version" → #:package Package@Version
+        content = NuGetRefPattern().Replace(content, match =>
+        {
+            var package = match.Groups[1].Value.Trim();
+            var version = match.Groups[2].Value.Trim();
+            return string.IsNullOrEmpty(version)
+                ? $"#:package {package}@*"
+                : $"#:package {package}@{version}";
+        });
+
+        // Add reflection property for JSON serialization (required for AOT compatibility)
+        content = "#:property JsonSerializerIsReflectionEnabledByDefault=true\n" + content;
+
+        // Write to temp .cs file
+        var tempDir = Path.Combine(Path.GetTempPath(), "draftspec-cli");
+        Directory.CreateDirectory(tempDir);
+        var tempFile = Path.Combine(tempDir, $"{Guid.NewGuid():N}.cs");
+        File.WriteAllText(tempFile, content);
+
+        // Create NuGet.config for local package resolution (development only)
+        EnsureNuGetConfig(tempDir);
+
+        return tempFile;
+    }
+
+    private static bool _nugetConfigCreated;
+    private static readonly object _nugetConfigLock = new();
+
+    /// <summary>
+    /// Create NuGet.config in temp directory for local package resolution.
+    /// Uses /tmp/draftspec-packages as additional source for development.
+    /// </summary>
+    private static void EnsureNuGetConfig(string tempDir)
+    {
+        if (_nugetConfigCreated) return;
+
+        lock (_nugetConfigLock)
+        {
+            if (_nugetConfigCreated) return;
+
+            var nugetConfigPath = Path.Combine(tempDir, "NuGet.config");
+            var localPackagesPath = Path.Combine(Path.GetTempPath(), "draftspec-packages");
+
+            // Only create if local packages directory exists (development mode)
+            if (Directory.Exists(localPackagesPath) && !File.Exists(nugetConfigPath))
+            {
+                var nugetConfig = $"""
+                    <?xml version="1.0" encoding="utf-8"?>
+                    <configuration>
+                      <packageSources>
+                        <add key="local" value="{localPackagesPath}" />
+                        <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+                      </packageSources>
+                    </configuration>
+                    """;
+                File.WriteAllText(nugetConfigPath, nugetConfig);
+            }
+
+            _nugetConfigCreated = true;
+        }
     }
 
     /// <summary>
@@ -318,24 +448,72 @@ public class SpecFileRunner : ISpecFileRunner
     {
         var fullPath = Path.GetFullPath(specFile);
         var workingDir = Path.GetDirectoryName(fullPath)!;
-        var fileName = Path.GetFileName(fullPath);
 
         // Build any projects in the spec's directory first
         BuildProjects(workingDir);
 
         // Create temp file path for JSON output
         var jsonOutputFile = Path.Combine(Path.GetTempPath(), $".draftspec-{Guid.NewGuid():N}.json");
+        var envVars = new Dictionary<string, string>
+        {
+            ["DRAFTSPEC_JSON_OUTPUT_FILE"] = jsonOutputFile
+        };
+
+        // Use file-based if: .NET 10+ AND no #load directives
+        if (_useFileBased && !UsesLoadDirective(fullPath))
+        {
+            return RunAsFileBasedWithJson(fullPath, workingDir, jsonOutputFile, envVars);
+        }
+
+        return RunAsDotnetScriptWithJson(fullPath, workingDir, jsonOutputFile, envVars);
+    }
+
+    private SpecRunResult RunAsFileBasedWithJson(
+        string specFile,
+        string workingDir,
+        string jsonOutputFile,
+        Dictionary<string, string> envVars)
+    {
+        string? tempFile = null;
+        try
+        {
+            tempFile = TransformToFileBased(specFile);
+            var stopwatch = Stopwatch.StartNew();
+            var result = ProcessHelper.RunDotnet(["run", tempFile], workingDir, envVars);
+            stopwatch.Stop();
+
+            string jsonOutput = File.Exists(jsonOutputFile)
+                ? File.ReadAllText(jsonOutputFile)
+                : "{}";
+
+            return new SpecRunResult(
+                specFile,
+                jsonOutput,
+                result.Error,
+                result.ExitCode,
+                stopwatch.Elapsed);
+        }
+        finally
+        {
+            if (tempFile != null)
+            {
+                try { File.Delete(tempFile); } catch { }
+            }
+            try { if (File.Exists(jsonOutputFile)) File.Delete(jsonOutputFile); } catch { }
+        }
+    }
+
+    private static SpecRunResult RunAsDotnetScriptWithJson(
+        string specFile,
+        string workingDir,
+        string jsonOutputFile,
+        Dictionary<string, string> envVars)
+    {
+        var fileName = Path.GetFileName(specFile);
 
         try
         {
             var stopwatch = Stopwatch.StartNew();
-
-            // Run spec with environment variable to trigger FileReporter
-            var envVars = new Dictionary<string, string>
-            {
-                ["DRAFTSPEC_JSON_OUTPUT_FILE"] = jsonOutputFile
-            };
-
             var result = ProcessHelper.RunDotnet(
                 ["script", fileName, "--no-cache"],
                 workingDir,

@@ -63,8 +63,14 @@ public static class Scaffolder
 
     private static string EscapeString(string value)
     {
+        // Escape all C# string escape sequences to prevent code injection
+        // Order matters: backslash must be escaped first
         return value
             .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"");
+            .Replace("\"", "\\\"")
+            .Replace("\n", "\\n")
+            .Replace("\r", "\\r")
+            .Replace("\t", "\\t")
+            .Replace("\0", "\\0");
     }
 }

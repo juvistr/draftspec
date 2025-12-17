@@ -171,8 +171,44 @@ dotnet run --project src/DraftSpec.Mcp
 > **Security Note:** The MCP server executes arbitrary code from spec content via `dotnet run`. Only use in trusted
 > environments or within sandboxed containers with restricted permissions.
 
-Agents can generate and run specs with zero ceremony—just send `describe`/`it` blocks, get structured JSON results back.
-No boilerplate needed.
+**Tools:**
+
+| Tool | Description |
+|------|-------------|
+| `run_spec` | Execute spec code and return structured JSON results |
+| `scaffold_specs` | Generate pending specs from a structured description |
+
+**scaffold_specs** - Generate spec scaffolds for BDD (behavior-first) or characterisation (code-first) workflows:
+
+```json
+{
+  "description": "UserService",
+  "contexts": [
+    { "description": "Create", "specs": ["creates user", "hashes password"] },
+    { "description": "GetById", "specs": ["returns user when found", "returns null when not found"] }
+  ]
+}
+```
+
+Output:
+```csharp
+describe("UserService", () =>
+{
+    describe("Create", () =>
+    {
+        it("creates user");
+        it("hashes password");
+    });
+
+    describe("GetById", () =>
+    {
+        it("returns user when found");
+        it("returns null when not found");
+    });
+});
+```
+
+Agents can scaffold specs, then fill in assertions using `run_spec` to verify.
 
 ### Middleware & Plugins
 

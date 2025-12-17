@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol.Server;
+using DraftSpec.Mcp.Models;
 using DraftSpec.Mcp.Services;
 
 namespace DraftSpec.Mcp.Tools;
@@ -40,5 +41,18 @@ public static class SpecTools
             cancellationToken);
 
         return JsonSerializer.Serialize(result, JsonOptions);
+    }
+
+    /// <summary>
+    /// Generate DraftSpec code from a structured description.
+    /// </summary>
+    [McpServerTool(Name = "scaffold_specs")]
+    [Description("Generate DraftSpec code from a structured description. " +
+                 "Outputs pending specs ready for the agent to fill in assertions.")]
+    public static string ScaffoldSpecs(
+        [Description("Recursive structure of describe blocks and specs")]
+        ScaffoldNode structure)
+    {
+        return Scaffolder.Generate(structure);
     }
 }

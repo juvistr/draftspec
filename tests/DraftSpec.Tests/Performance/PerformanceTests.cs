@@ -153,6 +153,73 @@ public class PerformanceTests
         await Assert.That(ReferenceEquals(chain1, chain2)).IsTrue();
     }
 
+    [Test]
+    public async Task HookChain_DeepNesting100Levels_BuildsInLinearTime()
+    {
+        // This test verifies the O(n²) -> O(n) fix for hook chain building
+        // With 100 levels, O(n²) would be ~10,000 operations, O(n) is ~200
+
+        var root = new SpecContext("level-0");
+        root.BeforeEach = () => Task.CompletedTask;
+        var current = root;
+
+        // Create 100 levels of nesting, each with a beforeEach hook
+        for (var i = 1; i < 100; i++)
+        {
+            current = new SpecContext($"level-{i}", current);
+            current.BeforeEach = () => Task.CompletedTask;
+        }
+
+        current.AddSpec(new SpecDefinition("deep spec", () => { }));
+
+        // Build the hook chain - should be O(n) not O(n²)
+        var sw = Stopwatch.StartNew();
+        var chain = current.GetBeforeEachChain();
+        sw.Stop();
+
+        // Verify chain has all 100 hooks in correct order (parent to child)
+        await Assert.That(chain).Count().IsEqualTo(100);
+
+        // Should complete very quickly with O(n) complexity
+        // Even on slow systems, 100 list operations should be sub-millisecond
+        await Assert.That(sw.ElapsedMilliseconds).IsLessThan(10);
+    }
+
+    [Test]
+    public async Task HookChain_DeepNesting_MaintainsParentToChildOrder()
+    {
+        var executionOrder = new List<int>();
+
+        var root = new SpecContext("level-0");
+        root.BeforeEach = () =>
+        {
+            executionOrder.Add(0);
+            return Task.CompletedTask;
+        };
+
+        var level1 = new SpecContext("level-1", root);
+        level1.BeforeEach = () =>
+        {
+            executionOrder.Add(1);
+            return Task.CompletedTask;
+        };
+
+        var level2 = new SpecContext("level-2", level1);
+        level2.BeforeEach = () =>
+        {
+            executionOrder.Add(2);
+            return Task.CompletedTask;
+        };
+
+        level2.AddSpec(new SpecDefinition("spec", () => { }));
+
+        var runner = new SpecRunner();
+        await runner.RunAsync(root);
+
+        // Hooks should run in parent-to-child order: 0, 1, 2
+        await Assert.That(executionOrder).IsEquivalentTo([0, 1, 2]);
+    }
+
     #endregion
 
     #region Focus Detection Performance

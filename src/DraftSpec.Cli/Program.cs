@@ -134,6 +134,10 @@ static CliOptions ParseArgs(string[] args)
         {
             options.Parallel = true;
         }
+        else if (arg == "--no-cache")
+        {
+            options.NoCache = true;
+        }
         else if (!arg.StartsWith('-'))
         {
             positional.Add(arg);
@@ -186,6 +190,7 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("  --parallel, -p         Run spec files in parallel");
     Console.WriteLine("  --css-url <url>        Custom CSS URL for HTML output");
     Console.WriteLine("  --force                Overwrite existing files (for init)");
+    Console.WriteLine("  --no-cache             Disable dotnet-script caching");
     Console.WriteLine();
     Console.WriteLine("Path can be:");
     Console.WriteLine("  - A directory (runs all *.spec.csx files recursively)");

@@ -18,4 +18,9 @@ public class CliOptions
     /// Example: "file:results.json,slack"
     /// </summary>
     public string? Reporters { get; set; }
+
+    /// <summary>
+    /// Disable dotnet-script caching, forcing recompilation on every run.
+    /// </summary>
+    public bool NoCache { get; set; }
 }

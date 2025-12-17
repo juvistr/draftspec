@@ -123,9 +123,13 @@ public partial class SpecExecutionService
     }
 
     [GeneratedRegex(@"run\s*\([^)]*\)\s*;")]
-    private static partial Regex RunCallPattern();
+    internal static partial Regex RunCallPattern();
 
-    private static string WrapSpecContent(string content)
+    /// <summary>
+    /// Wraps user spec content with boilerplate (package directive, usings, run call).
+    /// Internal for testability.
+    /// </summary>
+    internal static string WrapSpecContent(string content)
     {
         // Remove any existing boilerplate the user might have included
         var cleaned = content

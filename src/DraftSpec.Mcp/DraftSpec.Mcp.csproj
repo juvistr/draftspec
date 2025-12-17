@@ -11,6 +11,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="DraftSpec.Tests"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="ModelContextProtocol" Version="0.5.0-preview.*"/>
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1"/>
     </ItemGroup>

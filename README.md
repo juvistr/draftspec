@@ -1,5 +1,8 @@
 # DraftSpec
 
+[![CI](https://github.com/juvistr/draftspec/actions/workflows/ci.yml/badge.svg)](https://github.com/juvistr/draftspec/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/juvistr/draftspec/graph/badge.svg)](https://codecov.io/gh/juvistr/draftspec)
+
 > ⚠️ **Alpha** - Experimental, expect breaking changes
 
 RSpec-inspired testing for .NET.

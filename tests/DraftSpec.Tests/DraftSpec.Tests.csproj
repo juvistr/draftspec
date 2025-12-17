@@ -10,6 +10,11 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <!-- MTP-compatible code coverage (coverlet.collector is VSTest-only) -->
+        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.*" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="TUnit" Version="1.*"/>
     </ItemGroup>
 

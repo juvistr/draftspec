@@ -266,6 +266,7 @@ public class StaticDslTests
     #region Environment.ExitCode
 
     [Test]
+    [NotInParallel(nameof(Environment.ExitCode))]
     public async Task Run_AllPassed_ExitCodeZero()
     {
         // Save original
@@ -283,6 +284,7 @@ public class StaticDslTests
     }
 
     [Test]
+    [NotInParallel(nameof(Environment.ExitCode))]
     public async Task Run_AnyFailed_ExitCodeOne()
     {
         // Save original
@@ -300,6 +302,7 @@ public class StaticDslTests
     }
 
     [Test]
+    [NotInParallel(nameof(Environment.ExitCode))]
     public async Task Run_OnlyPending_ExitCodeZero()
     {
         // Save original

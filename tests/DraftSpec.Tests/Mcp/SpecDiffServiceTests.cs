@@ -1,6 +1,6 @@
+using DraftSpec.Formatters;
 using DraftSpec.Mcp.Models;
 using DraftSpec.Mcp.Services;
-using Models = DraftSpec.Mcp.Models;
 
 namespace DraftSpec.Tests.Mcp;
 
@@ -241,11 +241,11 @@ public class SpecDiffServiceTests
 
     #region Helpers
 
-    private static Models.SpecReport CreateReport(params (string path, string status)[] specs)
+    private static SpecReport CreateReport(params (string path, string status)[] specs)
     {
-        var report = new Models.SpecReport
+        var report = new SpecReport
         {
-            Summary = new Models.SpecSummary(),
+            Summary = new SpecSummary(),
             Contexts = []
         };
 
@@ -258,7 +258,7 @@ public class SpecDiffServiceTests
             var context = report.Contexts.FirstOrDefault(c => c.Description == contextDesc);
             if (context == null)
             {
-                context = new Models.SpecContextReport { Description = contextDesc };
+                context = new SpecContextReport { Description = contextDesc };
                 report.Contexts.Add(context);
             }
 
@@ -270,13 +270,13 @@ public class SpecDiffServiceTests
                 var nested = currentContext.Contexts.FirstOrDefault(c => c.Description == nestedDesc);
                 if (nested == null)
                 {
-                    nested = new Models.SpecContextReport { Description = nestedDesc };
+                    nested = new SpecContextReport { Description = nestedDesc };
                     currentContext.Contexts.Add(nested);
                 }
                 currentContext = nested;
             }
 
-            currentContext.Specs.Add(new Models.SpecResultReport
+            currentContext.Specs.Add(new SpecResultReport
             {
                 Description = parts[^1],
                 Status = status

@@ -4,7 +4,6 @@ using DraftSpec.Formatters;
 using DraftSpec.Mcp.Models;
 using DraftSpec.Mcp.Services;
 using ModelContextProtocol.Server;
-using MpcModels = DraftSpec.Mcp.Models;
 
 namespace DraftSpec.Mcp.Tools;
 
@@ -28,8 +27,8 @@ public static class DiffTools
         [Description("Current spec results JSON (from the latest run_spec call)")]
         string currentResults)
     {
-        MpcModels.SpecReport? baseline = null;
-        MpcModels.SpecReport? current = null;
+        SpecReport? baseline = null;
+        SpecReport? current = null;
 
         // Parse baseline results
         if (!string.IsNullOrWhiteSpace(baselineResults))
@@ -41,7 +40,7 @@ public static class DiffTools
                 baseline = runResult?.Report;
 
                 // If no report in RunSpecResult, try parsing as direct SpecReport
-                baseline ??= JsonSerializer.Deserialize<MpcModels.SpecReport>(baselineResults, JsonOptionsProvider.Default);
+                baseline ??= JsonSerializer.Deserialize<SpecReport>(baselineResults, JsonOptionsProvider.Default);
             }
             catch (JsonException)
             {
@@ -59,7 +58,7 @@ public static class DiffTools
             {
                 var runResult = JsonSerializer.Deserialize<RunSpecResult>(currentResults, JsonOptionsProvider.Default);
                 current = runResult?.Report;
-                current ??= JsonSerializer.Deserialize<MpcModels.SpecReport>(currentResults, JsonOptionsProvider.Default);
+                current ??= JsonSerializer.Deserialize<SpecReport>(currentResults, JsonOptionsProvider.Default);
             }
             catch (JsonException)
             {

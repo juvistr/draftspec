@@ -169,28 +169,8 @@ public class InProcessSpecRunnerTests
 
     #region Timeout Handling
 
-    [Test]
-    [Skip("In-process execution cannot cancel synchronous blocking code like Thread.Sleep")]
-    public async Task ExecuteAsync_Timeout_BlockingCode_CannotBeCancelled()
-    {
-        // Note: Thread.Sleep blocks the thread and cannot be cancelled by CancellationToken.
-        // In-process execution will wait for blocking operations to complete.
-        // For timeout behavior, use subprocess execution mode instead.
-        var specContent = """
-            describe("Slow", () =>
-            {
-                it("takes too long", () =>
-                {
-                    System.Threading.Thread.Sleep(5000);
-                });
-            });
-            """;
-
-        var result = await _runner.ExecuteAsync(specContent, TimeSpan.FromMilliseconds(100), CancellationToken.None);
-
-        // Blocking code completes and returns success
-        await Assert.That(result.Success).IsTrue();
-    }
+    // Note: Blocking code timeout test removed - in-process execution cannot cancel
+    // synchronous blocking code like Thread.Sleep. For timeout behavior, use subprocess mode.
 
     [Test]
     public async Task ExecuteAsync_ShortTimeout_StillReturnsResultAfterCompletion()

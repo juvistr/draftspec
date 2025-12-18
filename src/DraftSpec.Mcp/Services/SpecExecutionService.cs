@@ -87,12 +87,12 @@ public partial class SpecExecutionService
 
             stopwatch.Stop();
 
-            Models.SpecReport? report = null;
+            SpecReport? report = null;
             if (File.Exists(jsonOutputPath))
                 try
                 {
                     var json = await File.ReadAllTextAsync(jsonOutputPath, cancellationToken);
-                    report = Models.SpecReport.FromJson(json);
+                    report = SpecReport.FromJson(json);
                 }
                 catch (Exception ex)
                 {

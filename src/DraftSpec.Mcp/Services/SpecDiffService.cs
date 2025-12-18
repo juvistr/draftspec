@@ -1,3 +1,4 @@
+using DraftSpec.Formatters;
 using DraftSpec.Mcp.Models;
 
 namespace DraftSpec.Mcp.Services;

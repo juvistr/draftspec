@@ -1,7 +1,6 @@
 using System.Text.Json;
 using DraftSpec.Formatters;
 using DraftSpec.Mcp.Models;
-using Models = DraftSpec.Mcp.Models;
 
 namespace DraftSpec.Tests.Mcp;
 
@@ -182,9 +181,9 @@ public class BatchSpecModelsTests
             Success = true,
             ExitCode = 0,
             DurationMs = 100,
-            Report = new Models.SpecReport
+            Report = new SpecReport
             {
-                Summary = new Models.SpecSummary
+                Summary = new SpecSummary
                 {
                     Total = 5,
                     Passed = 5,

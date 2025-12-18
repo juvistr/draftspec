@@ -45,6 +45,16 @@ public static partial class Dsl
     }
 
     /// <summary>
+    /// Create an expectation for an async action (async exception testing).
+    /// </summary>
+    public static AsyncActionExpectation expect(
+        Func<Task> asyncAction,
+        [CallerArgumentExpression("asyncAction")] string? expr = null)
+    {
+        return new AsyncActionExpectation(asyncAction, expr);
+    }
+
+    /// <summary>
     /// Create an expectation for an array.
     /// </summary>
     public static CollectionExpectation<T> expect<T>(

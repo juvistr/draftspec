@@ -19,18 +19,44 @@ public static class SpecTools
     [McpServerTool(Name = "run_spec")]
     [Description("Execute a DraftSpec test specification and return structured results. " +
                  "Provide just the describe/it blocks - boilerplate is added automatically. " +
-                 "Emits progress notifications during execution for real-time feedback.")]
+                 "Emits progress notifications during execution for real-time feedback. " +
+                 "Use session_id to accumulate specs across multiple calls for iterative development.")]
     public static async Task<string> RunSpec(
         SpecExecutionService executionService,
+        SessionManager sessionManager,
         McpServer server,
         [Description("The spec content using describe/it/expect syntax. " +
                      "Do NOT include #:package, using directives, or run() - these are added automatically.")]
         string specContent,
+        [Description("Optional session ID for accumulating specs. When provided, previous specs from " +
+                     "this session are prepended to the current content, enabling iterative development.")]
+        string? sessionId = null,
         [Description("Timeout in seconds (default: 10, max: 60)")]
         int timeoutSeconds = 10,
         CancellationToken cancellationToken = default)
     {
         timeoutSeconds = Math.Clamp(timeoutSeconds, 1, 60);
+
+        // Get session if sessionId provided
+        Session? session = null;
+        string effectiveContent = specContent;
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            session = sessionManager.GetSession(sessionId);
+            if (session == null)
+            {
+                var error = new
+                {
+                    success = false,
+                    error = $"Session '{sessionId}' not found or has expired. Create a new session with create_session."
+                };
+                return JsonSerializer.Serialize(error, JsonOptionsProvider.Default);
+            }
+
+            // Combine accumulated content with new content
+            effectiveContent = session.GetFullContent(specContent);
+        }
 
         // Progress callback to emit MCP notifications
         async Task OnProgress(SpecProgressNotification notification)
@@ -57,10 +83,33 @@ public static class SpecTools
         }
 
         var result = await executionService.ExecuteSpecAsync(
-            specContent,
+            effectiveContent,
             TimeSpan.FromSeconds(timeoutSeconds),
             OnProgress,
             cancellationToken);
+
+        // If session is active and run succeeded, accumulate the new content
+        if (session != null && result.Success)
+        {
+            session.AppendContent(specContent);
+        }
+
+        // Add session info to result if using sessions
+        if (session != null)
+        {
+            var sessionResult = new
+            {
+                result.Success,
+                result.Report,
+                result.ConsoleOutput,
+                result.ErrorOutput,
+                result.ExitCode,
+                result.DurationMs,
+                sessionId = session.Id,
+                accumulatedContentLength = session.AccumulatedContent.Length
+            };
+            return JsonSerializer.Serialize(sessionResult, JsonOptionsProvider.Default);
+        }
 
         return JsonSerializer.Serialize(result, JsonOptionsProvider.Default);
     }

@@ -12,6 +12,7 @@ namespace DraftSpec.Mcp.Services;
 /// <summary>
 /// Executes DraftSpec tests in-process using Roslyn scripting.
 /// Provides faster execution than subprocess mode at the cost of less isolation.
+/// Uses async-local console capture for thread-safe concurrent execution.
 /// </summary>
 public class InProcessSpecRunner
 {
@@ -74,36 +75,26 @@ public class InProcessSpecRunner
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(timeout);
 
-            // Capture console output
-            var originalOut = Console.Out;
-            var outputCapture = new StringWriter();
+            // Capture console output using async-local capture for thread safety
+            using var capture = new AsyncLocalConsoleCapture();
 
-            try
+            // Execute the script
+            var result = await script.RunAsync(cancellationToken: cts.Token);
+
+            stopwatch.Stop();
+
+            // Parse captured output for JSON report
+            var output = capture.GetCapturedOutput();
+            var report = ExtractReport(output);
+
+            return new RunSpecResult
             {
-                Console.SetOut(outputCapture);
-
-                // Execute the script
-                var result = await script.RunAsync(cancellationToken: cts.Token);
-
-                stopwatch.Stop();
-
-                // Parse captured output for JSON report
-                var output = outputCapture.ToString();
-                var report = ExtractReport(output);
-
-                return new RunSpecResult
-                {
-                    Success = report?.Summary.Failed == 0,
-                    ExitCode = report?.Summary.Failed == 0 ? 0 : 1,
-                    Report = report,
-                    ConsoleOutput = output,
-                    DurationMs = stopwatch.Elapsed.TotalMilliseconds
-                };
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
+                Success = report?.Summary.Failed == 0,
+                ExitCode = report?.Summary.Failed == 0 ? 0 : 1,
+                Report = report,
+                ConsoleOutput = output,
+                DurationMs = stopwatch.Elapsed.TotalMilliseconds
+            };
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {

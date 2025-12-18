@@ -13,6 +13,7 @@ builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = Lo
 builder.Services.AddSingleton<TempFileManager>();
 builder.Services.AddSingleton<SessionManager>();
 builder.Services.AddSingleton<SpecExecutionService>();
+builder.Services.AddSingleton<InProcessSpecRunner>();
 
 // Configure MCP server with stdio transport
 builder.Services

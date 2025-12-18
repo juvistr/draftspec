@@ -20,9 +20,11 @@ public static class SpecTools
     [Description("Execute a DraftSpec test specification and return structured results. " +
                  "Provide just the describe/it blocks - boilerplate is added automatically. " +
                  "Emits progress notifications during execution for real-time feedback. " +
-                 "Use session_id to accumulate specs across multiple calls for iterative development.")]
+                 "Use session_id to accumulate specs across multiple calls for iterative development. " +
+                 "Use inProcess=true for faster execution via Roslyn scripting (no subprocess).")]
     public static async Task<string> RunSpec(
         SpecExecutionService executionService,
+        InProcessSpecRunner inProcessRunner,
         SessionManager sessionManager,
         McpServer server,
         [Description("The spec content using describe/it/expect syntax. " +
@@ -33,6 +35,9 @@ public static class SpecTools
         string? sessionId = null,
         [Description("Timeout in seconds (default: 10, max: 60)")]
         int timeoutSeconds = 10,
+        [Description("Execute in-process using Roslyn scripting for faster execution (default: false). " +
+                     "Skips subprocess overhead but shares process state.")]
+        bool inProcess = false,
         CancellationToken cancellationToken = default)
     {
         timeoutSeconds = Math.Clamp(timeoutSeconds, 1, 60);
@@ -58,35 +63,49 @@ public static class SpecTools
             effectiveContent = session.GetFullContent(specContent);
         }
 
-        // Progress callback to emit MCP notifications
-        async Task OnProgress(SpecProgressNotification notification)
-        {
-            var progressData = new
-            {
-                progressToken = "spec_execution",
-                progress = notification.ProgressPercent,
-                total = 100.0,
-                message = notification.Type switch
-                {
-                    "start" => $"Starting {notification.Total} specs...",
-                    "progress" => $"[{notification.Completed}/{notification.Total}] {notification.Status}: {notification.Spec}",
-                    "complete" => $"Completed: {notification.Passed} passed, {notification.Failed} failed",
-                    _ => notification.Type
-                }
-            };
+        RunSpecResult result;
 
-            await server.SendNotificationAsync(
-                "notifications/progress",
-                progressData,
-                JsonOptionsProvider.Default,
+        if (inProcess)
+        {
+            // Execute using Roslyn scripting (faster, less isolation)
+            result = await inProcessRunner.ExecuteAsync(
+                effectiveContent,
+                TimeSpan.FromSeconds(timeoutSeconds),
                 cancellationToken);
         }
+        else
+        {
+            // Progress callback to emit MCP notifications
+            async Task OnProgress(SpecProgressNotification notification)
+            {
+                var progressData = new
+                {
+                    progressToken = "spec_execution",
+                    progress = notification.ProgressPercent,
+                    total = 100.0,
+                    message = notification.Type switch
+                    {
+                        "start" => $"Starting {notification.Total} specs...",
+                        "progress" => $"[{notification.Completed}/{notification.Total}] {notification.Status}: {notification.Spec}",
+                        "complete" => $"Completed: {notification.Passed} passed, {notification.Failed} failed",
+                        _ => notification.Type
+                    }
+                };
 
-        var result = await executionService.ExecuteSpecAsync(
-            effectiveContent,
-            TimeSpan.FromSeconds(timeoutSeconds),
-            OnProgress,
-            cancellationToken);
+                await server.SendNotificationAsync(
+                    "notifications/progress",
+                    progressData,
+                    JsonOptionsProvider.Default,
+                    cancellationToken);
+            }
+
+            // Execute using subprocess (more isolation)
+            result = await executionService.ExecuteSpecAsync(
+                effectiveContent,
+                TimeSpan.FromSeconds(timeoutSeconds),
+                OnProgress,
+                cancellationToken);
+        }
 
         // If session is active and run succeeded, accumulate the new content
         if (session != null && result.Success)

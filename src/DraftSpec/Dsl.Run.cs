@@ -58,4 +58,13 @@ public static partial class Dsl
         Configuration?.Dispose();
         Configuration = null;
     }
+
+    /// <summary>
+    /// Reset all DSL state for a clean execution context.
+    /// Used primarily for in-process execution modes.
+    /// </summary>
+    public static void Reset()
+    {
+        ResetState();
+    }
 }

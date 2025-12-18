@@ -132,6 +132,7 @@ Closes #72
 gh run list --limit 5                    # List recent workflow runs
 gh run watch <run-id> --exit-status      # Watch a run until completion
 gh pr checks <pr-number>                 # Check PR status
+gh pr checks <pr-number> --watch         # Watch PR checks until completion
 ```
 
 ## Research

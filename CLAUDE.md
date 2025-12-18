@@ -112,7 +112,7 @@ Expected todo.Title to be "Buy milk", but was "Buy bread"
 1. Never push directly to `main` (branch protection enforced)
 2. Create feature branch from `main`
 3. Open PR referencing the issue (e.g., "Closes #63")
-4. Merge via PR for traceability
+4. Squash merge via PR (merge commits disabled)
 
 ## Research
 

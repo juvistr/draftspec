@@ -28,6 +28,7 @@ public static class CliOptionsParser
                 }
 
                 options.Format = args[++i].ToLowerInvariant();
+                options.ExplicitlySet.Add(nameof(CliOptions.Format));
             }
             else if (arg is "--output" or "-o")
             {
@@ -38,6 +39,7 @@ public static class CliOptionsParser
                 }
 
                 options.OutputFile = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.OutputFile));
             }
             else if (arg == "--css-url")
             {
@@ -56,14 +58,17 @@ public static class CliOptionsParser
             else if (arg is "--parallel" or "-p")
             {
                 options.Parallel = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.Parallel));
             }
             else if (arg == "--no-cache")
             {
                 options.NoCache = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.NoCache));
             }
             else if (arg is "--bail" or "-b")
             {
                 options.Bail = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.Bail));
             }
             else if (arg is "--filter-tags" or "-t")
             {
@@ -74,6 +79,7 @@ public static class CliOptionsParser
                 }
 
                 options.FilterTags = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.FilterTags));
             }
             else if (arg is "--exclude-tags" or "-x")
             {
@@ -84,6 +90,7 @@ public static class CliOptionsParser
                 }
 
                 options.ExcludeTags = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.ExcludeTags));
             }
             else if (arg is "--filter-name" or "-n")
             {
@@ -94,6 +101,7 @@ public static class CliOptionsParser
                 }
 
                 options.FilterName = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.FilterName));
             }
             else if (arg == "--exclude-name")
             {
@@ -104,6 +112,7 @@ public static class CliOptionsParser
                 }
 
                 options.ExcludeName = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.ExcludeName));
             }
             else if (!arg.StartsWith('-'))
             {

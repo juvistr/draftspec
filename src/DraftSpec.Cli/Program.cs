@@ -38,7 +38,7 @@ static async Task<int> Run(string[] args)
         return options.Command switch
         {
             "run" => RunCommand.Execute(options, formatterRegistry),
-            "watch" => await WatchCommand.ExecuteAsync(options.Path),
+            "watch" => await WatchCommand.ExecuteAsync(options),
             "init" => InitCommand.Execute(options),
             "new" => NewCommand.Execute(options),
             _ => ShowUsage($"Unknown command: {options.Command}")

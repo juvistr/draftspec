@@ -1,4 +1,5 @@
 using System.Security;
+using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Formatters;
 
@@ -18,6 +19,17 @@ public static class RunCommand
 
     public static int Execute(CliOptions options, ICliFormatterRegistry? formatterRegistry = null)
     {
+        // Load project configuration from draftspec.json
+        var configResult = ConfigLoader.Load(options.Path);
+        if (configResult.Error != null)
+        {
+            Console.Error.WriteLine($"Error: {configResult.Error}");
+            return 1;
+        }
+
+        if (configResult.Config != null)
+            options.ApplyDefaults(configResult.Config);
+
         var finder = new SpecFinder();
         var runner = new SpecFileRunner(
             options.NoCache,

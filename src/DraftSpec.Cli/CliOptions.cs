@@ -1,7 +1,15 @@
+using DraftSpec.Cli.Configuration;
+
 namespace DraftSpec.Cli;
 
 public class CliOptions
 {
+    /// <summary>
+    /// Tracks which options were explicitly set via CLI (vs defaults).
+    /// Used to determine if config file values should apply.
+    /// </summary>
+    public HashSet<string> ExplicitlySet { get; } = [];
+
     public string Command { get; set; } = "";
     public string Path { get; set; } = ".";
     public string Format { get; set; } = "console";
@@ -53,4 +61,36 @@ public class CliOptions
     /// Specs matching this pattern will be skipped.
     /// </summary>
     public string? ExcludeName { get; set; }
+
+    /// <summary>
+    /// Apply default values from a project configuration file.
+    /// Only applies values that weren't explicitly set via CLI.
+    /// </summary>
+    /// <param name="config">The project configuration to apply.</param>
+    public void ApplyDefaults(DraftSpecProjectConfig config)
+    {
+        if (!ExplicitlySet.Contains(nameof(Parallel)) && config.Parallel.HasValue)
+            Parallel = config.Parallel.Value;
+
+        if (!ExplicitlySet.Contains(nameof(Bail)) && config.Bail.HasValue)
+            Bail = config.Bail.Value;
+
+        if (!ExplicitlySet.Contains(nameof(NoCache)) && config.NoCache.HasValue)
+            NoCache = config.NoCache.Value;
+
+        if (!ExplicitlySet.Contains(nameof(Format)) && !string.IsNullOrEmpty(config.Format))
+            Format = config.Format;
+
+        if (!ExplicitlySet.Contains(nameof(OutputFile)) && !string.IsNullOrEmpty(config.OutputDirectory))
+            OutputFile = config.OutputDirectory;
+
+        if (!ExplicitlySet.Contains(nameof(FilterTags)) && config.Tags?.Include is { Count: > 0 })
+            FilterTags = string.Join(",", config.Tags.Include);
+
+        if (!ExplicitlySet.Contains(nameof(ExcludeTags)) && config.Tags?.Exclude is { Count: > 0 })
+            ExcludeTags = string.Join(",", config.Tags.Exclude);
+
+        if (!ExplicitlySet.Contains(nameof(Reporters)) && config.Reporters is { Count: > 0 })
+            Reporters = string.Join(",", config.Reporters);
+    }
 }

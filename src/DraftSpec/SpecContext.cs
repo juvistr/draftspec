@@ -14,6 +14,11 @@ namespace DraftSpec;
 public class SpecContext
 {
     /// <summary>
+    /// Shared empty hook chain to avoid allocations for contexts without hooks.
+    /// </summary>
+    private static readonly IReadOnlyList<Func<Task>> EmptyHookChain = Array.Empty<Func<Task>>();
+
+    /// <summary>
     /// The description text for this context block.
     /// </summary>
     public string Description { get; }
@@ -58,8 +63,9 @@ public class SpecContext
     public Func<Task>? AfterEach { get; set; }
 
     // Cached hook chains for performance (computed lazily)
-    private List<Func<Task>>? _beforeEachChain;
-    private List<Func<Task>>? _afterEachChain;
+    // Uses IReadOnlyList to allow either List<T> or Array.Empty<T> singleton
+    private IReadOnlyList<Func<Task>>? _beforeEachChain;
+    private IReadOnlyList<Func<Task>>? _afterEachChain;
 
     /// <summary>
     /// Creates a new spec context.
@@ -102,22 +108,45 @@ public class SpecContext
     {
         if (_beforeEachChain == null)
         {
-            // Build in child-to-parent order (O(1) per Add), then reverse once (O(n))
-            // This is O(n) total instead of O(n²) from Insert(0, ...) per item
-            var chain = new List<Func<Task>>();
-            var current = this;
-            while (current != null)
+            // Check if any hooks exist in the chain before allocating
+            if (!HasBeforeEachHooksInChain())
             {
-                if (current.BeforeEach != null)
-                    chain.Add(current.BeforeEach);
-                current = current.Parent;
+                _beforeEachChain = EmptyHookChain;
             }
+            else
+            {
+                // Build in child-to-parent order (O(1) per Add), then reverse once (O(n))
+                // This is O(n) total instead of O(n²) from Insert(0, ...) per item
+                var chain = new List<Func<Task>>();
+                var current = this;
+                while (current != null)
+                {
+                    if (current.BeforeEach != null)
+                        chain.Add(current.BeforeEach);
+                    current = current.Parent;
+                }
 
-            chain.Reverse();
-            _beforeEachChain = chain;
+                chain.Reverse();
+                _beforeEachChain = chain;
+            }
         }
 
         return _beforeEachChain;
+    }
+
+    /// <summary>
+    /// Checks if any BeforeEach hooks exist in this context or its ancestors.
+    /// </summary>
+    private bool HasBeforeEachHooksInChain()
+    {
+        var current = this;
+        while (current != null)
+        {
+            if (current.BeforeEach != null)
+                return true;
+            current = current.Parent;
+        }
+        return false;
     }
 
     /// <summary>
@@ -127,16 +156,40 @@ public class SpecContext
     {
         if (_afterEachChain == null)
         {
-            _afterEachChain = [];
-            var current = this;
-            while (current != null)
+            // Check if any hooks exist in the chain before allocating
+            if (!HasAfterEachHooksInChain())
             {
-                if (current.AfterEach != null)
-                    _afterEachChain.Add(current.AfterEach);
-                current = current.Parent;
+                _afterEachChain = EmptyHookChain;
+            }
+            else
+            {
+                var chain = new List<Func<Task>>();
+                var current = this;
+                while (current != null)
+                {
+                    if (current.AfterEach != null)
+                        chain.Add(current.AfterEach);
+                    current = current.Parent;
+                }
+                _afterEachChain = chain;
             }
         }
 
         return _afterEachChain;
+    }
+
+    /// <summary>
+    /// Checks if any AfterEach hooks exist in this context or its ancestors.
+    /// </summary>
+    private bool HasAfterEachHooksInChain()
+    {
+        var current = this;
+        while (current != null)
+        {
+            if (current.AfterEach != null)
+                return true;
+            current = current.Parent;
+        }
+        return false;
     }
 }

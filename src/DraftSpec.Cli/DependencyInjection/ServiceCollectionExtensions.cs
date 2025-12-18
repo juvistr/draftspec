@@ -1,5 +1,6 @@
 using DraftSpec.Formatters;
 using DraftSpec.Formatters.Html;
+using DraftSpec.Formatters.JUnit;
 using DraftSpec.Formatters.Markdown;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -89,6 +90,7 @@ public class CliFormatterRegistry : ICliFormatterRegistry
         {
             CssUrl = opts?.CssUrl ?? "https://cdnjs.cloudflare.com/ajax/libs/simpledotcss/2.3.7/simple.min.css"
         }));
+        Register(OutputFormats.JUnit, _ => new JUnitFormatter());
     }
 
     public IFormatter? GetFormatter(string name, CliOptions? options = null)

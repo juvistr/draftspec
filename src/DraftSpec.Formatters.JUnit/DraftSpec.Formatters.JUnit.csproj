@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj"/>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <!-- NuGet Package Configuration -->
+        <PackageId>DraftSpec.Formatters.JUnit</PackageId>
+        <Description>JUnit XML output formatter for DraftSpec test results. Integrates with CI/CD systems like Jenkins, Azure DevOps, and GitHub Actions.</Description>
+        <PackageTags>testing;bdd;formatters;junit;xml;ci-cd</PackageTags>
+    </PropertyGroup>
+
+</Project>

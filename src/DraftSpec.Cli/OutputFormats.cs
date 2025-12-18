@@ -9,4 +9,5 @@ public static class OutputFormats
     public const string Markdown = "markdown";
     public const string Html = "html";
     public const string Console = "console";
+    public const string JUnit = "junit";
 }

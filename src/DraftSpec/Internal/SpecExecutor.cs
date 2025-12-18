@@ -62,8 +62,8 @@ internal static class SpecExecutor
         else
             FormatToConsole(configuration, report);
 
-        // Set exit code based on failures
-        if (report.Summary.Failed > 0) Environment.ExitCode = 1;
+        // Set exit code based on failures (explicitly set to 0 on success)
+        Environment.ExitCode = report.Summary.Failed > 0 ? 1 : 0;
 
         // Reset state for next run
         resetState();

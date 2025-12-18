@@ -4,6 +4,7 @@
         <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj"/>
         <ProjectReference Include="..\DraftSpec.Formatters.Markdown\DraftSpec.Formatters.Markdown.csproj"/>
         <ProjectReference Include="..\DraftSpec.Formatters.Html\DraftSpec.Formatters.Html.csproj"/>
+        <ProjectReference Include="..\DraftSpec.Formatters.JUnit\DraftSpec.Formatters.JUnit.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

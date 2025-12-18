@@ -266,6 +266,126 @@ configure(runner => runner.WithoutTags("slow"));
 
 ---
 
+## Table-Driven Tests
+
+Generate specs from data collections using `withData`. Ideal for testing multiple inputs with similar behavior.
+
+### withData(data, specFactory)
+
+Iterate over a collection and call a factory function for each item:
+
+```csharp
+describe("String validation", () =>
+{
+    withData([
+        new { input = "hello", expected = 5 },
+        new { input = "world", expected = 5 },
+        new { input = "", expected = 0 }
+    ], data =>
+    {
+        it($"'{data.input}' has length {data.expected}", () =>
+        {
+            expect(data.input.Length).toBe(data.expected);
+        });
+    });
+});
+```
+
+### Tuple Destructuring
+
+For tuples, parameters are automatically destructured:
+
+**2-tuples:**
+```csharp
+withData([
+    ("hello", 5),
+    ("world", 5),
+    ("", 0)
+], (input, expected) =>
+{
+    it($"'{input}' has length {expected}", () =>
+    {
+        expect(input.Length).toBe(expected);
+    });
+});
+```
+
+**3-tuples:**
+```csharp
+withData([
+    (1, 1, 2),
+    (2, 3, 5),
+    (-1, 1, 0)
+], (a, b, expected) =>
+{
+    it($"{a} + {b} = {expected}", () =>
+    {
+        expect(a + b).toBe(expected);
+    });
+});
+```
+
+Supports up to 6-tuples: `(T1, T2)` through `(T1, T2, T3, T4, T5, T6)`.
+
+### Named Test Cases (Dictionary)
+
+Use a dictionary to provide explicit test case names:
+
+```csharp
+withData(new Dictionary<string, (int, int, int)>
+{
+    ["positive numbers"] = (1, 2, 3),
+    ["with zero"] = (0, 5, 5),
+    ["negative result"] = (1, -5, -4)
+}, (name, data) =>
+{
+    it(name, () =>
+    {
+        var (a, b, expected) = data;
+        expect(a + b).toBe(expected);
+    });
+});
+```
+
+### Combining with Contexts
+
+`withData` works naturally with nested contexts:
+
+```csharp
+describe("Calculator", () =>
+{
+    describe("Add", () =>
+    {
+        withData([
+            (1, 1, 2),
+            (0, 0, 0)
+        ], (a, b, expected) =>
+        {
+            it($"{a} + {b} = {expected}", () =>
+            {
+                expect(calculator.Add(a, b)).toBe(expected);
+            });
+        });
+    });
+
+    describe("Subtract", () =>
+    {
+        withData([
+            (5, 3, 2),
+            (0, 0, 0)
+        ], (a, b, expected) =>
+        {
+            it($"{a} - {b} = {expected}", () =>
+            {
+                expect(calculator.Subtract(a, b)).toBe(expected);
+            });
+        });
+    });
+});
+```
+
+---
+
 ## Configuration
 
 ### configure(Action\<SpecRunnerBuilder\>)

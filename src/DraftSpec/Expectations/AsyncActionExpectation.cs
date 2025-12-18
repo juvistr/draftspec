@@ -35,6 +35,17 @@ public readonly struct AsyncActionExpectation
     }
 
     /// <summary>
+    /// Returns a negated expectation for chaining negative assertions.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// await expect(async () => await action()).not.toThrowAsync();
+    /// await expect(async () => await action()).not.toThrowAsync&lt;InvalidOperationException&gt;();
+    /// </code>
+    /// </example>
+    public NegatedAsyncActionExpectation not => new(AsyncAction, Expression);
+
+    /// <summary>
     /// Assert that the async action throws an exception of the specified type.
     /// </summary>
     /// <returns>The thrown exception for further assertions.</returns>

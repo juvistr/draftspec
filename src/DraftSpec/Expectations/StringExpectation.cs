@@ -35,6 +35,17 @@ public readonly struct StringExpectation
     }
 
     /// <summary>
+    /// Returns a negated expectation for chaining negative assertions.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// expect(str).not.toBe("hello");
+    /// expect(str).not.toContain("foo");
+    /// </code>
+    /// </example>
+    public NegatedStringExpectation not => new(Actual, Expression);
+
+    /// <summary>
     /// Assert equality.
     /// </summary>
     public void toBe(string? expected)

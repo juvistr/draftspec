@@ -185,4 +185,155 @@ public class StringExpectationTests
     }
 
     #endregion
+
+    #region toMatch (string pattern)
+
+    [Test]
+    public async Task toMatch_WhenPatternMatches_Passes()
+    {
+        var expectation = new StringExpectation("hello123world", "value");
+        expectation.toMatch(@"\d+");
+    }
+
+    [Test]
+    public async Task toMatch_WhenPatternDoesNotMatch_Throws()
+    {
+        var expectation = new StringExpectation("hello world", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toMatch(@"\d+"));
+
+        await Assert.That(ex.Message).Contains("to match pattern");
+    }
+
+    [Test]
+    public async Task toMatch_WithNullActual_Throws()
+    {
+        var expectation = new StringExpectation(null, "value");
+
+        Assert.Throws<AssertionException>(() => expectation.toMatch(@"\d+"));
+    }
+
+    [Test]
+    public async Task toMatch_WithNullPattern_ThrowsArgumentNull()
+    {
+        var expectation = new StringExpectation("hello", "value");
+
+        Assert.Throws<ArgumentNullException>(() => expectation.toMatch((string)null!));
+    }
+
+    [Test]
+    public async Task toMatch_WithComplexPattern_Passes()
+    {
+        var expectation = new StringExpectation("user@example.com", "email");
+        expectation.toMatch(@"^[\w.+-]+@[\w-]+\.[\w.-]+$");
+    }
+
+    [Test]
+    public async Task toMatch_WithAnchoredPattern_WorksCorrectly()
+    {
+        var expectation = new StringExpectation("hello", "value");
+
+        // Should match when pattern is not anchored
+        expectation.toMatch("ell");
+
+        // Should fail when anchored pattern doesn't match
+        Assert.Throws<AssertionException>(() => expectation.toMatch("^ell$"));
+    }
+
+    #endregion
+
+    #region toMatch (Regex)
+
+    [Test]
+    public async Task toMatch_WithRegex_WhenMatches_Passes()
+    {
+        var expectation = new StringExpectation("HELLO123", "value");
+        var regex = new System.Text.RegularExpressions.Regex(@"\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        expectation.toMatch(regex);
+    }
+
+    [Test]
+    public async Task toMatch_WithRegex_WhenDoesNotMatch_Throws()
+    {
+        var expectation = new StringExpectation("hello", "value");
+        var regex = new System.Text.RegularExpressions.Regex(@"\d+");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toMatch(regex));
+
+        await Assert.That(ex.Message).Contains("to match pattern");
+    }
+
+    [Test]
+    public async Task toMatch_WithRegex_NullActual_Throws()
+    {
+        var expectation = new StringExpectation(null, "value");
+        var regex = new System.Text.RegularExpressions.Regex(@"\d+");
+
+        Assert.Throws<AssertionException>(() => expectation.toMatch(regex));
+    }
+
+    [Test]
+    public async Task toMatch_WithNullRegex_ThrowsArgumentNull()
+    {
+        var expectation = new StringExpectation("hello", "value");
+
+        Assert.Throws<ArgumentNullException>(() => expectation.toMatch((System.Text.RegularExpressions.Regex)null!));
+    }
+
+    #endregion
+
+    #region toHaveLength
+
+    [Test]
+    public async Task toHaveLength_WhenLengthMatches_Passes()
+    {
+        var expectation = new StringExpectation("hello", "value");
+        expectation.toHaveLength(5);
+    }
+
+    [Test]
+    public async Task toHaveLength_WhenLengthDoesNotMatch_Throws()
+    {
+        var expectation = new StringExpectation("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toHaveLength(3));
+
+        await Assert.That(ex.Message).Contains("to have length 3");
+        await Assert.That(ex.Message).Contains("had length 5");
+    }
+
+    [Test]
+    public async Task toHaveLength_WithNullActual_Throws()
+    {
+        var expectation = new StringExpectation(null, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toHaveLength(5));
+
+        await Assert.That(ex.Message).Contains("was null");
+    }
+
+    [Test]
+    public async Task toHaveLength_WithEmptyString_PassesForZero()
+    {
+        var expectation = new StringExpectation("", "value");
+        expectation.toHaveLength(0);
+    }
+
+    [Test]
+    public async Task toHaveLength_WithNegativeLength_ThrowsArgumentOutOfRange()
+    {
+        var expectation = new StringExpectation("hello", "value");
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => expectation.toHaveLength(-1));
+    }
+
+    [Test]
+    public async Task toHaveLength_WithUnicodeString_CountsCharacters()
+    {
+        // "Hello 🌍" has 8 characters (including the emoji which is 1 character in .NET)
+        var expectation = new StringExpectation("Hello 🌍", "value");
+        expectation.toHaveLength(8);
+    }
+
+    #endregion
 }

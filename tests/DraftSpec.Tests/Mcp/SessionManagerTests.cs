@@ -252,4 +252,53 @@ public class SessionManagerTests
         await Assert.That(session.Id).StartsWith("session-");
         await Assert.That(session.Id.Length).IsGreaterThan(20);
     }
+
+    [Test]
+    public async Task SessionIds_AreUnique()
+    {
+        using var manager = new SessionManager(_logger, _baseTempDir);
+        var ids = new HashSet<string>();
+
+        for (int i = 0; i < 100; i++)
+        {
+            var session = manager.CreateSession();
+            ids.Add(session.Id);
+        }
+
+        await Assert.That(ids.Count).IsEqualTo(100);
+    }
+
+    [Test]
+    public async Task SessionId_HasNoPredictableTimestamp()
+    {
+        using var manager = new SessionManager(_logger, _baseTempDir);
+
+        var session = manager.CreateSession();
+
+        // Session ID should not contain date/time patterns
+        // Old format was: session-{yyyyMMdd}-{HHmmss}-{guid8}
+        // New format is: session-{guid32}
+        var id = session.Id;
+        var parts = id.Split('-');
+
+        // Should only have 2 parts: "session" and the GUID (no hyphens in :N format)
+        await Assert.That(parts.Length).IsEqualTo(2);
+        await Assert.That(parts[0]).IsEqualTo("session");
+        await Assert.That(parts[1].Length).IsEqualTo(32); // GUID without hyphens
+    }
+
+    [Test]
+    public async Task SessionId_UsesFullGuidEntropy()
+    {
+        using var manager = new SessionManager(_logger, _baseTempDir);
+
+        var session = manager.CreateSession();
+
+        // Extract the GUID part (after "session-")
+        var guidPart = session.Id["session-".Length..];
+
+        // Should be valid hex string of 32 chars (128 bits = 16 bytes = 32 hex chars)
+        await Assert.That(guidPart.Length).IsEqualTo(32);
+        await Assert.That(guidPart.All(c => char.IsAsciiHexDigit(c))).IsTrue();
+    }
 }

@@ -88,17 +88,19 @@ public class McpCoreIntegrationTests
     [Test]
     public async Task SessionLifecycle_TouchingSession_PreventsExpiry()
     {
+        // Use longer timeout for CI variability
         using var sessionManager = new SessionManager(
             _sessionLogger,
             _baseTempDir,
-            defaultTimeout: TimeSpan.FromMilliseconds(500));
+            defaultTimeout: TimeSpan.FromMilliseconds(2000));
 
         var session = sessionManager.CreateSession();
 
         // Touch session repeatedly to prevent expiry
+        // Using 500ms delays (3x = 1500ms total, still under 2000ms timeout)
         for (var i = 0; i < 3; i++)
         {
-            await Task.Delay(100);
+            await Task.Delay(500);
             sessionManager.GetSession(session.Id); // Touch
         }
 

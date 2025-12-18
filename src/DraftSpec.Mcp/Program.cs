@@ -22,4 +22,17 @@ builder.Services
     .WithToolsFromAssembly()
     .WithResourcesFromAssembly();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// Log security warnings at startup
+var logger = host.Services.GetRequiredService<ILogger<Program>>();
+logger.LogWarning("DraftSpec MCP Server starting - SECURITY WARNING:");
+logger.LogWarning("  This server executes arbitrary C# code with full process privileges.");
+logger.LogWarning("  Only connect from trusted AI assistants in trusted environments.");
+logger.LogWarning("  Do NOT expose this server to untrusted networks or users.");
+logger.LogWarning("  See SECURITY.md for deployment guidance.");
+
+await host.RunAsync();
+
+/// <summary>Marker class for logging.</summary>
+internal partial class Program { }

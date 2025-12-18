@@ -21,6 +21,68 @@ The MCP server assumes:
 - **Consider containerization** - For additional isolation, run specs in containers
 - **Keep dependencies updated** - Regularly update DraftSpec and dotnet-script
 
+## Deployment Guidance
+
+### Recommended: Local Development Only
+
+The MCP server is designed for **local development environments** where you control both the AI assistant and the machine running specs.
+
+```bash
+# Typical local usage - safe when you control both ends
+dotnet run --project src/DraftSpec.Mcp
+```
+
+### Network Exposure: NOT Recommended
+
+**Never expose the MCP server to untrusted networks.** The server:
+- Has no built-in authentication
+- Executes arbitrary code from any connected client
+- Runs with the privileges of the host process
+
+### Container Isolation
+
+For additional security, run the MCP server in a container with restricted permissions:
+
+```dockerfile
+# Example Dockerfile for isolated execution
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine
+WORKDIR /app
+COPY . .
+
+# Run as non-root user
+RUN adduser -D specuser
+USER specuser
+
+# Limit capabilities
+CMD ["dotnet", "run", "--project", "src/DraftSpec.Mcp"]
+```
+
+```bash
+# Run with restricted permissions
+docker run --rm -it \
+  --read-only \
+  --tmpfs /tmp \
+  --network none \
+  --cap-drop ALL \
+  draftspec-mcp
+```
+
+### Execution Modes
+
+| Mode | Isolation | Performance | Use Case |
+|------|-----------|-------------|----------|
+| **In-process** | Shared process | Fast (cached compilation) | Trusted local development |
+| **Subprocess** | Process boundary | Slower (new process per run) | Slightly more isolation |
+| **Container** | Full isolation | Slowest | Untrusted or shared environments |
+
+### CI/CD Environments
+
+When using DraftSpec in CI/CD pipelines:
+- Run in ephemeral containers that are destroyed after each job
+- Use read-only file systems where possible
+- Limit network access to only required endpoints
+- Never persist credentials in spec files
+
 ### Existing Mitigations
 
 DraftSpec implements these security measures:
@@ -76,10 +138,6 @@ DraftSpec executes spec files using `dotnet script`. Only run spec files from tr
 ### Path Handling
 
 The CLI validates that spec files are within the project directory to prevent path traversal attacks.
-
-## Detailed Security Audit
-
-For a comprehensive security analysis, see [docs/review/SECURITY.md](docs/review/SECURITY.md).
 
 ## Disclosure Timeline
 

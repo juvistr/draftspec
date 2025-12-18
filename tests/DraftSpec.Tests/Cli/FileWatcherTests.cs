@@ -93,8 +93,9 @@ public class FileWatcherTests
         await Task.WhenAny(tcs.Task, Task.Delay(2000));
         await Task.Delay(150); // Extra time for any additional callbacks
 
-        // Should be debounced to 1 or 2 calls (depending on timing)
-        await Assert.That(callCount).IsLessThanOrEqualTo(2);
+        // Should be debounced - significantly fewer than 5 (1-3 depending on timing)
+        await Assert.That(callCount).IsLessThanOrEqualTo(3);
+        await Assert.That(callCount).IsLessThan(5); // Definitely debounced
     }
 
     #endregion

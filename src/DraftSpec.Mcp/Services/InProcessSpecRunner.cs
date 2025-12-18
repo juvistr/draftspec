@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -17,17 +16,18 @@ namespace DraftSpec.Mcp.Services;
 public class InProcessSpecRunner
 {
     private readonly ILogger<InProcessSpecRunner> _logger;
-    private readonly ConcurrentDictionary<string, Script<object>> _scriptCache = new();
+    private readonly LruCache<string, Script<object>> _scriptCache;
     private readonly ScriptOptions _scriptOptions;
 
     /// <summary>
-    /// Maximum number of cached scripts.
+    /// Default maximum number of cached scripts.
     /// </summary>
-    private const int MaxCacheSize = 100;
+    public const int DefaultCacheCapacity = 100;
 
-    public InProcessSpecRunner(ILogger<InProcessSpecRunner> logger)
+    public InProcessSpecRunner(ILogger<InProcessSpecRunner> logger, int cacheCapacity = DefaultCacheCapacity)
     {
         _logger = logger;
+        _scriptCache = new LruCache<string, Script<object>>(cacheCapacity);
 
         // Configure script options with DraftSpec references
         // Note: Static imports must be added in script code, not via WithImports
@@ -191,34 +191,20 @@ public class InProcessSpecRunner
 
     /// <summary>
     /// Get cached script or compile new one.
+    /// Uses LRU cache for automatic eviction of least recently used scripts.
     /// </summary>
     private Script<object> GetOrCompileScript(string contentHash, string content)
     {
-        if (_scriptCache.TryGetValue(contentHash, out var cached))
+        return _scriptCache.GetOrAdd(contentHash, _ =>
         {
-            _logger.LogDebug("Script cache hit for {Hash}", contentHash[..8]);
-            return cached;
-        }
+            _logger.LogDebug("Compiling script for {Hash}", contentHash[..8]);
+            var script = CSharpScript.Create(content, _scriptOptions);
 
-        _logger.LogDebug("Compiling script for {Hash}", contentHash[..8]);
-        var script = CSharpScript.Create(content, _scriptOptions);
+            // Compile to catch errors early
+            script.Compile();
 
-        // Compile to catch errors early
-        script.Compile();
-
-        // Manage cache size
-        if (_scriptCache.Count >= MaxCacheSize)
-        {
-            // Simple eviction: remove oldest entries
-            var toRemove = _scriptCache.Keys.Take(MaxCacheSize / 4).ToList();
-            foreach (var key in toRemove)
-            {
-                _scriptCache.TryRemove(key, out _);
-            }
-        }
-
-        _scriptCache[contentHash] = script;
-        return script;
+            return script;
+        });
     }
 
     /// <summary>
@@ -269,4 +255,14 @@ public class InProcessSpecRunner
         _scriptCache.Clear();
         _logger.LogInformation("Script cache cleared");
     }
+
+    /// <summary>
+    /// Gets the current number of cached scripts.
+    /// </summary>
+    public int CacheCount => _scriptCache.Count;
+
+    /// <summary>
+    /// Gets the maximum cache capacity.
+    /// </summary>
+    public int CacheCapacity => _scriptCache.Capacity;
 }

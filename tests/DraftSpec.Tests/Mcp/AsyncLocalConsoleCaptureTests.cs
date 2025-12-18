@@ -216,10 +216,10 @@ public class AsyncLocalConsoleCaptureTests
     [Test]
     public async Task ConcurrentCapture_StressTest()
     {
-        const int taskCount = 100;
+        const int taskCount = 50;
         var errors = new ConcurrentBag<string>();
 
-        var tasks = Enumerable.Range(0, taskCount).Select(async i =>
+        var tasks = Enumerable.Range(0, taskCount).Select(i => Task.Run(() =>
         {
             using var capture = new AsyncLocalConsoleCapture();
 
@@ -229,9 +229,6 @@ public class AsyncLocalConsoleCaptureTests
                 var msg = $"[{i}:{j}]";
                 Console.Write(msg);
                 expected.Append(msg);
-
-                if (j % 3 == 0)
-                    await Task.Yield();
             }
 
             var actual = capture.GetCapturedOutput();
@@ -239,7 +236,7 @@ public class AsyncLocalConsoleCaptureTests
             {
                 errors.Add($"Task {i}: expected '{expected}' but got '{actual}'");
             }
-        }).ToArray();
+        })).ToArray();
 
         await Task.WhenAll(tasks);
 

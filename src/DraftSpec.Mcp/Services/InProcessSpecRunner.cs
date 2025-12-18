@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using DraftSpec.Formatters;
@@ -252,12 +251,14 @@ public class InProcessSpecRunner
     }
 
     /// <summary>
-    /// Compute content hash for caching.
+    /// Compute content hash for caching using HashCode (fast non-cryptographic hash).
+    /// Uses .NET's built-in HashCode which internally uses a variant of xxHash.
     /// </summary>
     private static string ComputeHash(string content)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
+        var hash = new HashCode();
+        hash.AddBytes(Encoding.UTF8.GetBytes(content));
+        return hash.ToHashCode().ToString("x8");
     }
 
     /// <summary>

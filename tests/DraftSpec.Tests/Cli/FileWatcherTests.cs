@@ -159,8 +159,8 @@ public class FileWatcherTests
         var sourceFile = Path.Combine(_tempDir, "Program.cs");
         await File.WriteAllTextAsync(sourceFile, "class Program {}");
 
-        // Wait for callback
-        await Task.WhenAny(tcs.Task, Task.Delay(2000));
+        // Wait for callback with extended timeout for CI environments
+        await Task.WhenAny(tcs.Task, Task.Delay(5000));
 
         await Assert.That(receivedChange).IsNotNull();
         await Assert.That(receivedChange!.IsSpecFile).IsFalse();

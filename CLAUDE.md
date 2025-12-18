@@ -111,8 +111,20 @@ Expected todo.Title to be "Buy milk", but was "Buy bread"
 **Workflow**:
 1. Never push directly to `main` (branch protection enforced)
 2. Create feature branch from `main`
-3. Open PR referencing the issue (e.g., "Closes #63")
+3. Open PR with issue reference in body to auto-close
 4. Squash merge via PR (merge commits disabled)
+
+**Auto-closing issues**: Include one of these keywords followed by the issue number in the PR body (not title) to auto-close when merged:
+- `Closes #123` or `Fixes #123` (preferred)
+- `Resolves #123`
+
+Example PR body:
+```
+## Summary
+Add table-driven test support with withData method.
+
+Closes #72
+```
 
 ## Research
 

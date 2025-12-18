@@ -1,6 +1,7 @@
 using DraftSpec.Configuration;
 using DraftSpec.Formatters;
 using DraftSpec.Plugins;
+using DraftSpec.Providers;
 
 namespace DraftSpec.Tests.Configuration;
 
@@ -215,6 +216,25 @@ public class ConfigurationTests
         config.InitializeMiddleware(builder);
 
         await Assert.That(plugin.RegisterMiddlewareCalled).IsTrue();
+    }
+
+    [Test]
+    public async Task Configuration_EnvironmentProvider_DefaultsToSystemProvider()
+    {
+        var config = new DraftSpecConfiguration();
+
+        await Assert.That(config.EnvironmentProvider).IsSameReferenceAs(SystemEnvironmentProvider.Instance);
+    }
+
+    [Test]
+    public async Task Configuration_EnvironmentProvider_CanBeSet()
+    {
+        var config = new DraftSpecConfiguration();
+        var customProvider = new InMemoryEnvironmentProvider();
+
+        config.EnvironmentProvider = customProvider;
+
+        await Assert.That(config.EnvironmentProvider).IsSameReferenceAs(customProvider);
     }
 
     #endregion

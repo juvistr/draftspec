@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DraftSpec.Configuration;
 using DraftSpec.Formatters;
+using DraftSpec.Providers;
 
 namespace DraftSpec.Internal;
 
@@ -32,7 +33,8 @@ internal static class SpecExecutor
         DraftSpecConfiguration? configuration = null)
     {
         // Check if we're in CLI mode with file-based JSON output
-        var jsonOutputFile = Environment.GetEnvironmentVariable(Dsl.JsonOutputFileEnvVar);
+        var env = configuration?.EnvironmentProvider ?? SystemEnvironmentProvider.Instance;
+        var jsonOutputFile = env.GetEnvironmentVariable(Dsl.JsonOutputFileEnvVar);
         var useFileReporter = !string.IsNullOrEmpty(jsonOutputFile);
 
         if (rootContext is null)

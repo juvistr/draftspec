@@ -3,6 +3,7 @@ using System.Diagnostics;
 using DraftSpec.Configuration;
 using DraftSpec.Middleware;
 using DraftSpec.Plugins;
+using DraftSpec.Snapshots;
 
 namespace DraftSpec;
 
@@ -378,6 +379,12 @@ public class SpecRunner : ISpecRunner
         SpecStatus status;
         Exception? exception = null;
 
+        // Set snapshot context for toMatchSnapshot() assertions
+        SnapshotContext.Current = new SnapshotInfo(
+            string.Join(" ", ctx.ContextPath.Append(ctx.Spec.Description)),
+            ctx.ContextPath,
+            ctx.Spec.Description);
+
         try
         {
             await ctx.Spec.Body!.Invoke();
@@ -389,6 +396,10 @@ public class SpecRunner : ISpecRunner
             specSw.Stop();
             status = SpecStatus.Failed;
             exception = ex;
+        }
+        finally
+        {
+            SnapshotContext.Current = null;
         }
 
         var specDuration = specSw.Elapsed;

@@ -37,9 +37,10 @@ public class PipelineTests
     public async Task SpecRunnerBuilder_WithTimeout_ConfiguresTimeoutMiddleware()
     {
         var context = new SpecContext("test");
-        context.AddSpec(new SpecDefinition("slow", async () => await Task.Delay(500)));
+        // Use a large gap (2000ms delay vs 100ms timeout) to avoid CI flakiness
+        context.AddSpec(new SpecDefinition("slow", async () => await Task.Delay(2000)));
 
-        var runner = new SpecRunnerBuilder().WithTimeout(50).Build();
+        var runner = new SpecRunnerBuilder().WithTimeout(100).Build();
         var results = runner.Run(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);

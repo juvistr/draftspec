@@ -1,4 +1,5 @@
 using DraftSpec.Formatters;
+using DraftSpec.Providers;
 using DraftSpec.Plugins;
 
 namespace DraftSpec.Configuration;
@@ -40,6 +41,13 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// Set this to enable colored console output during spec execution.
     /// </summary>
     public IConsoleFormatter? ConsoleFormatter { get; set; }
+
+    /// <summary>
+    /// Environment provider for accessing environment variables.
+    /// Defaults to <see cref="SystemEnvironmentProvider.Instance"/>.
+    /// Set to <see cref="InMemoryEnvironmentProvider"/> for testing.
+    /// </summary>
+    public IEnvironmentProvider EnvironmentProvider { get; set; } = SystemEnvironmentProvider.Instance;
 
     /// <inheritdoc />
     public IFormatterRegistry Formatters { get; }

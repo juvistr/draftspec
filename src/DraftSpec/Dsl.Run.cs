@@ -1,5 +1,6 @@
 using DraftSpec.Configuration;
 using DraftSpec.Formatters;
+using DraftSpec.Providers;
 using DraftSpec.Internal;
 using DraftSpec.Plugins.Reporters;
 
@@ -51,9 +52,10 @@ public static partial class Dsl
     public static void run(bool json = false)
     {
         var config = Configuration ?? new DraftSpecConfiguration();
+        var env = config.EnvironmentProvider;
 
         // Check for environment-based JSON output (CLI mode)
-        var jsonOutputFile = Environment.GetEnvironmentVariable(JsonOutputFileEnvVar);
+        var jsonOutputFile = env.GetEnvironmentVariable(JsonOutputFileEnvVar);
         if (!string.IsNullOrEmpty(jsonOutputFile))
         {
             // Add FileReporter for JSON output to the specified file
@@ -63,7 +65,7 @@ public static partial class Dsl
         }
 
         // Check for progress streaming (MCP mode)
-        var progressStream = Environment.GetEnvironmentVariable(ProgressStreamEnvVar);
+        var progressStream = env.GetEnvironmentVariable(ProgressStreamEnvVar);
         if (progressStream is "true" or "1")
         {
             config.AddReporter(new ProgressStreamReporter());
@@ -73,7 +75,7 @@ public static partial class Dsl
 
         // Apply filter options from environment variables
         var builder = RunnerBuilder ?? new SpecRunnerBuilder();
-        ApplyFilterEnvironmentVariables(builder);
+        ApplyFilterEnvironmentVariables(builder, env);
         RunnerBuilder = builder;
 
         SpecExecutor.ExecuteAndOutput(RootContext, json, ResetState, RunnerBuilder, Configuration);
@@ -82,10 +84,10 @@ public static partial class Dsl
     /// <summary>
     /// Apply filter options from environment variables to the runner builder.
     /// </summary>
-    private static void ApplyFilterEnvironmentVariables(SpecRunnerBuilder builder)
+    private static void ApplyFilterEnvironmentVariables(SpecRunnerBuilder builder, IEnvironmentProvider env)
     {
         // Tag filtering
-        var filterTags = Environment.GetEnvironmentVariable(FilterTagsEnvVar);
+        var filterTags = env.GetEnvironmentVariable(FilterTagsEnvVar);
         if (!string.IsNullOrEmpty(filterTags))
         {
             var tags = filterTags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -96,7 +98,7 @@ public static partial class Dsl
         }
 
         // Tag exclusion
-        var excludeTags = Environment.GetEnvironmentVariable(ExcludeTagsEnvVar);
+        var excludeTags = env.GetEnvironmentVariable(ExcludeTagsEnvVar);
         if (!string.IsNullOrEmpty(excludeTags))
         {
             var tags = excludeTags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -107,14 +109,14 @@ public static partial class Dsl
         }
 
         // Name pattern filtering
-        var filterName = Environment.GetEnvironmentVariable(FilterNameEnvVar);
+        var filterName = env.GetEnvironmentVariable(FilterNameEnvVar);
         if (!string.IsNullOrEmpty(filterName))
         {
             builder.WithNameFilter(filterName);
         }
 
         // Name pattern exclusion - use inverted filter
-        var excludeName = Environment.GetEnvironmentVariable(ExcludeNameEnvVar);
+        var excludeName = env.GetEnvironmentVariable(ExcludeNameEnvVar);
         if (!string.IsNullOrEmpty(excludeName))
         {
             builder.WithNameExcludeFilter(excludeName);

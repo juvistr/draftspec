@@ -113,6 +113,83 @@ public class FilterMiddlewareTests
 
     #endregion
 
+    #region Name Pattern Exclusion
+
+    [Test]
+    public async Task WithNameExcludeFilter_MatchingPattern_SkipsSpec()
+    {
+        var context = new SpecContext("Calculator");
+        context.AddSpec(new SpecDefinition("adds numbers slowly", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithNameExcludeFilter("slow")
+            .Build();
+        var results = runner.Run(context);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
+    }
+
+    [Test]
+    public async Task WithNameExcludeFilter_NonMatchingPattern_RunsSpec()
+    {
+        var context = new SpecContext("Calculator");
+        context.AddSpec(new SpecDefinition("adds numbers", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithNameExcludeFilter("slow")
+            .Build();
+        var results = runner.Run(context);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
+    }
+
+    [Test]
+    public async Task WithNameExcludeFilter_MatchesFullDescription()
+    {
+        var context = new SpecContext("Calculator");
+        var child = new SpecContext("deprecated", context);
+        child.AddSpec(new SpecDefinition("old add method", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithNameExcludeFilter("deprecated")
+            .Build();
+        var results = runner.Run(context);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
+    }
+
+    [Test]
+    public async Task WithNameExcludeFilter_CaseInsensitiveByDefault()
+    {
+        var context = new SpecContext("Calculator");
+        context.AddSpec(new SpecDefinition("SLOW operation", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithNameExcludeFilter("slow")
+            .Build();
+        var results = runner.Run(context);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
+    }
+
+    [Test]
+    public async Task WithNameExcludeFilter_RegexPattern_Works()
+    {
+        var context = new SpecContext("Calculator");
+        context.AddSpec(new SpecDefinition("test_001_slow", () => { }));
+        context.AddSpec(new SpecDefinition("test_002_fast", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithNameExcludeFilter(".*_001_.*")
+            .Build();
+        var results = runner.Run(context);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
+        await Assert.That(results[1].Status).IsEqualTo(SpecStatus.Passed);
+    }
+
+    #endregion
+
     #region Tag Filtering
 
     [Test]

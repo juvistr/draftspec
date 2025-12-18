@@ -235,6 +235,130 @@ public class CliOptionsParserTests
 
     #endregion
 
+    #region Filter Options
+
+    [Test]
+    public async Task Parse_FilterTagsOption_SetsFilterTags()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--filter-tags", "fast,unit"]);
+
+        await Assert.That(options.FilterTags).IsEqualTo("fast,unit");
+    }
+
+    [Test]
+    public async Task Parse_ShortFilterTagsOption_SetsFilterTags()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "-t", "integration"]);
+
+        await Assert.That(options.FilterTags).IsEqualTo("integration");
+    }
+
+    [Test]
+    public async Task Parse_FilterTagsWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--filter-tags"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--filter-tags requires a value");
+    }
+
+    [Test]
+    public async Task Parse_ExcludeTagsOption_SetsExcludeTags()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--exclude-tags", "slow,flaky"]);
+
+        await Assert.That(options.ExcludeTags).IsEqualTo("slow,flaky");
+    }
+
+    [Test]
+    public async Task Parse_ShortExcludeTagsOption_SetsExcludeTags()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "-x", "wip"]);
+
+        await Assert.That(options.ExcludeTags).IsEqualTo("wip");
+    }
+
+    [Test]
+    public async Task Parse_ExcludeTagsWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--exclude-tags"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--exclude-tags requires a value");
+    }
+
+    [Test]
+    public async Task Parse_FilterNameOption_SetsFilterName()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--filter-name", "Calculator.*add"]);
+
+        await Assert.That(options.FilterName).IsEqualTo("Calculator.*add");
+    }
+
+    [Test]
+    public async Task Parse_ShortFilterNameOption_SetsFilterName()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "-n", "should.*return"]);
+
+        await Assert.That(options.FilterName).IsEqualTo("should.*return");
+    }
+
+    [Test]
+    public async Task Parse_FilterNameWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--filter-name"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--filter-name requires a value");
+    }
+
+    [Test]
+    public async Task Parse_ExcludeNameOption_SetsExcludeName()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--exclude-name", ".*slow.*"]);
+
+        await Assert.That(options.ExcludeName).IsEqualTo(".*slow.*");
+    }
+
+    [Test]
+    public async Task Parse_ExcludeNameWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--exclude-name"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--exclude-name requires a value");
+    }
+
+    [Test]
+    public async Task Parse_FilterOptionsDefaultsAreNull()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.FilterTags).IsNull();
+        await Assert.That(options.ExcludeTags).IsNull();
+        await Assert.That(options.FilterName).IsNull();
+        await Assert.That(options.ExcludeName).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_CombinedFilterOptions_SetsAll()
+    {
+        var options = CliOptionsParser.Parse([
+            "run", ".",
+            "-t", "fast,unit",
+            "-x", "slow",
+            "-n", "Calculator",
+            "--exclude-name", ".*deprecated.*"
+        ]);
+
+        await Assert.That(options.FilterTags).IsEqualTo("fast,unit");
+        await Assert.That(options.ExcludeTags).IsEqualTo("slow");
+        await Assert.That(options.FilterName).IsEqualTo("Calculator");
+        await Assert.That(options.ExcludeName).IsEqualTo(".*deprecated.*");
+    }
+
+    #endregion
+
     #region Error Cases
 
     [Test]

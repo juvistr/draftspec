@@ -65,6 +65,46 @@ public static class CliOptionsParser
             {
                 options.Bail = true;
             }
+            else if (arg is "--filter-tags" or "-t")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--filter-tags requires a value (comma-separated tags)";
+                    return options;
+                }
+
+                options.FilterTags = args[++i];
+            }
+            else if (arg is "--exclude-tags" or "-x")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--exclude-tags requires a value (comma-separated tags)";
+                    return options;
+                }
+
+                options.ExcludeTags = args[++i];
+            }
+            else if (arg is "--filter-name" or "-n")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--filter-name requires a value (regex pattern)";
+                    return options;
+                }
+
+                options.FilterName = args[++i];
+            }
+            else if (arg == "--exclude-name")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--exclude-name requires a value (regex pattern)";
+                    return options;
+                }
+
+                options.ExcludeName = args[++i];
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

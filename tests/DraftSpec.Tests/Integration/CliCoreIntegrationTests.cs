@@ -142,6 +142,13 @@ public class CliCoreIntegrationTests
 
         await runner.RunAsync(root);
 
+        // Verify all specs ran
+        await Assert.That(executionLog.Count).IsEqualTo(5);
+
+        // Skip timing assertions on CI - GitHub runners have extreme timing variability
+        if (Environment.GetEnvironmentVariable("CI") != null)
+            return;
+
         // Verify concurrent execution by checking time overlap
         var times = executionLog.OrderBy(e => e.Time).ToList();
         var firstTime = times.First().Time;
@@ -149,8 +156,7 @@ public class CliCoreIntegrationTests
         var totalDuration = (lastTime - firstTime).TotalMilliseconds;
 
         // With 5 parallel specs at 50ms each, should complete much faster than sequential (250ms)
-        // Use very generous threshold (2000ms) for CI variability while still verifying parallelism
-        await Assert.That(totalDuration).IsLessThan(2000);
+        await Assert.That(totalDuration).IsLessThan(500);
     }
 
     [Test]

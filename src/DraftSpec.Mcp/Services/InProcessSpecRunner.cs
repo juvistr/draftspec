@@ -201,7 +201,7 @@ public class InProcessSpecRunner
     /// <summary>
     /// Extract spec report from console output.
     /// </summary>
-    private Models.SpecReport? ExtractReport(string output)
+    private SpecReport? ExtractReport(string output)
     {
         // Look for JSON output from Dsl.run(json: true)
         // The output should be a JSON object starting with {
@@ -214,7 +214,7 @@ public class InProcessSpecRunner
             {
                 try
                 {
-                    return Models.SpecReport.FromJson(trimmed);
+                    return SpecReport.FromJson(trimmed);
                 }
                 catch
                 {
@@ -224,7 +224,7 @@ public class InProcessSpecRunner
         }
 
         // Try parsing the entire output as JSON
-        return Models.SpecReport.FromJson(output);
+        return SpecReport.FromJson(output);
     }
 
     /// <summary>

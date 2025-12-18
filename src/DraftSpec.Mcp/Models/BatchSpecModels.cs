@@ -1,3 +1,5 @@
+using DraftSpec.Formatters;
+
 namespace DraftSpec.Mcp.Models;
 
 /// <summary>

@@ -52,6 +52,17 @@ public readonly struct Expectation<T>
     }
 
     /// <summary>
+    /// Returns a negated expectation for chaining negative assertions.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// expect(value).not.toBe(5);
+    /// expect(value).not.toBeNull();
+    /// </code>
+    /// </example>
+    public NegatedExpectation<T> not => new(Actual, Expression);
+
+    /// <summary>
     /// Asserts that the actual value equals the expected value.
     /// </summary>
     /// <param name="expected">The expected value.</param>

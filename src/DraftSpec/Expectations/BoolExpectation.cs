@@ -35,6 +35,17 @@ public readonly struct BoolExpectation
     }
 
     /// <summary>
+    /// Returns a negated expectation for chaining negative assertions.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// expect(value).not.toBeTrue();
+    /// expect(value).not.toBeFalse();
+    /// </code>
+    /// </example>
+    public NegatedBoolExpectation not => new(Actual, Expression);
+
+    /// <summary>
     /// Assert that the value is true.
     /// </summary>
     public void toBeTrue()

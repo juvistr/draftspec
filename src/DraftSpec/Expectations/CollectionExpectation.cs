@@ -38,6 +38,17 @@ public readonly struct CollectionExpectation<T>
     }
 
     /// <summary>
+    /// Returns a negated expectation for chaining negative assertions.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// expect(list).not.toContain(item);
+    /// expect(list).not.toBeEmpty();
+    /// </code>
+    /// </example>
+    public NegatedCollectionExpectation<T> not => new(Actual, Expression);
+
+    /// <summary>
     /// Assert that the collection contains the specified item.
     /// </summary>
     public void toContain(T expected)

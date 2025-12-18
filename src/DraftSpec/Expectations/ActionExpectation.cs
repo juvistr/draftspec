@@ -35,6 +35,17 @@ public readonly struct ActionExpectation
     }
 
     /// <summary>
+    /// Returns a negated expectation for chaining negative assertions.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// expect(() => action()).not.toThrow();
+    /// expect(() => action()).not.toThrow&lt;InvalidOperationException&gt;();
+    /// </code>
+    /// </example>
+    public NegatedActionExpectation not => new(Action, Expression);
+
+    /// <summary>
     /// Assert that the action throws an exception of the specified type.
     /// </summary>
     public TException toThrow<TException>() where TException : Exception

@@ -126,6 +126,14 @@ Add table-driven test support with withData method.
 Closes #72
 ```
 
+## CI Commands
+
+```bash
+gh run list --limit 5                    # List recent workflow runs
+gh run watch <run-id> --exit-status      # Watch a run until completion
+gh pr checks <pr-number>                 # Check PR status
+```
+
 ## Research
 
 - `docs/research/INITIAL.md` - C# 14 features and framework landscape

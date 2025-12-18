@@ -94,6 +94,50 @@ public readonly struct Expectation<T>
                 $"Expected {Expression} to not be null");
     }
 
+    /// <summary>
+    /// Assert that the actual value is an instance of the specified type.
+    /// </summary>
+    /// <typeparam name="TExpected">The expected type.</typeparam>
+    /// <returns>The value cast to the expected type for further assertions.</returns>
+    public TExpected toBeInstanceOf<TExpected>()
+    {
+        if (Actual is null)
+            throw new AssertionException(
+                $"Expected {Expression} to be instance of {typeof(TExpected).Name}, but was null");
+
+        if (Actual is not TExpected typedValue)
+            throw new AssertionException(
+                $"Expected {Expression} to be instance of {typeof(TExpected).Name}, but was {Actual.GetType().Name}");
+
+        return typedValue;
+    }
+
+    /// <summary>
+    /// Assert that the actual value is equivalent to the expected value using deep comparison.
+    /// Uses JSON serialization to compare object structures.
+    /// </summary>
+    /// <param name="expected">The expected value to compare against.</param>
+    public void toBeEquivalentTo(T expected)
+    {
+        if (Actual is null && expected is null)
+            return;
+
+        if (Actual is null)
+            throw new AssertionException(
+                $"Expected {Expression} to be equivalent to {ExpectationHelpers.Format(expected)}, but was null");
+
+        if (expected is null)
+            throw new AssertionException(
+                $"Expected {Expression} to be equivalent to null, but was {ExpectationHelpers.Format(Actual)}");
+
+        var actualJson = System.Text.Json.JsonSerializer.Serialize(Actual);
+        var expectedJson = System.Text.Json.JsonSerializer.Serialize(expected);
+
+        if (actualJson != expectedJson)
+            throw new AssertionException(
+                $"Expected {Expression} to be equivalent to {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
+    }
+
     // Cached comparer to avoid repeated lookups - uses optimized paths for primitives
     private static readonly Comparer<T> _comparer = Comparer<T>.Default;
 

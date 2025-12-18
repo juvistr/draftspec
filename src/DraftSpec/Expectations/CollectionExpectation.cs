@@ -135,6 +135,53 @@ public readonly struct CollectionExpectation<T>
     }
 
     /// <summary>
+    /// Assert that the collection contains exactly the specified items (order-independent).
+    /// </summary>
+    /// <param name="expected">The expected items.</param>
+    public void toContainExactly(IEnumerable<T> expected)
+    {
+        var actualList = Materialize().ToList();
+        var expectedList = expected.ToList();
+
+        if (actualList.Count != expectedList.Count)
+        {
+            throw new AssertionException(
+                $"Expected {Expression} to contain exactly {expectedList.Count} items, but had {actualList.Count}. " +
+                $"Expected: [{FormatItems(expectedList)}], Actual: [{FormatCollection(actualList)}]");
+        }
+
+        // Check that all expected items are present (accounting for duplicates)
+        var actualCopy = new List<T>(actualList);
+        var missing = new List<T>();
+
+        foreach (var item in expectedList)
+        {
+            var index = actualCopy.FindIndex(a => EqualityComparer<T>.Default.Equals(a, item));
+            if (index >= 0)
+                actualCopy.RemoveAt(index);
+            else
+                missing.Add(item);
+        }
+
+        if (missing.Count > 0)
+        {
+            throw new AssertionException(
+                $"Expected {Expression} to contain exactly [{FormatItems(expectedList)}], " +
+                $"but was missing [{FormatItems(missing)}]. " +
+                $"Extra items: [{FormatItems(actualCopy)}]");
+        }
+    }
+
+    /// <summary>
+    /// Assert that the collection contains exactly the specified items (order-independent).
+    /// </summary>
+    /// <param name="expected">The expected items.</param>
+    public void toContainExactly(params T[] expected)
+    {
+        toContainExactly((IEnumerable<T>)expected);
+    }
+
+    /// <summary>
     /// Materializes the collection to avoid multiple enumeration.
     /// Avoids re-materializing if already a collection with O(1) Count.
     /// </summary>
@@ -148,6 +195,15 @@ public readonly struct CollectionExpectation<T>
         var items = collection.Take(10).Select(e => ExpectationHelpers.Format(e));
         var result = string.Join(", ", items);
         if (collection.Count > 10)
+            result += ", ...";
+        return result;
+    }
+
+    private static string FormatItems(IEnumerable<T> items)
+    {
+        var itemList = items.Take(10).Select(e => ExpectationHelpers.Format(e)).ToList();
+        var result = string.Join(", ", itemList);
+        if (items.Skip(10).Any())
             result += ", ...";
         return result;
     }

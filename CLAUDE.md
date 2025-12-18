@@ -99,6 +99,21 @@ Expected todo.Title to be "Buy milk", but was "Buy bread"
 - **Focus mode**: Any `fit` causes all non-focused specs to skip
 - **Pending**: `it("description")` without body marks spec as pending
 
+## Git Workflow
+
+**Branch naming** (semantic prefixes):
+- `feat/<short-description>` - New features
+- `fix/<short-description>` - Bug fixes
+- `test/<short-description>` - Test additions
+- `docs/<short-description>` - Documentation
+- `refactor/<short-description>` - Code refactoring
+
+**Workflow**:
+1. Never push directly to `main` (branch protection enforced)
+2. Create feature branch from `main`
+3. Open PR referencing the issue (e.g., "Closes #63")
+4. Merge via PR for traceability
+
 ## Research
 
 - `docs/research/INITIAL.md` - C# 14 features and framework landscape

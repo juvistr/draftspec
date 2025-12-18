@@ -68,6 +68,22 @@ public class SpecRunnerBuilder
     }
 
     /// <summary>
+    /// Add filter middleware that excludes spec names matching a regex pattern.
+    /// Matches against the full description (context path + spec description).
+    /// </summary>
+    /// <param name="pattern">Regex pattern to exclude</param>
+    /// <param name="options">Regex options (default: IgnoreCase)</param>
+    public SpecRunnerBuilder WithNameExcludeFilter(string pattern, RegexOptions options = RegexOptions.IgnoreCase)
+    {
+        var regex = new Regex(pattern, options);
+        return Use(new FilterMiddleware(ctx =>
+            {
+                var fullDescription = string.Join(" ", ctx.ContextPath.Append(ctx.Spec.Description));
+                return !regex.IsMatch(fullDescription);
+            }, $"matches excluded pattern '{pattern}'"));
+    }
+
+    /// <summary>
     /// Add filter middleware that runs only specs with any of the specified tags.
     /// </summary>
     /// <param name="tags">Tags to match (spec runs if it has ANY of these tags)</param>

@@ -27,10 +27,34 @@ public record BuildResult(bool Success, string Output, string Error, bool Skippe
 
 public partial class SpecFileRunner : ISpecFileRunner
 {
+    /// <summary>
+    /// Environment variable name for tag filtering (comma-separated).
+    /// </summary>
+    public const string FilterTagsEnvVar = "DRAFTSPEC_FILTER_TAGS";
+
+    /// <summary>
+    /// Environment variable name for tag exclusion (comma-separated).
+    /// </summary>
+    public const string ExcludeTagsEnvVar = "DRAFTSPEC_EXCLUDE_TAGS";
+
+    /// <summary>
+    /// Environment variable name for name pattern filtering (regex).
+    /// </summary>
+    public const string FilterNameEnvVar = "DRAFTSPEC_FILTER_NAME";
+
+    /// <summary>
+    /// Environment variable name for name pattern exclusion (regex).
+    /// </summary>
+    public const string ExcludeNameEnvVar = "DRAFTSPEC_EXCLUDE_NAME";
+
     private readonly Dictionary<string, DateTime> _lastBuildTime = new();
     private readonly Dictionary<string, DateTime> _lastSourceModified = new();
     private readonly bool _useFileBased;
     private readonly bool _noCache;
+    private readonly string? _filterTags;
+    private readonly string? _excludeTags;
+    private readonly string? _filterName;
+    private readonly string? _excludeName;
 
     /// <summary>
     /// Regex to match #r "nuget: Package, Version" directives.
@@ -38,10 +62,38 @@ public partial class SpecFileRunner : ISpecFileRunner
     [GeneratedRegex(@"#r\s+""nuget:\s*([^,""]+),?\s*([^""]*)""")]
     private static partial Regex NuGetRefPattern();
 
-    public SpecFileRunner(bool noCache = false)
+    public SpecFileRunner(
+        bool noCache = false,
+        string? filterTags = null,
+        string? excludeTags = null,
+        string? filterName = null,
+        string? excludeName = null)
     {
         _useFileBased = ProcessHelper.SupportsFileBasedApps;
         _noCache = noCache;
+        _filterTags = filterTags;
+        _excludeTags = excludeTags;
+        _filterName = filterName;
+        _excludeName = excludeName;
+    }
+
+    /// <summary>
+    /// Get environment variables for filter options.
+    /// </summary>
+    private Dictionary<string, string> GetFilterEnvironmentVariables()
+    {
+        var envVars = new Dictionary<string, string>();
+
+        if (!string.IsNullOrEmpty(_filterTags))
+            envVars[FilterTagsEnvVar] = _filterTags;
+        if (!string.IsNullOrEmpty(_excludeTags))
+            envVars[ExcludeTagsEnvVar] = _excludeTags;
+        if (!string.IsNullOrEmpty(_filterName))
+            envVars[FilterNameEnvVar] = _filterName;
+        if (!string.IsNullOrEmpty(_excludeName))
+            envVars[ExcludeNameEnvVar] = _excludeName;
+
+        return envVars;
     }
 
     public event Action<string>? OnBuildStarted;
@@ -240,7 +292,9 @@ public partial class SpecFileRunner : ISpecFileRunner
         {
             tempFile = TransformToFileBased(specFile);
             var stopwatch = Stopwatch.StartNew();
-            var result = ProcessHelper.RunDotnet(["run", tempFile], workingDir);
+            var envVars = GetFilterEnvironmentVariables();
+            var result = ProcessHelper.RunDotnet(["run", tempFile], workingDir,
+                envVars.Count > 0 ? envVars : null);
             stopwatch.Stop();
 
             return new SpecRunResult(
@@ -273,7 +327,9 @@ public partial class SpecFileRunner : ISpecFileRunner
         var args = _noCache
             ? new[] { "script", fileName, "--no-cache" }
             : new[] { "script", fileName };
-        var result = ProcessHelper.RunDotnet(args, workingDir);
+        var envVars = GetFilterEnvironmentVariables();
+        var result = ProcessHelper.RunDotnet(args, workingDir,
+            envVars.Count > 0 ? envVars : null);
         stopwatch.Stop();
 
         return new SpecRunResult(
@@ -442,10 +498,8 @@ public partial class SpecFileRunner : ISpecFileRunner
 
         // Create temp file path for JSON output
         var jsonOutputFile = Path.Combine(Path.GetTempPath(), $".draftspec-{Guid.NewGuid():N}.json");
-        var envVars = new Dictionary<string, string>
-        {
-            ["DRAFTSPEC_JSON_OUTPUT_FILE"] = jsonOutputFile
-        };
+        var envVars = GetFilterEnvironmentVariables();
+        envVars["DRAFTSPEC_JSON_OUTPUT_FILE"] = jsonOutputFile;
 
         // Use file-based if: .NET 10+ AND no #load directives
         if (_useFileBased && !UsesLoadDirective(fullPath))

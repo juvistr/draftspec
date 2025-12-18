@@ -20,6 +20,30 @@ public static partial class Dsl
     public const string ProgressStreamEnvVar = "DRAFTSPEC_PROGRESS_STREAM";
 
     /// <summary>
+    /// Environment variable name for tag filtering (comma-separated).
+    /// Only specs with any of these tags will run.
+    /// </summary>
+    public const string FilterTagsEnvVar = "DRAFTSPEC_FILTER_TAGS";
+
+    /// <summary>
+    /// Environment variable name for tag exclusion (comma-separated).
+    /// Specs with any of these tags will be skipped.
+    /// </summary>
+    public const string ExcludeTagsEnvVar = "DRAFTSPEC_EXCLUDE_TAGS";
+
+    /// <summary>
+    /// Environment variable name for name pattern filtering (regex).
+    /// Only specs matching this pattern will run.
+    /// </summary>
+    public const string FilterNameEnvVar = "DRAFTSPEC_FILTER_NAME";
+
+    /// <summary>
+    /// Environment variable name for name pattern exclusion (regex).
+    /// Specs matching this pattern will be skipped.
+    /// </summary>
+    public const string ExcludeNameEnvVar = "DRAFTSPEC_EXCLUDE_NAME";
+
+    /// <summary>
     /// Run all collected specs and output results.
     /// Sets Environment.ExitCode to 1 if any specs failed.
     /// </summary>
@@ -47,7 +71,54 @@ public static partial class Dsl
 
         Configuration = config;
 
+        // Apply filter options from environment variables
+        var builder = RunnerBuilder ?? new SpecRunnerBuilder();
+        ApplyFilterEnvironmentVariables(builder);
+        RunnerBuilder = builder;
+
         SpecExecutor.ExecuteAndOutput(RootContext, json, ResetState, RunnerBuilder, Configuration);
+    }
+
+    /// <summary>
+    /// Apply filter options from environment variables to the runner builder.
+    /// </summary>
+    private static void ApplyFilterEnvironmentVariables(SpecRunnerBuilder builder)
+    {
+        // Tag filtering
+        var filterTags = Environment.GetEnvironmentVariable(FilterTagsEnvVar);
+        if (!string.IsNullOrEmpty(filterTags))
+        {
+            var tags = filterTags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (tags.Length > 0)
+            {
+                builder.WithTagFilter(tags);
+            }
+        }
+
+        // Tag exclusion
+        var excludeTags = Environment.GetEnvironmentVariable(ExcludeTagsEnvVar);
+        if (!string.IsNullOrEmpty(excludeTags))
+        {
+            var tags = excludeTags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (tags.Length > 0)
+            {
+                builder.WithoutTags(tags);
+            }
+        }
+
+        // Name pattern filtering
+        var filterName = Environment.GetEnvironmentVariable(FilterNameEnvVar);
+        if (!string.IsNullOrEmpty(filterName))
+        {
+            builder.WithNameFilter(filterName);
+        }
+
+        // Name pattern exclusion - use inverted filter
+        var excludeName = Environment.GetEnvironmentVariable(ExcludeNameEnvVar);
+        if (!string.IsNullOrEmpty(excludeName))
+        {
+            builder.WithNameExcludeFilter(excludeName);
+        }
     }
 
     private static void ResetState()

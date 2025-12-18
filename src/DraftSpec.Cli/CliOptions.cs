@@ -29,4 +29,28 @@ public class CliOptions
     /// Remaining specs will be reported as skipped.
     /// </summary>
     public bool Bail { get; set; }
+
+    /// <summary>
+    /// Comma-separated list of tags to include.
+    /// Only specs with any of these tags will run.
+    /// </summary>
+    public string? FilterTags { get; set; }
+
+    /// <summary>
+    /// Comma-separated list of tags to exclude.
+    /// Specs with any of these tags will be skipped.
+    /// </summary>
+    public string? ExcludeTags { get; set; }
+
+    /// <summary>
+    /// Regex pattern to match spec names (context path + description).
+    /// Only specs matching this pattern will run.
+    /// </summary>
+    public string? FilterName { get; set; }
+
+    /// <summary>
+    /// Regex pattern to exclude spec names (context path + description).
+    /// Specs matching this pattern will be skipped.
+    /// </summary>
+    public string? ExcludeName { get; set; }
 }

@@ -25,12 +25,18 @@ public class RunSpecResult
     public SpecReport? Report { get; init; }
 
     /// <summary>
+    /// Structured error information for AI parsing. Null if no error.
+    /// </summary>
+    public SpecError? Error { get; init; }
+
+    /// <summary>
     /// Console output from the spec execution (stdout).
     /// </summary>
     public string? ConsoleOutput { get; init; }
 
     /// <summary>
     /// Error output from the spec execution (stderr).
+    /// Kept for backward compatibility - prefer using Error for structured access.
     /// </summary>
     public string? ErrorOutput { get; init; }
 

@@ -99,11 +99,15 @@ public partial class SpecExecutionService
                     _logger.LogWarning(ex, "Failed to parse JSON output");
                 }
 
+            var success = exitCode == 0 && report != null;
+            var error = success ? null : ErrorParser.Parse(stderr, stdout, exitCode, timedOut: false);
+
             return new RunSpecResult
             {
-                Success = exitCode == 0 && report != null,
+                Success = success,
                 ExitCode = exitCode,
                 Report = report,
+                Error = error,
                 ConsoleOutput = stdout,
                 ErrorOutput = stderr,
                 DurationMs = stopwatch.Elapsed.TotalMilliseconds
@@ -115,6 +119,11 @@ public partial class SpecExecutionService
             {
                 Success = false,
                 ExitCode = -1,
+                Error = new SpecError
+                {
+                    Category = ErrorCategory.Runtime,
+                    Message = "Execution was cancelled"
+                },
                 ErrorOutput = "Execution was cancelled",
                 DurationMs = stopwatch.Elapsed.TotalMilliseconds
             };
@@ -125,6 +134,11 @@ public partial class SpecExecutionService
             {
                 Success = false,
                 ExitCode = -1,
+                Error = new SpecError
+                {
+                    Category = ErrorCategory.Timeout,
+                    Message = $"Execution timed out after {timeout.TotalSeconds}s"
+                },
                 ErrorOutput = $"Execution timed out after {timeout.TotalSeconds}s",
                 DurationMs = stopwatch.Elapsed.TotalMilliseconds
             };
@@ -136,6 +150,12 @@ public partial class SpecExecutionService
             {
                 Success = false,
                 ExitCode = -1,
+                Error = new SpecError
+                {
+                    Category = ErrorCategory.Runtime,
+                    Message = $"Execution failed: {ex.Message}",
+                    StackTrace = ex.StackTrace
+                },
                 ErrorOutput = $"Execution failed: {ex.Message}",
                 DurationMs = stopwatch.Elapsed.TotalMilliseconds
             };

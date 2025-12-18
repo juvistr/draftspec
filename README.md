@@ -158,9 +158,32 @@ draftspec run . --format html -o report.html
 # Watch mode
 draftspec watch .                     # Re-run on file changes
 
-# Parallel execution
-draftspec run . --parallel
+# Parallel execution and filtering
+draftspec run . --parallel            # Run spec files in parallel
+draftspec run . --tags unit,fast      # Only run specs with these tags
+draftspec run . --exclude-tags slow   # Exclude specs with these tags
+draftspec run . --bail                # Stop on first failure
 ```
+
+### Configuration File
+
+Create a `draftspec.json` in your project for persistent settings:
+
+```json
+{
+  "parallel": true,
+  "timeout": 10000,
+  "bail": false,
+  "tags": {
+    "include": ["unit", "fast"],
+    "exclude": ["slow", "integration"]
+  },
+  "reporters": ["console", "json"],
+  "noCache": false
+}
+```
+
+CLI options override config file values.
 
 ### MCP Server (AI Integration)
 
@@ -182,6 +205,23 @@ dotnet run --project src/DraftSpec.Mcp
 |------|-------------|
 | `run_spec` | Execute spec code and return structured JSON results |
 | `scaffold_specs` | Generate pending specs from a structured description |
+| `parse_assertion` | Convert natural language to `expect()` syntax |
+
+**parse_assertion** - Convert natural language assertions to DraftSpec code:
+
+```json
+// Input
+{ "naturalLanguage": "should be greater than 5", "variableName": "count" }
+
+// Output
+{ "success": true, "code": "expect(count).toBeGreaterThan(5)", "confidence": 0.95 }
+```
+
+Supported patterns:
+- `"should not be null"` → `expect(x).toNotBeNull()`
+- `"should contain 'hello'"` → `expect(x).toContain("hello")`
+- `"should have 3 items"` → `expect(x).toHaveCount(3)`
+- `"should throw ArgumentException"` → `expect(() => x).toThrow<ArgumentException>()`
 
 **scaffold_specs** - Generate spec scaffolds for BDD (behavior-first) or characterisation (code-first) workflows:
 

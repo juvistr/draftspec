@@ -1,10 +1,91 @@
 # Configuration Reference
 
-Configure DraftSpec with middleware, plugins, formatters, and reporters.
+Configure DraftSpec with project files, middleware, plugins, formatters, and reporters.
 
-## Overview
+## Project Configuration (draftspec.json)
 
-DraftSpec provides two configuration entry points:
+Create a `draftspec.json` file in your project root for persistent settings that apply to all spec runs.
+
+### Basic Example
+
+```json
+{
+  "parallel": true,
+  "bail": false,
+  "timeout": 10000
+}
+```
+
+### Full Configuration
+
+```json
+{
+  "specPattern": "**/*.spec.csx",
+  "timeout": 10000,
+  "parallel": true,
+  "maxParallelism": 4,
+  "reporters": ["console", "json"],
+  "outputDirectory": "./test-results",
+  "tags": {
+    "include": ["unit", "fast"],
+    "exclude": ["slow", "integration"]
+  },
+  "bail": false,
+  "noCache": false,
+  "format": "console"
+}
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `specPattern` | string | `**/*.spec.csx` | Glob pattern for finding spec files |
+| `timeout` | number | 30000 | Spec timeout in milliseconds |
+| `parallel` | boolean | false | Run spec files in parallel |
+| `maxParallelism` | number | CPU count | Maximum concurrent spec files |
+| `reporters` | string[] | `["console"]` | Reporter names to use |
+| `outputDirectory` | string | `.` | Directory for output files |
+| `tags.include` | string[] | `[]` | Only run specs with these tags |
+| `tags.exclude` | string[] | `[]` | Exclude specs with these tags |
+| `bail` | boolean | false | Stop on first failure |
+| `noCache` | boolean | false | Disable dotnet-script caching |
+| `format` | string | `console` | Default output format |
+
+### CLI Override Behavior
+
+CLI options always take precedence over config file values:
+
+```bash
+# draftspec.json has parallel: false
+draftspec run . --parallel  # Uses parallel: true
+
+# draftspec.json has tags.include: ["unit"]
+draftspec run . --tags integration  # Runs integration tests instead
+```
+
+### JSON Features
+
+The configuration file supports:
+- **Comments**: Both `//` and `/* */` styles
+- **Trailing commas**: For easier editing
+- **Case-insensitive keys**: `Parallel`, `PARALLEL`, and `parallel` all work
+
+```json
+{
+  // Enable parallel execution for CI
+  "parallel": true,
+  "bail": true,  // Note: trailing comma allowed
+}
+```
+
+---
+
+## Code Configuration
+
+DraftSpec also provides code-based configuration for dynamic settings.
+
+### Configuration Entry Points
 
 1. **`configure(Action<SpecRunnerBuilder>)`** - Configure spec execution (middleware, filtering, parallelism)
 2. **`configure(Action<DraftSpecConfiguration>)`** - Configure the framework (plugins, formatters, reporters)

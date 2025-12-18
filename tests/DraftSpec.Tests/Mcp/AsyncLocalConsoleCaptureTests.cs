@@ -7,15 +7,14 @@ namespace DraftSpec.Tests.Mcp;
 /// <summary>
 /// Tests for AsyncLocalConsoleCapture thread-safe console output capture.
 /// </summary>
+/// <remarks>
+/// Note: No [Before(Test)] reset is used here because AsyncLocalConsoleCapture
+/// provides per-async-context isolation via AsyncLocal. Calling ResetForTesting()
+/// between tests can cause race conditions when tests run in parallel, as it
+/// restores the original Console.Out while other tests are actively capturing.
+/// </remarks>
 public class AsyncLocalConsoleCaptureTests
 {
-    [Before(Test)]
-    public void ResetCapture()
-    {
-        // Reset state between tests to ensure isolation
-        AsyncLocalConsoleCapture.ResetForTesting();
-    }
-
     #region Basic Capture Tests
 
     [Test]

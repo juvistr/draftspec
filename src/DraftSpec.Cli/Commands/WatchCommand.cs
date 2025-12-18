@@ -1,11 +1,30 @@
+using DraftSpec.Cli.Configuration;
+
 namespace DraftSpec.Cli.Commands;
 
 public static class WatchCommand
 {
-    public static async Task<int> ExecuteAsync(string path)
+    public static async Task<int> ExecuteAsync(CliOptions options)
     {
+        // Load project configuration from draftspec.json
+        var configResult = ConfigLoader.Load(options.Path);
+        if (configResult.Error != null)
+        {
+            Console.Error.WriteLine($"Error: {configResult.Error}");
+            return 1;
+        }
+
+        if (configResult.Config != null)
+            options.ApplyDefaults(configResult.Config);
+
+        var path = options.Path;
         var finder = new SpecFinder();
-        var runner = new SpecFileRunner();
+        var runner = new SpecFileRunner(
+            options.NoCache,
+            options.FilterTags,
+            options.ExcludeTags,
+            options.FilterName,
+            options.ExcludeName);
         var presenter = new ConsolePresenter(true);
 
         runner.OnBuildStarted += presenter.ShowBuilding;
@@ -31,7 +50,7 @@ public static class WatchCommand
             {
                 presenter.ShowHeader(specFiles, isPartialRun: isPartialRun);
 
-                lastSummary = runner.RunAll(specFiles);
+                lastSummary = runner.RunAll(specFiles, options.Parallel);
 
                 presenter.ShowSpecsStarting();
                 foreach (var result in lastSummary.Results) presenter.ShowResult(result, path);

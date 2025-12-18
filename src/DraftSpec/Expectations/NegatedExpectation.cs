@@ -54,6 +54,39 @@ public readonly struct NegatedExpectation<T>
                 $"Expected {Expression} to not be null");
     }
 
+    /// <summary>
+    /// Assert that the actual value is NOT an instance of the specified type.
+    /// </summary>
+    /// <typeparam name="TExpected">The type the value should not be.</typeparam>
+    public void toBeInstanceOf<TExpected>()
+    {
+        if (Actual is TExpected)
+            throw new AssertionException(
+                $"Expected {Expression} to not be instance of {typeof(TExpected).Name}, but it was");
+    }
+
+    /// <summary>
+    /// Assert that the actual value is NOT equivalent to the expected value using deep comparison.
+    /// Uses JSON serialization to compare object structures.
+    /// </summary>
+    /// <param name="expected">The value to compare against.</param>
+    public void toBeEquivalentTo(T expected)
+    {
+        if (Actual is null && expected is null)
+            throw new AssertionException(
+                $"Expected {Expression} to not be equivalent to null, but both were null");
+
+        if (Actual is null || expected is null)
+            return; // One is null and the other isn't - they're not equivalent
+
+        var actualJson = System.Text.Json.JsonSerializer.Serialize(Actual);
+        var expectedJson = System.Text.Json.JsonSerializer.Serialize(expected);
+
+        if (actualJson == expectedJson)
+            throw new AssertionException(
+                $"Expected {Expression} to not be equivalent to {ExpectationHelpers.Format(expected)}, but it was");
+    }
+
     // Cached comparer to avoid repeated lookups
     private static readonly Comparer<T> _comparer = Comparer<T>.Default;
 

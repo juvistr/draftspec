@@ -98,6 +98,41 @@ public readonly struct NegatedCollectionExpectation<T>
     }
 
     /// <summary>
+    /// Assert that the collection does NOT contain exactly the specified items (order-independent).
+    /// </summary>
+    public void toContainExactly(IEnumerable<T> expected)
+    {
+        var actualList = Materialize().ToList();
+        var expectedList = expected.ToList();
+
+        if (actualList.Count != expectedList.Count)
+            return; // Different count means they don't match exactly - pass
+
+        // Check if they have the same items (accounting for duplicates)
+        var actualCopy = new List<T>(actualList);
+        foreach (var item in expectedList)
+        {
+            var index = actualCopy.FindIndex(a => EqualityComparer<T>.Default.Equals(a, item));
+            if (index >= 0)
+                actualCopy.RemoveAt(index);
+            else
+                return; // Missing item means they don't match exactly - pass
+        }
+
+        // If we get here, they match exactly
+        throw new AssertionException(
+            $"Expected {Expression} to not contain exactly [{string.Join(", ", expectedList.Select(e => ExpectationHelpers.Format(e)))}], but it did");
+    }
+
+    /// <summary>
+    /// Assert that the collection does NOT contain exactly the specified items (order-independent).
+    /// </summary>
+    public void toContainExactly(params T[] expected)
+    {
+        toContainExactly((IEnumerable<T>)expected);
+    }
+
+    /// <summary>
     /// Materializes the collection to avoid multiple enumeration.
     /// </summary>
     private IReadOnlyCollection<T> Materialize()

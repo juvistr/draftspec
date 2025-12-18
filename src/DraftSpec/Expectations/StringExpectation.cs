@@ -93,4 +93,48 @@ public readonly struct StringExpectation
             throw new AssertionException(
                 $"Expected {Expression} to be null, but was \"{Actual}\"");
     }
+
+    /// <summary>
+    /// Assert that the string matches a regular expression pattern.
+    /// </summary>
+    /// <param name="pattern">The regex pattern to match against.</param>
+    public void toMatch(string pattern)
+    {
+        ArgumentNullException.ThrowIfNull(pattern);
+
+        if (Actual is null || !System.Text.RegularExpressions.Regex.IsMatch(Actual, pattern))
+            throw new AssertionException(
+                $"Expected {Expression} to match pattern \"{pattern}\", but was \"{Actual}\"");
+    }
+
+    /// <summary>
+    /// Assert that the string matches a regular expression.
+    /// </summary>
+    /// <param name="regex">The regex to match against.</param>
+    public void toMatch(System.Text.RegularExpressions.Regex regex)
+    {
+        ArgumentNullException.ThrowIfNull(regex);
+
+        if (Actual is null || !regex.IsMatch(Actual))
+            throw new AssertionException(
+                $"Expected {Expression} to match pattern \"{regex}\", but was \"{Actual}\"");
+    }
+
+    /// <summary>
+    /// Assert that the string has the expected length.
+    /// </summary>
+    /// <param name="expectedLength">The expected length.</param>
+    public void toHaveLength(int expectedLength)
+    {
+        if (expectedLength < 0)
+            throw new ArgumentOutOfRangeException(nameof(expectedLength), "Length must be non-negative");
+
+        if (Actual is null)
+            throw new AssertionException(
+                $"Expected {Expression} to have length {expectedLength}, but was null");
+
+        if (Actual.Length != expectedLength)
+            throw new AssertionException(
+                $"Expected {Expression} to have length {expectedLength}, but had length {Actual.Length}");
+    }
 }

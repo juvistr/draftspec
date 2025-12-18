@@ -161,8 +161,9 @@ public class SessionManager : IDisposable
 
     private static string GenerateSessionId()
     {
-        // Generate a short, readable session ID
-        return $"session-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString()[..8]}";
+        // Generate a cryptographically random session ID using full GUID (122 bits of randomness)
+        // No predictable timestamp prefix - purely random for security
+        return $"session-{Guid.NewGuid():N}";
     }
 
     /// <summary>

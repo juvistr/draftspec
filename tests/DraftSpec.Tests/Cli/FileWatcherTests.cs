@@ -52,8 +52,8 @@ public class FileWatcherTests
         var specFile = Path.Combine(_tempDir, "test.spec.csx");
         await File.WriteAllTextAsync(specFile, "// spec");
 
-        // Wait for callback with timeout
-        var completed = await Task.WhenAny(tcs.Task, Task.Delay(2000));
+        // Wait for callback with extended timeout for CI environments
+        var completed = await Task.WhenAny(tcs.Task, Task.Delay(5000));
         await Assert.That(completed == tcs.Task).IsTrue();
 
         // Small delay to ensure no extra callbacks
@@ -134,8 +134,8 @@ public class FileWatcherTests
         await Task.Delay(10);
         await File.WriteAllTextAsync(spec2, "// second");
 
-        // Wait for callback
-        await Task.WhenAny(tcs.Task, Task.Delay(2000));
+        // Wait for callback with extended timeout for CI environments
+        await Task.WhenAny(tcs.Task, Task.Delay(5000));
 
         await Assert.That(receivedChange).IsNotNull();
         // Multiple files should escalate to full run (FilePath = null)

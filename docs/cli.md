@@ -32,10 +32,14 @@ draftspec run <path> [options]
 
 | Option | Description |
 |--------|-------------|
-| `--format <format>` | Output format: `console` (default), `json`, `markdown`, `html` |
+| `--format, -f <format>` | Output format: `console` (default), `json`, `markdown`, `html` |
 | `-o, --output <file>` | Write output to file instead of stdout |
 | `--css-url <url>` | Custom CSS URL for HTML format |
-| `--parallel` | Run spec files in parallel |
+| `--parallel, -p` | Run spec files in parallel |
+| `--tags, -t <tags>` | Only run specs with these tags (comma-separated) |
+| `--exclude-tags <tags>` | Exclude specs with these tags (comma-separated) |
+| `--bail, -b` | Stop on first spec failure |
+| `--no-cache` | Disable dotnet-script caching |
 
 **Examples:**
 
@@ -63,6 +67,13 @@ draftspec run . --format html --css-url ./custom.css -o report.html
 
 # Parallel execution
 draftspec run . --parallel
+
+# Tag filtering
+draftspec run . --tags unit,fast           # Only run these tags
+draftspec run . --exclude-tags slow,flaky  # Exclude these tags
+
+# Bail on first failure
+draftspec run . --bail
 ```
 
 **Exit Codes:**
@@ -406,6 +417,71 @@ The CLI validates paths to prevent directory traversal:
 # These are rejected
 draftspec run . -o ../outside/report.json  # Error: outside current dir
 draftspec run ../../../etc/passwd          # Error: path traversal
+```
+
+---
+
+## Configuration File
+
+DraftSpec supports a `draftspec.json` configuration file for project-level defaults.
+
+### File Location
+
+Place `draftspec.json` in your project root (same directory where you run `draftspec`).
+
+### Configuration Options
+
+```json
+{
+  "specPattern": "**/*.spec.csx",
+  "timeout": 10000,
+  "parallel": true,
+  "maxParallelism": 4,
+  "reporters": ["console", "json"],
+  "outputDirectory": "./test-results",
+  "tags": {
+    "include": ["unit", "fast"],
+    "exclude": ["slow", "integration"]
+  },
+  "bail": false,
+  "noCache": false,
+  "format": "console"
+}
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `specPattern` | string | Glob pattern for spec files |
+| `timeout` | number | Spec timeout in milliseconds |
+| `parallel` | boolean | Run spec files in parallel |
+| `maxParallelism` | number | Maximum concurrent spec files |
+| `reporters` | string[] | Reporter names to use |
+| `outputDirectory` | string | Directory for output files |
+| `tags.include` | string[] | Only run specs with these tags |
+| `tags.exclude` | string[] | Exclude specs with these tags |
+| `bail` | boolean | Stop on first failure |
+| `noCache` | boolean | Disable dotnet-script caching |
+| `format` | string | Default output format |
+
+### CLI Override
+
+CLI options always override config file values:
+
+```bash
+# Config has parallel: false, but CLI enables it
+draftspec run . --parallel
+
+# Config has tags.include: ["unit"], CLI overrides
+draftspec run . --tags integration
+```
+
+### Validation
+
+Invalid configuration produces clear error messages:
+
+```
+Error: draftspec.json: timeout must be a positive number
+Error: draftspec.json: maxParallelism must be a positive number
 ```
 
 ---

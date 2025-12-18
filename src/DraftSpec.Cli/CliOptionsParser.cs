@@ -61,6 +61,10 @@ public static class CliOptionsParser
             {
                 options.NoCache = true;
             }
+            else if (arg is "--bail" or "-b")
+            {
+                options.Bail = true;
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

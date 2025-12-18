@@ -12,6 +12,7 @@ public class SpecRunnerBuilder
     private readonly List<ISpecMiddleware> _middleware = [];
     private DraftSpecConfiguration? _configuration;
     private int _maxDegreeOfParallelism;
+    private bool _bail;
 
     /// <summary>
     /// Add a middleware to the pipeline.
@@ -129,6 +130,16 @@ public class SpecRunnerBuilder
     }
 
     /// <summary>
+    /// Enable bail mode - stop execution after first failure.
+    /// Remaining specs will be reported as skipped.
+    /// </summary>
+    public SpecRunnerBuilder WithBail()
+    {
+        _bail = true;
+        return this;
+    }
+
+    /// <summary>
     /// Get the current configuration, or null if not set.
     /// </summary>
     internal DraftSpecConfiguration? Configuration => _configuration;
@@ -137,6 +148,11 @@ public class SpecRunnerBuilder
     /// Get the maximum degree of parallelism. 0 means sequential execution.
     /// </summary>
     internal int MaxDegreeOfParallelism => _maxDegreeOfParallelism;
+
+    /// <summary>
+    /// Get whether bail mode is enabled.
+    /// </summary>
+    internal bool Bail => _bail;
 
     /// <summary>
     /// Build the configured SpecRunner.
@@ -150,6 +166,6 @@ public class SpecRunnerBuilder
             _configuration.InitializeMiddleware(this);
         }
 
-        return new SpecRunner(_middleware, _configuration, _maxDegreeOfParallelism);
+        return new SpecRunner(_middleware, _configuration, _maxDegreeOfParallelism, _bail);
     }
 }

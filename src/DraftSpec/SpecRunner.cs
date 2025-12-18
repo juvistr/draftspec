@@ -17,11 +17,13 @@ public class SpecRunner : ISpecRunner
     private readonly DraftSpecConfiguration? _configuration;
     private readonly int _maxDegreeOfParallelism;
     private readonly IReadOnlyList<IReporter> _reporters;
+    private readonly bool _bail;
+    private volatile bool _bailTriggered;
 
     /// <summary>
     /// Create a SpecRunner with no middleware (default behavior).
     /// </summary>
-    public SpecRunner() : this([], null, 0)
+    public SpecRunner() : this([], null, 0, false)
     {
     }
 
@@ -31,14 +33,17 @@ public class SpecRunner : ISpecRunner
     /// <param name="middleware">Middleware executed in order (first wraps last)</param>
     /// <param name="configuration">Optional configuration for reporters and formatters</param>
     /// <param name="maxDegreeOfParallelism">Maximum parallel spec execution (0 = sequential)</param>
+    /// <param name="bail">Stop execution after first failure</param>
     public SpecRunner(
         IEnumerable<ISpecMiddleware> middleware,
         DraftSpecConfiguration? configuration = null,
-        int maxDegreeOfParallelism = 0)
+        int maxDegreeOfParallelism = 0,
+        bool bail = false)
     {
         _middleware = middleware.ToList();
         _configuration = configuration;
         _maxDegreeOfParallelism = maxDegreeOfParallelism;
+        _bail = bail;
         _reporters = configuration?.Reporters.All.ToList() ?? [];
         _pipeline = BuildPipeline();
     }
@@ -98,6 +103,9 @@ public class SpecRunner : ISpecRunner
     {
         var results = new List<SpecResult>();
         var hasFocused = HasFocusedSpecs(rootContext);
+
+        // Reset bail state for this run
+        _bailTriggered = false;
 
         // Notify reporters that run is starting
         var totalSpecs = CountSpecs(rootContext);
@@ -173,6 +181,13 @@ public class SpecRunner : ISpecRunner
         List<SpecResult> results,
         bool hasFocused)
     {
+        // If bail was triggered, skip remaining specs in this context
+        if (_bailTriggered)
+        {
+            await SkipRemainingSpecsInContext(context, parentDescriptions, results, hasFocused);
+            return;
+        }
+
         var descriptions = string.IsNullOrEmpty(context.Description)
             ? parentDescriptions
             : parentDescriptions.Add(context.Description);
@@ -190,7 +205,18 @@ public class SpecRunner : ISpecRunner
                 await RunSpecsSequentialAsync(context, descriptions, results, hasFocused);
 
             // Recurse into children (always sequential to maintain context isolation)
-            foreach (var child in context.Children) await RunContextAsync(child, descriptions, results, hasFocused);
+            foreach (var child in context.Children)
+            {
+                if (_bailTriggered)
+                {
+                    // Skip remaining children
+                    await SkipRemainingSpecsInContext(child, descriptions, results, hasFocused);
+                }
+                else
+                {
+                    await RunContextAsync(child, descriptions, results, hasFocused);
+                }
+            }
         }
         finally
         {
@@ -208,9 +234,24 @@ public class SpecRunner : ISpecRunner
     {
         foreach (var spec in context.Specs)
         {
+            // If bail triggered, skip remaining specs
+            if (_bailTriggered)
+            {
+                var skippedResult = new SpecResult(spec, SpecStatus.Skipped, descriptions);
+                results.Add(skippedResult);
+                await NotifySpecCompletedAsync(skippedResult);
+                continue;
+            }
+
             var result = await RunSpecAsync(spec, context, descriptions, hasFocused);
             results.Add(result);
             await NotifySpecCompletedAsync(result);
+
+            // Check if we should bail
+            if (_bail && result.Status == SpecStatus.Failed)
+            {
+                _bailTriggered = true;
+            }
         }
     }
 
@@ -223,18 +264,55 @@ public class SpecRunner : ISpecRunner
         // Create indexed list to preserve order
         var indexedSpecs = context.Specs.Select((spec, index) => (spec, index)).ToList();
         var resultArray = new SpecResult[indexedSpecs.Count];
+        var processedFlags = new bool[indexedSpecs.Count];
+
+        using var cts = _bail ? new CancellationTokenSource() : null;
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = _maxDegreeOfParallelism
+            MaxDegreeOfParallelism = _maxDegreeOfParallelism,
+            CancellationToken = cts?.Token ?? CancellationToken.None
         };
 
-        await Parallel.ForEachAsync(indexedSpecs, options, async (item, _) =>
+        try
         {
-            var (spec, index) = item;
-            var result = await RunSpecAsync(spec, context, descriptions, hasFocused);
-            resultArray[index] = result;
-        });
+            await Parallel.ForEachAsync(indexedSpecs, options, async (item, ct) =>
+            {
+                var (spec, index) = item;
+
+                // Check if bail was triggered before starting
+                if (_bailTriggered)
+                {
+                    resultArray[index] = new SpecResult(spec, SpecStatus.Skipped, descriptions);
+                    processedFlags[index] = true;
+                    return;
+                }
+
+                var result = await RunSpecAsync(spec, context, descriptions, hasFocused);
+                resultArray[index] = result;
+                processedFlags[index] = true;
+
+                // Check if we should bail
+                if (_bail && result.Status == SpecStatus.Failed)
+                {
+                    _bailTriggered = true;
+                    cts?.Cancel();
+                }
+            });
+        }
+        catch (OperationCanceledException) when (_bailTriggered)
+        {
+            // Expected when bail is triggered - fill in skipped results
+        }
+
+        // Fill in any specs that weren't processed due to cancellation
+        for (var i = 0; i < resultArray.Length; i++)
+        {
+            if (!processedFlags[i])
+            {
+                resultArray[i] = new SpecResult(indexedSpecs[i].spec, SpecStatus.Skipped, descriptions);
+            }
+        }
 
         // Add results in original order
         results.AddRange(resultArray);
@@ -269,6 +347,34 @@ public class SpecRunner : ISpecRunner
         };
 
         return await _pipeline(executionContext);
+    }
+
+    /// <summary>
+    /// Skip all specs in a context and its children (used when bail is triggered).
+    /// </summary>
+    private async Task SkipRemainingSpecsInContext(
+        SpecContext context,
+        ImmutableList<string> parentDescriptions,
+        List<SpecResult> results,
+        bool hasFocused)
+    {
+        var descriptions = string.IsNullOrEmpty(context.Description)
+            ? parentDescriptions
+            : parentDescriptions.Add(context.Description);
+
+        // Skip all specs in this context
+        foreach (var spec in context.Specs)
+        {
+            var skippedResult = new SpecResult(spec, SpecStatus.Skipped, descriptions);
+            results.Add(skippedResult);
+            await NotifySpecCompletedAsync(skippedResult);
+        }
+
+        // Recursively skip children
+        foreach (var child in context.Children)
+        {
+            await SkipRemainingSpecsInContext(child, descriptions, results, hasFocused);
+        }
     }
 
     /// <summary>

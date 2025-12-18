@@ -209,6 +209,30 @@ public class CliOptionsParserTests
         await Assert.That(options.NoCache).IsTrue();
     }
 
+    [Test]
+    public async Task Parse_BailFlag_SetsBail()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--bail"]);
+
+        await Assert.That(options.Bail).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_ShortBailFlag_SetsBail()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "-b"]);
+
+        await Assert.That(options.Bail).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_BailDefaultIsFalse()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.Bail).IsFalse();
+    }
+
     #endregion
 
     #region Error Cases

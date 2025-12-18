@@ -23,4 +23,10 @@ public class CliOptions
     /// Disable dotnet-script caching, forcing recompilation on every run.
     /// </summary>
     public bool NoCache { get; set; }
+
+    /// <summary>
+    /// Stop execution after first spec failure.
+    /// Remaining specs will be reported as skipped.
+    /// </summary>
+    public bool Bail { get; set; }
 }

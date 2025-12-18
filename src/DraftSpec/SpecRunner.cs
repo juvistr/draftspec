@@ -102,24 +102,21 @@ public class SpecRunner : ISpecRunner
     public async Task<List<SpecResult>> RunAsync(SpecContext rootContext)
     {
         var results = new List<SpecResult>();
-        var hasFocused = HasFocusedSpecs(rootContext);
+
+        // Use cached values from SpecContext (computed during tree construction)
+        var hasFocused = rootContext.HasFocusedDescendants;
 
         // Reset bail state for this run
         _bailTriggered = false;
 
-        // Notify reporters that run is starting
-        var totalSpecs = CountSpecs(rootContext);
+        // Notify reporters that run is starting (use cached spec count)
+        var totalSpecs = rootContext.TotalSpecCount;
         var startTime = DateTime.UtcNow;
         await NotifyRunStartingAsync(totalSpecs, startTime);
 
         await RunContextAsync(rootContext, ImmutableList<string>.Empty, results, hasFocused);
 
         return results;
-    }
-
-    private static int CountSpecs(SpecContext context)
-    {
-        return context.Specs.Count + context.Children.Sum(CountSpecs);
     }
 
     private async Task NotifyRunStartingAsync(int totalSpecs, DateTime startTime)
@@ -160,19 +157,6 @@ public class SpecRunner : ISpecRunner
             // Multiple reporters - notify in parallel
             await Task.WhenAll(_reporters.Select(r => r.OnSpecsBatchCompletedAsync(results)));
         }
-    }
-
-    private static bool HasFocusedSpecs(SpecContext context)
-    {
-        if (context.Specs.Any(s => s.IsFocused))
-            return true;
-
-        // Explicit loop with early exit for better performance
-        foreach (var child in context.Children)
-            if (HasFocusedSpecs(child))
-                return true;
-
-        return false;
     }
 
     private async Task RunContextAsync(

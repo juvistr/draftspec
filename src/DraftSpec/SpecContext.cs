@@ -32,6 +32,22 @@ public class SpecContext
     private readonly List<SpecContext> _children = [];
     private readonly List<SpecDefinition> _specs = [];
 
+    // Cached counts computed during tree construction
+    private int _totalSpecCount;
+    private bool _hasFocusedDescendants;
+
+    /// <summary>
+    /// Total number of specs in this context and all descendants.
+    /// Computed incrementally during tree construction.
+    /// </summary>
+    public int TotalSpecCount => _totalSpecCount;
+
+    /// <summary>
+    /// Whether this context or any descendant contains a focused spec.
+    /// Computed incrementally during tree construction.
+    /// </summary>
+    public bool HasFocusedDescendants => _hasFocusedDescendants;
+
     /// <summary>
     /// Child contexts (read-only view). Use <see cref="AddChild"/> to add.
     /// </summary>
@@ -90,6 +106,40 @@ public class SpecContext
     public void AddSpec(SpecDefinition spec)
     {
         _specs.Add(spec);
+
+        // Update cached counts
+        IncrementSpecCount();
+
+        if (spec.IsFocused)
+        {
+            PropagateHasFocused();
+        }
+    }
+
+    /// <summary>
+    /// Increments spec count in this context and all ancestors.
+    /// </summary>
+    private void IncrementSpecCount()
+    {
+        var current = this;
+        while (current != null)
+        {
+            current._totalSpecCount++;
+            current = current.Parent;
+        }
+    }
+
+    /// <summary>
+    /// Propagates HasFocusedDescendants flag up to all ancestors.
+    /// </summary>
+    private void PropagateHasFocused()
+    {
+        var current = this;
+        while (current != null && !current._hasFocusedDescendants)
+        {
+            current._hasFocusedDescendants = true;
+            current = current.Parent;
+        }
     }
 
     /// <summary>

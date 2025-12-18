@@ -12,6 +12,38 @@ namespace DraftSpec.Mcp.Resources;
 public static class SpecResources
 {
     /// <summary>
+    /// Validates that a path is within the specified base directory.
+    /// Returns null if valid, or an error message if invalid.
+    /// </summary>
+    private static string? ValidatePathWithinBase(string path, string? baseDirectory = null)
+    {
+        try
+        {
+            var basePath = Path.GetFullPath(baseDirectory ?? Directory.GetCurrentDirectory());
+            var fullPath = Path.GetFullPath(path);
+
+            // Security: Add trailing separator to prevent prefix bypass attacks
+            // e.g., "/var/app/specs-evil" should NOT pass check for base "/var/app/specs"
+            var normalizedBase = basePath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var normalizedPath = fullPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+            // Use platform-appropriate case sensitivity
+            var comparison = OperatingSystem.IsWindows()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+
+            if (!normalizedPath.StartsWith(normalizedBase, comparison))
+                return "Path must be within the working directory";
+
+            return null; // Valid
+        }
+        catch (Exception)
+        {
+            return "Invalid path";
+        }
+    }
+
+    /// <summary>
     /// List all spec files in the working directory.
     /// </summary>
     [McpServerResource(UriTemplate = "draftspec://specs", Name = "spec_list")]
@@ -99,6 +131,16 @@ public static class SpecResources
             ? path
             : Path.GetFullPath(path);
 
+        // Security: Validate path is within working directory
+        var validationError = ValidatePathWithinBase(fullPath);
+        if (validationError != null)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                error = validationError
+            });
+        }
+
         if (!File.Exists(fullPath))
         {
             return JsonSerializer.Serialize(new
@@ -164,6 +206,16 @@ public static class SpecResources
         var fullPath = Path.IsPathRooted(path)
             ? path
             : Path.GetFullPath(path);
+
+        // Security: Validate path is within working directory
+        var validationError = ValidatePathWithinBase(fullPath);
+        if (validationError != null)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                error = validationError
+            });
+        }
 
         if (!File.Exists(fullPath))
         {

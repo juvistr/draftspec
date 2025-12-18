@@ -5,21 +5,28 @@ namespace DraftSpec.Tests.Mcp.Resources;
 
 /// <summary>
 /// Tests for SpecResources MCP methods.
+/// These tests modify the current working directory, so they cannot run in parallel.
 /// </summary>
+[NotInParallel]
 public class SpecResourcesTests
 {
     private string _tempDir = null!;
+    private string _originalDir = null!;
 
     [Before(Test)]
     public void SetUp()
     {
+        _originalDir = Directory.GetCurrentDirectory();
         _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
+        Directory.SetCurrentDirectory(_tempDir);
     }
 
     [After(Test)]
     public void TearDown()
     {
+        // Restore original directory before cleanup
+        Directory.SetCurrentDirectory(_originalDir);
         if (Directory.Exists(_tempDir))
             Directory.Delete(_tempDir, recursive: true);
     }
@@ -109,11 +116,11 @@ public class SpecResourcesTests
     [Test]
     public async Task GetSpec_ExistingFile_ReturnsContent()
     {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        // CWD is _tempDir from SetUp
         var content = "describe('test', () => { it('works', () => { }); });";
-        File.WriteAllText(specPath, content);
+        File.WriteAllText("test.spec.csx", content);
 
-        var result = SpecResources.GetSpec(specPath);
+        var result = SpecResources.GetSpec("test.spec.csx");
         var json = JsonDocument.Parse(result);
 
         await Assert.That(json.RootElement.GetProperty("content").GetString()).IsEqualTo(content);
@@ -141,10 +148,10 @@ public class SpecResourcesTests
     [Test]
     public async Task GetSpec_NonCsxFile_ReturnsError()
     {
-        var txtPath = Path.Combine(_tempDir, "test.txt");
-        File.WriteAllText(txtPath, "not a spec");
+        // CWD is _tempDir from SetUp
+        File.WriteAllText("test.txt", "not a spec");
 
-        var result = SpecResources.GetSpec(txtPath);
+        var result = SpecResources.GetSpec("test.txt");
         var json = JsonDocument.Parse(result);
 
         await Assert.That(json.RootElement.TryGetProperty("error", out _)).IsTrue();
@@ -154,32 +161,22 @@ public class SpecResourcesTests
     [Test]
     public async Task GetSpec_RelativePath_Works()
     {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        File.WriteAllText(specPath, "// content");
+        // CWD is already set to _tempDir by SetUp
+        File.WriteAllText("test.spec.csx", "// content");
 
-        // Change to temp directory and use relative path
-        var originalDir = Directory.GetCurrentDirectory();
-        try
-        {
-            Directory.SetCurrentDirectory(_tempDir);
-            var result = SpecResources.GetSpec("test.spec.csx");
-            var json = JsonDocument.Parse(result);
+        var result = SpecResources.GetSpec("test.spec.csx");
+        var json = JsonDocument.Parse(result);
 
-            await Assert.That(json.RootElement.TryGetProperty("content", out _)).IsTrue();
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(originalDir);
-        }
+        await Assert.That(json.RootElement.TryGetProperty("content", out _)).IsTrue();
     }
 
     [Test]
     public async Task GetSpec_IncludesMetadata()
     {
-        var specPath = Path.Combine(_tempDir, "mytest.spec.csx");
-        File.WriteAllText(specPath, "// spec");
+        // CWD is _tempDir from SetUp
+        File.WriteAllText("mytest.spec.csx", "// spec");
 
-        var result = SpecResources.GetSpec(specPath);
+        var result = SpecResources.GetSpec("mytest.spec.csx");
         var json = JsonDocument.Parse(result);
 
         await Assert.That(json.RootElement.GetProperty("name").GetString()).IsEqualTo("mytest");
@@ -189,15 +186,72 @@ public class SpecResourcesTests
 
     #endregion
 
+    #region GetSpec Security
+
+    [Test]
+    public async Task GetSpec_PathOutsideWorkingDirectory_ReturnsError()
+    {
+        // CWD is _tempDir from SetUp
+        // Create a file in _tempDir
+        File.WriteAllText("test.spec.csx", "// content");
+
+        // Create a subdirectory and change to it
+        Directory.CreateDirectory("subdir");
+        Directory.SetCurrentDirectory(Path.Combine(_tempDir, "subdir"));
+
+        // Try to access the parent file using relative path (path traversal)
+        var result = SpecResources.GetSpec("../test.spec.csx");
+        var json = JsonDocument.Parse(result);
+
+        await Assert.That(json.RootElement.TryGetProperty("error", out _)).IsTrue();
+        await Assert.That(json.RootElement.GetProperty("error").GetString())
+            .Contains("within the working directory");
+    }
+
+    [Test]
+    public async Task GetSpec_AbsolutePathOutsideWorkingDirectory_ReturnsError()
+    {
+        // CWD is _tempDir from SetUp
+        var parentSpecPath = Path.Combine(_tempDir, "test.spec.csx");
+        File.WriteAllText(parentSpecPath, "// content");
+
+        // Create a subdirectory and change to it
+        Directory.CreateDirectory("subdir");
+        Directory.SetCurrentDirectory(Path.Combine(_tempDir, "subdir"));
+
+        // Try to access the parent file using absolute path
+        var result = SpecResources.GetSpec(parentSpecPath);
+        var json = JsonDocument.Parse(result);
+
+        await Assert.That(json.RootElement.TryGetProperty("error", out _)).IsTrue();
+        await Assert.That(json.RootElement.GetProperty("error").GetString())
+            .Contains("within the working directory");
+    }
+
+    [Test]
+    public async Task GetSpec_PathWithinWorkingDirectory_Succeeds()
+    {
+        // CWD is already _tempDir from SetUp
+        File.WriteAllText("test.spec.csx", "// content");
+
+        var result = SpecResources.GetSpec("test.spec.csx");
+        var json = JsonDocument.Parse(result);
+
+        await Assert.That(json.RootElement.TryGetProperty("error", out _)).IsFalse();
+        await Assert.That(json.RootElement.TryGetProperty("content", out _)).IsTrue();
+    }
+
+    #endregion
+
     #region GetSpecMetadata
 
     [Test]
     public async Task GetSpecMetadata_ExistingFile_ReturnsMetadata()
     {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        File.WriteAllText(specPath, "describe('Test', () => { it('works'); });");
+        // CWD is _tempDir from SetUp
+        File.WriteAllText("test.spec.csx", "describe('Test', () => { it('works'); });");
 
-        var result = SpecResources.GetSpecMetadata(specPath);
+        var result = SpecResources.GetSpecMetadata("test.spec.csx");
         var json = JsonDocument.Parse(result);
 
         await Assert.That(json.RootElement.TryGetProperty("error", out _)).IsFalse();
@@ -207,15 +261,15 @@ public class SpecResourcesTests
     [Test]
     public async Task GetSpecMetadata_CountsDescribeBlocks()
     {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        File.WriteAllText(specPath, @"
+        // CWD is _tempDir from SetUp
+        File.WriteAllText("test.spec.csx", @"
 describe('First', () => {
     describe('Nested', () => { });
 });
 describe('Second', () => { });
 ");
 
-        var result = SpecResources.GetSpecMetadata(specPath);
+        var result = SpecResources.GetSpecMetadata("test.spec.csx");
         var json = JsonDocument.Parse(result);
 
         await Assert.That(json.RootElement.GetProperty("stats").GetProperty("describeBlocks").GetInt32()).IsEqualTo(3);
@@ -224,8 +278,8 @@ describe('Second', () => { });
     [Test]
     public async Task GetSpecMetadata_CountsItSpecs()
     {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        File.WriteAllText(specPath, @"
+        // CWD is _tempDir from SetUp
+        File.WriteAllText("test.spec.csx", @"
 describe('Test', () => {
     it('first', () => { });
     it('second', () => { });
@@ -233,7 +287,7 @@ describe('Test', () => {
 });
 ");
 
-        var result = SpecResources.GetSpecMetadata(specPath);
+        var result = SpecResources.GetSpecMetadata("test.spec.csx");
         var json = JsonDocument.Parse(result);
 
         await Assert.That(json.RootElement.GetProperty("stats").GetProperty("specs").GetInt32()).IsEqualTo(3);
@@ -260,14 +314,70 @@ describe('Test', () => {
     [Test]
     public async Task GetSpecMetadata_IncludesTimestamps()
     {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        File.WriteAllText(specPath, "// spec");
+        // CWD is _tempDir from SetUp
+        File.WriteAllText("test.spec.csx", "// spec");
 
-        var result = SpecResources.GetSpecMetadata(specPath);
+        var result = SpecResources.GetSpecMetadata("test.spec.csx");
         var json = JsonDocument.Parse(result);
 
         await Assert.That(json.RootElement.TryGetProperty("modifiedAt", out _)).IsTrue();
         await Assert.That(json.RootElement.TryGetProperty("createdAt", out _)).IsTrue();
+    }
+
+    #endregion
+
+    #region GetSpecMetadata Security
+
+    [Test]
+    public async Task GetSpecMetadata_PathOutsideWorkingDirectory_ReturnsError()
+    {
+        // CWD is _tempDir from SetUp
+        File.WriteAllText("test.spec.csx", "// content");
+
+        // Create a subdirectory and change to it
+        Directory.CreateDirectory("subdir");
+        Directory.SetCurrentDirectory(Path.Combine(_tempDir, "subdir"));
+
+        // Try to access the parent file using relative path (path traversal)
+        var result = SpecResources.GetSpecMetadata("../test.spec.csx");
+        var json = JsonDocument.Parse(result);
+
+        await Assert.That(json.RootElement.TryGetProperty("error", out _)).IsTrue();
+        await Assert.That(json.RootElement.GetProperty("error").GetString())
+            .Contains("within the working directory");
+    }
+
+    [Test]
+    public async Task GetSpecMetadata_AbsolutePathOutsideWorkingDirectory_ReturnsError()
+    {
+        // CWD is _tempDir from SetUp
+        var parentSpecPath = Path.Combine(_tempDir, "test.spec.csx");
+        File.WriteAllText(parentSpecPath, "// content");
+
+        // Create a subdirectory and change to it
+        Directory.CreateDirectory("subdir");
+        Directory.SetCurrentDirectory(Path.Combine(_tempDir, "subdir"));
+
+        // Try to access the parent file using absolute path
+        var result = SpecResources.GetSpecMetadata(parentSpecPath);
+        var json = JsonDocument.Parse(result);
+
+        await Assert.That(json.RootElement.TryGetProperty("error", out _)).IsTrue();
+        await Assert.That(json.RootElement.GetProperty("error").GetString())
+            .Contains("within the working directory");
+    }
+
+    [Test]
+    public async Task GetSpecMetadata_PathWithinWorkingDirectory_Succeeds()
+    {
+        // CWD is already _tempDir from SetUp
+        File.WriteAllText("test.spec.csx", "// content");
+
+        var result = SpecResources.GetSpecMetadata("test.spec.csx");
+        var json = JsonDocument.Parse(result);
+
+        await Assert.That(json.RootElement.TryGetProperty("error", out _)).IsFalse();
+        await Assert.That(json.RootElement.TryGetProperty("name", out _)).IsTrue();
     }
 
     #endregion

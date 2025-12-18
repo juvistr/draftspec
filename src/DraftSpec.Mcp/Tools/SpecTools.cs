@@ -115,6 +115,134 @@ public static class SpecTools
     }
 
     /// <summary>
+    /// Run multiple spec files in a single batch for efficiency.
+    /// </summary>
+    [McpServerTool(Name = "run_specs_batch")]
+    [Description("Execute multiple DraftSpec specifications in a single call. " +
+                 "Supports parallel execution for faster test runs. " +
+                 "Returns aggregated summary and individual results.")]
+    public static async Task<string> RunSpecsBatch(
+        SpecExecutionService executionService,
+        McpServer server,
+        [Description("Array of specs to execute, each with a name and content")]
+        List<BatchSpecInput> specs,
+        [Description("Run specs in parallel (default: true)")]
+        bool parallel = true,
+        [Description("Timeout per spec in seconds (default: 10, max: 60)")]
+        int timeoutSeconds = 10,
+        CancellationToken cancellationToken = default)
+    {
+        if (specs == null || specs.Count == 0)
+        {
+            return JsonSerializer.Serialize(new BatchSpecResult
+            {
+                AllPassed = true,
+                TotalSpecs = 0,
+                PassedSpecs = 0,
+                FailedSpecs = 0,
+                TotalDurationMs = 0,
+                Results = []
+            }, JsonOptionsProvider.Default);
+        }
+
+        timeoutSeconds = Math.Clamp(timeoutSeconds, 1, 60);
+        var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        // Progress tracking for batch
+        var totalSpecs = specs.Sum(s => 1); // Could estimate inner spec count if needed
+        var completedSpecs = 0;
+
+        async Task ReportBatchProgress(string specName, int index)
+        {
+            completedSpecs++;
+            var progressData = new
+            {
+                progressToken = "batch_execution",
+                progress = (double)completedSpecs / specs.Count * 100,
+                total = 100.0,
+                message = $"[{completedSpecs}/{specs.Count}] Completed: {specName}"
+            };
+
+            await server.SendNotificationAsync(
+                "notifications/progress",
+                progressData,
+                JsonOptionsProvider.Default,
+                cancellationToken);
+        }
+
+        List<NamedSpecResult> results;
+
+        if (parallel)
+        {
+            // Execute all specs in parallel
+            var tasks = specs.Select(async (spec, index) =>
+            {
+                var result = await executionService.ExecuteSpecAsync(
+                    spec.Content,
+                    timeout,
+                    cancellationToken);
+
+                await ReportBatchProgress(spec.Name, index);
+
+                return new NamedSpecResult
+                {
+                    Name = spec.Name,
+                    Success = result.Success,
+                    ExitCode = result.ExitCode,
+                    Report = result.Report,
+                    Error = result.Error,
+                    DurationMs = result.DurationMs
+                };
+            });
+
+            results = (await Task.WhenAll(tasks)).ToList();
+        }
+        else
+        {
+            // Execute specs sequentially
+            results = [];
+            for (var i = 0; i < specs.Count; i++)
+            {
+                var spec = specs[i];
+                var result = await executionService.ExecuteSpecAsync(
+                    spec.Content,
+                    timeout,
+                    cancellationToken);
+
+                await ReportBatchProgress(spec.Name, i);
+
+                results.Add(new NamedSpecResult
+                {
+                    Name = spec.Name,
+                    Success = result.Success,
+                    ExitCode = result.ExitCode,
+                    Report = result.Report,
+                    Error = result.Error,
+                    DurationMs = result.DurationMs
+                });
+            }
+        }
+
+        stopwatch.Stop();
+
+        var passedCount = results.Count(r => r.Success);
+        var failedCount = results.Count - passedCount;
+
+        var batchResult = new BatchSpecResult
+        {
+            AllPassed = failedCount == 0,
+            TotalSpecs = results.Count,
+            PassedSpecs = passedCount,
+            FailedSpecs = failedCount,
+            TotalDurationMs = stopwatch.Elapsed.TotalMilliseconds,
+            Results = results
+        };
+
+        return JsonSerializer.Serialize(batchResult, JsonOptionsProvider.Default);
+    }
+
+    /// <summary>
     /// Generate DraftSpec code from a structured description.
     /// </summary>
     [McpServerTool(Name = "scaffold_specs")]

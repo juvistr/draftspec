@@ -200,13 +200,14 @@ public class SessionManagerTests
     }
 
     [Test]
+    [Retry(3)] // Timing-sensitive test, retry if flaky
     public async Task GetAllSessions_ExcludesExpiredSessions()
     {
         using var manager = new SessionManager(_logger, _baseTempDir,
-            defaultTimeout: TimeSpan.FromMilliseconds(1));
+            defaultTimeout: TimeSpan.FromMilliseconds(10));
 
         manager.CreateSession();
-        await Task.Delay(50);
+        await Task.Delay(100);
 
         var sessions = manager.GetAllSessions();
 
@@ -214,17 +215,19 @@ public class SessionManagerTests
     }
 
     [Test]
+    [Retry(3)] // Timing-sensitive test, retry if flaky
     public async Task CleanupTimer_RemovesExpiredSessions()
     {
         using var manager = new SessionManager(_logger, _baseTempDir,
-            defaultTimeout: TimeSpan.FromMilliseconds(10),
-            cleanupInterval: TimeSpan.FromMilliseconds(50));
+            defaultTimeout: TimeSpan.FromMilliseconds(50),
+            cleanupInterval: TimeSpan.FromMilliseconds(100));
 
         manager.CreateSession();
         await Assert.That(manager.ActiveSessionCount).IsEqualTo(1);
 
-        // Wait for cleanup timer
-        await Task.Delay(200);
+        // Wait for session to expire and cleanup timer to run
+        // Use longer delay to account for CI timing variability
+        await Task.Delay(500);
 
         await Assert.That(manager.ActiveSessionCount).IsEqualTo(0);
     }

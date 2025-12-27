@@ -306,4 +306,123 @@ public class CollectionExpectationTests
     }
 
     #endregion
+
+    #region expect() overloads for collection types
+
+    [Test]
+    public async Task expect_WithHashSet_ReturnsCollectionExpectation()
+    {
+        var hashSet = new HashSet<int> { 1, 2, 3 };
+
+        DraftSpec.Dsl.expect(hashSet).toHaveCount(3);
+        DraftSpec.Dsl.expect(hashSet).toContain(2);
+        DraftSpec.Dsl.expect(hashSet).toNotBeEmpty();
+    }
+
+    [Test]
+    public async Task expect_WithHashSet_toBeEmpty_Works()
+    {
+        var hashSet = new HashSet<int>();
+
+        DraftSpec.Dsl.expect(hashSet).toBeEmpty();
+        DraftSpec.Dsl.expect(hashSet).toHaveCount(0);
+    }
+
+    [Test]
+    public async Task expect_WithHashSet_toHaveCount_ThrowsOnMismatch()
+    {
+        var hashSet = new HashSet<int> { 1, 2, 3 };
+
+        var ex = Assert.Throws<AssertionException>(() => DraftSpec.Dsl.expect(hashSet).toHaveCount(5));
+
+        await Assert.That(ex.Message).Contains("to have count 5");
+        await Assert.That(ex.Message).Contains("but was 3");
+    }
+
+    [Test]
+    public async Task expect_WithISet_ReturnsCollectionExpectation()
+    {
+        ISet<string> set = new HashSet<string> { "a", "b" };
+
+        DraftSpec.Dsl.expect(set).toHaveCount(2);
+        DraftSpec.Dsl.expect(set).toContain("a");
+    }
+
+    [Test]
+    public async Task expect_WithSortedSet_ViaISet_ReturnsCollectionExpectation()
+    {
+        // SortedSet needs cast to ISet to get collection methods
+        // (concrete types match generic overload otherwise)
+        ISet<int> sortedSet = new SortedSet<int> { 3, 1, 2 };
+
+        DraftSpec.Dsl.expect(sortedSet).toHaveCount(3);
+        DraftSpec.Dsl.expect(sortedSet).toContain(2);
+        DraftSpec.Dsl.expect(sortedSet).toBe(1, 2, 3); // SortedSet maintains order
+    }
+
+    [Test]
+    public async Task expect_WithIReadOnlyList_ReturnsCollectionExpectation()
+    {
+        IReadOnlyList<int> readOnlyList = new List<int> { 1, 2, 3 }.AsReadOnly();
+
+        DraftSpec.Dsl.expect(readOnlyList).toHaveCount(3);
+        DraftSpec.Dsl.expect(readOnlyList).toContain(2);
+        DraftSpec.Dsl.expect(readOnlyList).toBe(1, 2, 3);
+    }
+
+    [Test]
+    public async Task expect_WithIReadOnlyCollection_ReturnsCollectionExpectation()
+    {
+        IReadOnlyCollection<int> readOnlyCollection = new List<int> { 1, 2, 3 }.AsReadOnly();
+
+        DraftSpec.Dsl.expect(readOnlyCollection).toHaveCount(3);
+        DraftSpec.Dsl.expect(readOnlyCollection).toNotBeEmpty();
+    }
+
+    [Test]
+    public async Task expect_WithICollection_ReturnsCollectionExpectation()
+    {
+        ICollection<int> collection = new List<int> { 1, 2, 3 };
+
+        DraftSpec.Dsl.expect(collection).toHaveCount(3);
+        DraftSpec.Dsl.expect(collection).toContain(2);
+        DraftSpec.Dsl.expect(collection).toNotBeEmpty();
+    }
+
+    [Test]
+    public async Task expect_WithICollection_toBeEmpty_ThrowsWhenNotEmpty()
+    {
+        ICollection<int> collection = new List<int> { 1, 2, 3 };
+
+        var ex = Assert.Throws<AssertionException>(() => DraftSpec.Dsl.expect(collection).toBeEmpty());
+
+        await Assert.That(ex.Message).Contains("to be empty");
+    }
+
+    [Test]
+    public async Task expect_WithQueue_ViaIReadOnlyCollection_ReturnsCollectionExpectation()
+    {
+        // Queue<T> implements IReadOnlyCollection<T> but not ICollection<T>
+        var queue = new Queue<int>();
+        queue.Enqueue(1);
+        queue.Enqueue(2);
+
+        DraftSpec.Dsl.expect((IReadOnlyCollection<int>)queue).toHaveCount(2);
+        DraftSpec.Dsl.expect((IReadOnlyCollection<int>)queue).toContain(1);
+    }
+
+    [Test]
+    public async Task expect_WithLinkedList_ViaICollection_ReturnsCollectionExpectation()
+    {
+        // LinkedList<T> implements ICollection<T>
+        ICollection<int> linkedList = new LinkedList<int>();
+        linkedList.Add(1);
+        linkedList.Add(2);
+        linkedList.Add(3);
+
+        DraftSpec.Dsl.expect(linkedList).toHaveCount(3);
+        DraftSpec.Dsl.expect(linkedList).toNotBeEmpty();
+    }
+
+    #endregion
 }

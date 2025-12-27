@@ -83,4 +83,54 @@ public static partial class Dsl
     {
         return new CollectionExpectation<T>(actual, expr);
     }
+
+    /// <summary>
+    /// Create an expectation for a hash set.
+    /// </summary>
+    public static CollectionExpectation<T> expect<T>(
+        HashSet<T> actual,
+        [CallerArgumentExpression("actual")] string? expr = null)
+    {
+        return new CollectionExpectation<T>(actual, expr);
+    }
+
+    /// <summary>
+    /// Create an expectation for a set.
+    /// </summary>
+    public static CollectionExpectation<T> expect<T>(
+        ISet<T> actual,
+        [CallerArgumentExpression("actual")] string? expr = null)
+    {
+        return new CollectionExpectation<T>(actual, expr);
+    }
+
+    /// <summary>
+    /// Create an expectation for a read-only list.
+    /// </summary>
+    public static CollectionExpectation<T> expect<T>(
+        IReadOnlyList<T> actual,
+        [CallerArgumentExpression("actual")] string? expr = null)
+    {
+        return new CollectionExpectation<T>(actual, expr);
+    }
+
+    /// <summary>
+    /// Create an expectation for a read-only collection.
+    /// </summary>
+    public static CollectionExpectation<T> expect<T>(
+        IReadOnlyCollection<T> actual,
+        [CallerArgumentExpression("actual")] string? expr = null)
+    {
+        return new CollectionExpectation<T>(actual, expr);
+    }
+
+    /// <summary>
+    /// Create an expectation for a collection.
+    /// </summary>
+    public static CollectionExpectation<T> expect<T>(
+        ICollection<T> actual,
+        [CallerArgumentExpression("actual")] string? expr = null)
+    {
+        return new CollectionExpectation<T>(actual, expr);
+    }
 }

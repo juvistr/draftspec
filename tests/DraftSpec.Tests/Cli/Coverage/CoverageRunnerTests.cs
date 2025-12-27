@@ -186,7 +186,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task Constructor_SetsOutputDirectory()
     {
-        var runner = new CoverageRunner("/custom/path", "cobertura");
+        using var runner = new CoverageRunner("/custom/path", "cobertura");
 
         await Assert.That(runner.OutputDirectory).IsEqualTo("/custom/path");
     }
@@ -194,7 +194,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task Constructor_SetsFormat()
     {
-        var runner = new CoverageRunner("/tmp", "xml");
+        using var runner = new CoverageRunner("/tmp", "xml");
 
         await Assert.That(runner.Format).IsEqualTo("xml");
     }
@@ -202,7 +202,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task Constructor_DefaultsToCobertura()
     {
-        var runner = new CoverageRunner("/tmp");
+        using var runner = new CoverageRunner("/tmp");
 
         await Assert.That(runner.Format).IsEqualTo("cobertura");
     }
@@ -210,17 +210,61 @@ public class CoverageRunnerTests
     [Test]
     public async Task Constructor_NormalizesFormatToLowercase()
     {
-        var runner = new CoverageRunner("/tmp", "COBERTURA");
+        using var runner = new CoverageRunner("/tmp", "COBERTURA");
 
         await Assert.That(runner.Format).IsEqualTo("cobertura");
     }
 
     [Test]
-    public async Task CoverageFiles_InitiallyEmpty()
+    public async Task Constructor_GeneratesSessionId()
     {
-        var runner = new CoverageRunner("/tmp");
+        using var runner = new CoverageRunner("/tmp");
 
-        await Assert.That(runner.CoverageFiles).IsEmpty();
+        await Assert.That(runner.SessionId).StartsWith("draftspec-");
+        await Assert.That(runner.SessionId.Length).IsGreaterThan(20);
+    }
+
+    [Test]
+    public async Task Constructor_SetsUniqueSessions()
+    {
+        using var runner1 = new CoverageRunner("/tmp");
+        using var runner2 = new CoverageRunner("/tmp");
+
+        await Assert.That(runner1.SessionId).IsNotEqualTo(runner2.SessionId);
+    }
+
+    [Test]
+    public async Task Constructor_SetsCoverageFilePath()
+    {
+        using var runner = new CoverageRunner("/tmp/coverage", "cobertura");
+
+        await Assert.That(runner.CoverageFile).IsEqualTo("/tmp/coverage/coverage.cobertura.xml");
+    }
+
+    [Test]
+    public async Task IsServerRunning_InitiallyFalse()
+    {
+        using var runner = new CoverageRunner("/tmp");
+
+        await Assert.That(runner.IsServerRunning).IsFalse();
+    }
+
+    [Test]
+    public async Task GetCoverageFile_ReturnsNullWhenFileDoesNotExist()
+    {
+        using var runner = new CoverageRunner("/tmp/nonexistent");
+
+        await Assert.That(runner.GetCoverageFile()).IsNull();
+    }
+
+    [Test]
+    public async Task Shutdown_ReturnsFalseWhenServerNotStarted()
+    {
+        using var runner = new CoverageRunner("/tmp");
+
+        var result = runner.Shutdown();
+
+        await Assert.That(result).IsFalse();
     }
 
     #endregion

@@ -25,61 +25,61 @@ internal static class ContextBuilder
     /// <summary>
     /// Create a regular spec definition with a sync body.
     /// </summary>
-    public static SpecDefinition CreateSpec(string description, Action body, IReadOnlyList<string>? tags = null)
+    public static SpecDefinition CreateSpec(string description, Action body, IReadOnlyList<string>? tags = null, int lineNumber = 0)
     {
-        return new SpecDefinition(description, body) { Tags = tags ?? [] };
+        return new SpecDefinition(description, body) { Tags = tags ?? [], LineNumber = lineNumber };
     }
 
     /// <summary>
     /// Create a regular spec definition with an async body.
     /// </summary>
-    public static SpecDefinition CreateSpec(string description, Func<Task> body, IReadOnlyList<string>? tags = null)
+    public static SpecDefinition CreateSpec(string description, Func<Task> body, IReadOnlyList<string>? tags = null, int lineNumber = 0)
     {
-        return new SpecDefinition(description, body) { Tags = tags ?? [] };
+        return new SpecDefinition(description, body) { Tags = tags ?? [], LineNumber = lineNumber };
     }
 
     /// <summary>
     /// Create a pending spec definition (no body).
     /// </summary>
-    public static SpecDefinition CreatePendingSpec(string description, IReadOnlyList<string>? tags = null)
+    public static SpecDefinition CreatePendingSpec(string description, IReadOnlyList<string>? tags = null, int lineNumber = 0)
     {
-        return new SpecDefinition(description) { Tags = tags ?? [] };
+        return new SpecDefinition(description) { Tags = tags ?? [], LineNumber = lineNumber };
     }
 
     /// <summary>
     /// Create a focused spec definition with a sync body.
     /// </summary>
-    public static SpecDefinition CreateFocusedSpec(string description, Action body, IReadOnlyList<string>? tags = null)
+    public static SpecDefinition CreateFocusedSpec(string description, Action body, IReadOnlyList<string>? tags = null, int lineNumber = 0)
     {
-        return new SpecDefinition(description, body) { IsFocused = true, Tags = tags ?? [] };
+        return new SpecDefinition(description, body) { IsFocused = true, Tags = tags ?? [], LineNumber = lineNumber };
     }
 
     /// <summary>
     /// Create a focused spec definition with an async body.
     /// </summary>
     public static SpecDefinition CreateFocusedSpec(string description, Func<Task> body,
-        IReadOnlyList<string>? tags = null)
+        IReadOnlyList<string>? tags = null, int lineNumber = 0)
     {
-        return new SpecDefinition(description, body) { IsFocused = true, Tags = tags ?? [] };
+        return new SpecDefinition(description, body) { IsFocused = true, Tags = tags ?? [], LineNumber = lineNumber };
     }
 
     /// <summary>
     /// Create a skipped spec definition with a sync body.
     /// </summary>
-    public static SpecDefinition CreateSkippedSpec(string description, Action? body, IReadOnlyList<string>? tags = null)
+    public static SpecDefinition CreateSkippedSpec(string description, Action? body, IReadOnlyList<string>? tags = null, int lineNumber = 0)
     {
         return body == null
-            ? new SpecDefinition(description) { IsSkipped = true, Tags = tags ?? [] }
-            : new SpecDefinition(description, body) { IsSkipped = true, Tags = tags ?? [] };
+            ? new SpecDefinition(description) { IsSkipped = true, Tags = tags ?? [], LineNumber = lineNumber }
+            : new SpecDefinition(description, body) { IsSkipped = true, Tags = tags ?? [], LineNumber = lineNumber };
     }
 
     /// <summary>
     /// Create a skipped spec definition with an async body.
     /// </summary>
     public static SpecDefinition CreateSkippedSpec(string description, Func<Task>? body,
-        IReadOnlyList<string>? tags = null)
+        IReadOnlyList<string>? tags = null, int lineNumber = 0)
     {
-        return new SpecDefinition(description, body) { IsSkipped = true, Tags = tags ?? [] };
+        return new SpecDefinition(description, body) { IsSkipped = true, Tags = tags ?? [], LineNumber = lineNumber };
     }
 
     /// <summary>

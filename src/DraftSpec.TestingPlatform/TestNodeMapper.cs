@@ -12,13 +12,22 @@ internal static class TestNodeMapper
     /// </summary>
     public static TestNode CreateDiscoveryNode(DiscoveredSpec spec)
     {
-        var properties = new PropertyBag(DiscoveredTestNodeStateProperty.CachedInstance);
+        var propertyList = new List<IProperty>
+        {
+            DiscoveredTestNodeStateProperty.CachedInstance
+        };
+
+        // Add file location for IDE navigation if we have line number
+        if (spec.LineNumber > 0)
+        {
+            propertyList.Add(CreateFileLocationProperty(spec.SourceFile, spec.LineNumber));
+        }
 
         return new TestNode
         {
             Uid = new TestNodeUid(spec.Id),
             DisplayName = spec.DisplayName,
-            Properties = properties
+            Properties = new PropertyBag(propertyList.ToArray())
         };
     }
 
@@ -28,24 +37,28 @@ internal static class TestNodeMapper
     public static TestNode CreateResultNode(DiscoveredSpec spec, SpecResult result)
     {
         var stateProperty = GetStateProperty(result);
-        var properties = new PropertyBag(stateProperty);
+        var propertyList = new List<IProperty> { stateProperty };
 
         // Add timing property if we have duration info
         if (result.TotalDuration > TimeSpan.Zero)
         {
-            properties = new PropertyBag(
-                stateProperty,
-                new TimingProperty(new TimingInfo(
-                    DateTimeOffset.UtcNow - result.TotalDuration,
-                    DateTimeOffset.UtcNow,
-                    result.TotalDuration)));
+            propertyList.Add(new TimingProperty(new TimingInfo(
+                DateTimeOffset.UtcNow - result.TotalDuration,
+                DateTimeOffset.UtcNow,
+                result.TotalDuration)));
+        }
+
+        // Add file location for IDE navigation if we have line number
+        if (spec.LineNumber > 0)
+        {
+            propertyList.Add(CreateFileLocationProperty(spec.SourceFile, spec.LineNumber));
         }
 
         return new TestNode
         {
             Uid = new TestNodeUid(spec.Id),
             DisplayName = spec.DisplayName,
-            Properties = properties
+            Properties = new PropertyBag(propertyList.ToArray())
         };
     }
 
@@ -55,26 +68,33 @@ internal static class TestNodeMapper
     /// </summary>
     public static TestNode CreateResultNode(
         string relativeSourceFile,
+        string absoluteSourceFile,
         SpecResult result)
     {
         var id = GenerateStableId(relativeSourceFile, result.ContextPath, result.Spec.Description);
         var displayName = GenerateDisplayName(result.ContextPath, result.Spec.Description);
         var stateProperty = GetStateProperty(result);
+        var propertyList = new List<IProperty> { stateProperty };
 
-        var properties = result.TotalDuration > TimeSpan.Zero
-            ? new PropertyBag(
-                stateProperty,
-                new TimingProperty(new TimingInfo(
-                    DateTimeOffset.UtcNow - result.TotalDuration,
-                    DateTimeOffset.UtcNow,
-                    result.TotalDuration)))
-            : new PropertyBag(stateProperty);
+        if (result.TotalDuration > TimeSpan.Zero)
+        {
+            propertyList.Add(new TimingProperty(new TimingInfo(
+                DateTimeOffset.UtcNow - result.TotalDuration,
+                DateTimeOffset.UtcNow,
+                result.TotalDuration)));
+        }
+
+        // Add file location for IDE navigation if we have line number
+        if (result.Spec.LineNumber > 0)
+        {
+            propertyList.Add(CreateFileLocationProperty(absoluteSourceFile, result.Spec.LineNumber));
+        }
 
         return new TestNode
         {
             Uid = new TestNodeUid(id),
             DisplayName = displayName,
-            Properties = properties
+            Properties = new PropertyBag(propertyList.ToArray())
         };
     }
 
@@ -123,5 +143,18 @@ internal static class TestNodeMapper
     {
         var parts = new List<string>(contextPath) { specDescription };
         return string.Join(" > ", parts);
+    }
+
+    /// <summary>
+    /// Creates a TestFileLocationProperty for IDE navigation.
+    /// </summary>
+    private static TestFileLocationProperty CreateFileLocationProperty(string filePath, int lineNumber)
+    {
+        // MTP uses 0-based line numbers, but CallerLineNumber provides 1-based
+        var zeroBasedLine = Math.Max(0, lineNumber - 1);
+        var linePosition = new LinePosition(zeroBasedLine, 0);
+        var lineSpan = new LinePositionSpan(linePosition, linePosition);
+
+        return new TestFileLocationProperty(filePath, lineSpan);
     }
 }

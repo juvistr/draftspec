@@ -72,6 +72,12 @@ public sealed class DiscoveredSpec
     public IReadOnlyList<string> Tags { get; init; } = [];
 
     /// <summary>
+    /// Line number in the source file where this spec was defined.
+    /// Used for IDE navigation support.
+    /// </summary>
+    public int LineNumber { get; init; }
+
+    /// <summary>
     /// Reference to the original spec definition for execution.
     /// </summary>
     internal SpecDefinition? SpecDefinition { get; init; }

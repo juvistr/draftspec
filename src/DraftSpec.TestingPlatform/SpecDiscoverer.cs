@@ -159,6 +159,7 @@ internal sealed class SpecDiscoverer
                 IsSkipped = spec.IsSkipped,
                 IsFocused = spec.IsFocused,
                 Tags = spec.Tags,
+                LineNumber = spec.LineNumber,
                 SpecDefinition = spec,
                 Context = context
             });

@@ -28,6 +28,12 @@ public class SpecContext
     /// </summary>
     public SpecContext? Parent { get; }
 
+    /// <summary>
+    /// Line number in the source file where this context was defined.
+    /// Used for IDE navigation support.
+    /// </summary>
+    public int LineNumber { get; init; }
+
     // Internal mutable lists
     private readonly List<SpecContext> _children = [];
     private readonly List<SpecDefinition> _specs = [];

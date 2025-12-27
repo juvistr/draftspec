@@ -166,7 +166,10 @@ public class CoverageRunner
         return Path.Combine(_outputDirectory, $"coverage-{index:D4}.{GetFileExtension()}");
     }
 
-    private string GetFileExtension() => _format switch
+    /// <summary>
+    /// Get file extension for the configured format.
+    /// </summary>
+    internal string GetFileExtension() => _format switch
     {
         "cobertura" => "cobertura.xml",
         "xml" => "xml",
@@ -174,13 +177,19 @@ public class CoverageRunner
         _ => "cobertura.xml"
     };
 
-    private static string BuildDotnetCommand(IEnumerable<string> arguments)
+    /// <summary>
+    /// Build a dotnet command string from arguments.
+    /// </summary>
+    internal static string BuildDotnetCommand(IEnumerable<string> arguments)
     {
         var args = arguments.Select(QuoteIfNeeded);
         return $"dotnet {string.Join(" ", args)}";
     }
 
-    private static string QuoteIfNeeded(string arg)
+    /// <summary>
+    /// Quote an argument if it contains special characters.
+    /// </summary>
+    internal static string QuoteIfNeeded(string arg)
     {
         if (string.IsNullOrEmpty(arg))
             return "\"\"";

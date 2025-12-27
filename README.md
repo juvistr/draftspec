@@ -165,6 +165,32 @@ draftspec run . --exclude-tags slow   # Exclude specs with these tags
 draftspec run . --bail                # Stop on first failure
 ```
 
+### dotnet test Integration (MTP)
+
+Run specs via `dotnet test` with full IDE Test Explorer support:
+
+```bash
+# Create a test project
+dotnet new classlib -n MyProject.Specs
+cd MyProject.Specs
+dotnet add package DraftSpec.TestingPlatform
+
+# Add spec files (*.spec.csx)
+# Run tests
+dotnet test
+
+# With coverage
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+Features:
+- Visual Studio / VS Code / Rider Test Explorer integration
+- Click-to-navigate from test results to source
+- Built-in code coverage collection
+- Standard `dotnet test` CI/CD integration
+
+See [MTP Integration Guide](docs/mtp-integration.md) for full documentation.
+
 ### Configuration File
 
 Create a `draftspec.json` in your project for persistent settings:
@@ -271,6 +297,7 @@ configure(runner => runner
 - **[DSL Reference](docs/dsl-reference.md)** - Complete API for describe/it/hooks
 - **[Assertions](docs/assertions.md)** - Full expect() API reference
 - **[CLI Reference](docs/cli.md)** - Command-line options
+- **[MTP Integration](docs/mtp-integration.md)** - dotnet test and IDE integration
 - **[Configuration](docs/configuration.md)** - Middleware and plugins
 
 ## Contributing

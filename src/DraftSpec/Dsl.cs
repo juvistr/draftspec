@@ -19,9 +19,13 @@ public static partial class Dsl
         set => CurrentContextLocal.Value = value;
     }
 
-    internal static SpecContext? RootContext
+    /// <summary>
+    /// Gets the root context containing the spec tree after describe() blocks are executed.
+    /// Used by MTP integration to access the spec tree for discovery and execution.
+    /// </summary>
+    public static SpecContext? RootContext
     {
         get => RootContextLocal.Value;
-        set => RootContextLocal.Value = value;
+        internal set => RootContextLocal.Value = value;
     }
 }

@@ -24,6 +24,7 @@
         <ProjectReference Include="..\..\src\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj"/>
         <ProjectReference Include="..\..\src\DraftSpec.Formatters.Console\DraftSpec.Formatters.Console.csproj"/>
         <ProjectReference Include="..\..\src\DraftSpec.Mcp\DraftSpec.Mcp.csproj"/>
+        <ProjectReference Include="..\..\src\DraftSpec.TestingPlatform\DraftSpec.TestingPlatform.csproj"/>
     </ItemGroup>
 
 </Project>

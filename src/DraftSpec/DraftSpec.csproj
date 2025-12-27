@@ -23,6 +23,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="DraftSpec.Tests"/>
+        <InternalsVisibleTo Include="DraftSpec.TestingPlatform"/>
     </ItemGroup>
 
 </Project>

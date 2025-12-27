@@ -1,15 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <!-- Collect CSX spec files as content -->
+  <!-- Include all CSX files (specs and helpers) as content, copy to output -->
   <ItemGroup>
-    <DraftSpecFile Include="$(DraftSpecPattern)" Exclude="**/bin/**;**/obj/**" />
-    <Content Include="@(DraftSpecFile)" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <!-- Also include helper CSX files (loaded via #load) -->
-  <ItemGroup>
-    <DraftSpecHelperFile Include="**/*_helper.csx;**/spec_helper.csx" Exclude="**/bin/**;**/obj/**" />
-    <Content Include="@(DraftSpecHelperFile)" CopyToOutputDirectory="PreserveNewest" />
+    <None Remove="**/*.csx" />
+    <Content Include="**/*.csx" Exclude="**/bin/**;**/obj/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Generate entry point by copying template -->

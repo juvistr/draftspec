@@ -109,6 +109,12 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("  --force                Overwrite existing files (for init)");
     Console.WriteLine("  --no-cache             Disable dotnet-script caching");
     Console.WriteLine();
+    Console.WriteLine("Coverage Options:");
+    Console.WriteLine("  --coverage             Enable code coverage collection");
+    Console.WriteLine("  --coverage-output <dir>  Coverage output directory (default: ./coverage)");
+    Console.WriteLine("  --coverage-format <fmt>  Coverage format: cobertura, xml (default: cobertura)");
+    Console.WriteLine("  --coverage-report-formats <formats>  Additional report formats: html, json");
+    Console.WriteLine();
     Console.WriteLine("Path can be:");
     Console.WriteLine("  - A directory (runs all *.spec.csx files recursively)");
     Console.WriteLine("  - A single .spec.csx file");
@@ -119,6 +125,7 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("  draftspec new Calculator");
     Console.WriteLine("  draftspec run ./specs");
     Console.WriteLine("  draftspec run ./specs --format markdown -o report.md");
+    Console.WriteLine("  draftspec run ./specs --coverage");
     Console.WriteLine("  draftspec watch .");
 
     return error != null ? 1 : 0;

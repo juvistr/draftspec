@@ -329,6 +329,92 @@ public class ConfigLoaderTests
         await Assert.That(options.Format).IsEqualTo("console");
     }
 
+    [Test]
+    public async Task ApplyDefaults_AppliesCoverageEnabled()
+    {
+        var options = new CliOptions();
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig { Enabled = true }
+        };
+
+        options.ApplyDefaults(config);
+
+        await Assert.That(options.Coverage).IsTrue();
+    }
+
+    [Test]
+    public async Task ApplyDefaults_AppliesCoverageOutput()
+    {
+        var options = new CliOptions();
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig { Output = "./my-coverage" }
+        };
+
+        options.ApplyDefaults(config);
+
+        await Assert.That(options.CoverageOutput).IsEqualTo("./my-coverage");
+    }
+
+    [Test]
+    public async Task ApplyDefaults_AppliesCoverageFormat()
+    {
+        var options = new CliOptions();
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig { Format = "xml" }
+        };
+
+        options.ApplyDefaults(config);
+
+        await Assert.That(options.CoverageFormat).IsEqualTo("xml");
+    }
+
+    [Test]
+    public async Task ApplyDefaults_AppliesCoverageReportFormats()
+    {
+        var options = new CliOptions();
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig { ReportFormats = ["html", "json"] }
+        };
+
+        options.ApplyDefaults(config);
+
+        await Assert.That(options.CoverageReportFormats).IsEqualTo("html,json");
+    }
+
+    [Test]
+    public async Task ApplyDefaults_DoesNotOverrideExplicitCoverageOptions()
+    {
+        var options = new CliOptions { Coverage = false };
+        options.ExplicitlySet.Add(nameof(CliOptions.Coverage));
+
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig { Enabled = true }
+        };
+
+        options.ApplyDefaults(config);
+
+        await Assert.That(options.Coverage).IsFalse();
+    }
+
+    [Test]
+    public async Task ApplyDefaults_DoesNotApplyCoverageWhenNotEnabled()
+    {
+        var options = new CliOptions();
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig { Enabled = false }
+        };
+
+        options.ApplyDefaults(config);
+
+        await Assert.That(options.Coverage).IsFalse();
+    }
+
     #endregion
 
     #region CliOptionsParser ExplicitlySet Tests
@@ -363,6 +449,192 @@ public class ConfigLoaderTests
         var options = CliOptionsParser.Parse(["run", "."]);
 
         await Assert.That(options.ExplicitlySet).IsEmpty();
+    }
+
+    #endregion
+
+    #region DraftSpecProjectConfig.Validate Tests
+
+    [Test]
+    public async Task Validate_ValidConfig_ReturnsEmpty()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Timeout = 5000,
+            MaxParallelism = 4,
+            Parallel = true,
+            Coverage = new CoverageConfig
+            {
+                Enabled = true,
+                Thresholds = new ThresholdsConfig { Line = 80, Branch = 70 },
+                Formats = ["cobertura", "html"]
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).IsEmpty();
+    }
+
+    [Test]
+    public async Task Validate_NegativeTimeout_ReturnsError()
+    {
+        var config = new DraftSpecProjectConfig { Timeout = -1 };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).Contains("timeout must be a positive number");
+    }
+
+    [Test]
+    public async Task Validate_ZeroTimeout_ReturnsError()
+    {
+        var config = new DraftSpecProjectConfig { Timeout = 0 };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).Contains("timeout must be a positive number");
+    }
+
+    [Test]
+    public async Task Validate_NegativeMaxParallelism_ReturnsError()
+    {
+        var config = new DraftSpecProjectConfig { MaxParallelism = -1 };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).Contains("maxParallelism must be a positive number");
+    }
+
+    [Test]
+    public async Task Validate_LineThresholdTooHigh_ReturnsError()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig
+            {
+                Thresholds = new ThresholdsConfig { Line = 101 }
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).Contains("coverage.thresholds.line must be between 0 and 100");
+    }
+
+    [Test]
+    public async Task Validate_LineThresholdNegative_ReturnsError()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig
+            {
+                Thresholds = new ThresholdsConfig { Line = -1 }
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).Contains("coverage.thresholds.line must be between 0 and 100");
+    }
+
+    [Test]
+    public async Task Validate_BranchThresholdTooHigh_ReturnsError()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig
+            {
+                Thresholds = new ThresholdsConfig { Branch = 150 }
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).Contains("coverage.thresholds.branch must be between 0 and 100");
+    }
+
+    [Test]
+    public async Task Validate_BranchThresholdNegative_ReturnsError()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig
+            {
+                Thresholds = new ThresholdsConfig { Branch = -5 }
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).Contains("coverage.thresholds.branch must be between 0 and 100");
+    }
+
+    [Test]
+    public async Task Validate_UnknownCoverageFormat_ReturnsError()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig
+            {
+                Formats = ["cobertura", "invalid-format"]
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).Contains("Unknown coverage format: invalid-format");
+    }
+
+    [Test]
+    public async Task Validate_ValidCoverageFormats_ReturnsEmpty()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig
+            {
+                Formats = ["cobertura", "xml", "html", "json", "coverage"]
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).IsEmpty();
+    }
+
+    [Test]
+    public async Task Validate_CoverageFormatsCaseInsensitive_ReturnsEmpty()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Coverage = new CoverageConfig
+            {
+                Formats = ["COBERTURA", "Html", "JSON"]
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).IsEmpty();
+    }
+
+    [Test]
+    public async Task Validate_MultipleErrors_ReturnsAll()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Timeout = -1,
+            MaxParallelism = 0,
+            Coverage = new CoverageConfig
+            {
+                Thresholds = new ThresholdsConfig { Line = 200, Branch = -10 },
+                Formats = ["bad-format"]
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors.Count).IsGreaterThanOrEqualTo(4);
     }
 
     #endregion

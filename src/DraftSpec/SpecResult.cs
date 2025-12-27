@@ -1,3 +1,4 @@
+using DraftSpec.Coverage;
 using DraftSpec.Middleware;
 
 namespace DraftSpec;
@@ -63,6 +64,12 @@ public sealed record SpecResult(
     /// Total execution time including hooks and spec body.
     /// </summary>
     public TimeSpan TotalDuration => BeforeEachDuration + Duration + AfterEachDuration;
+
+    /// <summary>
+    /// Per-spec coverage data if coverage tracking is enabled.
+    /// Null if coverage middleware is not configured or not active.
+    /// </summary>
+    public SpecCoverageData? CoverageInfo { get; init; }
 
     /// <summary>
     /// Full description including context path and spec description, space-separated.

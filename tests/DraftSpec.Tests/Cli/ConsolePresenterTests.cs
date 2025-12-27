@@ -368,4 +368,96 @@ public class ConsolePresenterTests
     }
 
     #endregion
+
+    #region Coverage Display
+
+    [Test]
+    public async Task ShowCoverageReport_ShowsReportPath()
+    {
+        var presenter = new ConsolePresenter();
+
+        presenter.ShowCoverageReport("/path/to/coverage.cobertura.xml");
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("Coverage report:");
+        await Assert.That(output).Contains("/path/to/coverage.cobertura.xml");
+    }
+
+    [Test]
+    public async Task ShowCoverageReportGenerated_ShowsFormatAndPath()
+    {
+        var presenter = new ConsolePresenter();
+
+        presenter.ShowCoverageReportGenerated("html", "/path/to/coverage.html");
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("Coverage html report:");
+        await Assert.That(output).Contains("/path/to/coverage.html");
+    }
+
+    [Test]
+    public async Task ShowCoverageSummary_ShowsLineAndBranchPercent()
+    {
+        var presenter = new ConsolePresenter();
+
+        presenter.ShowCoverageSummary(85.5, 72.3);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("Coverage:");
+        await Assert.That(output).Contains("85.5% lines");
+        await Assert.That(output).Contains("72.3% branches");
+    }
+
+    [Test]
+    public async Task ShowCoverageSummary_FormatsPercentages()
+    {
+        var presenter = new ConsolePresenter();
+
+        presenter.ShowCoverageSummary(100.0, 0.0);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("100.0% lines");
+        await Assert.That(output).Contains("0.0% branches");
+    }
+
+    [Test]
+    public async Task ShowCoverageThresholdWarnings_ShowsWarningHeader()
+    {
+        var presenter = new ConsolePresenter();
+
+        presenter.ShowCoverageThresholdWarnings(["Line coverage 75% < 80% threshold"]);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("Coverage threshold warning:");
+    }
+
+    [Test]
+    public async Task ShowCoverageThresholdWarnings_ShowsAllFailures()
+    {
+        var presenter = new ConsolePresenter();
+        var failures = new[]
+        {
+            "Line coverage 75% < 80% threshold",
+            "Branch coverage 60% < 70% threshold"
+        };
+
+        presenter.ShowCoverageThresholdWarnings(failures);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("Line coverage 75% < 80% threshold");
+        await Assert.That(output).Contains("Branch coverage 60% < 70% threshold");
+    }
+
+    [Test]
+    public async Task ShowCoverageThresholdWarnings_IndentsFailures()
+    {
+        var presenter = new ConsolePresenter();
+
+        presenter.ShowCoverageThresholdWarnings(["Some failure"]);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("  Some failure");
+    }
+
+    #endregion
 }

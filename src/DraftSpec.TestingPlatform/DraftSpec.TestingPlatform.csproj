@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <!-- NuGet Package Configuration -->
+        <PackageId>DraftSpec.TestingPlatform</PackageId>
+        <Description>Microsoft.Testing.Platform adapter for DraftSpec. Enables running CSX specs via dotnet test with built-in coverage support.</Description>
+        <PackageTags>testing;bdd;rspec;mtp;dotnet-test;coverage</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- MTP SDK -->
+        <PackageReference Include="Microsoft.Testing.Platform" Version="2.0.2" />
+
+        <!-- Roslyn Scripting (for future use) -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.14.0" />
+
+        <!-- DraftSpec Core -->
+        <ProjectReference Include="..\DraftSpec\DraftSpec.csproj" />
+    </ItemGroup>
+
+    <!-- MSBuild props/targets for auto-registration -->
+    <ItemGroup>
+        <!-- Exclude template from compilation - it's only for copying to consumer projects -->
+        <Compile Remove="build\**\*.cs" />
+        <None Include="build\**\*" Pack="true" PackagePath="build\" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="DraftSpec.Tests" />
+    </ItemGroup>
+
+</Project>

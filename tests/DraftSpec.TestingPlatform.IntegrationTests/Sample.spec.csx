@@ -1,12 +1,11 @@
-#r "nuget: DraftSpec, *"
+// Root-level sample spec file for MTP integration
+// No run() call - MTP controls execution
 using static DraftSpec.Dsl;
 
-describe("Sample", () =>
+describe("Root Sample", () =>
 {
-    it("passes", () =>
+    it("demonstrates root-level specs", () =>
     {
-        expect(1 + 1).toBe(2);
+        expect(42).toBe(42);
     });
 });
-
-run();

@@ -271,6 +271,29 @@ internal sealed partial class CsxScriptHost
             options = options.AddReferences(refPath);
         }
 
+        // Add all DLLs from the base directory (covers project references copied to output)
+        foreach (var dll in Directory.EnumerateFiles(_baseDirectory, "*.dll", SearchOption.TopDirectoryOnly))
+        {
+            // Skip DLLs we've already added
+            var fileName = Path.GetFileName(dll);
+            if (fileName.StartsWith("System.", StringComparison.OrdinalIgnoreCase) ||
+                fileName.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) ||
+                fileName.Equals("DraftSpec.dll", StringComparison.OrdinalIgnoreCase) ||
+                fileName.Equals("DraftSpec.TestingPlatform.dll", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            try
+            {
+                options = options.AddReferences(dll);
+            }
+            catch
+            {
+                // Skip DLLs that can't be loaded (e.g., native DLLs)
+            }
+        }
+
         return options;
     }
 }

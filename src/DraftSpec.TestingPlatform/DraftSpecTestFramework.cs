@@ -66,9 +66,12 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
     /// </summary>
     public Task<CreateTestSessionResult> CreateTestSessionAsync(CreateTestSessionContext context)
     {
-        // Initialize with the current directory as project root
-        // In a real scenario, we'd get this from the test assembly location
-        _projectDirectory = Environment.CurrentDirectory;
+        // Use the test assembly location as the base directory for finding CSX files.
+        // CSX files are copied to the output directory by MSBuild targets.
+        // Environment.CurrentDirectory is unreliable when running from IDE.
+        var assemblyLocation = typeof(DraftSpecTestFramework).Assembly.Location;
+        _projectDirectory = Path.GetDirectoryName(assemblyLocation) ?? Environment.CurrentDirectory;
+
         _discoverer = new SpecDiscoverer(_projectDirectory);
         _executor = new MtpSpecExecutor(_projectDirectory);
 

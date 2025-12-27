@@ -382,6 +382,91 @@ public class CliOptionsParserTests
 
     #endregion
 
+    #region Coverage Options
+
+    [Test]
+    public async Task Parse_CoverageFlag_SetsCoverage()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--coverage"]);
+
+        await Assert.That(options.Coverage).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_CoverageDefaultIsFalse()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.Coverage).IsFalse();
+    }
+
+    [Test]
+    public async Task Parse_CoverageOutputOption_SetsCoverageOutput()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--coverage", "--coverage-output", "./reports"]);
+
+        await Assert.That(options.CoverageOutput).IsEqualTo("./reports");
+    }
+
+    [Test]
+    public async Task Parse_CoverageOutputWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--coverage-output"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--coverage-output requires a directory path");
+    }
+
+    [Test]
+    public async Task Parse_CoverageFormatOption_SetsCoverageFormat()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--coverage", "--coverage-format", "xml"]);
+
+        await Assert.That(options.CoverageFormat).IsEqualTo("xml");
+    }
+
+    [Test]
+    public async Task Parse_CoverageFormatWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--coverage-format"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--coverage-format requires a value");
+    }
+
+    [Test]
+    public async Task Parse_CoverageFormatDefaultIsCobertura()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--coverage"]);
+
+        await Assert.That(options.CoverageFormat).IsEqualTo("cobertura");
+    }
+
+    [Test]
+    public async Task Parse_CoverageFormatIsCaseInsensitive()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--coverage-format", "COBERTURA"]);
+
+        await Assert.That(options.CoverageFormat).IsEqualTo("cobertura");
+    }
+
+    [Test]
+    public async Task Parse_AllCoverageOptions_SetsAll()
+    {
+        var options = CliOptionsParser.Parse([
+            "run", ".",
+            "--coverage",
+            "--coverage-output", "./coverage-reports",
+            "--coverage-format", "xml"
+        ]);
+
+        await Assert.That(options.Coverage).IsTrue();
+        await Assert.That(options.CoverageOutput).IsEqualTo("./coverage-reports");
+        await Assert.That(options.CoverageFormat).IsEqualTo("xml");
+    }
+
+    #endregion
+
     #region Combined Options
 
     [Test]

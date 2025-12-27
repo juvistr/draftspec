@@ -114,6 +114,44 @@ public static class CliOptionsParser
                 options.ExcludeName = args[++i];
                 options.ExplicitlySet.Add(nameof(CliOptions.ExcludeName));
             }
+            else if (arg == "--coverage")
+            {
+                options.Coverage = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.Coverage));
+            }
+            else if (arg == "--coverage-output")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--coverage-output requires a directory path";
+                    return options;
+                }
+
+                options.CoverageOutput = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.CoverageOutput));
+            }
+            else if (arg == "--coverage-format")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--coverage-format requires a value (cobertura, xml, coverage)";
+                    return options;
+                }
+
+                options.CoverageFormat = args[++i].ToLowerInvariant();
+                options.ExplicitlySet.Add(nameof(CliOptions.CoverageFormat));
+            }
+            else if (arg == "--coverage-report-formats")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--coverage-report-formats requires a value (comma-separated: html, json)";
+                    return options;
+                }
+
+                options.CoverageReportFormats = args[++i].ToLowerInvariant();
+                options.ExplicitlySet.Add(nameof(CliOptions.CoverageReportFormats));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

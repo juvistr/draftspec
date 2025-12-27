@@ -137,4 +137,54 @@ public class ConsolePresenter
         Console.ResetColor();
         Console.WriteLine();
     }
+
+    public void ShowCoverageReport(string reportPath)
+    {
+        Console.WriteLine();
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"Coverage report: {reportPath}");
+        Console.ResetColor();
+    }
+
+    public void ShowCoverageReportGenerated(string format, string path)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"Coverage {format} report: {path}");
+        Console.ResetColor();
+    }
+
+    public void ShowCoverageSummary(double linePercent, double branchPercent)
+    {
+        var lineColor = GetCoverageColor(linePercent);
+        var branchColor = GetCoverageColor(branchPercent);
+
+        Console.Write("Coverage: ");
+        Console.ForegroundColor = lineColor;
+        Console.Write($"{linePercent:F1}% lines");
+        Console.ResetColor();
+        Console.Write(", ");
+        Console.ForegroundColor = branchColor;
+        Console.Write($"{branchPercent:F1}% branches");
+        Console.ResetColor();
+        Console.WriteLine();
+    }
+
+    public void ShowCoverageThresholdWarnings(IEnumerable<string> failures)
+    {
+        Console.WriteLine();
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("Coverage threshold warning:");
+        foreach (var failure in failures)
+        {
+            Console.WriteLine($"  {failure}");
+        }
+        Console.ResetColor();
+    }
+
+    private static ConsoleColor GetCoverageColor(double percent) => percent switch
+    {
+        >= 80 => ConsoleColor.Green,
+        >= 50 => ConsoleColor.Yellow,
+        _ => ConsoleColor.Red
+    };
 }

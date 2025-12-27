@@ -63,6 +63,30 @@ public class CliOptions
     public string? ExcludeName { get; set; }
 
     /// <summary>
+    /// Enable code coverage collection via dotnet-coverage.
+    /// </summary>
+    public bool Coverage { get; set; }
+
+    /// <summary>
+    /// Output directory for coverage reports.
+    /// Default: ./coverage
+    /// </summary>
+    public string? CoverageOutput { get; set; }
+
+    /// <summary>
+    /// Coverage output format: cobertura, xml, or coverage.
+    /// Default: cobertura
+    /// </summary>
+    public string CoverageFormat { get; set; } = "cobertura";
+
+    /// <summary>
+    /// Additional coverage report formats to generate (comma-separated).
+    /// Options: html, json
+    /// Example: "html,json" generates both HTML and JSON reports.
+    /// </summary>
+    public string? CoverageReportFormats { get; set; }
+
+    /// <summary>
     /// Apply default values from a project configuration file.
     /// Only applies values that weren't explicitly set via CLI.
     /// </summary>
@@ -92,5 +116,18 @@ public class CliOptions
 
         if (!ExplicitlySet.Contains(nameof(Reporters)) && config.Reporters is { Count: > 0 })
             Reporters = string.Join(",", config.Reporters);
+
+        // Coverage configuration
+        if (!ExplicitlySet.Contains(nameof(Coverage)) && config.Coverage?.Enabled == true)
+            Coverage = true;
+
+        if (!ExplicitlySet.Contains(nameof(CoverageOutput)) && !string.IsNullOrEmpty(config.Coverage?.Output))
+            CoverageOutput = config.Coverage.Output;
+
+        if (!ExplicitlySet.Contains(nameof(CoverageFormat)) && !string.IsNullOrEmpty(config.Coverage?.Format))
+            CoverageFormat = config.Coverage.Format;
+
+        if (!ExplicitlySet.Contains(nameof(CoverageReportFormats)) && config.Coverage?.ReportFormats is { Count: > 0 })
+            CoverageReportFormats = string.Join(",", config.Coverage.ReportFormats);
     }
 }

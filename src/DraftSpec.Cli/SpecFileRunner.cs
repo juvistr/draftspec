@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using DraftSpec.Cli.Coverage;
 
 namespace DraftSpec.Cli;
 
@@ -55,6 +56,7 @@ public partial class SpecFileRunner : ISpecFileRunner
     private readonly string? _excludeTags;
     private readonly string? _filterName;
     private readonly string? _excludeName;
+    private readonly CoverageRunner? _coverageRunner;
 
     /// <summary>
     /// Regex to match #r "nuget: Package, Version" directives.
@@ -67,7 +69,8 @@ public partial class SpecFileRunner : ISpecFileRunner
         string? filterTags = null,
         string? excludeTags = null,
         string? filterName = null,
-        string? excludeName = null)
+        string? excludeName = null,
+        CoverageRunner? coverageRunner = null)
     {
         _useFileBased = ProcessHelper.SupportsFileBasedApps;
         _noCache = noCache;
@@ -75,7 +78,13 @@ public partial class SpecFileRunner : ISpecFileRunner
         _excludeTags = excludeTags;
         _filterName = filterName;
         _excludeName = excludeName;
+        _coverageRunner = coverageRunner;
     }
+
+    /// <summary>
+    /// Gets the coverage runner if coverage is enabled.
+    /// </summary>
+    public CoverageRunner? CoverageRunner => _coverageRunner;
 
     /// <summary>
     /// Get environment variables for filter options.
@@ -293,8 +302,21 @@ public partial class SpecFileRunner : ISpecFileRunner
             tempFile = TransformToFileBased(specFile);
             var stopwatch = Stopwatch.StartNew();
             var envVars = GetFilterEnvironmentVariables();
-            var result = ProcessHelper.RunDotnet(["run", tempFile], workingDir,
-                envVars.Count > 0 ? envVars : null);
+
+            ProcessResult result;
+            if (_coverageRunner != null)
+            {
+                result = _coverageRunner.RunWithCoverage(
+                    ["run", tempFile],
+                    workingDir,
+                    envVars.Count > 0 ? envVars : null);
+            }
+            else
+            {
+                result = ProcessHelper.RunDotnet(["run", tempFile], workingDir,
+                    envVars.Count > 0 ? envVars : null);
+            }
+
             stopwatch.Stop();
 
             return new SpecRunResult(
@@ -328,8 +350,21 @@ public partial class SpecFileRunner : ISpecFileRunner
             ? new[] { "script", fileName, "--no-cache" }
             : new[] { "script", fileName };
         var envVars = GetFilterEnvironmentVariables();
-        var result = ProcessHelper.RunDotnet(args, workingDir,
-            envVars.Count > 0 ? envVars : null);
+
+        ProcessResult result;
+        if (_coverageRunner != null)
+        {
+            result = _coverageRunner.RunWithCoverage(
+                args,
+                workingDir,
+                envVars.Count > 0 ? envVars : null);
+        }
+        else
+        {
+            result = ProcessHelper.RunDotnet(args, workingDir,
+                envVars.Count > 0 ? envVars : null);
+        }
+
         stopwatch.Stop();
 
         return new SpecRunResult(

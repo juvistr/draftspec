@@ -33,7 +33,7 @@ bld/
 # Test results
 [Tt]est[Rr]esult*/
 *.trx
-coverage*/
+/coverage/
 *.coverage
 *.coveragexml
 

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using DraftSpec.Configuration;
+using DraftSpec.Coverage;
 using DraftSpec.Middleware;
 
 namespace DraftSpec;
@@ -13,6 +14,8 @@ public class SpecRunnerBuilder
     private DraftSpecConfiguration? _configuration;
     private int _maxDegreeOfParallelism;
     private bool _bail;
+    private ICoverageTracker? _coverageTracker;
+    private CoverageIndex? _coverageIndex;
 
     /// <summary>
     /// Add a middleware to the pipeline.
@@ -156,6 +159,38 @@ public class SpecRunnerBuilder
     }
 
     /// <summary>
+    /// Enable per-spec coverage tracking.
+    /// </summary>
+    /// <param name="tracker">
+    /// Coverage tracker implementation. If null, creates a new InProcessCoverageTracker.
+    /// </param>
+    /// <param name="index">
+    /// Optional coverage index for reverse lookups (which specs cover which lines).
+    /// </param>
+    /// <remarks>
+    /// Coverage middleware is added at the beginning of the pipeline to capture
+    /// coverage from all other middleware and the spec itself.
+    ///
+    /// The tracker must be started before running specs and stopped after.
+    /// </remarks>
+    public SpecRunnerBuilder WithCoverage(ICoverageTracker? tracker = null, CoverageIndex? index = null)
+    {
+        _coverageTracker = tracker ?? new InProcessCoverageTracker();
+        _coverageIndex = index;
+        return this;
+    }
+
+    /// <summary>
+    /// Get the coverage tracker, if configured.
+    /// </summary>
+    public ICoverageTracker? CoverageTracker => _coverageTracker;
+
+    /// <summary>
+    /// Get the coverage index, if configured.
+    /// </summary>
+    public CoverageIndex? CoverageIndex => _coverageIndex;
+
+    /// <summary>
     /// Get the current configuration, or null if not set.
     /// </summary>
     internal DraftSpecConfiguration? Configuration => _configuration;
@@ -182,6 +217,14 @@ public class SpecRunnerBuilder
             _configuration.InitializeMiddleware(this);
         }
 
-        return new SpecRunner(_middleware, _configuration, _maxDegreeOfParallelism, _bail);
+        // Add coverage middleware at the beginning if configured
+        // This ensures it captures coverage from all other middleware
+        var middleware = _middleware.ToList();
+        if (_coverageTracker != null)
+        {
+            middleware.Insert(0, new CoverageMiddleware(_coverageTracker, _coverageIndex));
+        }
+
+        return new SpecRunner(middleware, _configuration, _maxDegreeOfParallelism, _bail);
     }
 }

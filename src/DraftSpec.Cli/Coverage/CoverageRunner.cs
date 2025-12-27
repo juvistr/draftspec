@@ -1,19 +1,27 @@
+using System.Diagnostics;
+
 namespace DraftSpec.Cli.Coverage;
 
 /// <summary>
-/// Wraps command execution with dotnet-coverage collect.
+/// Wraps command execution with dotnet-coverage collect using server mode
+/// for efficient multi-file coverage collection.
 /// </summary>
-public class CoverageRunner
+public class CoverageRunner : IDisposable
 {
     private readonly string _outputDirectory;
     private readonly string _format;
-    private readonly List<string> _coverageFiles = [];
-    private int _fileCounter;
+    private readonly string _sessionId;
+    private readonly string _coverageFile;
+    private Process? _serverProcess;
+    private bool _serverStarted;
+    private bool _disposed;
 
     public CoverageRunner(string outputDirectory, string format = "cobertura")
     {
         _outputDirectory = outputDirectory;
         _format = format.ToLowerInvariant();
+        _sessionId = $"draftspec-{Guid.NewGuid():N}";
+        _coverageFile = Path.Combine(_outputDirectory, $"coverage.{GetFileExtension()}");
     }
 
     /// <summary>
@@ -27,100 +35,187 @@ public class CoverageRunner
     public string Format => _format;
 
     /// <summary>
-    /// Coverage files generated during this run.
+    /// Session ID for the coverage server.
     /// </summary>
-    public IReadOnlyList<string> CoverageFiles => _coverageFiles;
+    public string SessionId => _sessionId;
+
+    /// <summary>
+    /// Whether the coverage server is running.
+    /// </summary>
+    public bool IsServerRunning => _serverStarted && _serverProcess is { HasExited: false };
+
+    /// <summary>
+    /// Path to the coverage output file.
+    /// </summary>
+    public string CoverageFile => _coverageFile;
+
+    /// <summary>
+    /// Start the coverage collection server.
+    /// Must be called before RunWithCoverage.
+    /// </summary>
+    public bool StartServer()
+    {
+        if (_serverStarted)
+            return IsServerRunning;
+
+        EnsureOutputDirectory();
+
+        // Start: dotnet-coverage collect --server-mode --session-id {id} -o {file} -f {format}
+        var args = new[]
+        {
+            "collect",
+            "--server-mode",
+            "--session-id", _sessionId,
+            "-o", _coverageFile,
+            "-f", _format
+        };
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet-coverage",
+            Arguments = string.Join(" ", args.Select(QuoteIfNeeded)),
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        try
+        {
+            _serverProcess = Process.Start(startInfo);
+            _serverStarted = true;
+
+            // Give the server a moment to initialize
+            Thread.Sleep(500);
+
+            return _serverProcess is { HasExited: false };
+        }
+        catch
+        {
+            _serverStarted = false;
+            return false;
+        }
+    }
 
     /// <summary>
     /// Run a dotnet command with coverage collection.
+    /// Uses 'connect' to attach to running server for efficiency.
+    /// Falls back to standalone 'collect' if server not running.
     /// </summary>
     public ProcessResult RunWithCoverage(
         IEnumerable<string> dotnetArguments,
         string? workingDirectory = null,
         Dictionary<string, string>? environmentVariables = null)
     {
-        EnsureOutputDirectory();
-
-        var coverageFile = GenerateCoverageFileName();
-        _coverageFiles.Add(coverageFile);
-
-        // Build: dotnet-coverage collect -o {file} -f {format} "dotnet {args}"
         var commandToWrap = BuildDotnetCommand(dotnetArguments);
 
-        var args = new List<string>
+        // If server is running, use connect (fast)
+        if (IsServerRunning)
+        {
+            var connectArgs = new List<string>
+            {
+                "connect",
+                _sessionId,
+                commandToWrap
+            };
+
+            return ProcessHelper.Run(
+                "dotnet-coverage",
+                connectArgs,
+                workingDirectory,
+                environmentVariables);
+        }
+
+        // Fallback: standalone collect (slow, but works without server)
+        EnsureOutputDirectory();
+
+        var collectArgs = new List<string>
         {
             "collect",
-            "-o", coverageFile,
+            "-o", _coverageFile,
             "-f", _format,
             commandToWrap
         };
 
         return ProcessHelper.Run(
             "dotnet-coverage",
-            args,
+            collectArgs,
             workingDirectory,
             environmentVariables);
     }
 
     /// <summary>
-    /// Merge all collected coverage files into a single report.
-    /// Returns the path to the merged file, or null if no files to merge.
+    /// Shutdown the coverage server and finalize the coverage file.
     /// </summary>
-    public string? MergeCoverageFiles()
+    public bool Shutdown()
     {
-        if (_coverageFiles.Count == 0)
-            return null;
+        if (!_serverStarted)
+            return false;
 
-        var mergedFile = Path.Combine(_outputDirectory, $"coverage.{GetFileExtension()}");
-
-        if (_coverageFiles.Count == 1)
-        {
-            // Just copy the single file to the final location
-            if (_coverageFiles[0] != mergedFile)
-            {
-                File.Copy(_coverageFiles[0], mergedFile, overwrite: true);
-            }
-            return mergedFile;
-        }
-
-        // Merge multiple files
-        var args = new List<string> { "merge", "-o", mergedFile, "-f", _format };
-        args.AddRange(_coverageFiles);
-
+        // Send shutdown command
+        var args = new[] { "shutdown", _sessionId };
         var result = ProcessHelper.Run("dotnet-coverage", args);
 
-        return result.Success ? mergedFile : null;
-    }
-
-    /// <summary>
-    /// Clean up intermediate coverage files after merging.
-    /// </summary>
-    public void CleanupIntermediateFiles()
-    {
-        var mergedFile = Path.Combine(_outputDirectory, $"coverage.{GetFileExtension()}");
-
-        foreach (var file in _coverageFiles)
+        // Wait for server process to exit
+        if (_serverProcess != null)
         {
-            if (file != mergedFile && File.Exists(file))
+            try
             {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch
-                {
-                    // Ignore cleanup failures
-                }
+                _serverProcess.WaitForExit(5000);
+            }
+            catch
+            {
+                // Ignore timeout
             }
         }
+
+        _serverStarted = false;
+        return result.Success && File.Exists(_coverageFile);
     }
 
     /// <summary>
-    /// Generate formatted reports from a coverage file.
+    /// Get the coverage file path after collection is complete.
+    /// Returns null if no coverage was collected.
     /// </summary>
-    /// <param name="coverageFilePath">Path to the Cobertura XML coverage file.</param>
+    public string? GetCoverageFile()
+    {
+        return File.Exists(_coverageFile) ? _coverageFile : null;
+    }
+
+    /// <summary>
+    /// Generate formatted reports from the coverage file.
+    /// </summary>
     /// <param name="formats">Formats to generate (e.g., "html", "json").</param>
     /// <returns>Dictionary of format name to output file path.</returns>
+    public Dictionary<string, string> GenerateReports(IEnumerable<string> formats)
+    {
+        var result = new Dictionary<string, string>();
+
+        if (!File.Exists(_coverageFile))
+            return result;
+
+        var report = CoberturaParser.TryParseFile(_coverageFile);
+        if (report == null)
+            return result;
+
+        foreach (var format in formats)
+        {
+            var formatter = GetFormatter(format);
+            if (formatter == null)
+                continue;
+
+            var outputPath = Path.Combine(_outputDirectory, $"coverage{formatter.FileExtension}");
+            var content = formatter.Format(report);
+            File.WriteAllText(outputPath, content);
+            result[format] = outputPath;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Generate formatted reports from a specific coverage file path.
+    /// </summary>
     public Dictionary<string, string> GenerateReports(string coverageFilePath, IEnumerable<string> formats)
     {
         var result = new Dictionary<string, string>();
@@ -160,12 +255,6 @@ public class CoverageRunner
             Directory.CreateDirectory(_outputDirectory);
     }
 
-    private string GenerateCoverageFileName()
-    {
-        var index = Interlocked.Increment(ref _fileCounter);
-        return Path.Combine(_outputDirectory, $"coverage-{index:D4}.{GetFileExtension()}");
-    }
-
     /// <summary>
     /// Get file extension for the configured format.
     /// </summary>
@@ -202,5 +291,39 @@ public class CoverageRunner
         }
 
         return arg;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+
+        if (_serverStarted)
+        {
+            try
+            {
+                Shutdown();
+            }
+            catch
+            {
+                // Best-effort cleanup
+            }
+        }
+
+        if (_serverProcess != null)
+        {
+            try
+            {
+                if (!_serverProcess.HasExited)
+                    _serverProcess.Kill();
+                _serverProcess.Dispose();
+            }
+            catch
+            {
+                // Best-effort cleanup
+            }
+        }
     }
 }

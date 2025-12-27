@@ -44,6 +44,12 @@ public static class RunCommand
 
             var coverageOutput = Path.GetFullPath(options.CoverageOutput ?? "./coverage");
             coverageRunner = new CoverageRunner(coverageOutput, options.CoverageFormat);
+
+            // Start coverage server for efficient multi-file collection
+            if (!coverageRunner.StartServer())
+            {
+                Console.Error.WriteLine("Warning: Failed to start coverage server, falling back to per-file collection.");
+            }
         }
 
         var finder = new SpecFinder();
@@ -148,7 +154,7 @@ public static class RunCommand
     }
 
     /// <summary>
-    /// Handle coverage merging, reporting, and threshold checking.
+    /// Handle coverage shutdown, reporting, and threshold checking.
     /// Returns an exit code if coverage threshold failed, null otherwise.
     /// </summary>
     private static int? HandleCoverage(CoverageRunner? coverageRunner, DraftSpecProjectConfig? config, CliOptions options)
@@ -156,13 +162,15 @@ public static class RunCommand
         if (coverageRunner == null)
             return null;
 
-        var mergedFile = coverageRunner.MergeCoverageFiles();
-        if (mergedFile == null)
+        // Shutdown server and finalize coverage file
+        coverageRunner.Shutdown();
+
+        var coverageFile = coverageRunner.GetCoverageFile();
+        if (coverageFile == null)
             return null;
 
         Console.WriteLine();
-        Console.WriteLine($"Coverage report: {mergedFile}");
-        coverageRunner.CleanupIntermediateFiles();
+        Console.WriteLine($"Coverage report: {coverageFile}");
 
         // Generate additional report formats if requested (CLI option takes precedence)
         var reportFormatsStr = options.CoverageReportFormats;
@@ -172,7 +180,7 @@ public static class RunCommand
 
         if (reportFormats is { Count: > 0 })
         {
-            var generatedReports = coverageRunner.GenerateReports(mergedFile, reportFormats);
+            var generatedReports = coverageRunner.GenerateReports(reportFormats);
             foreach (var (format, path) in generatedReports)
             {
                 Console.WriteLine($"Coverage {format} report: {path}");
@@ -184,7 +192,7 @@ public static class RunCommand
         if (thresholds != null && (thresholds.Line.HasValue || thresholds.Branch.HasValue))
         {
             var checker = new CoverageThresholdChecker();
-            var result = checker.CheckFile(mergedFile, thresholds);
+            var result = checker.CheckFile(coverageFile, thresholds);
 
             if (result != null)
             {
@@ -200,6 +208,9 @@ public static class RunCommand
                 }
             }
         }
+
+        // Dispose to clean up any remaining resources
+        coverageRunner.Dispose();
 
         return null;
     }

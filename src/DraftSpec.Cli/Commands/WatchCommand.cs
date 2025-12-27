@@ -18,9 +18,10 @@ public static class WatchCommand
         if (configResult.Config != null)
             options.ApplyDefaults(configResult.Config);
 
-        // Initialize coverage runner if enabled
-        CoverageRunner? coverageRunner = null;
-        if (options.Coverage)
+        // Check coverage tool availability if enabled
+        var coverageEnabled = options.Coverage;
+        string? coverageOutput = null;
+        if (coverageEnabled)
         {
             if (!CoverageToolDetector.IsAvailable)
             {
@@ -29,24 +30,12 @@ public static class WatchCommand
                 return 1;
             }
 
-            var coverageOutput = Path.GetFullPath(options.CoverageOutput ?? "./coverage");
-            coverageRunner = new CoverageRunner(coverageOutput, options.CoverageFormat);
+            coverageOutput = Path.GetFullPath(options.CoverageOutput ?? "./coverage");
         }
 
         var path = options.Path;
         var finder = new SpecFinder();
-        var runner = new SpecFileRunner(
-            options.NoCache,
-            options.FilterTags,
-            options.ExcludeTags,
-            options.FilterName,
-            options.ExcludeName,
-            coverageRunner);
         var presenter = new ConsolePresenter(true);
-
-        runner.OnBuildStarted += presenter.ShowBuilding;
-        runner.OnBuildCompleted += presenter.ShowBuildResult;
-        runner.OnBuildSkipped += presenter.ShowBuildSkipped;
 
         var cts = new CancellationTokenSource();
 
@@ -62,6 +51,27 @@ public static class WatchCommand
         void RunSpecs(IReadOnlyList<string> specFiles, bool isPartialRun = false)
         {
             presenter.Clear();
+
+            // Create fresh coverage runner for each watch iteration
+            CoverageRunner? coverageRunner = null;
+            if (coverageEnabled && coverageOutput != null)
+            {
+                coverageRunner = new CoverageRunner(coverageOutput, options.CoverageFormat);
+                coverageRunner.StartServer();
+            }
+
+            // Create runner with coverage for this iteration
+            var runner = new SpecFileRunner(
+                options.NoCache,
+                options.FilterTags,
+                options.ExcludeTags,
+                options.FilterName,
+                options.ExcludeName,
+                coverageRunner);
+
+            runner.OnBuildStarted += presenter.ShowBuilding;
+            runner.OnBuildCompleted += presenter.ShowBuildResult;
+            runner.OnBuildSkipped += presenter.ShowBuildSkipped;
 
             try
             {
@@ -80,6 +90,10 @@ public static class WatchCommand
             catch (ArgumentException ex)
             {
                 presenter.ShowError(ex.Message);
+            }
+            finally
+            {
+                coverageRunner?.Dispose();
             }
 
             presenter.ShowWatching();
@@ -134,7 +148,7 @@ public static class WatchCommand
     }
 
     /// <summary>
-    /// Handle coverage in watch mode - merge files, generate reports, show warnings.
+    /// Handle coverage in watch mode - shutdown server, generate reports, show warnings.
     /// Unlike run mode, this doesn't exit on threshold failure.
     /// </summary>
     private static void HandleCoverageInWatchMode(
@@ -146,12 +160,14 @@ public static class WatchCommand
         if (coverageRunner == null)
             return;
 
-        var mergedFile = coverageRunner.MergeCoverageFiles();
-        if (mergedFile == null)
+        // Shutdown server and finalize coverage file
+        coverageRunner.Shutdown();
+
+        var coverageFile = coverageRunner.GetCoverageFile();
+        if (coverageFile == null)
             return;
 
-        presenter.ShowCoverageReport(mergedFile);
-        coverageRunner.CleanupIntermediateFiles();
+        presenter.ShowCoverageReport(coverageFile);
 
         // Generate additional report formats if requested
         var reportFormatsStr = options.CoverageReportFormats;
@@ -161,7 +177,7 @@ public static class WatchCommand
 
         if (reportFormats is { Count: > 0 })
         {
-            var generatedReports = coverageRunner.GenerateReports(mergedFile, reportFormats);
+            var generatedReports = coverageRunner.GenerateReports(reportFormats);
             foreach (var (format, path) in generatedReports)
             {
                 presenter.ShowCoverageReportGenerated(format, path);
@@ -173,7 +189,7 @@ public static class WatchCommand
         if (thresholds != null && (thresholds.Line.HasValue || thresholds.Branch.HasValue))
         {
             var checker = new CoverageThresholdChecker();
-            var result = checker.CheckFile(mergedFile, thresholds);
+            var result = checker.CheckFile(coverageFile, thresholds);
 
             if (result != null)
             {

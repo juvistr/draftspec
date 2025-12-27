@@ -73,12 +73,14 @@ public class SpecExecutionContextTests
         // Spawn multiple threads accessing Items concurrently
         for (var i = 0; i < 100; i++)
         {
-            var key = $"key_{i}";
+            // Capture loop variable to avoid closure issues
+            var index = i;
+            var key = $"key_{index}";
             tasks.Add(Task.Run(() =>
             {
                 try
                 {
-                    context.Items[key] = i;
+                    context.Items[key] = index;
                     _ = context.Items.TryGetValue(key, out _);
                 }
                 catch (Exception ex)

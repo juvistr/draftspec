@@ -6,6 +6,12 @@
     <Content Include="@(DraftSpecFile)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Also include helper CSX files (loaded via #load) -->
+  <ItemGroup>
+    <DraftSpecHelperFile Include="**/*_helper.csx;**/spec_helper.csx" Exclude="**/bin/**;**/obj/**" />
+    <Content Include="@(DraftSpecHelperFile)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- Generate entry point by copying template -->
   <Target Name="GenerateDraftSpecEntryPoint"
           BeforeTargets="BeforeCompile"

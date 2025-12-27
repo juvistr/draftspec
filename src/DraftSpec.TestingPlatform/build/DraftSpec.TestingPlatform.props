@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <!-- Mark this as a test project for MTP -->
+    <IsTestProject>true</IsTestProject>
+
+    <!-- Enable Microsoft.Testing.Platform -->
+    <EnableMicrosoftTestingPlatform Condition="'$(EnableMicrosoftTestingPlatform)' == ''">true</EnableMicrosoftTestingPlatform>
+
+    <!-- Generate entry point automatically -->
+    <GenerateTestingPlatformEntryPoint Condition="'$(GenerateTestingPlatformEntryPoint)' == ''">true</GenerateTestingPlatformEntryPoint>
+
+    <!-- Output as executable for dotnet test -->
+    <OutputType>Exe</OutputType>
+
+    <!-- Enable reflection for JSON serialization (required for DraftSpec) -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+
+  <!-- Default spec file pattern -->
+  <PropertyGroup Condition="'$(DraftSpecPattern)' == ''">
+    <DraftSpecPattern>**/*.spec.csx</DraftSpecPattern>
+  </PropertyGroup>
+</Project>

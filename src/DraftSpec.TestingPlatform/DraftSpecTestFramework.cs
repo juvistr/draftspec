@@ -15,6 +15,11 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
     private readonly ITestFrameworkCapabilities _capabilities;
     private readonly IServiceProvider _serviceProvider;
 
+    // Lazy-initialized components (created on first use with project directory)
+    private SpecDiscoverer? _discoverer;
+    private MtpSpecExecutor? _executor;
+    private string? _projectDirectory;
+
     /// <summary>
     /// Unique identifier for this test framework.
     /// </summary>
@@ -61,8 +66,12 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
     /// </summary>
     public Task<CreateTestSessionResult> CreateTestSessionAsync(CreateTestSessionContext context)
     {
-        // Session initialization will be expanded in future issues
-        // to set up Roslyn scripting environment and discover CSX files
+        // Initialize with the current directory as project root
+        // In a real scenario, we'd get this from the test assembly location
+        _projectDirectory = Environment.CurrentDirectory;
+        _discoverer = new SpecDiscoverer(_projectDirectory);
+        _executor = new MtpSpecExecutor(_projectDirectory);
+
         return Task.FromResult(new CreateTestSessionResult { IsSuccess = true });
     }
 
@@ -91,6 +100,8 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
     /// </summary>
     public Task<CloseTestSessionResult> CloseTestSessionAsync(CloseTestSessionContext context)
     {
+        _discoverer = null;
+        _executor = null;
         return Task.FromResult(new CloseTestSessionResult { IsSuccess = true });
     }
 
@@ -101,20 +112,21 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
         DiscoverTestExecutionRequest request,
         ExecuteRequestContext context)
     {
-        // TODO: Issue #120 - Implement CsxScriptHost for discovery
-        // TODO: Issue #121 - Implement discovery mode
-
-        // For now, publish a placeholder test node to verify the framework is recognized
-        var testNode = new TestNode
+        if (_discoverer == null)
         {
-            Uid = new TestNodeUid("draftspec:placeholder"),
-            DisplayName = "DraftSpec Placeholder (discovery not yet implemented)",
-            Properties = new PropertyBag(DiscoveredTestNodeStateProperty.CachedInstance)
-        };
+            return;
+        }
 
-        await context.MessageBus.PublishAsync(
-            this,
-            new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+        var specs = await _discoverer.DiscoverAsync(context.CancellationToken);
+
+        foreach (var spec in specs)
+        {
+            var testNode = TestNodeMapper.CreateDiscoveryNode(spec);
+
+            await context.MessageBus.PublishAsync(
+                this,
+                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+        }
     }
 
     /// <summary>
@@ -124,19 +136,50 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
         RunTestExecutionRequest request,
         ExecuteRequestContext context)
     {
-        // TODO: Issue #120 - Implement CsxScriptHost for execution
-        // TODO: Issue #122 - Implement filtered spec execution
-
-        // For now, publish a passed placeholder to verify the framework is working
-        var testNode = new TestNode
+        if (_executor == null || _discoverer == null)
         {
-            Uid = new TestNodeUid("draftspec:placeholder"),
-            DisplayName = "DraftSpec Placeholder (execution not yet implemented)",
-            Properties = new PropertyBag(PassedTestNodeStateProperty.CachedInstance)
-        };
+            return;
+        }
 
-        await context.MessageBus.PublishAsync(
-            this,
-            new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+        // Check if specific tests are requested via filter
+        var filter = request.Filter;
+        IReadOnlyList<ExecutionResult> executionResults;
+
+        if (filter is TestNodeUidListFilter uidFilter && uidFilter.TestNodeUids.Length > 0)
+        {
+            // Run specific tests by ID
+            var requestedIds = uidFilter.TestNodeUids.Select(uid => uid.Value).ToHashSet();
+            executionResults = await _executor.ExecuteByIdsAsync(requestedIds, context.CancellationToken);
+        }
+        else
+        {
+            // Run all tests - discover and execute all files
+            var specs = await _discoverer.DiscoverAsync(context.CancellationToken);
+
+            // Group by file and execute
+            var fileGroups = specs.GroupBy(s => s.SourceFile);
+            var results = new List<ExecutionResult>();
+
+            foreach (var group in fileGroups)
+            {
+                var result = await _executor.ExecuteFileAsync(group.Key, context.CancellationToken);
+                results.Add(result);
+            }
+
+            executionResults = results;
+        }
+
+        // Publish results to MTP
+        foreach (var execResult in executionResults)
+        {
+            foreach (var specResult in execResult.Results)
+            {
+                var testNode = TestNodeMapper.CreateResultNode(execResult.RelativeSourceFile, specResult);
+
+                await context.MessageBus.PublishAsync(
+                    this,
+                    new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+            }
+        }
     }
 }

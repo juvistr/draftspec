@@ -22,7 +22,7 @@ dotnet tool install -g dotnet-script
 The CLI provides convenient commands for running specs, watch mode, and project initialization:
 
 ```bash
-dotnet tool install -g DraftSpec.Cli
+dotnet tool install -g DraftSpec.Cli --prerelease
 ```
 
 ## Your First Spec

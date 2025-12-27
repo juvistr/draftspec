@@ -5,7 +5,7 @@ Complete reference for the DraftSpec command-line interface.
 ## Installation
 
 ```bash
-dotnet tool install -g DraftSpec.Cli
+dotnet tool install -g DraftSpec.Cli --prerelease
 ```
 
 After installation, the `draftspec` command is available globally.

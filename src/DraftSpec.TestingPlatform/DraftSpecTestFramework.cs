@@ -174,7 +174,10 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
         {
             foreach (var specResult in execResult.Results)
             {
-                var testNode = TestNodeMapper.CreateResultNode(execResult.RelativeSourceFile, specResult);
+                var testNode = TestNodeMapper.CreateResultNode(
+                    execResult.RelativeSourceFile,
+                    execResult.AbsoluteSourceFile,
+                    specResult);
 
                 await context.MessageBus.PublishAsync(
                     this,

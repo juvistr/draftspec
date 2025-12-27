@@ -58,7 +58,7 @@ internal sealed class MtpSpecExecutor
 
             if (rootContext == null)
             {
-                return new ExecutionResult(relativePath, []);
+                return new ExecutionResult(relativePath, absolutePath, []);
             }
 
             // Create result capture reporter
@@ -92,7 +92,7 @@ internal sealed class MtpSpecExecutor
             var report = SpecReportBuilder.Build(rootContext, results);
             await captureReporter.OnRunCompletedAsync(report);
 
-            return new ExecutionResult(relativePath, captureReporter.Results);
+            return new ExecutionResult(relativePath, absolutePath, captureReporter.Results);
         }
         finally
         {
@@ -161,7 +161,9 @@ internal sealed class MtpSpecExecutor
 /// Result of executing specs from a single file.
 /// </summary>
 /// <param name="RelativeSourceFile">Relative path to the source file.</param>
+/// <param name="AbsoluteSourceFile">Absolute path to the source file.</param>
 /// <param name="Results">Spec results from execution.</param>
 internal sealed record ExecutionResult(
     string RelativeSourceFile,
+    string AbsoluteSourceFile,
     IReadOnlyList<SpecResult> Results);

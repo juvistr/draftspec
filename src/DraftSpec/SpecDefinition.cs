@@ -48,6 +48,12 @@ public class SpecDefinition
     public IReadOnlyList<string> Tags { get; init; } = [];
 
     /// <summary>
+    /// Line number in the source file where this spec was defined.
+    /// Used for IDE navigation support.
+    /// </summary>
+    public int LineNumber { get; init; }
+
+    /// <summary>
     /// Creates a spec with an async body.
     /// </summary>
     /// <param name="description">Description of what the spec tests.</param>

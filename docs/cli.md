@@ -511,8 +511,33 @@ Error: draftspec.json: maxParallelism must be a positive number
 
 ---
 
+## Alternative: Microsoft Testing Platform
+
+For projects that need IDE Test Explorer integration or `dotnet test` compatibility, consider using the [MTP Integration](mtp-integration.md) instead of the CLI.
+
+| Feature | CLI | MTP (`dotnet test`) |
+|---------|-----|---------------------|
+| Standalone execution | Yes | No (requires project) |
+| Watch mode | Yes | No |
+| IDE Test Explorer | No | Yes |
+| Code coverage | External | Built-in |
+| CI/CD | Custom | Standard `dotnet test` |
+
+The CLI is ideal for:
+- Quick prototyping and exploration
+- Standalone spec scripts
+- Watch mode development
+
+MTP is better for:
+- Enterprise/team environments
+- IDE-centric workflows
+- Standard .NET CI/CD pipelines
+
+---
+
 ## See Also
 
 - **[Getting Started](getting-started.md)** - First-time setup
 - **[DSL Reference](dsl-reference.md)** - describe/it/hooks API
+- **[MTP Integration](mtp-integration.md)** - dotnet test and IDE support
 - **[Configuration](configuration.md)** - Middleware and plugins

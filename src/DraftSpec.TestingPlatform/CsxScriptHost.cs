@@ -47,6 +47,13 @@ internal sealed partial class CsxScriptHost
     private static partial Regex LoadDirectiveRegex();
 
     /// <summary>
+    /// Regex to match using directives.
+    /// Matches both 'using X;' and 'using static X;' forms.
+    /// </summary>
+    [GeneratedRegex(@"^\s*using\s+(static\s+)?[^;]+;\s*$", RegexOptions.Multiline)]
+    private static partial Regex UsingDirectiveRegex();
+
+    /// <summary>
     /// Creates a new script host.
     /// </summary>
     /// <param name="baseDirectory">Base directory for resolving relative paths (typically output directory).</param>
@@ -129,16 +136,34 @@ internal sealed partial class CsxScriptHost
     {
         var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var additionalReferences = new List<string>();
+        var usings = new HashSet<string>(StringComparer.Ordinal);
         var codeBuilder = new StringBuilder();
 
-        await ProcessFileAsync(absolutePath, processedFiles, additionalReferences, codeBuilder, cancellationToken);
+        await ProcessFileAsync(absolutePath, processedFiles, additionalReferences, usings, codeBuilder, cancellationToken);
+
+        // Build final code: usings first, then all other code
+        var finalBuilder = new StringBuilder();
+
+        // Add all collected using directives at the top
+        foreach (var usingDirective in usings.OrderBy(u => u))
+        {
+            finalBuilder.AppendLine(usingDirective);
+        }
+
+        if (usings.Count > 0)
+        {
+            finalBuilder.AppendLine();
+        }
+
+        // Add the rest of the code
+        finalBuilder.Append(codeBuilder);
 
         // Append code to capture the root context at the end of script execution
-        codeBuilder.AppendLine();
-        codeBuilder.AppendLine("// --- Capture context for MTP ---");
-        codeBuilder.AppendLine("CaptureRootContext?.Invoke(DraftSpec.Dsl.RootContext);");
+        finalBuilder.AppendLine();
+        finalBuilder.AppendLine("// --- Capture context for MTP ---");
+        finalBuilder.AppendLine("CaptureRootContext?.Invoke(DraftSpec.Dsl.RootContext);");
 
-        return (codeBuilder.ToString(), additionalReferences);
+        return (finalBuilder.ToString(), additionalReferences);
     }
 
     /// <summary>
@@ -148,6 +173,7 @@ internal sealed partial class CsxScriptHost
         string filePath,
         HashSet<string> processedFiles,
         List<string> additionalReferences,
+        HashSet<string> usings,
         StringBuilder codeBuilder,
         CancellationToken cancellationToken)
     {
@@ -170,7 +196,7 @@ internal sealed partial class CsxScriptHost
             var loadAbsolutePath = Path.GetFullPath(loadPath, fileDirectory);
 
             // Recursively process the loaded file
-            await ProcessFileAsync(loadAbsolutePath, processedFiles, additionalReferences, codeBuilder, cancellationToken);
+            await ProcessFileAsync(loadAbsolutePath, processedFiles, additionalReferences, usings, codeBuilder, cancellationToken);
         }
 
         // Extract #r directives (but skip nuget references - those need special handling)
@@ -193,9 +219,17 @@ internal sealed partial class CsxScriptHost
             }
         }
 
+        // Extract using directives (to be placed at top of combined code)
+        var usingMatches = UsingDirectiveRegex().Matches(content);
+        foreach (Match match in usingMatches)
+        {
+            usings.Add(match.Value.Trim());
+        }
+
         // Remove directives from code (they're handled separately)
         var cleanedCode = LoadDirectiveRegex().Replace(content, "");
         cleanedCode = AssemblyReferenceRegex().Replace(cleanedCode, "");
+        cleanedCode = UsingDirectiveRegex().Replace(cleanedCode, "");
 
         // Append the cleaned code
         codeBuilder.AppendLine($"// --- {Path.GetFileName(absolutePath)} ---");

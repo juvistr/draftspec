@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Import DraftSpec.TestingPlatform props (sets OutputType=Exe, enables MTP) -->
+  <Import Project="..\..\src\DraftSpec.TestingPlatform\build\DraftSpec.TestingPlatform.props" />
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -19,11 +22,7 @@
     <ProjectReference Include="..\..\src\DraftSpec.TestingPlatform\DraftSpec.TestingPlatform.csproj" />
   </ItemGroup>
 
-  <!-- Include spec files as content -->
-  <ItemGroup>
-    <None Update="**\*.spec.csx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+  <!-- Import DraftSpec.TestingPlatform targets (generates entry point, copies CSX files) -->
+  <Import Project="..\..\src\DraftSpec.TestingPlatform\build\DraftSpec.TestingPlatform.targets" />
 
 </Project>

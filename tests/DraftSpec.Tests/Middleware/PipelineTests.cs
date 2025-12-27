@@ -95,7 +95,7 @@ public class PipelineTests
         context.AddSpec(new SpecDefinition("test", async () =>
         {
             attempts++;
-            if (attempts == 1) await Task.Delay(1000); // First attempt times out (1s >> 50ms)
+            if (attempts == 1) await Task.Delay(5000); // First attempt times out (5s >> 50ms)
             // Second attempt succeeds quickly
         }));
 

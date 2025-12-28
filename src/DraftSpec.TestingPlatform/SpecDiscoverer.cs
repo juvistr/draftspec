@@ -144,8 +144,8 @@ internal sealed class SpecDiscoverer
         // Process specs in this context
         foreach (var spec in context.Specs)
         {
-            var specId = GenerateStableId(relativeSourceFile, currentPath, spec.Description);
-            var displayName = GenerateDisplayName(currentPath, spec.Description);
+            var specId = TestNodeMapper.GenerateStableId(relativeSourceFile, currentPath, spec.Description);
+            var displayName = TestNodeMapper.GenerateDisplayName(currentPath, spec.Description);
 
             results.Add(new DiscoveredSpec
             {
@@ -172,33 +172,4 @@ internal sealed class SpecDiscoverer
         }
     }
 
-    /// <summary>
-    /// Generates a stable, unique ID for a spec.
-    /// Format: relative/path/file.spec.csx:Context/Path/spec description
-    /// </summary>
-    private static string GenerateStableId(
-        string relativeSourceFile,
-        IReadOnlyList<string> contextPath,
-        string specDescription)
-    {
-        // Normalize path separators to forward slashes for cross-platform consistency
-        var normalizedPath = relativeSourceFile.Replace('\\', '/');
-
-        // Build context path with forward slashes
-        var contextPathString = string.Join("/", contextPath);
-
-        return $"{normalizedPath}:{contextPathString}/{specDescription}";
-    }
-
-    /// <summary>
-    /// Generates a human-readable display name.
-    /// Format: Context > Path > spec description
-    /// </summary>
-    private static string GenerateDisplayName(
-        IReadOnlyList<string> contextPath,
-        string specDescription)
-    {
-        var parts = new List<string>(contextPath) { specDescription };
-        return string.Join(" > ", parts);
-    }
 }

@@ -138,14 +138,15 @@ internal static class TestNodeMapper
 
     /// <summary>
     /// Generates a human-readable display name.
-    /// Format: Context > Path > spec description
+    /// Returns just the spec description since the tree view provides context hierarchy.
     /// </summary>
     public static string GenerateDisplayName(
         IReadOnlyList<string> contextPath,
         string specDescription)
     {
-        var parts = new List<string>(contextPath) { specDescription };
-        return string.Join(" > ", parts);
+        // Just return the spec description - the IDE tree view shows the hierarchy
+        // via TestMethodIdentifierProperty (TypeName = context path, MethodName = description)
+        return specDescription;
     }
 
     /// <summary>
@@ -172,18 +173,15 @@ internal static class TestNodeMapper
         // and the spec description as the "method name"
         var fileName = Path.GetFileNameWithoutExtension(spec.RelativeSourceFile);
 
-        // Build a type name from the context path (e.g., "Sample.nested_context")
-        // Replace spaces and special chars with underscores for valid type name
-        var contextParts = spec.ContextPath
-            .Select(SanitizeIdentifier)
-            .ToArray();
+        // Build a type name from the context path
+        // ECMA-335 allows spaces in identifiers, and ManagedNameUtilities now supports them
+        // via escaping (see https://github.com/microsoft/vstest/issues/2733)
+        var typeName = spec.ContextPath.Count > 0
+            ? string.Join(".", spec.ContextPath)
+            : fileName;
 
-        var typeName = contextParts.Length > 0
-            ? string.Join(".", contextParts)
-            : SanitizeIdentifier(fileName);
-
-        // Use the spec description as the method name
-        var methodName = SanitizeIdentifier(spec.Description);
+        // Use the spec description as the method name (no sanitization needed)
+        var methodName = spec.Description;
 
         // Get the assembly name from the DraftSpec.TestingPlatform assembly
         var assemblyName = typeof(TestNodeMapper).Assembly.FullName ?? "DraftSpec.TestingPlatform";
@@ -197,30 +195,5 @@ internal static class TestNodeMapper
             parameterTypeFullNames: [],
             returnTypeFullName: "System.Void"
         );
-    }
-
-    /// <summary>
-    /// Sanitizes a string to be a valid C# identifier.
-    /// Replaces invalid characters with underscores.
-    /// </summary>
-    private static string SanitizeIdentifier(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-            return "_";
-
-        var chars = input.ToCharArray();
-
-        // First character must be letter or underscore
-        if (!char.IsLetter(chars[0]) && chars[0] != '_')
-            chars[0] = '_';
-
-        // Subsequent characters can be letters, digits, or underscores
-        for (var i = 1; i < chars.Length; i++)
-        {
-            if (!char.IsLetterOrDigit(chars[i]) && chars[i] != '_')
-                chars[i] = '_';
-        }
-
-        return new string(chars);
     }
 }

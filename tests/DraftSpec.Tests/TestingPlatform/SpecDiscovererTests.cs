@@ -168,7 +168,8 @@ public class SpecDiscovererTests
         var specs = await discoverer.DiscoverFileAsync(csxPath);
 
         // Assert
-        await Assert.That(specs[0].DisplayName).IsEqualTo("Auth > Login > validates credentials");
+        // DisplayName is now just the spec description (tree view shows hierarchy)
+        await Assert.That(specs[0].DisplayName).IsEqualTo("validates credentials");
     }
 
     [Test]

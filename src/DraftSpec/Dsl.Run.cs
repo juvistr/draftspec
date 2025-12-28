@@ -123,21 +123,11 @@ public static partial class Dsl
         }
     }
 
-    private static void ResetState()
-    {
-        RootContext = null;
-        CurrentContext = null;
-        RunnerBuilder = null;
-        Configuration?.Dispose();
-        Configuration = null;
-    }
+    private static void ResetState() => Session.Reset();
 
     /// <summary>
     /// Reset all DSL state for a clean execution context.
     /// Used primarily for in-process execution modes.
     /// </summary>
-    public static void Reset()
-    {
-        ResetState();
-    }
+    public static void Reset() => Session.Reset();
 }

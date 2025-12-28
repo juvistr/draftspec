@@ -5,18 +5,23 @@ namespace DraftSpec;
 /// Usage: using static DraftSpec.Dsl;
 /// </summary>
 /// <remarks>
-/// This partial class contains state management.
+/// This partial class contains the session accessor and core state properties.
 /// See also: Dsl.Context.cs, Dsl.Specs.cs, Dsl.Hooks.cs, Dsl.Expect.cs, Dsl.Run.cs
 /// </remarks>
 public static partial class Dsl
 {
-    private static readonly AsyncLocal<SpecContext?> CurrentContextLocal = new();
-    private static readonly AsyncLocal<SpecContext?> RootContextLocal = new();
+    private static readonly AsyncLocal<SpecSession?> SessionLocal = new();
+
+    /// <summary>
+    /// Gets the current spec session for this async execution context.
+    /// A new session is created automatically if one doesn't exist.
+    /// </summary>
+    public static SpecSession Session => SessionLocal.Value ??= new SpecSession();
 
     internal static SpecContext? CurrentContext
     {
-        get => CurrentContextLocal.Value;
-        set => CurrentContextLocal.Value = value;
+        get => Session.CurrentContext;
+        set => Session.CurrentContext = value;
     }
 
     /// <summary>
@@ -25,7 +30,7 @@ public static partial class Dsl
     /// </summary>
     public static SpecContext? RootContext
     {
-        get => RootContextLocal.Value;
-        internal set => RootContextLocal.Value = value;
+        get => Session.RootContext;
+        internal set => Session.RootContext = value;
     }
 }

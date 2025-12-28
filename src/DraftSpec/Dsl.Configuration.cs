@@ -4,19 +4,16 @@ namespace DraftSpec;
 
 public static partial class Dsl
 {
-    private static readonly AsyncLocal<SpecRunnerBuilder?> RunnerBuilderLocal = new();
-    private static readonly AsyncLocal<DraftSpecConfiguration?> ConfigurationLocal = new();
-
     internal static SpecRunnerBuilder? RunnerBuilder
     {
-        get => RunnerBuilderLocal.Value;
-        set => RunnerBuilderLocal.Value = value;
+        get => Session.RunnerBuilder;
+        set => Session.RunnerBuilder = value;
     }
 
     internal static DraftSpecConfiguration? Configuration
     {
-        get => ConfigurationLocal.Value;
-        set => ConfigurationLocal.Value = value;
+        get => Session.Configuration;
+        set => Session.Configuration = value;
     }
 
     /// <summary>

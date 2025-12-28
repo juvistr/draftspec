@@ -9,7 +9,7 @@
   <!-- Generate entry point by copying template -->
   <Target Name="GenerateDraftSpecEntryPoint"
           BeforeTargets="BeforeCompile"
-          Condition="'$(GenerateTestingPlatformEntryPoint)' == 'true'">
+          Condition="'$(GenerateDraftSpecEntryPoint)' == 'true'">
 
     <PropertyGroup>
       <DraftSpecEntryPointDir>$(IntermediateOutputPath)generated/</DraftSpecEntryPointDir>

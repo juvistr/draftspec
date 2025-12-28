@@ -1,20 +1,19 @@
+using Microsoft.Testing.Extensions.VSTestBridge;
+using Microsoft.Testing.Extensions.VSTestBridge.Requests;
 using Microsoft.Testing.Platform.Capabilities.TestFramework;
-using Microsoft.Testing.Platform.Extensions;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
+using Microsoft.Testing.Platform.Messages;
 using Microsoft.Testing.Platform.Requests;
 
 namespace DraftSpec.TestingPlatform;
 
 /// <summary>
 /// Microsoft.Testing.Platform adapter for DraftSpec.
-/// Implements ITestFramework to integrate DraftSpec specs with dotnet test.
+/// Inherits from VSTestBridgedTestFrameworkBase to support both MTP and VSTest modes.
 /// </summary>
-internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
+internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
 {
-    private readonly ITestFrameworkCapabilities _capabilities;
-    private readonly IServiceProvider _serviceProvider;
-
     // Lazy-initialized components (created on first use with project directory)
     private SpecDiscoverer? _discoverer;
     private MtpSpecExecutor? _executor;
@@ -23,27 +22,22 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
     /// <summary>
     /// Unique identifier for this test framework.
     /// </summary>
-    public string Uid => "DraftSpec.TestingPlatform";
+    public override string Uid => "DraftSpec.TestingPlatform";
 
     /// <summary>
     /// Version of the test framework adapter.
     /// </summary>
-    public string Version => typeof(DraftSpecTestFramework).Assembly.GetName().Version?.ToString() ?? "1.0.0";
+    public override string Version => typeof(DraftSpecTestFramework).Assembly.GetName().Version?.ToString() ?? "1.0.0";
 
     /// <summary>
     /// Display name shown in test output.
     /// </summary>
-    public string DisplayName => "DraftSpec";
+    public override string DisplayName => "DraftSpec";
 
     /// <summary>
     /// Description of the test framework.
     /// </summary>
-    public string Description => "RSpec-inspired testing framework for .NET";
-
-    /// <summary>
-    /// Types of data this framework produces (test results).
-    /// </summary>
-    public Type[] DataTypesProduced => [typeof(TestNodeUpdateMessage)];
+    public override string Description => "RSpec-inspired testing framework for .NET";
 
     /// <summary>
     /// Creates a new instance of the DraftSpec test framework adapter.
@@ -51,20 +45,19 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
     public DraftSpecTestFramework(
         ITestFrameworkCapabilities capabilities,
         IServiceProvider serviceProvider)
+        : base(serviceProvider, capabilities)
     {
-        _capabilities = capabilities;
-        _serviceProvider = serviceProvider;
     }
 
     /// <summary>
     /// Whether this framework is enabled.
     /// </summary>
-    public Task<bool> IsEnabledAsync() => Task.FromResult(true);
+    public override Task<bool> IsEnabledAsync() => Task.FromResult(true);
 
     /// <summary>
     /// Called at the start of a test session to initialize the framework.
     /// </summary>
-    public Task<CreateTestSessionResult> CreateTestSessionAsync(CreateTestSessionContext context)
+    public override Task<CreateTestSessionResult> CreateTestSessionAsync(CreateTestSessionContext context)
     {
         // Use the test assembly location as the base directory for finding CSX files.
         // CSX files are copied to the output directory by MSBuild targets.
@@ -79,29 +72,29 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
     }
 
     /// <summary>
-    /// Processes test discovery or execution requests.
+    /// Processes standard MTP test execution requests.
     /// </summary>
-    public async Task ExecuteRequestAsync(ExecuteRequestContext context)
+    protected override async Task ExecuteRequestAsync(
+        TestExecutionRequest request,
+        IMessageBus messageBus,
+        CancellationToken cancellationToken)
     {
-        switch (context.Request)
+        switch (request)
         {
             case DiscoverTestExecutionRequest discoverRequest:
-                await DiscoverTestsAsync(discoverRequest, context);
+                await DiscoverTestsInternalAsync(discoverRequest, messageBus, cancellationToken);
                 break;
 
             case RunTestExecutionRequest runRequest:
-                await RunTestsAsync(runRequest, context);
+                await RunTestsInternalAsync(runRequest, messageBus, cancellationToken);
                 break;
         }
-
-        // CRITICAL: Must call Complete() to signal request is finished
-        context.Complete();
     }
 
     /// <summary>
     /// Called at the end of a test session for cleanup.
     /// </summary>
-    public Task<CloseTestSessionResult> CloseTestSessionAsync(CloseTestSessionContext context)
+    public override Task<CloseTestSessionResult> CloseTestSessionAsync(CloseTestSessionContext context)
     {
         _discoverer = null;
         _executor = null;
@@ -109,35 +102,114 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
     }
 
     /// <summary>
-    /// Discovers tests from CSX spec files.
+    /// Discovers tests via VSTest bridge (called by IDE test explorers).
     /// </summary>
-    private async Task DiscoverTestsAsync(
-        DiscoverTestExecutionRequest request,
-        ExecuteRequestContext context)
+    protected override async Task DiscoverTestsAsync(
+        VSTestDiscoverTestExecutionRequest request,
+        IMessageBus messageBus,
+        CancellationToken cancellationToken)
     {
+        // Initialize components if not already done
+        EnsureInitialized();
+
         if (_discoverer == null)
         {
             return;
         }
 
-        var specs = await _discoverer.DiscoverAsync(context.CancellationToken);
+        var specs = await _discoverer.DiscoverAsync(cancellationToken);
 
         foreach (var spec in specs)
         {
             var testNode = TestNodeMapper.CreateDiscoveryNode(spec);
 
-            await context.MessageBus.PublishAsync(
+            await messageBus.PublishAsync(
                 this,
                 new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
         }
     }
 
     /// <summary>
-    /// Executes tests based on the run request.
+    /// Runs tests via VSTest bridge (called by IDE test explorers).
     /// </summary>
-    private async Task RunTestsAsync(
+    protected override async Task RunTestsAsync(
+        VSTestRunTestExecutionRequest request,
+        IMessageBus messageBus,
+        CancellationToken cancellationToken)
+    {
+        // Initialize components if not already done
+        EnsureInitialized();
+
+        if (_executor == null || _discoverer == null)
+        {
+            return;
+        }
+
+        // Run all discovered tests (VSTest provides filtering via its own mechanisms)
+        var specs = await _discoverer.DiscoverAsync(cancellationToken);
+        var fileGroups = specs.GroupBy(s => s.SourceFile);
+
+        foreach (var group in fileGroups)
+        {
+            var result = await _executor.ExecuteFileAsync(group.Key, cancellationToken);
+
+            foreach (var specResult in result.Results)
+            {
+                var testNode = TestNodeMapper.CreateResultNode(
+                    result.RelativeSourceFile,
+                    result.AbsoluteSourceFile,
+                    specResult);
+
+                await messageBus.PublishAsync(
+                    this,
+                    new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+            }
+        }
+    }
+
+    private void EnsureInitialized()
+    {
+        if (_projectDirectory == null)
+        {
+            var assemblyLocation = typeof(DraftSpecTestFramework).Assembly.Location;
+            _projectDirectory = Path.GetDirectoryName(assemblyLocation) ?? Environment.CurrentDirectory;
+            _discoverer = new SpecDiscoverer(_projectDirectory);
+            _executor = new MtpSpecExecutor(_projectDirectory);
+        }
+    }
+
+    /// <summary>
+    /// Discovers tests from CSX spec files (internal MTP path).
+    /// </summary>
+    private async Task DiscoverTestsInternalAsync(
+        DiscoverTestExecutionRequest request,
+        IMessageBus messageBus,
+        CancellationToken cancellationToken)
+    {
+        if (_discoverer == null)
+        {
+            return;
+        }
+
+        var specs = await _discoverer.DiscoverAsync(cancellationToken);
+
+        foreach (var spec in specs)
+        {
+            var testNode = TestNodeMapper.CreateDiscoveryNode(spec);
+
+            await messageBus.PublishAsync(
+                this,
+                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+        }
+    }
+
+    /// <summary>
+    /// Executes tests based on the run request (internal MTP path).
+    /// </summary>
+    private async Task RunTestsInternalAsync(
         RunTestExecutionRequest request,
-        ExecuteRequestContext context)
+        IMessageBus messageBus,
+        CancellationToken cancellationToken)
     {
         if (_executor == null || _discoverer == null)
         {
@@ -152,12 +224,12 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
         {
             // Run specific tests by ID
             var requestedIds = uidFilter.TestNodeUids.Select(uid => uid.Value).ToHashSet();
-            executionResults = await _executor.ExecuteByIdsAsync(requestedIds, context.CancellationToken);
+            executionResults = await _executor.ExecuteByIdsAsync(requestedIds, cancellationToken);
         }
         else
         {
             // Run all tests - discover and execute all files
-            var specs = await _discoverer.DiscoverAsync(context.CancellationToken);
+            var specs = await _discoverer.DiscoverAsync(cancellationToken);
 
             // Group by file and execute
             var fileGroups = specs.GroupBy(s => s.SourceFile);
@@ -165,7 +237,7 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
 
             foreach (var group in fileGroups)
             {
-                var result = await _executor.ExecuteFileAsync(group.Key, context.CancellationToken);
+                var result = await _executor.ExecuteFileAsync(group.Key, cancellationToken);
                 results.Add(result);
             }
 
@@ -182,7 +254,7 @@ internal sealed class DraftSpecTestFramework : ITestFramework, IDataProducer
                     execResult.AbsoluteSourceFile,
                     specResult);
 
-                await context.MessageBus.PublishAsync(
+                await messageBus.PublishAsync(
                     this,
                     new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
             }

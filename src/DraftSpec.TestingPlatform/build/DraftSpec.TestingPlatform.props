@@ -7,8 +7,14 @@
     <!-- Enable Microsoft.Testing.Platform -->
     <EnableMicrosoftTestingPlatform Condition="'$(EnableMicrosoftTestingPlatform)' == ''">true</EnableMicrosoftTestingPlatform>
 
-    <!-- Generate entry point automatically -->
-    <GenerateTestingPlatformEntryPoint Condition="'$(GenerateTestingPlatformEntryPoint)' == ''">true</GenerateTestingPlatformEntryPoint>
+    <!-- Mark as MTP application for dotnet test recognition -->
+    <IsTestingPlatformApplication>true</IsTestingPlatformApplication>
+
+    <!-- Disable MS's entry point generation - DraftSpec generates its own -->
+    <GenerateMicrosoftTestingPlatformEntryPoint>false</GenerateMicrosoftTestingPlatformEntryPoint>
+
+    <!-- Generate DraftSpec's custom entry point -->
+    <GenerateDraftSpecEntryPoint Condition="'$(GenerateDraftSpecEntryPoint)' == ''">true</GenerateDraftSpecEntryPoint>
 
     <!-- Output as executable for dotnet test -->
     <OutputType>Exe</OutputType>
@@ -16,6 +22,11 @@
     <!-- Enable reflection for JSON serialization (required for DraftSpec) -->
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
+
+  <!-- Add TestContainer capability for IDE Test Explorer discovery -->
+  <ItemGroup>
+    <ProjectCapability Include="TestContainer" />
+  </ItemGroup>
 
   <!-- Default spec file pattern -->
   <PropertyGroup Condition="'$(DraftSpecPattern)' == ''">

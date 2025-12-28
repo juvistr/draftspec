@@ -10,6 +10,11 @@
     <!-- Mark as MTP application for dotnet test recognition -->
     <IsTestingPlatformApplication>true</IsTestingPlatformApplication>
 
+    <!-- Enable Testing Platform protocol for IDE communication -->
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <UseTestingPlatformProtocol>true</UseTestingPlatformProtocol>
+    <IsTestingPlatformEnabled>true</IsTestingPlatformEnabled>
+
     <!-- Disable MS's entry point generation - DraftSpec generates its own -->
     <GenerateMicrosoftTestingPlatformEntryPoint>false</GenerateMicrosoftTestingPlatformEntryPoint>
 

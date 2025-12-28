@@ -106,7 +106,9 @@ internal static class TestNodeMapper
     /// </summary>
     public static TestNode CreateErrorNode(DiscoveryError error)
     {
-        var stateProperty = new ErrorTestNodeStateProperty(
+        // Use FailedTestNodeStateProperty (not ErrorTestNodeStateProperty) so IDEs
+        // display discovery errors as failed tests in the test explorer
+        var stateProperty = new FailedTestNodeStateProperty(
             error.Exception ?? new Exception(error.Message),
             error.Message);
 

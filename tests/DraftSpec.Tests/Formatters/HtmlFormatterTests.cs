@@ -187,6 +187,148 @@ public class HtmlFormatterTests
         await Assert.That(output).Contains("&lt;script&gt;");
     }
 
+    [Test]
+    public async Task Format_SanitizesCustomCss_RemovesAtImport()
+    {
+        var report = CreateReport([
+            new SpecResultReport { Description = "spec", Status = "passed" }
+        ]);
+
+        var formatter = new HtmlFormatter(new HtmlOptions
+        {
+            CustomCss = "@import url('https://evil.com/steal.css'); .custom { color: red; }"
+        });
+        var output = formatter.Format(report);
+
+        await Assert.That(output).DoesNotContain("@import");
+        await Assert.That(output).Contains("/* removed */");
+        await Assert.That(output).Contains(".custom { color: red; }");
+    }
+
+    [Test]
+    public async Task Format_SanitizesCustomCss_RemovesJavascriptUrl()
+    {
+        var report = CreateReport([
+            new SpecResultReport { Description = "spec", Status = "passed" }
+        ]);
+
+        var formatter = new HtmlFormatter(new HtmlOptions
+        {
+            CustomCss = ".evil { background: url(javascript:alert('xss')); }"
+        });
+        var output = formatter.Format(report);
+
+        await Assert.That(output).DoesNotContain("javascript:");
+    }
+
+    [Test]
+    public async Task Format_SanitizesCustomCss_RemovesJavascriptUrlWithWhitespace()
+    {
+        var report = CreateReport([
+            new SpecResultReport { Description = "spec", Status = "passed" }
+        ]);
+
+        // Attempt to bypass with whitespace
+        var formatter = new HtmlFormatter(new HtmlOptions
+        {
+            CustomCss = ".evil { background: url(  javascript:alert('xss')); }"
+        });
+        var output = formatter.Format(report);
+
+        await Assert.That(output).DoesNotContain("javascript:");
+    }
+
+    [Test]
+    public async Task Format_SanitizesCustomCss_RemovesDataUrl()
+    {
+        var report = CreateReport([
+            new SpecResultReport { Description = "spec", Status = "passed" }
+        ]);
+
+        var formatter = new HtmlFormatter(new HtmlOptions
+        {
+            CustomCss = ".evil { background: url(data:text/html,<script>alert('xss')</script>); }"
+        });
+        var output = formatter.Format(report);
+
+        await Assert.That(output).DoesNotContain("data:");
+    }
+
+    [Test]
+    public async Task Format_SanitizesCustomCss_RemovesExpressionWithWhitespace()
+    {
+        var report = CreateReport([
+            new SpecResultReport { Description = "spec", Status = "passed" }
+        ]);
+
+        // IE expression() with whitespace
+        var formatter = new HtmlFormatter(new HtmlOptions
+        {
+            CustomCss = ".evil { width: expression  (alert('xss')); }"
+        });
+        var output = formatter.Format(report);
+
+        await Assert.That(output).DoesNotContain("expression");
+    }
+
+    [Test]
+    public async Task Format_SanitizesCustomCss_RemovesBehaviorWithWhitespace()
+    {
+        var report = CreateReport([
+            new SpecResultReport { Description = "spec", Status = "passed" }
+        ]);
+
+        var formatter = new HtmlFormatter(new HtmlOptions
+        {
+            CustomCss = ".evil { behavior : url(script.htc); }"
+        });
+        var output = formatter.Format(report);
+
+        await Assert.That(output).DoesNotContain("behavior");
+    }
+
+    [Test]
+    public async Task Format_SanitizesCustomCss_HandlesMultipleDangerousPatterns()
+    {
+        var report = CreateReport([
+            new SpecResultReport { Description = "spec", Status = "passed" }
+        ]);
+
+        var formatter = new HtmlFormatter(new HtmlOptions
+        {
+            CustomCss = """
+                @import url('evil.css');
+                .a { background: url(javascript:void(0)); }
+                .b { behavior: url(script.htc); }
+                .c { -moz-binding: url(xbl.xml); }
+                .safe { color: green; }
+                """
+        });
+        var output = formatter.Format(report);
+
+        await Assert.That(output).DoesNotContain("@import");
+        await Assert.That(output).DoesNotContain("javascript:");
+        await Assert.That(output).DoesNotContain("behavior");
+        await Assert.That(output).DoesNotContain("-moz-binding");
+        await Assert.That(output).Contains(".safe { color: green; }");
+    }
+
+    [Test]
+    public async Task Format_SanitizesCustomCss_PreservesLegitimateUrls()
+    {
+        var report = CreateReport([
+            new SpecResultReport { Description = "spec", Status = "passed" }
+        ]);
+
+        var formatter = new HtmlFormatter(new HtmlOptions
+        {
+            CustomCss = ".safe { background: url('https://example.com/image.png'); }"
+        });
+        var output = formatter.Format(report);
+
+        await Assert.That(output).Contains("url('https://example.com/image.png')");
+    }
+
     #endregion
 
     #region Status Rendering

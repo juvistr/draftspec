@@ -72,7 +72,8 @@ public class TimeoutMiddlewareTests
 
         var result = await middleware.ExecuteAsync(context, async ctx =>
         {
-            await Task.Delay(500);
+            // Use a much longer delay than timeout to ensure reliable timeout triggering
+            await Task.Delay(5000);
             return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
         });
 
@@ -90,7 +91,8 @@ public class TimeoutMiddlewareTests
 
         var result = await middleware.ExecuteAsync(context, async ctx =>
         {
-            await Task.Delay(500);
+            // Use a much longer delay than timeout to ensure reliable timeout triggering
+            await Task.Delay(5000);
             return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
         });
 

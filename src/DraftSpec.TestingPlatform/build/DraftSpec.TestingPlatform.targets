@@ -6,25 +6,5 @@
     <Content Include="**/*.csx" Exclude="**/bin/**;**/obj/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- Generate entry point by copying template -->
-  <Target Name="GenerateDraftSpecEntryPoint"
-          BeforeTargets="BeforeCompile"
-          Condition="'$(GenerateDraftSpecEntryPoint)' == 'true'">
-
-    <PropertyGroup>
-      <DraftSpecEntryPointDir>$(IntermediateOutputPath)generated/</DraftSpecEntryPointDir>
-      <DraftSpecEntryPoint>$(DraftSpecEntryPointDir)DraftSpec.EntryPoint.g.cs</DraftSpecEntryPoint>
-      <DraftSpecTemplateFile>$(MSBuildThisFileDirectory)EntryPoint.template.cs</DraftSpecTemplateFile>
-    </PropertyGroup>
-
-    <MakeDir Directories="$(DraftSpecEntryPointDir)" />
-
-    <Copy SourceFiles="$(DraftSpecTemplateFile)"
-          DestinationFiles="$(DraftSpecEntryPoint)"
-          SkipUnchangedFiles="true" />
-
-    <ItemGroup>
-      <Compile Include="$(DraftSpecEntryPoint)" />
-    </ItemGroup>
-  </Target>
+  <!-- Entry point generation is now handled by MTP via TestingPlatformBuilderHook -->
 </Project>

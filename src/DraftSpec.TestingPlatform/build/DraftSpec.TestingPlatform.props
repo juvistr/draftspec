@@ -15,11 +15,8 @@
     <UseTestingPlatformProtocol>true</UseTestingPlatformProtocol>
     <IsTestingPlatformEnabled>true</IsTestingPlatformEnabled>
 
-    <!-- Disable MS's entry point generation - DraftSpec generates its own -->
-    <GenerateMicrosoftTestingPlatformEntryPoint>false</GenerateMicrosoftTestingPlatformEntryPoint>
-
-    <!-- Generate DraftSpec's custom entry point -->
-    <GenerateDraftSpecEntryPoint Condition="'$(GenerateDraftSpecEntryPoint)' == ''">true</GenerateDraftSpecEntryPoint>
+    <!-- Let MTP generate entry point - it will call our TestingPlatformBuilderHook -->
+    <!-- This is critical for IDE integration (Rider, VS, VS Code) -->
 
     <!-- Output as executable for dotnet test -->
     <OutputType>Exe</OutputType>
@@ -31,6 +28,14 @@
   <!-- Add TestContainer capability for IDE Test Explorer discovery -->
   <ItemGroup>
     <ProjectCapability Include="TestContainer" />
+  </ItemGroup>
+
+  <!-- Register DraftSpec hook for MTP to discover and call -->
+  <ItemGroup>
+    <TestingPlatformBuilderHook Include="DraftSpec.TestingPlatform">
+      <DisplayName>DraftSpec</DisplayName>
+      <TypeFullName>DraftSpec.TestingPlatform.TestingPlatformBuilderHook</TypeFullName>
+    </TestingPlatformBuilderHook>
   </ItemGroup>
 
   <!-- Default spec file pattern -->

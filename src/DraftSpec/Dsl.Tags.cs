@@ -1,18 +1,14 @@
-using DraftSpec.Internal;
-
 namespace DraftSpec;
 
 public static partial class Dsl
 {
-    private static readonly AsyncLocal<List<string>?> CurrentTagsLocal = new();
-
     /// <summary>
     /// Current tags in scope. Specs created within a tag() block inherit these tags.
     /// </summary>
     internal static List<string>? CurrentTags
     {
-        get => CurrentTagsLocal.Value;
-        set => CurrentTagsLocal.Value = value;
+        get => Session.CurrentTags;
+        set => Session.CurrentTags = value;
     }
 
     /// <summary>

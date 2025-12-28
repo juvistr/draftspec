@@ -46,8 +46,15 @@ public class SpecExecutionContext
     /// Uses ConcurrentDictionary for safe parallel access.
     /// Lazy-initialized to avoid allocation when not used.
     /// </summary>
-    public ConcurrentDictionary<string, object> Items =>
-        _items ??= new ConcurrentDictionary<string, object>();
+    public ConcurrentDictionary<string, object> Items
+    {
+        get
+        {
+            if (_items is not null) return _items;
+            Interlocked.CompareExchange(ref _items, new ConcurrentDictionary<string, object>(), null);
+            return _items;
+        }
+    }
 
     /// <summary>
     /// Returns true if Items has been accessed and contains data.

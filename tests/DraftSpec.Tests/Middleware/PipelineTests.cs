@@ -168,6 +168,132 @@ public class PipelineTests
 
     #endregion
 
+    #region Exception Handling
+
+    [Test]
+    public async Task Pipeline_MiddlewareThrowsBeforeNext_PropagatesException()
+    {
+        var context = new SpecContext("test");
+        context.AddSpec(new SpecDefinition("test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .Use(new ThrowingMiddleware(new InvalidOperationException("middleware failed"), throwBeforeNext: true))
+            .Build();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        await Assert.That(exception.Message).IsEqualTo("middleware failed");
+    }
+
+    [Test]
+    public async Task Pipeline_MiddlewareThrowsAfterNext_PropagatesException()
+    {
+        var context = new SpecContext("test");
+        var specExecuted = false;
+        context.AddSpec(new SpecDefinition("test", () => specExecuted = true));
+
+        var runner = new SpecRunnerBuilder()
+            .Use(new ThrowingMiddleware(new InvalidOperationException("cleanup failed"), throwBeforeNext: false))
+            .Build();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        await Assert.That(exception.Message).IsEqualTo("cleanup failed");
+        await Assert.That(specExecuted).IsTrue(); // Spec should have run before exception
+    }
+
+    [Test]
+    public async Task Pipeline_InnerMiddlewareThrows_OuterMiddlewareCleanupRuns()
+    {
+        var context = new SpecContext("test");
+        context.AddSpec(new SpecDefinition("test", () => { }));
+        var outerCleanupRan = false;
+
+        var runner = new SpecRunnerBuilder()
+            .Use(new WrapperMiddlewareWithCleanup(
+                () => { },
+                () => outerCleanupRan = true))
+            .Use(new ThrowingMiddleware(new InvalidOperationException("inner failed"), throwBeforeNext: true))
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        await Assert.That(outerCleanupRan).IsTrue();
+    }
+
+    [Test]
+    public async Task Pipeline_SpecThrows_MiddlewareCleanupRuns()
+    {
+        var context = new SpecContext("test");
+        context.AddSpec(new SpecDefinition("failing spec", () => throw new Exception("spec failed")));
+        var cleanupRan = false;
+
+        var runner = new SpecRunnerBuilder()
+            .Use(new WrapperMiddlewareWithCleanup(
+                () => { },
+                () => cleanupRan = true))
+            .Build();
+
+        var results = runner.Run(context);
+
+        await Assert.That(cleanupRan).IsTrue();
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
+    }
+
+    [Test]
+    public async Task Pipeline_MiddlewareThrows_LaterMiddlewareNotExecuted()
+    {
+        var context = new SpecContext("test");
+        context.AddSpec(new SpecDefinition("test", () => { }));
+        var secondMiddlewareRan = false;
+
+        var runner = new SpecRunnerBuilder()
+            .Use(new ThrowingMiddleware(new InvalidOperationException("first failed"), throwBeforeNext: true))
+            .Use(new TestMiddleware(() => secondMiddlewareRan = true))
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        await Assert.That(secondMiddlewareRan).IsFalse();
+    }
+
+    [Test]
+    public async Task Pipeline_MultipleMiddleware_ExceptionPropagatesThroughAll()
+    {
+        var context = new SpecContext("test");
+        context.AddSpec(new SpecDefinition("test", () => { }));
+        var cleanupOrder = new List<string>();
+
+        var runner = new SpecRunnerBuilder()
+            .Use(new WrapperMiddlewareWithCleanup(
+                () => { },
+                () => cleanupOrder.Add("outer")))
+            .Use(new WrapperMiddlewareWithCleanup(
+                () => { },
+                () => cleanupOrder.Add("middle")))
+            .Use(new ThrowingMiddleware(new InvalidOperationException("inner failed"), throwBeforeNext: true))
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+
+        // Cleanup should run in reverse order (inner to outer)
+        await Assert.That(cleanupOrder).HasCount().EqualTo(2);
+        await Assert.That(cleanupOrder[0]).IsEqualTo("middle");
+        await Assert.That(cleanupOrder[1]).IsEqualTo("outer");
+    }
+
+    [Test]
+    public async Task Pipeline_AsyncMiddlewareThrows_PropagatesException()
+    {
+        var context = new SpecContext("test");
+        context.AddSpec(new SpecDefinition("test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .Use(new AsyncThrowingMiddleware())
+            .Build();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        await Assert.That(exception.Message).IsEqualTo("async middleware failed");
+    }
+
+    #endregion
+
     #region Test Helpers
 
     private class TestMiddleware : ISpecMiddleware
@@ -244,6 +370,64 @@ public class PipelineTests
             var result = await next(context);
             _after();
             return result;
+        }
+    }
+
+    private class ThrowingMiddleware : ISpecMiddleware
+    {
+        private readonly Exception _exception;
+        private readonly bool _throwBeforeNext;
+
+        public ThrowingMiddleware(Exception exception, bool throwBeforeNext)
+        {
+            _exception = exception;
+            _throwBeforeNext = throwBeforeNext;
+        }
+
+        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
+            Func<SpecExecutionContext, Task<SpecResult>> next)
+        {
+            if (_throwBeforeNext)
+                throw _exception;
+
+            var result = await next(context);
+            throw _exception;
+        }
+    }
+
+    private class WrapperMiddlewareWithCleanup : ISpecMiddleware
+    {
+        private readonly Action _before;
+        private readonly Action _cleanup;
+
+        public WrapperMiddlewareWithCleanup(Action before, Action cleanup)
+        {
+            _before = before;
+            _cleanup = cleanup;
+        }
+
+        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
+            Func<SpecExecutionContext, Task<SpecResult>> next)
+        {
+            _before();
+            try
+            {
+                return await next(context);
+            }
+            finally
+            {
+                _cleanup();
+            }
+        }
+    }
+
+    private class AsyncThrowingMiddleware : ISpecMiddleware
+    {
+        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
+            Func<SpecExecutionContext, Task<SpecResult>> next)
+        {
+            await Task.Yield(); // Force async continuation
+            throw new InvalidOperationException("async middleware failed");
         }
     }
 

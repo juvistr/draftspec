@@ -44,12 +44,12 @@ public class SpecDiscovererTests
         var discoverer = new SpecDiscoverer(_tempDir);
 
         // Act
-        var specs = await discoverer.DiscoverAsync();
+        var result = await discoverer.DiscoverAsync();
 
         // Assert
-        await Assert.That(specs.Count).IsEqualTo(2);
-        await Assert.That(specs.Select(s => s.Description)).Contains("spec 1");
-        await Assert.That(specs.Select(s => s.Description)).Contains("spec 2");
+        await Assert.That(result.Specs.Count).IsEqualTo(2);
+        await Assert.That(result.Specs.Select(s => s.Description)).Contains("spec 1");
+        await Assert.That(result.Specs.Select(s => s.Description)).Contains("spec 2");
     }
 
     [Test]
@@ -327,13 +327,13 @@ public class SpecDiscovererTests
         var discoverer = new SpecDiscoverer(_tempDir);
 
         // Act
-        var specs = await discoverer.DiscoverAsync();
+        var result = await discoverer.DiscoverAsync();
 
         // Assert - each file should have independent specs, not combined
-        await Assert.That(specs.Count).IsEqualTo(2);
+        await Assert.That(result.Specs.Count).IsEqualTo(2);
 
-        var fileASpecs = specs.Where(s => s.ContextPath[0] == "FileA").ToList();
-        var fileBSpecs = specs.Where(s => s.ContextPath[0] == "FileB").ToList();
+        var fileASpecs = result.Specs.Where(s => s.ContextPath[0] == "FileA").ToList();
+        var fileBSpecs = result.Specs.Where(s => s.ContextPath[0] == "FileB").ToList();
 
         await Assert.That(fileASpecs.Count).IsEqualTo(1);
         await Assert.That(fileBSpecs.Count).IsEqualTo(1);
@@ -375,11 +375,59 @@ public class SpecDiscovererTests
         var discoverer = new SpecDiscoverer(_tempDir);
 
         // Act
-        var specs = await discoverer.DiscoverAsync();
+        var result = await discoverer.DiscoverAsync();
 
         // Assert
-        await Assert.That(specs.Count).IsEqualTo(1);
+        await Assert.That(result.Specs.Count).IsEqualTo(1);
         // Path should use forward slashes
-        await Assert.That(specs[0].Id).Contains("features/auth/login.spec.csx");
+        await Assert.That(result.Specs[0].Id).Contains("features/auth/login.spec.csx");
+    }
+
+    [Test]
+    public async Task DiscoverAsync_CollectsCompilationErrors()
+    {
+        // Arrange - file with invalid code (using non-existent method)
+        var validSpec = Path.Combine(_tempDir, "valid.spec.csx");
+        await File.WriteAllTextAsync(validSpec, """
+            using static DraftSpec.Dsl;
+            describe("Valid", () => { it("works", () => { }); });
+            """);
+
+        var invalidSpec = Path.Combine(_tempDir, "invalid.spec.csx");
+        await File.WriteAllTextAsync(invalidSpec, """
+            using static DraftSpec.Dsl;
+            describe("Invalid", () => { it("fails", () => {
+                nonExistentMethod();
+            }); });
+            """);
+
+        var discoverer = new SpecDiscoverer(_tempDir);
+
+        // Act
+        var result = await discoverer.DiscoverAsync();
+
+        // Assert - should have specs from valid file and error from invalid file
+        await Assert.That(result.Specs.Count).IsEqualTo(1);
+        await Assert.That(result.Specs[0].Description).IsEqualTo("works");
+        await Assert.That(result.HasErrors).IsTrue();
+        await Assert.That(result.Errors.Count).IsEqualTo(1);
+        await Assert.That(result.Errors[0].RelativeSourceFile).IsEqualTo("invalid.spec.csx");
+        await Assert.That(result.Errors[0].Message).Contains("nonExistentMethod");
+    }
+
+    [Test]
+    public async Task DiscoveryError_GeneratesStableId()
+    {
+        // Arrange
+        var error = new DiscoveryError
+        {
+            SourceFile = "/project/specs/broken.spec.csx",
+            RelativeSourceFile = "specs/broken.spec.csx",
+            Message = "Compilation failed"
+        };
+
+        // Assert
+        await Assert.That(error.Id).IsEqualTo("specs/broken.spec.csx:DISCOVERY_ERROR");
+        await Assert.That(error.DisplayName).IsEqualTo("[Discovery Error] specs/broken.spec.csx");
     }
 }

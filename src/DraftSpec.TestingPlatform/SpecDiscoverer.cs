@@ -26,11 +26,12 @@ internal sealed class SpecDiscoverer
     /// Discovers all specs from CSX files in the project directory.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of discovered specs with stable IDs.</returns>
-    public async Task<IReadOnlyList<DiscoveredSpec>> DiscoverAsync(CancellationToken cancellationToken = default)
+    /// <returns>Discovery result containing specs and any errors.</returns>
+    public async Task<DiscoveryResult> DiscoverAsync(CancellationToken cancellationToken = default)
     {
         var csxFiles = FindSpecFiles();
         var allSpecs = new List<DiscoveredSpec>();
+        var errors = new List<DiscoveryError>();
 
         foreach (var csxFile in csxFiles)
         {
@@ -52,9 +53,15 @@ internal sealed class SpecDiscoverer
             }
             catch (Exception ex)
             {
-                // Log error but continue with other files
-                // TODO: Consider surfacing discovery errors to MTP
-                Console.Error.WriteLine($"Error discovering specs in {csxFile}: {ex.Message}");
+                // Collect error for reporting through MTP
+                var relativePath = GetRelativePath(csxFile);
+                errors.Add(new DiscoveryError
+                {
+                    SourceFile = csxFile,
+                    RelativeSourceFile = relativePath,
+                    Message = ex.Message,
+                    Exception = ex
+                });
             }
             finally
             {
@@ -63,7 +70,11 @@ internal sealed class SpecDiscoverer
             }
         }
 
-        return allSpecs;
+        return new DiscoveryResult
+        {
+            Specs = allSpecs,
+            Errors = errors
+        };
     }
 
     /// <summary>

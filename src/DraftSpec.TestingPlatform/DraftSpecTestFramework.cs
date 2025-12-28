@@ -117,11 +117,22 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
             return;
         }
 
-        var specs = await _discoverer.DiscoverAsync(cancellationToken);
+        var result = await _discoverer.DiscoverAsync(cancellationToken);
 
-        foreach (var spec in specs)
+        // Publish discovered specs
+        foreach (var spec in result.Specs)
         {
             var testNode = TestNodeMapper.CreateDiscoveryNode(spec);
+
+            await messageBus.PublishAsync(
+                this,
+                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+        }
+
+        // Publish discovery errors as error nodes
+        foreach (var error in result.Errors)
+        {
+            var testNode = TestNodeMapper.CreateErrorNode(error);
 
             await messageBus.PublishAsync(
                 this,
@@ -146,8 +157,20 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         }
 
         // Run all discovered tests (VSTest provides filtering via its own mechanisms)
-        var specs = await _discoverer.DiscoverAsync(cancellationToken);
-        var fileGroups = specs.GroupBy(s => s.SourceFile);
+        var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken);
+
+        // Report discovery errors
+        foreach (var error in discoveryResult.Errors)
+        {
+            var testNode = TestNodeMapper.CreateErrorNode(error);
+
+            await messageBus.PublishAsync(
+                this,
+                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+        }
+
+        // Execute discovered specs
+        var fileGroups = discoveryResult.Specs.GroupBy(s => s.SourceFile);
 
         foreach (var group in fileGroups)
         {
@@ -191,11 +214,22 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
             return;
         }
 
-        var specs = await _discoverer.DiscoverAsync(cancellationToken);
+        var result = await _discoverer.DiscoverAsync(cancellationToken);
 
-        foreach (var spec in specs)
+        // Publish discovered specs
+        foreach (var spec in result.Specs)
         {
             var testNode = TestNodeMapper.CreateDiscoveryNode(spec);
+
+            await messageBus.PublishAsync(
+                this,
+                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+        }
+
+        // Publish discovery errors as error nodes
+        foreach (var error in result.Errors)
+        {
+            var testNode = TestNodeMapper.CreateErrorNode(error);
 
             await messageBus.PublishAsync(
                 this,
@@ -219,6 +253,7 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         // Check if specific tests are requested via filter
         var filter = request.Filter;
         IReadOnlyList<ExecutionResult> executionResults;
+        IReadOnlyList<DiscoveryError> discoveryErrors = [];
 
         if (filter is TestNodeUidListFilter uidFilter && uidFilter.TestNodeUids.Length > 0)
         {
@@ -229,10 +264,11 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         else
         {
             // Run all tests - discover and execute all files
-            var specs = await _discoverer.DiscoverAsync(cancellationToken);
+            var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken);
+            discoveryErrors = discoveryResult.Errors;
 
             // Group by file and execute
-            var fileGroups = specs.GroupBy(s => s.SourceFile);
+            var fileGroups = discoveryResult.Specs.GroupBy(s => s.SourceFile);
             var results = new List<ExecutionResult>();
 
             foreach (var group in fileGroups)
@@ -242,6 +278,16 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
             }
 
             executionResults = results;
+        }
+
+        // Publish discovery errors as error nodes
+        foreach (var error in discoveryErrors)
+        {
+            var testNode = TestNodeMapper.CreateErrorNode(error);
+
+            await messageBus.PublishAsync(
+                this,
+                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
         }
 
         // Publish results to MTP

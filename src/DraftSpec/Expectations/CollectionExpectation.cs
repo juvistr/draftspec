@@ -4,6 +4,7 @@ namespace DraftSpec;
 
 /// <summary>
 /// Expectation wrapper for collections with collection-specific assertions.
+/// Supports both positive and negated assertions via the <see cref="not"/> property.
 /// </summary>
 /// <typeparam name="T">The type of elements in the collection.</typeparam>
 /// <remarks>
@@ -26,6 +27,8 @@ public readonly struct CollectionExpectation<T>
     /// </summary>
     public string? Expression { get; }
 
+    private readonly bool _isNegated;
+
     /// <summary>
     /// Creates an expectation for the specified collection.
     /// </summary>
@@ -35,6 +38,17 @@ public readonly struct CollectionExpectation<T>
     {
         Actual = actual;
         Expression = expr;
+        _isNegated = false;
+    }
+
+    /// <summary>
+    /// Creates an expectation for the specified collection with negation control.
+    /// </summary>
+    internal CollectionExpectation(IEnumerable<T> actual, string? expr, bool isNegated)
+    {
+        Actual = actual;
+        Expression = expr;
+        _isNegated = isNegated;
     }
 
     /// <summary>
@@ -46,17 +60,26 @@ public readonly struct CollectionExpectation<T>
     /// expect(list).not.toBeEmpty();
     /// </code>
     /// </example>
-    public NegatedCollectionExpectation<T> not => new(Actual, Expression);
+    public CollectionExpectation<T> not => new(Actual, Expression, !_isNegated);
 
     /// <summary>
-    /// Assert that the collection contains the specified item.
+    /// Assert that the collection contains (or does not contain, if negated) the specified item.
     /// </summary>
     public void toContain(T expected)
     {
-        var materialized = Materialize();
-        if (!materialized.Contains(expected))
-            throw new AssertionException(
-                $"Expected {Expression} to contain {ExpectationHelpers.Format(expected)}, but it did not. Contents: [{FormatCollection(materialized)}]");
+        if (_isNegated)
+        {
+            if (Actual.Contains(expected))
+                throw new AssertionException(
+                    $"Expected {Expression} to not contain {ExpectationHelpers.Format(expected)}, but it did");
+        }
+        else
+        {
+            var materialized = Materialize();
+            if (!materialized.Contains(expected))
+                throw new AssertionException(
+                    $"Expected {Expression} to contain {ExpectationHelpers.Format(expected)}, but it did not. Contents: [{FormatCollection(materialized)}]");
+        }
     }
 
     /// <summary>
@@ -70,38 +93,68 @@ public readonly struct CollectionExpectation<T>
     }
 
     /// <summary>
-    /// Assert that the collection contains all the specified items.
+    /// Assert that the collection contains (or does not contain, if negated) all the specified items.
     /// </summary>
     public void toContainAll(params T[] expected)
     {
         var materialized = Materialize();
-        var missing = expected.Where(e => !materialized.Contains(e)).ToList();
-        if (missing.Count > 0)
-            throw new AssertionException(
-                $"Expected {Expression} to contain all of [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was missing [{string.Join(", ", missing.Select(e => ExpectationHelpers.Format(e)))}]");
+
+        if (_isNegated)
+        {
+            if (expected.All(e => materialized.Contains(e)))
+                throw new AssertionException(
+                    $"Expected {Expression} to not contain all of [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but it did");
+        }
+        else
+        {
+            var missing = expected.Where(e => !materialized.Contains(e)).ToList();
+            if (missing.Count > 0)
+                throw new AssertionException(
+                    $"Expected {Expression} to contain all of [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was missing [{string.Join(", ", missing.Select(e => ExpectationHelpers.Format(e)))}]");
+        }
     }
 
     /// <summary>
-    /// Assert that the collection has the specified count.
+    /// Assert that the collection has (or does not have, if negated) the specified count.
     /// </summary>
     public void toHaveCount(int expected)
     {
         var materialized = Materialize();
         var count = materialized.Count;
-        if (count != expected)
-            throw new AssertionException(
-                $"Expected {Expression} to have count {expected}, but was {count}");
+
+        if (_isNegated)
+        {
+            if (count == expected)
+                throw new AssertionException(
+                    $"Expected {Expression} to not have count {expected}, but it did");
+        }
+        else
+        {
+            if (count != expected)
+                throw new AssertionException(
+                    $"Expected {Expression} to have count {expected}, but was {count}");
+        }
     }
 
     /// <summary>
-    /// Assert that the collection is empty.
+    /// Assert that the collection is (or is not, if negated) empty.
     /// </summary>
     public void toBeEmpty()
     {
         var materialized = Materialize();
-        if (materialized.Count > 0)
-            throw new AssertionException(
-                $"Expected {Expression} to be empty, but had {materialized.Count} items: [{FormatCollection(materialized)}]");
+
+        if (_isNegated)
+        {
+            if (materialized.Count == 0)
+                throw new AssertionException(
+                    $"Expected {Expression} to not be empty");
+        }
+        else
+        {
+            if (materialized.Count > 0)
+                throw new AssertionException(
+                    $"Expected {Expression} to be empty, but had {materialized.Count} items: [{FormatCollection(materialized)}]");
+        }
     }
 
     /// <summary>
@@ -116,18 +169,28 @@ public readonly struct CollectionExpectation<T>
     }
 
     /// <summary>
-    /// Assert that the collection equals the expected sequence.
+    /// Assert that the collection equals (or does not equal, if negated) the expected sequence.
     /// </summary>
     public void toBe(IEnumerable<T> expected)
     {
         var materialized = Materialize();
-        if (!materialized.SequenceEqual(expected))
-            throw new AssertionException(
-                $"Expected {Expression} to be [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was [{FormatCollection(materialized)}]");
+
+        if (_isNegated)
+        {
+            if (materialized.SequenceEqual(expected))
+                throw new AssertionException(
+                    $"Expected {Expression} to not be [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}]");
+        }
+        else
+        {
+            if (!materialized.SequenceEqual(expected))
+                throw new AssertionException(
+                    $"Expected {Expression} to be [{string.Join(", ", expected.Select(e => ExpectationHelpers.Format(e)))}], but was [{FormatCollection(materialized)}]");
+        }
     }
 
     /// <summary>
-    /// Assert that the collection equals the expected items.
+    /// Assert that the collection equals (or does not equal, if negated) the expected items.
     /// </summary>
     public void toBe(params T[] expected)
     {
@@ -135,7 +198,7 @@ public readonly struct CollectionExpectation<T>
     }
 
     /// <summary>
-    /// Assert that the collection contains exactly the specified items (order-independent).
+    /// Assert that the collection contains (or does not contain, if negated) exactly the specified items (order-independent).
     /// </summary>
     /// <param name="expected">The expected items.</param>
     public void toContainExactly(IEnumerable<T> expected)
@@ -143,37 +206,60 @@ public readonly struct CollectionExpectation<T>
         var actualList = Materialize().ToList();
         var expectedList = expected.ToList();
 
-        if (actualList.Count != expectedList.Count)
+        if (_isNegated)
         {
+            if (actualList.Count != expectedList.Count)
+                return; // Different count means they don't match exactly - pass
+
+            // Check if they have the same items (accounting for duplicates)
+            var actualCopy = new List<T>(actualList);
+            foreach (var item in expectedList)
+            {
+                var index = actualCopy.FindIndex(a => EqualityComparer<T>.Default.Equals(a, item));
+                if (index >= 0)
+                    actualCopy.RemoveAt(index);
+                else
+                    return; // Missing item means they don't match exactly - pass
+            }
+
+            // If we get here, they match exactly
             throw new AssertionException(
-                $"Expected {Expression} to contain exactly {expectedList.Count} items, but had {actualList.Count}. " +
-                $"Expected: [{FormatItems(expectedList)}], Actual: [{FormatCollection(actualList)}]");
+                $"Expected {Expression} to not contain exactly [{string.Join(", ", expectedList.Select(e => ExpectationHelpers.Format(e)))}], but it did");
         }
-
-        // Check that all expected items are present (accounting for duplicates)
-        var actualCopy = new List<T>(actualList);
-        var missing = new List<T>();
-
-        foreach (var item in expectedList)
+        else
         {
-            var index = actualCopy.FindIndex(a => EqualityComparer<T>.Default.Equals(a, item));
-            if (index >= 0)
-                actualCopy.RemoveAt(index);
-            else
-                missing.Add(item);
-        }
+            if (actualList.Count != expectedList.Count)
+            {
+                throw new AssertionException(
+                    $"Expected {Expression} to contain exactly {expectedList.Count} items, but had {actualList.Count}. " +
+                    $"Expected: [{FormatItems(expectedList)}], Actual: [{FormatCollection(actualList)}]");
+            }
 
-        if (missing.Count > 0)
-        {
-            throw new AssertionException(
-                $"Expected {Expression} to contain exactly [{FormatItems(expectedList)}], " +
-                $"but was missing [{FormatItems(missing)}]. " +
-                $"Extra items: [{FormatItems(actualCopy)}]");
+            // Check that all expected items are present (accounting for duplicates)
+            var actualCopy = new List<T>(actualList);
+            var missing = new List<T>();
+
+            foreach (var item in expectedList)
+            {
+                var index = actualCopy.FindIndex(a => EqualityComparer<T>.Default.Equals(a, item));
+                if (index >= 0)
+                    actualCopy.RemoveAt(index);
+                else
+                    missing.Add(item);
+            }
+
+            if (missing.Count > 0)
+            {
+                throw new AssertionException(
+                    $"Expected {Expression} to contain exactly [{FormatItems(expectedList)}], " +
+                    $"but was missing [{FormatItems(missing)}]. " +
+                    $"Extra items: [{FormatItems(actualCopy)}]");
+            }
         }
     }
 
     /// <summary>
-    /// Assert that the collection contains exactly the specified items (order-independent).
+    /// Assert that the collection contains (or does not contain, if negated) exactly the specified items (order-independent).
     /// </summary>
     /// <param name="expected">The expected items.</param>
     public void toContainExactly(params T[] expected)

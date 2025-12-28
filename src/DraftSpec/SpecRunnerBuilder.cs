@@ -10,6 +10,11 @@ namespace DraftSpec;
 /// </summary>
 public class SpecRunnerBuilder
 {
+    /// <summary>
+    /// Default timeout for regex operations to prevent ReDoS attacks.
+    /// </summary>
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
+
     private readonly List<ISpecMiddleware> _middleware = [];
     private DraftSpecConfiguration? _configuration;
     private int _maxDegreeOfParallelism;
@@ -62,7 +67,7 @@ public class SpecRunnerBuilder
     /// <param name="options">Regex options (default: IgnoreCase)</param>
     public SpecRunnerBuilder WithNameFilter(string pattern, RegexOptions options = RegexOptions.IgnoreCase)
     {
-        var regex = new Regex(pattern, options);
+        var regex = new Regex(pattern, options, RegexTimeout);
         return Use(new FilterMiddleware(ctx =>
             {
                 var fullDescription = string.Join(" ", ctx.ContextPath.Append(ctx.Spec.Description));
@@ -78,7 +83,7 @@ public class SpecRunnerBuilder
     /// <param name="options">Regex options (default: IgnoreCase)</param>
     public SpecRunnerBuilder WithNameExcludeFilter(string pattern, RegexOptions options = RegexOptions.IgnoreCase)
     {
-        var regex = new Regex(pattern, options);
+        var regex = new Regex(pattern, options, RegexTimeout);
         return Use(new FilterMiddleware(ctx =>
             {
                 var fullDescription = string.Join(" ", ctx.ContextPath.Append(ctx.Spec.Description));

@@ -34,11 +34,12 @@ public class PipelineTests
     }
 
     [Test]
+    [NotInParallel]
     public async Task SpecRunnerBuilder_WithTimeout_ConfiguresTimeoutMiddleware()
     {
         var context = new SpecContext("test");
-        // Use a large gap (2000ms delay vs 100ms timeout) to avoid CI flakiness
-        context.AddSpec(new SpecDefinition("slow", async () => await Task.Delay(2000)));
+        // Use a large gap (10s delay vs 100ms timeout) to avoid CI flakiness
+        context.AddSpec(new SpecDefinition("slow", async () => await Task.Delay(10_000)));
 
         var runner = new SpecRunnerBuilder().WithTimeout(100).Build();
         var results = runner.Run(context);

@@ -1,4 +1,5 @@
 using System.Text;
+using DraftSpec.Formatters;
 
 namespace DraftSpec.Formatters.Markdown;
 
@@ -90,9 +91,9 @@ public class MarkdownFormatter : IFormatter
             {
                 var symbol = spec.Status switch
                 {
-                    "passed" => "✓",
-                    "failed" => "✗",
-                    "pending" => "○",
+                    SpecStatusNames.Passed => "✓",
+                    SpecStatusNames.Failed => "✗",
+                    SpecStatusNames.Pending => "○",
                     _ => "?"
                 };
                 sb.AppendLine($"- {symbol} {spec.Description}");

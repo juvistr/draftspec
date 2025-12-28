@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using DraftSpec.Formatters;
 
 namespace DraftSpec.Formatters.Html;
 
@@ -136,10 +137,10 @@ public class HtmlFormatter : IFormatter
             {
                 var symbol = spec.Status switch
                 {
-                    "passed" => "✓",
-                    "failed" => "✗",
-                    "pending" => "○",
-                    "skipped" => "−",
+                    SpecStatusNames.Passed => "✓",
+                    SpecStatusNames.Failed => "✗",
+                    SpecStatusNames.Pending => "○",
+                    SpecStatusNames.Skipped => "−",
                     _ => "?"
                 };
 

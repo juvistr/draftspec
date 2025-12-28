@@ -85,11 +85,21 @@ public abstract class Spec
     }
 
     /// <summary>
-    /// Defines a spec with an implementation.
+    /// Defines a spec with a synchronous implementation.
     /// </summary>
     /// <param name="description">What the spec tests.</param>
     /// <param name="body">The test implementation.</param>
     protected void it(string description, Action body)
+    {
+        ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateSpec(description, body));
+    }
+
+    /// <summary>
+    /// Defines a spec with an asynchronous implementation.
+    /// </summary>
+    /// <param name="description">What the spec tests.</param>
+    /// <param name="body">The async test implementation.</param>
+    protected void it(string description, Func<Task> body)
     {
         ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateSpec(description, body));
     }
@@ -104,11 +114,23 @@ public abstract class Spec
     }
 
     /// <summary>
-    /// Defines a focused spec. When any focused specs exist, only focused specs run.
+    /// Defines a focused spec with a synchronous implementation.
+    /// When any focused specs exist, only focused specs run.
     /// </summary>
     /// <param name="description">What the spec tests.</param>
     /// <param name="body">The test implementation.</param>
     protected void fit(string description, Action body)
+    {
+        ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateFocusedSpec(description, body));
+    }
+
+    /// <summary>
+    /// Defines a focused spec with an asynchronous implementation.
+    /// When any focused specs exist, only focused specs run.
+    /// </summary>
+    /// <param name="description">What the spec tests.</param>
+    /// <param name="body">The async test implementation.</param>
+    protected void fit(string description, Func<Task> body)
     {
         ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateFocusedSpec(description, body));
     }
@@ -124,7 +146,17 @@ public abstract class Spec
     }
 
     /// <summary>
-    /// Sets a hook that runs once before any spec in the current context.
+    /// Defines a skipped spec with an async body that will not be executed.
+    /// </summary>
+    /// <param name="description">What the spec would test.</param>
+    /// <param name="body">Optional async body (will not be executed).</param>
+    protected void xit(string description, Func<Task>? body)
+    {
+        ContextBuilder.AddSpec(CurrentContext, ContextBuilder.CreateSkippedSpec(description, body));
+    }
+
+    /// <summary>
+    /// Sets a synchronous hook that runs once before any spec in the current context.
     /// </summary>
     protected Action beforeAll
     {
@@ -132,7 +164,15 @@ public abstract class Spec
     }
 
     /// <summary>
-    /// Sets a hook that runs once after all specs in the current context.
+    /// Sets an asynchronous hook that runs once before any spec in the current context.
+    /// </summary>
+    protected void beforeAllAsync(Func<Task> hook)
+    {
+        ContextBuilder.SetBeforeAll(CurrentContext, hook);
+    }
+
+    /// <summary>
+    /// Sets a synchronous hook that runs once after all specs in the current context.
     /// </summary>
     protected Action afterAll
     {
@@ -140,7 +180,15 @@ public abstract class Spec
     }
 
     /// <summary>
-    /// Sets a hook that runs before each spec in the current context.
+    /// Sets an asynchronous hook that runs once after all specs in the current context.
+    /// </summary>
+    protected void afterAllAsync(Func<Task> hook)
+    {
+        ContextBuilder.SetAfterAll(CurrentContext, hook);
+    }
+
+    /// <summary>
+    /// Sets a synchronous hook that runs before each spec in the current context.
     /// </summary>
     protected Action before
     {
@@ -148,10 +196,26 @@ public abstract class Spec
     }
 
     /// <summary>
-    /// Sets a hook that runs after each spec in the current context.
+    /// Sets an asynchronous hook that runs before each spec in the current context.
+    /// </summary>
+    protected void beforeAsync(Func<Task> hook)
+    {
+        ContextBuilder.SetBeforeEach(CurrentContext, hook);
+    }
+
+    /// <summary>
+    /// Sets a synchronous hook that runs after each spec in the current context.
     /// </summary>
     protected Action after
     {
         set => ContextBuilder.SetAfterEach(CurrentContext, value);
+    }
+
+    /// <summary>
+    /// Sets an asynchronous hook that runs after each spec in the current context.
+    /// </summary>
+    protected void afterAsync(Func<Task> hook)
+    {
+        ContextBuilder.SetAfterEach(CurrentContext, hook);
     }
 }

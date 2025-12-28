@@ -27,13 +27,15 @@ public interface ISpecRunner
     /// Runs all specs in the given spec class asynchronously.
     /// </summary>
     /// <param name="spec">The spec class instance containing the spec definitions.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>Task that resolves to a list of results for each executed spec.</returns>
-    Task<List<SpecResult>> RunAsync(Spec spec);
+    Task<List<SpecResult>> RunAsync(Spec spec, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Runs all specs starting from the given root context asynchronously.
     /// </summary>
     /// <param name="rootContext">The root context of the spec tree.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>Task that resolves to a list of results for each executed spec.</returns>
-    Task<List<SpecResult>> RunAsync(SpecContext rootContext);
+    Task<List<SpecResult>> RunAsync(SpecContext rootContext, CancellationToken cancellationToken = default);
 }

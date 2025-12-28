@@ -90,16 +90,16 @@ public class SpecRunner : ISpecRunner
     /// <summary>
     /// Execute specs asynchronously from a Spec entry point.
     /// </summary>
-    public Task<List<SpecResult>> RunAsync(Spec spec)
+    public Task<List<SpecResult>> RunAsync(Spec spec, CancellationToken cancellationToken = default)
     {
-        return RunAsync(spec.RootContext);
+        return RunAsync(spec.RootContext, cancellationToken);
     }
 
     /// <summary>
     /// Execute specs asynchronously from a root context.
     /// Walks the context tree, executing specs through the middleware pipeline.
     /// </summary>
-    public async Task<List<SpecResult>> RunAsync(SpecContext rootContext)
+    public async Task<List<SpecResult>> RunAsync(SpecContext rootContext, CancellationToken cancellationToken = default)
     {
         var results = new List<SpecResult>();
 
@@ -117,7 +117,7 @@ public class SpecRunner : ISpecRunner
         // Use a mutable list for context path - push/pop as we traverse
         // This avoids ImmutableList allocations on every context entry
         var contextPath = new List<string>();
-        await RunContextAsync(rootContext, contextPath, results, hasFocused);
+        await RunContextAsync(rootContext, contextPath, results, hasFocused, cancellationToken);
 
         return results;
     }
@@ -166,8 +166,12 @@ public class SpecRunner : ISpecRunner
         SpecContext context,
         List<string> contextPath,
         List<SpecResult> results,
-        bool hasFocused)
+        bool hasFocused,
+        CancellationToken cancellationToken)
     {
+        // Check for cancellation
+        cancellationToken.ThrowIfCancellationRequested();
+
         // If bail was triggered, skip remaining specs in this context
         if (_bailTriggered)
         {
@@ -191,13 +195,15 @@ public class SpecRunner : ISpecRunner
         {
             // Run specs in this context (parallel or sequential)
             if (_maxDegreeOfParallelism > 1 && context.Specs.Count > 1)
-                await RunSpecsParallelAsync(context, contextPath, results, hasFocused);
+                await RunSpecsParallelAsync(context, contextPath, results, hasFocused, cancellationToken);
             else
-                await RunSpecsSequentialAsync(context, contextPath, results, hasFocused);
+                await RunSpecsSequentialAsync(context, contextPath, results, hasFocused, cancellationToken);
 
             // Recurse into children (always sequential to maintain context isolation)
             foreach (var child in context.Children)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (_bailTriggered)
                 {
                     // Skip remaining children
@@ -205,7 +211,7 @@ public class SpecRunner : ISpecRunner
                 }
                 else
                 {
-                    await RunContextAsync(child, contextPath, results, hasFocused);
+                    await RunContextAsync(child, contextPath, results, hasFocused, cancellationToken);
                 }
             }
         }
@@ -225,7 +231,8 @@ public class SpecRunner : ISpecRunner
         SpecContext context,
         List<string> contextPath,
         List<SpecResult> results,
-        bool hasFocused)
+        bool hasFocused,
+        CancellationToken cancellationToken)
     {
         // Take a snapshot of the context path for this batch of specs
         // This avoids repeated ToArray() calls for each spec in the same context
@@ -233,6 +240,9 @@ public class SpecRunner : ISpecRunner
 
         foreach (var spec in context.Specs)
         {
+            // Check for cancellation
+            cancellationToken.ThrowIfCancellationRequested();
+
             // If bail triggered, skip remaining specs
             if (_bailTriggered)
             {
@@ -258,7 +268,8 @@ public class SpecRunner : ISpecRunner
         SpecContext context,
         List<string> contextPath,
         List<SpecResult> results,
-        bool hasFocused)
+        bool hasFocused,
+        CancellationToken cancellationToken)
     {
         // Take a snapshot of the context path for this batch of specs
         var pathSnapshot = contextPath.ToArray();
@@ -268,12 +279,13 @@ public class SpecRunner : ISpecRunner
         var resultArray = new SpecResult[indexedSpecs.Count];
         var processedFlags = new bool[indexedSpecs.Count];
 
-        using var cts = _bail ? new CancellationTokenSource() : null;
+        // Link external cancellation token with bail cancellation
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         var options = new ParallelOptions
         {
             MaxDegreeOfParallelism = _maxDegreeOfParallelism,
-            CancellationToken = cts?.Token ?? CancellationToken.None
+            CancellationToken = cts.Token
         };
 
         try
@@ -298,14 +310,17 @@ public class SpecRunner : ISpecRunner
                 if (_bail && result.Status == SpecStatus.Failed)
                 {
                     _bailTriggered = true;
-                    cts?.Cancel();
+                    cts.Cancel();
                 }
             });
         }
-        catch (OperationCanceledException) when (_bailTriggered)
+        catch (OperationCanceledException) when (_bailTriggered || cancellationToken.IsCancellationRequested)
         {
-            // Expected when bail is triggered - fill in skipped results
+            // Expected when bail is triggered or external cancellation requested
         }
+
+        // Rethrow if this was external cancellation (not bail)
+        cancellationToken.ThrowIfCancellationRequested();
 
         // Fill in any specs that weren't processed due to cancellation
         for (var i = 0; i < resultArray.Length; i++)

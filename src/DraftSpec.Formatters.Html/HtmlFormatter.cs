@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Web;
 
 namespace DraftSpec.Formatters.Html;
@@ -166,21 +167,71 @@ public class HtmlFormatter : IFormatter
     }
 
     /// <summary>
-    /// Sanitize CSS to prevent XSS via style tag escape and IE/browser-specific CSS attacks.
-    /// Removes closing style tags, script tags, and dangerous CSS properties/functions.
+    /// Timeout for CSS sanitization regex operations to prevent ReDoS.
     /// </summary>
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Pattern to match HTML tags that could break out of the style element.
+    /// Matches &lt;/ followed by style, script, link, or import (with optional whitespace).
+    /// </summary>
+    private static readonly Regex HtmlTagPattern = new(
+        @"<\s*/?\s*(style|script|link|import)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        RegexTimeout);
+
+    /// <summary>
+    /// Pattern to match dangerous CSS functions and properties.
+    /// Includes expression(), behavior:, -moz-binding, and @import.
+    /// </summary>
+    private static readonly Regex DangerousCssPattern = new(
+        @"expression\s*\(|behavior\s*:|@import|-moz-binding",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        RegexTimeout);
+
+    /// <summary>
+    /// Pattern to match url() with dangerous protocols.
+    /// Matches url( followed by optional quotes/whitespace then javascript:, data:, or vbscript:.
+    /// </summary>
+    private static readonly Regex DangerousUrlPattern = new(
+        @"url\s*\(\s*['""]?\s*(javascript|data|vbscript)\s*:",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        RegexTimeout);
+
+    /// <summary>
+    /// Sanitize CSS to prevent XSS via style tag escape and browser-specific CSS attacks.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This sanitizer uses a blocklist approach to remove known dangerous patterns.
+    /// It is designed for developer-provided CSS in trusted environments (e.g., test reports).
+    /// </para>
+    /// <para>
+    /// For untrusted user input, consider using a proper CSS parser or whitelist approach.
+    /// </para>
+    /// <para>
+    /// Blocked patterns include:
+    /// <list type="bullet">
+    ///   <item>HTML tags that could break out of the style element</item>
+    ///   <item>expression() - IE JavaScript execution</item>
+    ///   <item>behavior: - IE behavior binding</item>
+    ///   <item>-moz-binding - Firefox XBL binding</item>
+    ///   <item>@import - external stylesheet loading</item>
+    ///   <item>url() with javascript:, data:, or vbscript: protocols</item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     private static string SanitizeCss(string css)
     {
-        // Remove any attempts to close the style tag or inject scripts
-        return css
-            .Replace("</style>", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("</style", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("<script", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("<link", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("<import", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("expression(", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("behavior:", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("url(javascript", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("-moz-binding", "", StringComparison.OrdinalIgnoreCase);
+        // Remove HTML tags that could break out of the style element
+        var result = HtmlTagPattern.Replace(css, "/* removed */");
+
+        // Remove dangerous CSS functions and properties
+        result = DangerousCssPattern.Replace(result, "/* removed */");
+
+        // Remove dangerous URL protocols
+        result = DangerousUrlPattern.Replace(result, "url(/* removed */");
+
+        return result;
     }
 }

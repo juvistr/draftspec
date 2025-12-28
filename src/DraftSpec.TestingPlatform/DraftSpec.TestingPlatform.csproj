@@ -19,7 +19,10 @@
         <!-- MTP SDK -->
         <PackageReference Include="Microsoft.Testing.Platform" Version="2.0.2" />
 
-        <!-- Roslyn Scripting (for future use) -->
+        <!-- VSTest Bridge for IDE integration (VS, Rider, VS Code) -->
+        <PackageReference Include="Microsoft.Testing.Extensions.VSTestBridge" Version="2.0.2" />
+
+        <!-- Roslyn Scripting -->
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.14.0" />
 
         <!-- DraftSpec Core -->

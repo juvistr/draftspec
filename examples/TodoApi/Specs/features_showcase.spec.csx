@@ -245,16 +245,16 @@ describe("3. Assertions", () =>
 
         it("toThrow<T> - returns exception for inspection", () =>
         {
-            var ex = expect(() => throw new InvalidOperationException("test error"))
-                .toThrow<InvalidOperationException>();
+            Action throwAction = () => throw new InvalidOperationException("test error");
+            var ex = expect(throwAction).toThrow<InvalidOperationException>();
 
             expect(ex.Message).toBe("test error");
         });
 
         it("toThrow - any exception", () =>
         {
-            var ex = expect(() => throw new Exception("something went wrong"))
-                .toThrow();
+            Action throwAction = () => throw new Exception("something went wrong");
+            var ex = expect(throwAction).toThrow();
 
             expect(ex.Message).toContain("wrong");
         });

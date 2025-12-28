@@ -410,6 +410,7 @@ public class StaticDslTests
     }
 
     [Test]
+    [NotInParallel(nameof(Environment.ExitCode))]
     public async Task AsyncSpec_ExceptionPropagates()
     {
         // Save original

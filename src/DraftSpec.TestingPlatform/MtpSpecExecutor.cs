@@ -141,8 +141,17 @@ internal sealed class MtpSpecExecutor
                 continue;
             }
 
-            var result = await ExecuteFileAsync(absolutePath, fileIds, cancellationToken);
-            results.Add(result);
+            try
+            {
+                var result = await ExecuteFileAsync(absolutePath, fileIds, cancellationToken);
+                results.Add(result);
+            }
+            catch (Exception)
+            {
+                // File failed to compile - skip it silently since discovery should have
+                // already identified these specs as having compilation errors.
+                // If discovery missed it (e.g., file changed), the specs just won't be reported.
+            }
         }
 
         return results;

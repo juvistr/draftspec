@@ -2,6 +2,7 @@ namespace DraftSpec;
 
 /// <summary>
 /// Expectation wrapper for async actions, used for testing async exception behavior.
+/// Supports both positive and negated assertions via the <see cref="not"/> property.
 /// </summary>
 /// <remarks>
 /// Created via <c>expect(async () => await action())</c>. Provides assertions like
@@ -23,6 +24,8 @@ public readonly struct AsyncActionExpectation
     /// </summary>
     public string? Expression { get; }
 
+    private readonly bool _isNegated;
+
     /// <summary>
     /// Creates an expectation for the specified async action.
     /// </summary>
@@ -32,6 +35,17 @@ public readonly struct AsyncActionExpectation
     {
         AsyncAction = asyncAction;
         Expression = expr;
+        _isNegated = false;
+    }
+
+    /// <summary>
+    /// Creates an expectation for the specified async action with negation control.
+    /// </summary>
+    internal AsyncActionExpectation(Func<Task> asyncAction, string? expr, bool isNegated)
+    {
+        AsyncAction = asyncAction;
+        Expression = expr;
+        _isNegated = isNegated;
     }
 
     /// <summary>
@@ -43,49 +57,85 @@ public readonly struct AsyncActionExpectation
     /// await expect(async () => await action()).not.toThrowAsync&lt;InvalidOperationException&gt;();
     /// </code>
     /// </example>
-    public NegatedAsyncActionExpectation not => new(AsyncAction, Expression);
+    public AsyncActionExpectation not => new(AsyncAction, Expression, !_isNegated);
 
     /// <summary>
-    /// Assert that the async action throws an exception of the specified type.
+    /// Assert that the async action throws (or does not throw, if negated) an exception of the specified type.
     /// </summary>
-    /// <returns>The thrown exception for further assertions.</returns>
+    /// <returns>The thrown exception (positive only; negated returns default).</returns>
     public async Task<TException> toThrowAsync<TException>() where TException : Exception
     {
-        try
+        if (_isNegated)
         {
-            await AsyncAction();
+            try
+            {
+                await AsyncAction();
+            }
+            catch (TException)
+            {
+                throw new AssertionException(
+                    $"Expected {Expression} to not throw {typeof(TException).Name}, but it did");
+            }
+            catch
+            {
+                // Different exception type - this is fine
+            }
+            return default!;
         }
-        catch (TException ex)
+        else
         {
-            return ex;
-        }
-        catch (Exception ex)
-        {
-            throw new AssertionException(
-                $"Expected {Expression} to throw {typeof(TException).Name}, but threw {ex.GetType().Name}: {ex.Message}");
-        }
+            try
+            {
+                await AsyncAction();
+            }
+            catch (TException ex)
+            {
+                return ex;
+            }
+            catch (Exception ex)
+            {
+                throw new AssertionException(
+                    $"Expected {Expression} to throw {typeof(TException).Name}, but threw {ex.GetType().Name}: {ex.Message}");
+            }
 
-        throw new AssertionException(
-            $"Expected {Expression} to throw {typeof(TException).Name}, but no exception was thrown");
+            throw new AssertionException(
+                $"Expected {Expression} to throw {typeof(TException).Name}, but no exception was thrown");
+        }
     }
 
     /// <summary>
-    /// Assert that the async action throws any exception.
+    /// Assert that the async action throws (or does not throw, if negated) any exception.
     /// </summary>
-    /// <returns>The thrown exception for further assertions.</returns>
+    /// <returns>The thrown exception (positive only; negated returns default).</returns>
     public async Task<Exception> toThrowAsync()
     {
-        try
+        if (_isNegated)
         {
-            await AsyncAction();
+            try
+            {
+                await AsyncAction();
+            }
+            catch (Exception ex)
+            {
+                throw new AssertionException(
+                    $"Expected {Expression} to not throw, but threw {ex.GetType().Name}: {ex.Message}");
+            }
+            return default!;
         }
-        catch (Exception ex)
+        else
         {
-            return ex;
-        }
+            try
+            {
+                await AsyncAction();
+            }
+            catch (Exception ex)
+            {
+                return ex;
+            }
 
-        throw new AssertionException(
-            $"Expected {Expression} to throw an exception, but no exception was thrown");
+            throw new AssertionException(
+                $"Expected {Expression} to throw an exception, but no exception was thrown");
+        }
     }
 
     /// <summary>

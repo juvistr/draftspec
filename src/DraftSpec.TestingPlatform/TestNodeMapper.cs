@@ -102,6 +102,28 @@ internal static class TestNodeMapper
     }
 
     /// <summary>
+    /// Creates a TestNode for a discovery error (failed compilation or script error).
+    /// </summary>
+    public static TestNode CreateErrorNode(DiscoveryError error)
+    {
+        var stateProperty = new ErrorTestNodeStateProperty(
+            error.Exception ?? new Exception(error.Message),
+            error.Message);
+
+        var propertyList = new List<IProperty> { stateProperty };
+
+        // Add file location pointing to line 1 of the failed file
+        propertyList.Add(CreateFileLocationProperty(error.SourceFile, 1));
+
+        return new TestNode
+        {
+            Uid = new TestNodeUid(error.Id),
+            DisplayName = error.DisplayName,
+            Properties = new PropertyBag(propertyList.ToArray())
+        };
+    }
+
+    /// <summary>
     /// Gets the appropriate state property for a spec result.
     /// </summary>
     private static TestNodeStateProperty GetStateProperty(SpecResult result)

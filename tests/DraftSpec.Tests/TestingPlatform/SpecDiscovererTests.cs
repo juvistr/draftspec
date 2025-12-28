@@ -406,13 +406,19 @@ public class SpecDiscovererTests
         // Act
         var result = await discoverer.DiscoverAsync();
 
-        // Assert - should have specs from valid file and error from invalid file
-        await Assert.That(result.Specs.Count).IsEqualTo(1);
-        await Assert.That(result.Specs[0].Description).IsEqualTo("works");
-        await Assert.That(result.HasErrors).IsTrue();
-        await Assert.That(result.Errors.Count).IsEqualTo(1);
-        await Assert.That(result.Errors[0].RelativeSourceFile).IsEqualTo("invalid.spec.csx");
-        await Assert.That(result.Errors[0].Message).Contains("nonExistentMethod");
+        // Assert - should have specs from both files
+        // The invalid file's spec is discovered via static parsing with a compilation error
+        await Assert.That(result.Specs.Count).IsEqualTo(2);
+
+        var validSpecResult = result.Specs.Single(s => s.Description == "works");
+        var invalidSpecResult = result.Specs.Single(s => s.Description == "fails");
+
+        await Assert.That(validSpecResult.HasCompilationError).IsFalse();
+        await Assert.That(invalidSpecResult.HasCompilationError).IsTrue();
+        await Assert.That(invalidSpecResult.CompilationError).Contains("nonExistentMethod");
+
+        // No errors in the list since specs were found statically
+        await Assert.That(result.HasErrors).IsFalse();
     }
 
     [Test]

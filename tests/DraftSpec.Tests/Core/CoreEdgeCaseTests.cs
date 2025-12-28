@@ -276,6 +276,42 @@ public class CoreEdgeCaseTests
     }
 
     [Test]
+    public async Task SpecContext_EmptyDescriptionWithParent_DoesNotModifyParent()
+    {
+        // Arrange
+        var parent = new SpecContext("parent");
+        var initialChildCount = parent.Children.Count;
+
+        // Act - attempt to create invalid child
+        Assert.Throws<ArgumentException>(() => new SpecContext("", parent));
+
+        // Assert - parent should not have been modified
+        await Assert.That(parent.Children.Count).IsEqualTo(initialChildCount);
+    }
+
+    [Test]
+    public async Task SpecContext_WhitespaceDescriptionWithParent_DoesNotModifyParent()
+    {
+        var parent = new SpecContext("parent");
+        var initialChildCount = parent.Children.Count;
+
+        Assert.Throws<ArgumentException>(() => new SpecContext("   ", parent));
+
+        await Assert.That(parent.Children.Count).IsEqualTo(initialChildCount);
+    }
+
+    [Test]
+    public async Task SpecContext_NullDescriptionWithParent_DoesNotModifyParent()
+    {
+        var parent = new SpecContext("parent");
+        var initialChildCount = parent.Children.Count;
+
+        Assert.Throws<ArgumentException>(() => new SpecContext(null!, parent));
+
+        await Assert.That(parent.Children.Count).IsEqualTo(initialChildCount);
+    }
+
+    [Test]
     public async Task SpecContext_AddChild_AddsToChildrenCollection()
     {
         var parent = new SpecContext("parent");

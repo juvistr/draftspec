@@ -466,4 +466,51 @@ public class CoreEdgeCaseTests
     }
 
     #endregion
+
+    #region SpecResult Tests
+
+    [Test]
+    public async Task SpecResult_FullDescription_CombinesContextPathAndDescription()
+    {
+        var spec = new SpecDefinition("does something", () => { });
+        var result = new SpecResult(spec, SpecStatus.Passed, ["Calculator", "add"]);
+
+        await Assert.That(result.FullDescription).IsEqualTo("Calculator add does something");
+    }
+
+    [Test]
+    public async Task SpecResult_FullDescription_IsCachedOnRepeatedAccess()
+    {
+        var spec = new SpecDefinition("is cached", () => { });
+        var result = new SpecResult(spec, SpecStatus.Passed, ["context"]);
+
+        // Access multiple times
+        var first = result.FullDescription;
+        var second = result.FullDescription;
+        var third = result.FullDescription;
+
+        // Should return the same cached instance
+        await Assert.That(ReferenceEquals(first, second)).IsTrue();
+        await Assert.That(ReferenceEquals(second, third)).IsTrue();
+    }
+
+    [Test]
+    public async Task SpecResult_FullDescription_EmptyContextPath_ReturnsOnlyDescription()
+    {
+        var spec = new SpecDefinition("standalone spec", () => { });
+        var result = new SpecResult(spec, SpecStatus.Passed, []);
+
+        await Assert.That(result.FullDescription).IsEqualTo("standalone spec");
+    }
+
+    [Test]
+    public async Task SpecResult_FullDescription_DeepContextPath_FormatsCorrectly()
+    {
+        var spec = new SpecDefinition("specific behavior", () => { });
+        var result = new SpecResult(spec, SpecStatus.Passed, ["root", "level1", "level2", "level3"]);
+
+        await Assert.That(result.FullDescription).IsEqualTo("root level1 level2 level3 specific behavior");
+    }
+
+    #endregion
 }

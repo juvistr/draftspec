@@ -72,7 +72,13 @@ public sealed record SpecResult(
     public SpecCoverageData? CoverageInfo { get; init; }
 
     /// <summary>
-    /// Full description including context path and spec description, space-separated.
+    /// Cached full description to avoid repeated string allocations.
     /// </summary>
-    public string FullDescription => string.Join(" ", ContextPath.Append(Spec.Description));
+    private string? _fullDescription;
+
+    /// <summary>
+    /// Full description including context path and spec description, space-separated.
+    /// Lazily computed and cached on first access.
+    /// </summary>
+    public string FullDescription => _fullDescription ??= string.Join(" ", ContextPath.Append(Spec.Description));
 }

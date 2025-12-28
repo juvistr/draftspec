@@ -23,6 +23,9 @@ internal static class TestNodeMapper
             propertyList.Add(CreateFileLocationProperty(spec.SourceFile, spec.LineNumber));
         }
 
+        // Add TestMethodIdentifierProperty for IDE integration (Rider requires this)
+        propertyList.Add(CreateTestMethodIdentifier(spec));
+
         return new TestNode
         {
             Uid = new TestNodeUid(spec.Id),
@@ -156,5 +159,68 @@ internal static class TestNodeMapper
         var lineSpan = new LinePositionSpan(linePosition, linePosition);
 
         return new TestFileLocationProperty(filePath, lineSpan);
+    }
+
+    /// <summary>
+    /// Creates a TestMethodIdentifierProperty for IDE integration.
+    /// Rider and other IDEs require this property to properly display tests.
+    /// For CSX-based specs, we create synthetic type/method names based on the spec hierarchy.
+    /// </summary>
+    private static TestMethodIdentifierProperty CreateTestMethodIdentifier(DiscoveredSpec spec)
+    {
+        // Use the CSX file name (without extension) as the synthetic "type name"
+        // and the spec description as the "method name"
+        var fileName = Path.GetFileNameWithoutExtension(spec.RelativeSourceFile);
+
+        // Build a type name from the context path (e.g., "Sample.nested_context")
+        // Replace spaces and special chars with underscores for valid type name
+        var contextParts = spec.ContextPath
+            .Select(SanitizeIdentifier)
+            .ToArray();
+
+        var typeName = contextParts.Length > 0
+            ? string.Join(".", contextParts)
+            : SanitizeIdentifier(fileName);
+
+        // Use the spec description as the method name
+        var methodName = SanitizeIdentifier(spec.Description);
+
+        // Get the assembly name from the DraftSpec.TestingPlatform assembly
+        var assemblyName = typeof(TestNodeMapper).Assembly.FullName ?? "DraftSpec.TestingPlatform";
+
+        return new TestMethodIdentifierProperty(
+            assemblyFullName: assemblyName,
+            @namespace: "DraftSpec.Specs",
+            typeName: typeName,
+            methodName: methodName,
+            methodArity: 0,
+            parameterTypeFullNames: [],
+            returnTypeFullName: "System.Void"
+        );
+    }
+
+    /// <summary>
+    /// Sanitizes a string to be a valid C# identifier.
+    /// Replaces invalid characters with underscores.
+    /// </summary>
+    private static string SanitizeIdentifier(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return "_";
+
+        var chars = input.ToCharArray();
+
+        // First character must be letter or underscore
+        if (!char.IsLetter(chars[0]) && chars[0] != '_')
+            chars[0] = '_';
+
+        // Subsequent characters can be letters, digits, or underscores
+        for (var i = 1; i < chars.Length; i++)
+        {
+            if (!char.IsLetterOrDigit(chars[i]) && chars[i] != '_')
+                chars[i] = '_';
+        }
+
+        return new string(chars);
     }
 }

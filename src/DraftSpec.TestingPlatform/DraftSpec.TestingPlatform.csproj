@@ -10,6 +10,9 @@
         <Description>Microsoft.Testing.Platform adapter for DraftSpec. Enables running CSX specs via dotnet test with built-in coverage support.</Description>
         <PackageTags>testing;bdd;rspec;mtp;dotnet-test;coverage</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <!-- Override IsPackable=false set by Microsoft.Testing.Platform -->
+        <IsPackable>true</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>

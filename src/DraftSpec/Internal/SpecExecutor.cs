@@ -109,10 +109,10 @@ internal static class SpecExecutor
         {
             var status = spec.Status switch
             {
-                "passed" => "✓",
-                "failed" => "✗",
-                "pending" => "○",
-                "skipped" => "-",
+                SpecStatusNames.Passed => "✓",
+                SpecStatusNames.Failed => "✗",
+                SpecStatusNames.Pending => "○",
+                SpecStatusNames.Skipped => "-",
                 _ => "?"
             };
             output.WriteLine($"{indent}  {status} {spec.Description}");

@@ -83,11 +83,11 @@ public class SpecResultReport
     public double? DurationMs { get; set; }
     public string? Error { get; set; }
 
-    [JsonIgnore] public bool Passed => Status == "passed";
+    [JsonIgnore] public bool Passed => Status == SpecStatusNames.Passed;
 
-    [JsonIgnore] public bool Failed => Status == "failed";
+    [JsonIgnore] public bool Failed => Status == SpecStatusNames.Failed;
 
-    [JsonIgnore] public bool Pending => Status == "pending";
+    [JsonIgnore] public bool Pending => Status == SpecStatusNames.Pending;
 
-    [JsonIgnore] public bool Skipped => Status == "skipped";
+    [JsonIgnore] public bool Skipped => Status == SpecStatusNames.Skipped;
 }

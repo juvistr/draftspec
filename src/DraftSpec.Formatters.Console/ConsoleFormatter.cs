@@ -1,3 +1,5 @@
+using DraftSpec.Formatters;
+
 namespace DraftSpec.Formatters.Console;
 
 /// <summary>
@@ -57,10 +59,10 @@ public class ConsoleFormatter : IConsoleFormatter
         {
             var (symbol, color) = spec.Status switch
             {
-                "passed" => ("✓", ConsoleColor.Green),
-                "failed" => ("✗", ConsoleColor.Red),
-                "pending" => ("○", ConsoleColor.Yellow),
-                "skipped" => ("-", ConsoleColor.DarkGray),
+                SpecStatusNames.Passed => ("✓", ConsoleColor.Green),
+                SpecStatusNames.Failed => ("✗", ConsoleColor.Red),
+                SpecStatusNames.Pending => ("○", ConsoleColor.Yellow),
+                SpecStatusNames.Skipped => ("-", ConsoleColor.DarkGray),
                 _ => ("?", ConsoleColor.White)
             };
 
@@ -70,7 +72,7 @@ public class ConsoleFormatter : IConsoleFormatter
             output.Write(spec.Description);
 
             // Show duration for specs that ran
-            if (spec.Status is "passed" or "failed" && spec.DurationMs > 0)
+            if (spec.Status is SpecStatusNames.Passed or SpecStatusNames.Failed && spec.DurationMs > 0)
             {
                 if (useColors) System.Console.ForegroundColor = ConsoleColor.DarkGray;
                 output.Write($" ({FormatDuration(spec.DurationMs ?? 0)})");

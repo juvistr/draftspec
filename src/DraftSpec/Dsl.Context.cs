@@ -13,44 +13,36 @@ public static partial class Dsl
         {
             // First describe call - create root
             RootContext = new SpecContext(description) { LineNumber = lineNumber };
-            CurrentContext = RootContext;
-            try
-            {
-                body();
-            }
-            finally
-            {
-                CurrentContext = null;
-            }
+            ExecuteInContext(RootContext, restoreTo: null, body);
         }
         else if (CurrentContext is null)
         {
             // Another top-level describe - add as child of root
             var context = new SpecContext(description, RootContext) { LineNumber = lineNumber };
-            CurrentContext = context;
-            try
-            {
-                body();
-            }
-            finally
-            {
-                CurrentContext = null;
-            }
+            ExecuteInContext(context, restoreTo: null, body);
         }
         else
         {
             // Nested describe
             var parent = CurrentContext;
             var context = new SpecContext(description, parent) { LineNumber = lineNumber };
-            CurrentContext = context;
-            try
-            {
-                body();
-            }
-            finally
-            {
-                CurrentContext = parent;
-            }
+            ExecuteInContext(context, restoreTo: parent, body);
+        }
+    }
+
+    /// <summary>
+    /// Execute body within the given context, restoring CurrentContext afterward.
+    /// </summary>
+    private static void ExecuteInContext(SpecContext context, SpecContext? restoreTo, Action body)
+    {
+        CurrentContext = context;
+        try
+        {
+            body();
+        }
+        finally
+        {
+            CurrentContext = restoreTo;
         }
     }
 

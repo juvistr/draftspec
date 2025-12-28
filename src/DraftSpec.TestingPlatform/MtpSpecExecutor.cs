@@ -92,7 +92,20 @@ internal sealed class MtpSpecExecutor
             var report = SpecReportBuilder.Build(rootContext, results);
             await captureReporter.OnRunCompletedAsync(report);
 
-            return new ExecutionResult(relativePath, absolutePath, captureReporter.Results);
+            // When filtering, only return results for requested specs
+            // (filtered-out specs get Skipped status but shouldn't be reported to IDE)
+            var finalResults = requestedIds != null && requestedIds.Count > 0
+                ? captureReporter.Results.Where(r =>
+                {
+                    var id = TestNodeMapper.GenerateStableId(
+                        relativePath,
+                        r.ContextPath,
+                        r.Spec.Description);
+                    return requestedIds.Contains(id);
+                }).ToList()
+                : captureReporter.Results;
+
+            return new ExecutionResult(relativePath, absolutePath, finalResults);
         }
         finally
         {

@@ -159,13 +159,10 @@ public class MtpSpecExecutorTests
         // Act
         var result = await executor.ExecuteFileAsync(csxPath, requestedIds);
 
-        // Assert - only one spec should run (adds), others skipped
-        var passedSpecs = result.Results.Where(r => r.Status == SpecStatus.Passed).ToList();
-        var skippedSpecs = result.Results.Where(r => r.Status == SpecStatus.Skipped).ToList();
-
-        await Assert.That(passedSpecs.Count).IsEqualTo(1);
-        await Assert.That(passedSpecs[0].Spec.Description).IsEqualTo("adds");
-        await Assert.That(skippedSpecs.Count).IsEqualTo(2);
+        // Assert - only requested spec should be in results (non-requested specs are not reported)
+        await Assert.That(result.Results.Count).IsEqualTo(1);
+        await Assert.That(result.Results[0].Status).IsEqualTo(SpecStatus.Passed);
+        await Assert.That(result.Results[0].Spec.Description).IsEqualTo("adds");
     }
 
     [Test]

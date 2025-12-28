@@ -67,22 +67,22 @@ public class SpecContext
     /// <summary>
     /// Hook that runs once before any spec in this context. Runs after parent's BeforeAll.
     /// </summary>
-    public Func<Task>? BeforeAll { get; set; }
+    public Func<Task>? BeforeAll { get; internal set; }
 
     /// <summary>
     /// Hook that runs once after all specs in this context. Runs before parent's AfterAll.
     /// </summary>
-    public Func<Task>? AfterAll { get; set; }
+    public Func<Task>? AfterAll { get; internal set; }
 
     /// <summary>
     /// Hook that runs before each spec. Runs after parent's BeforeEach.
     /// </summary>
-    public Func<Task>? BeforeEach { get; set; }
+    public Func<Task>? BeforeEach { get; internal set; }
 
     /// <summary>
     /// Hook that runs after each spec. Runs before parent's AfterEach.
     /// </summary>
-    public Func<Task>? AfterEach { get; set; }
+    public Func<Task>? AfterEach { get; internal set; }
 
     // Cached hook chains for performance (computed lazily)
     // Uses IReadOnlyList to allow either List<T> or Array.Empty<T> singleton

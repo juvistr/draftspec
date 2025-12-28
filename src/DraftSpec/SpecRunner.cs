@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Diagnostics;
 using DraftSpec.Configuration;
 using DraftSpec.Middleware;
@@ -115,7 +114,10 @@ public class SpecRunner : ISpecRunner
         var startTime = DateTime.UtcNow;
         await NotifyRunStartingAsync(totalSpecs, startTime);
 
-        await RunContextAsync(rootContext, ImmutableList<string>.Empty, results, hasFocused);
+        // Use a mutable list for context path - push/pop as we traverse
+        // This avoids ImmutableList allocations on every context entry
+        var contextPath = new List<string>();
+        await RunContextAsync(rootContext, contextPath, results, hasFocused);
 
         return results;
     }
@@ -162,20 +164,24 @@ public class SpecRunner : ISpecRunner
 
     private async Task RunContextAsync(
         SpecContext context,
-        ImmutableList<string> parentDescriptions,
+        List<string> contextPath,
         List<SpecResult> results,
         bool hasFocused)
     {
         // If bail was triggered, skip remaining specs in this context
         if (_bailTriggered)
         {
-            await SkipRemainingSpecsInContext(context, parentDescriptions, results, hasFocused);
+            await SkipRemainingSpecsInContext(context, contextPath, results, hasFocused);
             return;
         }
 
-        var descriptions = string.IsNullOrEmpty(context.Description)
-            ? parentDescriptions
-            : parentDescriptions.Add(context.Description);
+        // Push this context's description onto the path (if non-empty)
+        var pushed = false;
+        if (!string.IsNullOrEmpty(context.Description))
+        {
+            contextPath.Add(context.Description);
+            pushed = true;
+        }
 
         // Run beforeAll (always sequential)
         if (context.BeforeAll != null)
@@ -185,9 +191,9 @@ public class SpecRunner : ISpecRunner
         {
             // Run specs in this context (parallel or sequential)
             if (_maxDegreeOfParallelism > 1 && context.Specs.Count > 1)
-                await RunSpecsParallelAsync(context, descriptions, results, hasFocused);
+                await RunSpecsParallelAsync(context, contextPath, results, hasFocused);
             else
-                await RunSpecsSequentialAsync(context, descriptions, results, hasFocused);
+                await RunSpecsSequentialAsync(context, contextPath, results, hasFocused);
 
             // Recurse into children (always sequential to maintain context isolation)
             foreach (var child in context.Children)
@@ -195,16 +201,20 @@ public class SpecRunner : ISpecRunner
                 if (_bailTriggered)
                 {
                     // Skip remaining children
-                    await SkipRemainingSpecsInContext(child, descriptions, results, hasFocused);
+                    await SkipRemainingSpecsInContext(child, contextPath, results, hasFocused);
                 }
                 else
                 {
-                    await RunContextAsync(child, descriptions, results, hasFocused);
+                    await RunContextAsync(child, contextPath, results, hasFocused);
                 }
             }
         }
         finally
         {
+            // Pop this context's description from the path
+            if (pushed)
+                contextPath.RemoveAt(contextPath.Count - 1);
+
             // Run afterAll (always sequential)
             if (context.AfterAll != null)
                 await context.AfterAll();
@@ -213,22 +223,26 @@ public class SpecRunner : ISpecRunner
 
     private async Task RunSpecsSequentialAsync(
         SpecContext context,
-        IReadOnlyList<string> descriptions,
+        List<string> contextPath,
         List<SpecResult> results,
         bool hasFocused)
     {
+        // Take a snapshot of the context path for this batch of specs
+        // This avoids repeated ToArray() calls for each spec in the same context
+        var pathSnapshot = contextPath.ToArray();
+
         foreach (var spec in context.Specs)
         {
             // If bail triggered, skip remaining specs
             if (_bailTriggered)
             {
-                var skippedResult = new SpecResult(spec, SpecStatus.Skipped, descriptions);
+                var skippedResult = new SpecResult(spec, SpecStatus.Skipped, pathSnapshot);
                 results.Add(skippedResult);
                 await NotifySpecCompletedAsync(skippedResult);
                 continue;
             }
 
-            var result = await RunSpecAsync(spec, context, descriptions, hasFocused);
+            var result = await RunSpecAsync(spec, context, pathSnapshot, hasFocused);
             results.Add(result);
             await NotifySpecCompletedAsync(result);
 
@@ -242,10 +256,13 @@ public class SpecRunner : ISpecRunner
 
     private async Task RunSpecsParallelAsync(
         SpecContext context,
-        IReadOnlyList<string> descriptions,
+        List<string> contextPath,
         List<SpecResult> results,
         bool hasFocused)
     {
+        // Take a snapshot of the context path for this batch of specs
+        var pathSnapshot = contextPath.ToArray();
+
         // Create indexed list to preserve order
         var indexedSpecs = context.Specs.Select((spec, index) => (spec, index)).ToList();
         var resultArray = new SpecResult[indexedSpecs.Count];
@@ -268,12 +285,12 @@ public class SpecRunner : ISpecRunner
                 // Check if bail was triggered before starting
                 if (_bailTriggered)
                 {
-                    resultArray[index] = new SpecResult(spec, SpecStatus.Skipped, descriptions);
+                    resultArray[index] = new SpecResult(spec, SpecStatus.Skipped, pathSnapshot);
                     processedFlags[index] = true;
                     return;
                 }
 
-                var result = await RunSpecAsync(spec, context, descriptions, hasFocused);
+                var result = await RunSpecAsync(spec, context, pathSnapshot, hasFocused);
                 resultArray[index] = result;
                 processedFlags[index] = true;
 
@@ -295,7 +312,7 @@ public class SpecRunner : ISpecRunner
         {
             if (!processedFlags[i])
             {
-                resultArray[i] = new SpecResult(indexedSpecs[i].spec, SpecStatus.Skipped, descriptions);
+                resultArray[i] = new SpecResult(indexedSpecs[i].spec, SpecStatus.Skipped, pathSnapshot);
             }
         }
 
@@ -339,26 +356,42 @@ public class SpecRunner : ISpecRunner
     /// </summary>
     private async Task SkipRemainingSpecsInContext(
         SpecContext context,
-        ImmutableList<string> parentDescriptions,
+        List<string> contextPath,
         List<SpecResult> results,
         bool hasFocused)
     {
-        var descriptions = string.IsNullOrEmpty(context.Description)
-            ? parentDescriptions
-            : parentDescriptions.Add(context.Description);
-
-        // Skip all specs in this context
-        foreach (var spec in context.Specs)
+        // Push this context's description onto the path (if non-empty)
+        var pushed = false;
+        if (!string.IsNullOrEmpty(context.Description))
         {
-            var skippedResult = new SpecResult(spec, SpecStatus.Skipped, descriptions);
-            results.Add(skippedResult);
-            await NotifySpecCompletedAsync(skippedResult);
+            contextPath.Add(context.Description);
+            pushed = true;
         }
 
-        // Recursively skip children
-        foreach (var child in context.Children)
+        try
         {
-            await SkipRemainingSpecsInContext(child, descriptions, results, hasFocused);
+            // Take a snapshot for this context's specs
+            var pathSnapshot = contextPath.ToArray();
+
+            // Skip all specs in this context
+            foreach (var spec in context.Specs)
+            {
+                var skippedResult = new SpecResult(spec, SpecStatus.Skipped, pathSnapshot);
+                results.Add(skippedResult);
+                await NotifySpecCompletedAsync(skippedResult);
+            }
+
+            // Recursively skip children
+            foreach (var child in context.Children)
+            {
+                await SkipRemainingSpecsInContext(child, contextPath, results, hasFocused);
+            }
+        }
+        finally
+        {
+            // Pop this context's description from the path
+            if (pushed)
+                contextPath.RemoveAt(contextPath.Count - 1);
         }
     }
 

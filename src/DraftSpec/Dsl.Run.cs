@@ -12,37 +12,37 @@ public static partial class Dsl
     /// Environment variable name for CLI-based JSON output file path.
     /// When set, run() automatically adds a FileReporter to write JSON to this file.
     /// </summary>
-    public const string JsonOutputFileEnvVar = "DRAFTSPEC_JSON_OUTPUT_FILE";
+    public const string JsonOutputFileEnvVar = EnvironmentVariables.JsonOutputFile;
 
     /// <summary>
     /// Environment variable name for enabling progress streaming.
     /// When set to "true" or "1", run() adds a ProgressStreamReporter for MCP integration.
     /// </summary>
-    public const string ProgressStreamEnvVar = "DRAFTSPEC_PROGRESS_STREAM";
+    public const string ProgressStreamEnvVar = EnvironmentVariables.ProgressStream;
 
     /// <summary>
     /// Environment variable name for tag filtering (comma-separated).
     /// Only specs with any of these tags will run.
     /// </summary>
-    public const string FilterTagsEnvVar = "DRAFTSPEC_FILTER_TAGS";
+    public const string FilterTagsEnvVar = EnvironmentVariables.FilterTags;
 
     /// <summary>
     /// Environment variable name for tag exclusion (comma-separated).
     /// Specs with any of these tags will be skipped.
     /// </summary>
-    public const string ExcludeTagsEnvVar = "DRAFTSPEC_EXCLUDE_TAGS";
+    public const string ExcludeTagsEnvVar = EnvironmentVariables.ExcludeTags;
 
     /// <summary>
     /// Environment variable name for name pattern filtering (regex).
     /// Only specs matching this pattern will run.
     /// </summary>
-    public const string FilterNameEnvVar = "DRAFTSPEC_FILTER_NAME";
+    public const string FilterNameEnvVar = EnvironmentVariables.FilterName;
 
     /// <summary>
     /// Environment variable name for name pattern exclusion (regex).
     /// Specs matching this pattern will be skipped.
     /// </summary>
-    public const string ExcludeNameEnvVar = "DRAFTSPEC_EXCLUDE_NAME";
+    public const string ExcludeNameEnvVar = EnvironmentVariables.ExcludeName;
 
     /// <summary>
     /// Run all collected specs and output results.

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using DraftSpec.Cli.Coverage;
+using DraftSpec.Formatters;
 
 namespace DraftSpec.Cli;
 
@@ -31,22 +32,22 @@ public partial class SpecFileRunner : ISpecFileRunner
     /// <summary>
     /// Environment variable name for tag filtering (comma-separated).
     /// </summary>
-    public const string FilterTagsEnvVar = "DRAFTSPEC_FILTER_TAGS";
+    public const string FilterTagsEnvVar = EnvironmentVariables.FilterTags;
 
     /// <summary>
     /// Environment variable name for tag exclusion (comma-separated).
     /// </summary>
-    public const string ExcludeTagsEnvVar = "DRAFTSPEC_EXCLUDE_TAGS";
+    public const string ExcludeTagsEnvVar = EnvironmentVariables.ExcludeTags;
 
     /// <summary>
     /// Environment variable name for name pattern filtering (regex).
     /// </summary>
-    public const string FilterNameEnvVar = "DRAFTSPEC_FILTER_NAME";
+    public const string FilterNameEnvVar = EnvironmentVariables.FilterName;
 
     /// <summary>
     /// Environment variable name for name pattern exclusion (regex).
     /// </summary>
-    public const string ExcludeNameEnvVar = "DRAFTSPEC_EXCLUDE_NAME";
+    public const string ExcludeNameEnvVar = EnvironmentVariables.ExcludeName;
 
     private readonly Dictionary<string, DateTime> _lastBuildTime = new();
     private readonly Dictionary<string, DateTime> _lastSourceModified = new();
@@ -534,7 +535,7 @@ public partial class SpecFileRunner : ISpecFileRunner
         // Create temp file path for JSON output
         var jsonOutputFile = Path.Combine(Path.GetTempPath(), $".draftspec-{Guid.NewGuid():N}.json");
         var envVars = GetFilterEnvironmentVariables();
-        envVars["DRAFTSPEC_JSON_OUTPUT_FILE"] = jsonOutputFile;
+        envVars[EnvironmentVariables.JsonOutputFile] = jsonOutputFile;
 
         // Use file-based if: .NET 10+ AND no #load directives
         if (_useFileBased && !UsesLoadDirective(fullPath))

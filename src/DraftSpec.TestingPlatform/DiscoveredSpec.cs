@@ -78,6 +78,17 @@ public sealed class DiscoveredSpec
     public int LineNumber { get; init; }
 
     /// <summary>
+    /// Compilation error message if this spec was discovered via static parsing
+    /// from a file that failed to compile. Null for normally discovered specs.
+    /// </summary>
+    public string? CompilationError { get; init; }
+
+    /// <summary>
+    /// True if this spec has a compilation error and cannot be executed.
+    /// </summary>
+    public bool HasCompilationError => CompilationError != null;
+
+    /// <summary>
     /// Reference to the original spec definition for execution.
     /// </summary>
     internal SpecDefinition? SpecDefinition { get; init; }

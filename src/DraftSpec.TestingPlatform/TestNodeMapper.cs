@@ -10,12 +10,25 @@ internal static class TestNodeMapper
     /// <summary>
     /// Creates a TestNode for a discovered spec (discovery phase).
     /// </summary>
+    /// <remarks>
+    /// For specs with compilation errors, uses FailedTestNodeStateProperty
+    /// so they appear as failed tests in the IDE test explorer.
+    /// </remarks>
     public static TestNode CreateDiscoveryNode(DiscoveredSpec spec)
     {
-        var propertyList = new List<IProperty>
+        var propertyList = new List<IProperty>();
+
+        // Use appropriate state property based on whether spec has compilation error
+        if (spec.HasCompilationError)
         {
-            DiscoveredTestNodeStateProperty.CachedInstance
-        };
+            propertyList.Add(new FailedTestNodeStateProperty(
+                new Exception(spec.CompilationError!),
+                $"Compilation error: {spec.CompilationError}"));
+        }
+        else
+        {
+            propertyList.Add(DiscoveredTestNodeStateProperty.CachedInstance);
+        }
 
         // Add file location for IDE navigation if we have line number
         if (spec.LineNumber > 0)
@@ -97,6 +110,38 @@ internal static class TestNodeMapper
         {
             Uid = new TestNodeUid(id),
             DisplayName = displayName,
+            Properties = new PropertyBag(propertyList.ToArray())
+        };
+    }
+
+    /// <summary>
+    /// Creates a TestNode for a spec that has a compilation error (execution phase).
+    /// </summary>
+    /// <remarks>
+    /// Used for statically-discovered specs from files with compilation errors.
+    /// These specs are shown as failed with the compilation error message.
+    /// </remarks>
+    public static TestNode CreateCompilationErrorResultNode(DiscoveredSpec spec)
+    {
+        var stateProperty = new FailedTestNodeStateProperty(
+            new Exception(spec.CompilationError!),
+            $"Cannot execute: {spec.CompilationError}");
+
+        var propertyList = new List<IProperty> { stateProperty };
+
+        // Add file location for IDE navigation
+        if (spec.LineNumber > 0)
+        {
+            propertyList.Add(CreateFileLocationProperty(spec.SourceFile, spec.LineNumber));
+        }
+
+        // Add TestMethodIdentifierProperty for IDE integration
+        propertyList.Add(CreateTestMethodIdentifier(spec));
+
+        return new TestNode
+        {
+            Uid = new TestNodeUid(spec.Id),
+            DisplayName = spec.DisplayName,
             Properties = new PropertyBag(propertyList.ToArray())
         };
     }

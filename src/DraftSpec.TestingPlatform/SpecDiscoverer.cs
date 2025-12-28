@@ -6,11 +6,13 @@ namespace DraftSpec.TestingPlatform;
 /// <remarks>
 /// The discoverer finds all *.spec.csx files, executes them to build the spec tree,
 /// then flattens the tree into a list of DiscoveredSpec instances with stable IDs.
+/// If a file fails to compile, falls back to static parsing to still discover spec structure.
 /// </remarks>
 internal sealed class SpecDiscoverer
 {
     private readonly string _projectDirectory;
     private readonly CsxScriptHost _scriptHost;
+    private readonly StaticSpecParser _staticParser;
 
     /// <summary>
     /// Creates a new spec discoverer.
@@ -20,6 +22,7 @@ internal sealed class SpecDiscoverer
     {
         _projectDirectory = Path.GetFullPath(projectDirectory);
         _scriptHost = new CsxScriptHost(_projectDirectory);
+        _staticParser = new StaticSpecParser(_projectDirectory);
     }
 
     /// <summary>
@@ -53,15 +56,31 @@ internal sealed class SpecDiscoverer
             }
             catch (Exception ex)
             {
-                // Collect error for reporting through MTP
+                // Execution failed - try static parsing to discover spec structure
                 var relativePath = GetRelativePath(csxFile);
-                errors.Add(new DiscoveryError
+                var staticResult = await _staticParser.ParseFileAsync(csxFile, cancellationToken);
+
+                if (staticResult.Specs.Count > 0)
                 {
-                    SourceFile = csxFile,
-                    RelativeSourceFile = relativePath,
-                    Message = ex.Message,
-                    Exception = ex
-                });
+                    // Convert statically-discovered specs with compilation error marker
+                    var errorSpecs = ConvertStaticSpecs(
+                        staticResult.Specs,
+                        csxFile,
+                        relativePath,
+                        ex.Message);
+                    allSpecs.AddRange(errorSpecs);
+                }
+                else
+                {
+                    // Couldn't discover any specs - report as error node
+                    errors.Add(new DiscoveryError
+                    {
+                        SourceFile = csxFile,
+                        RelativeSourceFile = relativePath,
+                        Message = ex.Message,
+                        Exception = ex
+                    });
+                }
             }
             finally
             {
@@ -183,4 +202,47 @@ internal sealed class SpecDiscoverer
         }
     }
 
+    /// <summary>
+    /// Converts statically-discovered specs to DiscoveredSpec instances with compilation error markers.
+    /// </summary>
+    private static List<DiscoveredSpec> ConvertStaticSpecs(
+        IReadOnlyList<StaticSpec> staticSpecs,
+        string sourceFile,
+        string relativeSourceFile,
+        string compilationError)
+    {
+        var results = new List<DiscoveredSpec>();
+
+        foreach (var staticSpec in staticSpecs)
+        {
+            var specId = TestNodeMapper.GenerateStableId(
+                relativeSourceFile,
+                staticSpec.ContextPath,
+                staticSpec.Description);
+            var displayName = TestNodeMapper.GenerateDisplayName(
+                staticSpec.ContextPath,
+                staticSpec.Description);
+
+            results.Add(new DiscoveredSpec
+            {
+                Id = specId,
+                Description = staticSpec.Description,
+                DisplayName = displayName,
+                ContextPath = staticSpec.ContextPath,
+                SourceFile = sourceFile,
+                RelativeSourceFile = relativeSourceFile,
+                IsPending = staticSpec.IsPending,
+                IsSkipped = staticSpec.Type == StaticSpecType.Skipped,
+                IsFocused = staticSpec.Type == StaticSpecType.Focused,
+                Tags = [],
+                LineNumber = staticSpec.LineNumber,
+                CompilationError = compilationError,
+                // No SpecDefinition or Context - can't execute
+                SpecDefinition = null,
+                Context = null
+            });
+        }
+
+        return results;
+    }
 }

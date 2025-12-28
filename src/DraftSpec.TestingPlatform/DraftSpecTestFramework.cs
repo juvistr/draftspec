@@ -169,8 +169,22 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
                 new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
         }
 
-        // Execute discovered specs
-        var fileGroups = discoveryResult.Specs.GroupBy(s => s.SourceFile);
+        // Separate specs with compilation errors from executable specs
+        var executableSpecs = discoveryResult.Specs.Where(s => !s.HasCompilationError).ToList();
+        var compilationErrorSpecs = discoveryResult.Specs.Where(s => s.HasCompilationError).ToList();
+
+        // Report specs with compilation errors as failed
+        foreach (var spec in compilationErrorSpecs)
+        {
+            var testNode = TestNodeMapper.CreateCompilationErrorResultNode(spec);
+
+            await messageBus.PublishAsync(
+                this,
+                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+        }
+
+        // Execute discovered specs (only those without compilation errors)
+        var fileGroups = executableSpecs.GroupBy(s => s.SourceFile);
 
         foreach (var group in fileGroups)
         {
@@ -254,6 +268,7 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         var filter = request.Filter;
         IReadOnlyList<ExecutionResult> executionResults;
         IReadOnlyList<DiscoveryError> discoveryErrors = [];
+        IReadOnlyList<DiscoveredSpec> compilationErrorSpecs = [];
 
         if (filter is TestNodeUidListFilter uidFilter && uidFilter.TestNodeUids.Length > 0)
         {
@@ -267,8 +282,12 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
             var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken);
             discoveryErrors = discoveryResult.Errors;
 
-            // Group by file and execute
-            var fileGroups = discoveryResult.Specs.GroupBy(s => s.SourceFile);
+            // Separate specs with compilation errors from executable specs
+            var executableSpecs = discoveryResult.Specs.Where(s => !s.HasCompilationError).ToList();
+            compilationErrorSpecs = discoveryResult.Specs.Where(s => s.HasCompilationError).ToList();
+
+            // Group executable specs by file and execute
+            var fileGroups = executableSpecs.GroupBy(s => s.SourceFile);
             var results = new List<ExecutionResult>();
 
             foreach (var group in fileGroups)
@@ -284,6 +303,16 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         foreach (var error in discoveryErrors)
         {
             var testNode = TestNodeMapper.CreateErrorNode(error);
+
+            await messageBus.PublishAsync(
+                this,
+                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
+        }
+
+        // Publish specs with compilation errors as failed test nodes
+        foreach (var spec in compilationErrorSpecs)
+        {
+            var testNode = TestNodeMapper.CreateCompilationErrorResultNode(spec);
 
             await messageBus.PublishAsync(
                 this,

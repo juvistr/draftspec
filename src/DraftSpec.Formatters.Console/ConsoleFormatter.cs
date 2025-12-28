@@ -8,9 +8,32 @@ namespace DraftSpec.Formatters.Console;
 public class ConsoleFormatter : IConsoleFormatter
 {
     /// <summary>
-    /// Format and write a spec report to the provided TextWriter.
+    /// Console output doesn't have a typical file extension.
     /// </summary>
-    public void Format(SpecReport report, TextWriter output, bool useColors = true)
+    public string FileExtension => ".txt";
+
+    /// <summary>
+    /// Format a spec report to a string (without colors).
+    /// </summary>
+    public string Format(SpecReport report)
+    {
+        using var writer = new StringWriter();
+        Format(report, writer, useColors: false);
+        return writer.ToString();
+    }
+
+    /// <summary>
+    /// Format and write a spec report to the provided TextWriter (with colors by default).
+    /// </summary>
+    public void Format(SpecReport report, TextWriter output)
+    {
+        Format(report, output, useColors: true);
+    }
+
+    /// <summary>
+    /// Format and write a spec report to the provided TextWriter with color control.
+    /// </summary>
+    public void Format(SpecReport report, TextWriter output, bool useColors)
     {
         output.WriteLine();
 

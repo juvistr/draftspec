@@ -19,7 +19,10 @@
         <!-- MTP SDK -->
         <PackageReference Include="Microsoft.Testing.Platform" Version="2.0.2" />
 
-        <!-- VSTest Bridge for IDE integration (VS, Rider, VS Code) -->
+        <!-- MSBuild integration for IDE server mode (VS, Rider, VS Code Test Explorers) -->
+        <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.0.2" />
+
+        <!-- VSTest Bridge for IDE integration -->
         <PackageReference Include="Microsoft.Testing.Extensions.VSTestBridge" Version="2.0.2" />
 
         <!-- Roslyn Scripting -->

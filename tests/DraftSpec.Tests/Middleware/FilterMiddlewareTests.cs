@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using DraftSpec.Middleware;
 
 namespace DraftSpec.Tests.Middleware;
@@ -109,6 +110,49 @@ public class FilterMiddlewareTests
         var results = runner.Run(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
+    }
+
+    #endregion
+
+    #region ReDoS Protection
+
+    [Test]
+    [Timeout(5000)] // Test should complete well under 5 seconds
+    public async Task WithNameFilter_MaliciousPattern_ThrowsTimeoutException(CancellationToken ct)
+    {
+        // This pattern causes catastrophic backtracking on non-matching input
+        // Without timeout protection, it would hang for hours/days
+        var evilPattern = "(a+)+$";
+        var evilInput = new string('a', 30) + "!"; // 30 'a's followed by '!'
+
+        var context = new SpecContext(evilInput);
+        context.AddSpec(new SpecDefinition("test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithNameFilter(evilPattern)
+            .Build();
+
+        // The regex should timeout and throw RegexMatchTimeoutException
+        var action = () => runner.Run(context);
+        await Assert.That(action).Throws<RegexMatchTimeoutException>();
+    }
+
+    [Test]
+    [Timeout(5000)]
+    public async Task WithNameExcludeFilter_MaliciousPattern_ThrowsTimeoutException(CancellationToken ct)
+    {
+        var evilPattern = "(a+)+$";
+        var evilInput = new string('a', 30) + "!";
+
+        var context = new SpecContext(evilInput);
+        context.AddSpec(new SpecDefinition("test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithNameExcludeFilter(evilPattern)
+            .Build();
+
+        var action = () => runner.Run(context);
+        await Assert.That(action).Throws<RegexMatchTimeoutException>();
     }
 
     #endregion

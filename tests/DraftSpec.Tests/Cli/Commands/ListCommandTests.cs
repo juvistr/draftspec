@@ -288,6 +288,138 @@ public class ListCommandTests
         await Assert.That(output).DoesNotContain("subtract");
     }
 
+    [Test]
+    public async Task ExecuteAsync_InvalidRegex_FallsBackToSubstring()
+    {
+        CreateSpecFile("fallback.spec.csx", """
+            describe("Feature", () => {
+                it("test (unclosed paren", () => { });
+                it("normal test", () => { });
+            });
+            """);
+        var command = CreateCommand();
+        // Invalid regex pattern (unmatched opening paren) should fall back to substring match
+        var options = new CliOptions { Path = _tempDir, FilterName = "(unclosed", ListFormat = "flat" };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        var output = _console.Output;
+        // Should find the spec containing "(unclosed" as substring
+        await Assert.That(output).Contains("test (unclosed paren");
+        await Assert.That(output).DoesNotContain("normal test");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_MultipleStatusFilters_UsesOrLogic()
+    {
+        CreateSpecFile("multi.spec.csx", """
+            describe("Feature", () => {
+                it("regular spec", () => { });
+                fit("focused spec", () => { });
+                it("pending spec");
+                xit("skipped spec", () => { });
+            });
+            """);
+        var command = CreateCommand();
+        // FocusedOnly AND PendingOnly should show both focused and pending (OR logic)
+        var options = new CliOptions { Path = _tempDir, FocusedOnly = true, PendingOnly = true, ListFormat = "flat" };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        var output = _console.Output;
+        await Assert.That(output).Contains("focused spec");
+        await Assert.That(output).Contains("pending spec");
+        await Assert.That(output).DoesNotContain("regular spec");
+        await Assert.That(output).DoesNotContain("skipped spec");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_AllStatusFilters_ShowsAllNonRegular()
+    {
+        CreateSpecFile("all.spec.csx", """
+            describe("Feature", () => {
+                it("regular spec", () => { });
+                fit("focused spec", () => { });
+                it("pending spec");
+                xit("skipped spec", () => { });
+            });
+            """);
+        var command = CreateCommand();
+        // All three status filters = show focused OR pending OR skipped
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            FocusedOnly = true,
+            PendingOnly = true,
+            SkippedOnly = true,
+            ListFormat = "flat"
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        var output = _console.Output;
+        await Assert.That(output).Contains("focused spec");
+        await Assert.That(output).Contains("pending spec");
+        await Assert.That(output).Contains("skipped spec");
+        await Assert.That(output).DoesNotContain("regular spec");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_StatusFilterWithNameFilter_CombinesWithAnd()
+    {
+        CreateSpecFile("combined.spec.csx", """
+            describe("Feature", () => {
+                it("pending apple");
+                it("pending banana");
+                fit("focused apple", () => { });
+                fit("focused banana", () => { });
+            });
+            """);
+        var command = CreateCommand();
+        // FocusedOnly + FilterName "apple" should show only focused specs containing "apple"
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            FocusedOnly = true,
+            FilterName = "apple",
+            ListFormat = "flat"
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        var output = _console.Output;
+        await Assert.That(output).Contains("focused apple");
+        await Assert.That(output).DoesNotContain("focused banana");
+        await Assert.That(output).DoesNotContain("pending");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_FilterTags_WithEmptyTags_FiltersOutAll()
+    {
+        // Note: Current implementation sets Tags = [] for all specs,
+        // so FilterTags will always filter out everything.
+        // This tests that the filter doesn't crash with empty tags.
+        CreateSpecFile("tags.spec.csx", """
+            describe("Feature", () => {
+                it("spec one", () => { });
+                it("spec two", () => { });
+            });
+            """);
+        var command = CreateCommand();
+        var options = new CliOptions { Path = _tempDir, FilterTags = "sometag", ListFormat = "flat" };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        // No specs have tags, so all should be filtered out
+        await Assert.That(_console.Output).DoesNotContain("spec one");
+        await Assert.That(_console.Output).DoesNotContain("spec two");
+    }
+
     #endregion
 
     #region Output Formats

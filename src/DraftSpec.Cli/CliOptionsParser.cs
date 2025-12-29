@@ -233,12 +233,48 @@ public static class CliOptionsParser
             if (options.Command == "new")
                 options.SpecName = positional[1];
             else
-                options.Path = positional[1];
+                options.Path = ParsePathWithLineNumbers(positional[1], options);
         }
 
         if (positional.Count > 2 && options.Command == "new")
             options.Path = positional[2];
 
         return options;
+    }
+
+    /// <summary>
+    /// Parses a path that may include line numbers (e.g., "file.spec.csx:15,23").
+    /// Returns the file path and populates LineFilters if line numbers are present.
+    /// </summary>
+    private static string ParsePathWithLineNumbers(string pathArg, CliOptions options)
+    {
+        // Check for file:line syntax
+        // Must handle Windows paths (C:\...) by checking if colon is followed by digits
+        var colonIndex = pathArg.LastIndexOf(':');
+
+        // No colon, or colon is at position 1 (Windows drive letter like C:)
+        if (colonIndex <= 0 || (colonIndex == 1 && char.IsLetter(pathArg[0])))
+            return pathArg;
+
+        // Check if what follows the colon looks like line numbers (digits and commas)
+        var afterColon = pathArg[(colonIndex + 1)..];
+        if (string.IsNullOrEmpty(afterColon) || !afterColon.All(c => char.IsDigit(c) || c == ','))
+            return pathArg;
+
+        // Parse line numbers
+        var filePath = pathArg[..colonIndex];
+        var lineNumbers = afterColon
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => int.TryParse(s, out var n) ? n : 0)
+            .Where(n => n > 0)
+            .ToArray();
+
+        if (lineNumbers.Length > 0)
+        {
+            options.LineFilters ??= [];
+            options.LineFilters.Add(new LineFilter(filePath, lineNumbers));
+        }
+
+        return filePath;
     }
 }

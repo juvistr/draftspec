@@ -1,8 +1,10 @@
 using System.Security;
+using System.Text.RegularExpressions;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Cli.Services;
 using DraftSpec.Formatters;
+using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Cli.Commands;
 
@@ -44,10 +46,28 @@ public class RunCommand : ICommand
         if (configResult.Config != null)
             options.ApplyDefaults(configResult.Config);
 
+        // Apply line number filtering if specified
+        var filterName = options.FilterName;
+        if (options.LineFilters is { Count: > 0 })
+        {
+            var lineFilterPattern = await BuildLineFilterPatternAsync(options, ct);
+            if (!string.IsNullOrEmpty(lineFilterPattern))
+            {
+                filterName = string.IsNullOrEmpty(filterName)
+                    ? lineFilterPattern
+                    : $"({filterName})|({lineFilterPattern})";
+            }
+            else
+            {
+                _console.WriteError("No specs found at the specified line numbers.");
+                return 1;
+            }
+        }
+
         var runner = _runnerFactory.Create(
             options.FilterTags,
             options.ExcludeTags,
-            options.FilterName,
+            filterName,
             options.ExcludeName);
 
         var specFiles = _specFinder.FindSpecs(options.Path);
@@ -174,5 +194,86 @@ public class RunCommand : ICommand
 
         if (!normalizedOutput.StartsWith(normalizedBase, comparison))
             throw new SecurityException("Output file must be within current directory");
+    }
+
+    /// <summary>
+    /// Builds a regex pattern to match specs at specified line numbers.
+    /// Uses static parsing to discover spec structure and line numbers.
+    /// </summary>
+    private async Task<string?> BuildLineFilterPatternAsync(CliOptions options, CancellationToken ct)
+    {
+        var matchingDisplayNames = new List<string>();
+        var projectPath = Path.GetFullPath(options.Path);
+
+        // If path is a file, use its directory as project path
+        if (_fileSystem.FileExists(projectPath))
+            projectPath = Path.GetDirectoryName(projectPath)!;
+
+        var parser = new StaticSpecParser(projectPath);
+
+        foreach (var filter in options.LineFilters!)
+        {
+            var filePath = Path.GetFullPath(filter.File, projectPath);
+
+            if (!_fileSystem.FileExists(filePath))
+            {
+                _console.WriteWarning($"File not found: {filter.File}");
+                continue;
+            }
+
+            var result = await parser.ParseFileAsync(filePath, ct);
+
+            // Find specs at the specified line numbers
+            // Also find describe blocks - if a line matches a describe, include all its specs
+            foreach (var lineNumber in filter.Lines)
+            {
+                // Check if any spec is at this line
+                var matchingSpecs = result.Specs
+                    .Where(s => s.LineNumber == lineNumber)
+                    .ToList();
+
+                if (matchingSpecs.Count > 0)
+                {
+                    foreach (var spec in matchingSpecs)
+                    {
+                        var displayName = GenerateDisplayName(spec.ContextPath, spec.Description);
+                        matchingDisplayNames.Add(displayName);
+                    }
+                }
+                else
+                {
+                    // No spec at exact line - check if line is within a context block
+                    // Find all specs whose context path suggests they're in a describe at this line
+                    // This is approximate - we match specs that have a context starting near this line
+                    var nearbySpecs = result.Specs
+                        .Where(s => Math.Abs(s.LineNumber - lineNumber) <= 1)
+                        .ToList();
+
+                    foreach (var spec in nearbySpecs)
+                    {
+                        var displayName = GenerateDisplayName(spec.ContextPath, spec.Description);
+                        matchingDisplayNames.Add(displayName);
+                    }
+                }
+            }
+        }
+
+        if (matchingDisplayNames.Count == 0)
+            return null;
+
+        // Build regex pattern that matches any of the display names exactly
+        var escapedNames = matchingDisplayNames
+            .Distinct()
+            .Select(Regex.Escape);
+
+        return $"^({string.Join("|", escapedNames)})$";
+    }
+
+    private static string GenerateDisplayName(IReadOnlyList<string> contextPath, string description)
+    {
+        if (contextPath.Count == 0)
+            return description;
+
+        return string.Join(" > ", contextPath) + " > " + description;
     }
 }

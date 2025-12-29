@@ -34,9 +34,9 @@ jobs:
         run: |
           dotnet run --project tests/DraftSpec.Tests -c Release -- --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml
 
-      - name: Run MTP integration tests
+      - name: Run CLI integration tests
         run: |
-          dotnet run --project tests/DraftSpec.TestingPlatform.IntegrationTests -c Release
+          dotnet run --project tests/DraftSpec.Cli.IntegrationTests -c Release
 
       - name: Generate coverage report
         run: |

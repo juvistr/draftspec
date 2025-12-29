@@ -71,7 +71,7 @@ public class InitCommand : ICommand
     private static string GenerateSpecHelper(ProjectInfo? info, string directory)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("#r \"nuget: DraftSpec\"");
+        sb.AppendLine("#r \"nuget: DraftSpec, *\""); // Wildcard includes prereleases
 
         if (info != null)
         {

@@ -90,7 +90,7 @@ public class InitCommandTests
 
         var specHelperPath = Path.Combine(_tempDir, "spec_helper.csx");
         var content = _fileSystem.WrittenFiles[specHelperPath];
-        await Assert.That(content).Contains("#r \"nuget: DraftSpec\"");
+        await Assert.That(content).Contains("#r \"nuget: DraftSpec, *\"");
         await Assert.That(content).Contains("using static DraftSpec.Dsl;");
     }
 
@@ -140,7 +140,7 @@ public class InitCommandTests
         await command.ExecuteAsync(options);
 
         await Assert.That(_fileSystem.WrittenFiles.ContainsKey(specHelperPath)).IsTrue();
-        await Assert.That(_fileSystem.WrittenFiles[specHelperPath]).Contains("#r \"nuget: DraftSpec\"");
+        await Assert.That(_fileSystem.WrittenFiles[specHelperPath]).Contains("#r \"nuget: DraftSpec, *\"");
     }
 
     [Test]

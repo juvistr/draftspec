@@ -8,18 +8,18 @@ public class DotnetProjectBuilder : IProjectBuilder
     private readonly IFileSystem _fileSystem;
     private readonly IProcessRunner _processRunner;
     private readonly IBuildCache _buildCache;
-    private readonly DraftSpec.ITimeProvider _timeProvider;
+    private readonly IClock _clock;
 
     public DotnetProjectBuilder(
         IFileSystem fileSystem,
         IProcessRunner processRunner,
         IBuildCache buildCache,
-        DraftSpec.ITimeProvider timeProvider)
+        IClock clock)
     {
         _fileSystem = fileSystem;
         _processRunner = processRunner;
         _buildCache = buildCache;
-        _timeProvider = timeProvider;
+        _clock = clock;
     }
 
     public event Action<string>? OnBuildStarted;
@@ -51,7 +51,7 @@ public class DotnetProjectBuilder : IProjectBuilder
         }
 
         // Update build cache on successful build
-        _buildCache.UpdateCache(projectDir, _timeProvider.UtcNow, latestSource);
+        _buildCache.UpdateCache(projectDir, _clock.UtcNow, latestSource);
     }
 
     public string FindOutputDirectory(string specDirectory)

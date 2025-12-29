@@ -10,7 +10,7 @@ public class TimeProviderTests
     [Test]
     public async Task UtcNow_ReturnsReasonableTime()
     {
-        var provider = new SystemTimeProvider();
+        var provider = new SystemClock();
         var now = provider.UtcNow;
         var expected = DateTime.UtcNow;
         await Assert.That(Math.Abs((now - expected).TotalSeconds)).IsLessThan(1);
@@ -19,7 +19,7 @@ public class TimeProviderTests
     [Test]
     public async Task StartNew_ReturnsWorkingStopwatch()
     {
-        var provider = new SystemTimeProvider();
+        var provider = new SystemClock();
         var stopwatch = provider.StartNew();
 
         await Assert.That(stopwatch).IsNotNull();
@@ -29,7 +29,7 @@ public class TimeProviderTests
     [Test]
     public async Task Stopwatch_Elapsed_IncreasesOverTime()
     {
-        var provider = new SystemTimeProvider();
+        var provider = new SystemClock();
         var stopwatch = provider.StartNew();
 
         var initialElapsed = stopwatch.Elapsed;
@@ -43,7 +43,7 @@ public class TimeProviderTests
     [Test]
     public async Task Stopwatch_Stop_FreezesElapsed()
     {
-        var provider = new SystemTimeProvider();
+        var provider = new SystemClock();
         var stopwatch = provider.StartNew();
 
         await Task.Delay(20);

@@ -5,7 +5,7 @@ namespace DraftSpec.Tests.Cli;
 /// <summary>
 /// Tests for DotnetProjectBuilder with mocked dependencies.
 /// </summary>
-public class ProjectBuilderTests
+public class DotnetProjectBuilderTests
 {
     #region BuildProjects Tests
 
@@ -15,7 +15,7 @@ public class ProjectBuilderTests
         var fileSystem = new MockFileSystem();
         var processRunner = new MockProcessRunner();
         var buildCache = new InMemoryBuildCache();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var builder = new DotnetProjectBuilder(fileSystem, processRunner, buildCache, timeProvider);
 
@@ -39,7 +39,7 @@ public class ProjectBuilderTests
         processRunner.AddResult(new ProcessResult("Build succeeded", "", 0));
 
         var buildCache = new InMemoryBuildCache();
-        var timeProvider = new MockTimeProvider { CurrentUtcNow = DateTime.UtcNow };
+        var timeProvider = new MockClock { CurrentUtcNow = DateTime.UtcNow };
 
         var builder = new DotnetProjectBuilder(fileSystem, processRunner, buildCache, timeProvider);
 
@@ -67,7 +67,7 @@ public class ProjectBuilderTests
 
         var processRunner = new MockProcessRunner();
         var buildCache = new InMemoryBuildCache();
-        var timeProvider = new MockTimeProvider { CurrentUtcNow = DateTime.UtcNow };
+        var timeProvider = new MockClock { CurrentUtcNow = DateTime.UtcNow };
 
         // Pre-populate the cache
         buildCache.UpdateCache("/project", DateTime.UtcNow, DateTime.UtcNow.AddHours(-1));
@@ -100,7 +100,7 @@ public class ProjectBuilderTests
         // Cache says last build was an hour ago with source from 2 hours ago
         buildCache.UpdateCache("/project", now.AddHours(-1), now.AddHours(-2));
 
-        var timeProvider = new MockTimeProvider { CurrentUtcNow = now };
+        var timeProvider = new MockClock { CurrentUtcNow = now };
 
         var builder = new DotnetProjectBuilder(fileSystem, processRunner, buildCache, timeProvider);
 
@@ -130,7 +130,7 @@ public class ProjectBuilderTests
             fileSystem,
             new MockProcessRunner(),
             new InMemoryBuildCache(),
-            new MockTimeProvider());
+            new MockClock());
 
         var result = builder.FindOutputDirectory("/project");
 
@@ -147,7 +147,7 @@ public class ProjectBuilderTests
             fileSystem,
             new MockProcessRunner(),
             new InMemoryBuildCache(),
-            new MockTimeProvider());
+            new MockClock());
 
         var result = builder.FindOutputDirectory("/project/Specs");
 
@@ -170,7 +170,7 @@ public class ProjectBuilderTests
         processRunner.AddResult(new ProcessResult("", "", 0));
 
         var buildCache = new InMemoryBuildCache();
-        var timeProvider = new MockTimeProvider { CurrentUtcNow = DateTime.UtcNow };
+        var timeProvider = new MockClock { CurrentUtcNow = DateTime.UtcNow };
 
         var builder = new DotnetProjectBuilder(fileSystem, processRunner, buildCache, timeProvider);
 
@@ -204,7 +204,7 @@ public class ProjectBuilderTests
             fileSystem,
             processRunner,
             new InMemoryBuildCache(),
-            new MockTimeProvider { CurrentUtcNow = DateTime.UtcNow });
+            new MockClock { CurrentUtcNow = DateTime.UtcNow });
 
         string? buildStartedProject = null;
         builder.OnBuildStarted += p => buildStartedProject = p;
@@ -320,19 +320,19 @@ file class MockProcessRunner : IProcessRunner
 /// <summary>
 /// Mock time provider for testing.
 /// </summary>
-file class MockTimeProvider : DraftSpec.ITimeProvider
+file class MockClock : IClock
 {
     public DateTime CurrentUtcNow { get; set; } = DateTime.UtcNow;
     public DateTime UtcNow => CurrentUtcNow;
 
     private readonly MockStopwatch _stopwatch = new();
-    public DraftSpec.IStopwatch StartNew() => _stopwatch;
+    public IStopwatch StartNew() => _stopwatch;
 }
 
 /// <summary>
 /// Mock stopwatch for testing.
 /// </summary>
-file class MockStopwatch : DraftSpec.IStopwatch
+file class MockStopwatch : IStopwatch
 {
     public TimeSpan Elapsed => TimeSpan.FromMilliseconds(100);
     public void Stop() { }

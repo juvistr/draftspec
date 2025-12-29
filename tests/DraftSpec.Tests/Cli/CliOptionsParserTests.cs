@@ -490,6 +490,104 @@ public class CliOptionsParserTests
 
     #endregion
 
+    #region Line Number Filtering
+
+    [Test]
+    public async Task Parse_PathWithSingleLineNumber_ParsesLineFilter()
+    {
+        var options = CliOptionsParser.Parse(["run", "test.spec.csx:15"]);
+
+        await Assert.That(options.Path).IsEqualTo("test.spec.csx");
+        await Assert.That(options.LineFilters).IsNotNull();
+        await Assert.That(options.LineFilters!.Count).IsEqualTo(1);
+        await Assert.That(options.LineFilters[0].File).IsEqualTo("test.spec.csx");
+        await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 15 });
+    }
+
+    [Test]
+    public async Task Parse_PathWithMultipleLineNumbers_ParsesAllLines()
+    {
+        var options = CliOptionsParser.Parse(["run", "test.spec.csx:15,20,25"]);
+
+        await Assert.That(options.Path).IsEqualTo("test.spec.csx");
+        await Assert.That(options.LineFilters).IsNotNull();
+        await Assert.That(options.LineFilters!.Count).IsEqualTo(1);
+        await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 15, 20, 25 });
+    }
+
+    [Test]
+    public async Task Parse_PathWithoutLineNumber_NoLineFilters()
+    {
+        var options = CliOptionsParser.Parse(["run", "test.spec.csx"]);
+
+        await Assert.That(options.Path).IsEqualTo("test.spec.csx");
+        await Assert.That(options.LineFilters).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_WindowsPath_NotTreatedAsLineNumber()
+    {
+        // Windows drive letter C: should not be confused with line number syntax
+        var options = CliOptionsParser.Parse(["run", "C:\\path\\test.spec.csx"]);
+
+        await Assert.That(options.Path).IsEqualTo("C:\\path\\test.spec.csx");
+        await Assert.That(options.LineFilters).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_WindowsPathWithLineNumber_ParsesCorrectly()
+    {
+        // Windows path with line number should work
+        var options = CliOptionsParser.Parse(["run", "C:\\path\\test.spec.csx:42"]);
+
+        await Assert.That(options.Path).IsEqualTo("C:\\path\\test.spec.csx");
+        await Assert.That(options.LineFilters).IsNotNull();
+        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 42 });
+    }
+
+    [Test]
+    public async Task Parse_PathWithColonButNoDigits_NotTreatedAsLineNumber()
+    {
+        // Colon followed by non-digits should not be parsed as line number
+        var options = CliOptionsParser.Parse(["run", "test.spec.csx:abc"]);
+
+        await Assert.That(options.Path).IsEqualTo("test.spec.csx:abc");
+        await Assert.That(options.LineFilters).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_RelativePathWithLineNumber_ParsesCorrectly()
+    {
+        var options = CliOptionsParser.Parse(["run", "./specs/test.spec.csx:10"]);
+
+        await Assert.That(options.Path).IsEqualTo("./specs/test.spec.csx");
+        await Assert.That(options.LineFilters).IsNotNull();
+        await Assert.That(options.LineFilters![0].File).IsEqualTo("./specs/test.spec.csx");
+        await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 10 });
+    }
+
+    [Test]
+    public async Task Parse_LineNumberZero_Ignored()
+    {
+        // Line number 0 should be filtered out
+        var options = CliOptionsParser.Parse(["run", "test.spec.csx:0,15"]);
+
+        await Assert.That(options.LineFilters).IsNotNull();
+        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 15 });
+    }
+
+    [Test]
+    public async Task Parse_EmptyLineNumber_Ignored()
+    {
+        // Empty entries from consecutive commas should be ignored
+        var options = CliOptionsParser.Parse(["run", "test.spec.csx:15,,20"]);
+
+        await Assert.That(options.LineFilters).IsNotNull();
+        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 15, 20 });
+    }
+
+    #endregion
+
     #region List Command Options
 
     [Test]

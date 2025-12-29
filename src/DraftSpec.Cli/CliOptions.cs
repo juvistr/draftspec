@@ -2,6 +2,13 @@ using DraftSpec.Cli.Configuration;
 
 namespace DraftSpec.Cli;
 
+/// <summary>
+/// Represents a line number filter for running specs at specific lines.
+/// </summary>
+/// <param name="File">The spec file path.</param>
+/// <param name="Lines">The line numbers to run.</param>
+public record LineFilter(string File, int[] Lines);
+
 public class CliOptions
 {
     /// <summary>
@@ -134,6 +141,14 @@ public class CliOptions
     /// When set, only these files are validated instead of scanning directory.
     /// </summary>
     public List<string>? Files { get; set; }
+
+    // Run command line filtering
+
+    /// <summary>
+    /// Line number filters parsed from file:line syntax.
+    /// Used to run specific specs by line number (e.g., "file.spec.csx:15,23").
+    /// </summary>
+    public List<LineFilter>? LineFilters { get; set; }
 
     /// <summary>
     /// Apply default values from a project configuration file.

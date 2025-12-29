@@ -36,7 +36,7 @@ public record InProcessRunSummary(
 /// Runs spec files in-process using CsxScriptHost.
 /// Replaces the subprocess-based SpecFileRunner with direct Roslyn execution.
 /// </summary>
-public class InProcessSpecRunner
+public class InProcessSpecRunner : IInProcessSpecRunner
 {
     private readonly Dictionary<string, DateTime> _lastBuildTime = new();
     private readonly Dictionary<string, DateTime> _lastSourceModified = new();

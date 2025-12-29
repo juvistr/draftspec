@@ -9,12 +9,14 @@ namespace DraftSpec.Tests.Cli;
 public class ConfigLoaderTests
 {
     private string _tempDir = null!;
+    private ConfigLoader _loader = null!;
 
     [Before(Test)]
     public void Setup()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec-config-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
+        _loader = new ConfigLoader();
     }
 
     [After(Test)]
@@ -32,7 +34,7 @@ public class ConfigLoaderTests
     [Test]
     public async Task Load_ReturnsNullConfig_WhenNoConfigFileExists()
     {
-        var result = ConfigLoader.Load(_tempDir);
+        var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Config).IsNull();
         await Assert.That(result.Error).IsNull();
@@ -51,7 +53,7 @@ public class ConfigLoaderTests
             }
             """);
 
-        var result = ConfigLoader.Load(_tempDir);
+        var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsTrue();
         await Assert.That(result.Config).IsNotNull();
@@ -82,7 +84,7 @@ public class ConfigLoaderTests
             }
             """);
 
-        var result = ConfigLoader.Load(_tempDir);
+        var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsTrue();
         var config = result.Config!;
@@ -106,7 +108,7 @@ public class ConfigLoaderTests
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
         File.WriteAllText(configPath, "{ invalid json }");
 
-        var result = ConfigLoader.Load(_tempDir);
+        var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsFalse();
         await Assert.That(result.Error).IsNotNull();
@@ -120,7 +122,7 @@ public class ConfigLoaderTests
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
         File.WriteAllText(configPath, """{ "timeout": -1 }""");
 
-        var result = ConfigLoader.Load(_tempDir);
+        var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsFalse();
         await Assert.That(result.Error!).Contains("timeout must be a positive number");
@@ -132,7 +134,7 @@ public class ConfigLoaderTests
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
         File.WriteAllText(configPath, """{ "maxParallelism": 0 }""");
 
-        var result = ConfigLoader.Load(_tempDir);
+        var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsFalse();
         await Assert.That(result.Error!).Contains("maxParallelism must be a positive number");
@@ -150,7 +152,7 @@ public class ConfigLoaderTests
             }
             """);
 
-        var result = ConfigLoader.Load(_tempDir);
+        var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsTrue();
         await Assert.That(result.Config!.Parallel).IsEqualTo(true);
@@ -168,7 +170,7 @@ public class ConfigLoaderTests
             }
             """);
 
-        var result = ConfigLoader.Load(_tempDir);
+        var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsTrue();
         await Assert.That(result.Config!.Parallel).IsEqualTo(true);
@@ -189,7 +191,7 @@ public class ConfigLoaderTests
             }
             """);
 
-        var result = ConfigLoader.Load(_tempDir);
+        var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsTrue();
         await Assert.That(result.Config!.Parallel).IsEqualTo(true);
@@ -206,7 +208,7 @@ public class ConfigLoaderTests
             }
             """);
 
-        var result = ConfigLoader.Load(_tempDir);
+        var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsTrue();
     }

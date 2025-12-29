@@ -545,6 +545,11 @@ public class RunCommandTests
         public string ReadAllText(string path) => "";
         public bool DirectoryExists(string path) => true;
         public void CreateDirectory(string path) { }
+        public string[] GetFiles(string path, string searchPattern) => [];
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => [];
+        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
+        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
+        public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
     }
 
     private class TrackingFileSystem : IFileSystem
@@ -561,6 +566,11 @@ public class RunCommandTests
         public string ReadAllText(string path) => "";
         public bool DirectoryExists(string path) => true;
         public void CreateDirectory(string path) { }
+        public string[] GetFiles(string path, string searchPattern) => [];
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => [];
+        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
+        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
+        public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
     }
 
     #endregion

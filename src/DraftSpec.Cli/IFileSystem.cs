@@ -34,6 +34,31 @@ public interface IFileSystem
     /// Create a directory and any parent directories.
     /// </summary>
     void CreateDirectory(string path);
+
+    /// <summary>
+    /// Get files in a directory matching a search pattern.
+    /// </summary>
+    string[] GetFiles(string path, string searchPattern);
+
+    /// <summary>
+    /// Get files in a directory matching a search pattern, with search option.
+    /// </summary>
+    string[] GetFiles(string path, string searchPattern, SearchOption searchOption);
+
+    /// <summary>
+    /// Enumerate files in a directory matching a search pattern.
+    /// </summary>
+    IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption);
+
+    /// <summary>
+    /// Enumerate directories matching a search pattern.
+    /// </summary>
+    IEnumerable<string> EnumerateDirectories(string path, string searchPattern);
+
+    /// <summary>
+    /// Get the last write time of a file in UTC.
+    /// </summary>
+    DateTime GetLastWriteTimeUtc(string path);
 }
 
 /// <summary>
@@ -53,4 +78,18 @@ public class FileSystem : IFileSystem
     public bool DirectoryExists(string path) => Directory.Exists(path);
 
     public void CreateDirectory(string path) => Directory.CreateDirectory(path);
+
+    public string[] GetFiles(string path, string searchPattern)
+        => Directory.GetFiles(path, searchPattern);
+
+    public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+        => Directory.GetFiles(path, searchPattern, searchOption);
+
+    public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption)
+        => Directory.EnumerateFiles(path, searchPattern, searchOption);
+
+    public IEnumerable<string> EnumerateDirectories(string path, string searchPattern)
+        => Directory.EnumerateDirectories(path, searchPattern);
+
+    public DateTime GetLastWriteTimeUtc(string path) => File.GetLastWriteTimeUtc(path);
 }

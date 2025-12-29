@@ -644,6 +644,14 @@ public class ListCommandTests
         public string ReadAllText(string path) => File.ReadAllText(path);
         public bool DirectoryExists(string path) => Directory.Exists(path);
         public void CreateDirectory(string path) => Directory.CreateDirectory(path);
+        public string[] GetFiles(string path, string searchPattern) => Directory.GetFiles(path, searchPattern);
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) =>
+            Directory.GetFiles(path, searchPattern, searchOption);
+        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) =>
+            Directory.EnumerateFiles(path, searchPattern, searchOption);
+        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) =>
+            Directory.EnumerateDirectories(path, searchPattern);
+        public DateTime GetLastWriteTimeUtc(string path) => File.GetLastWriteTimeUtc(path);
     }
 
     #endregion

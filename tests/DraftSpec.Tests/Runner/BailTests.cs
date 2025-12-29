@@ -21,7 +21,7 @@ public class BailTests
         context.AddSpec(new SpecDefinition("never runs", () => executed.Add("third")));
 
         var runner = SpecRunner.Create().WithBail().Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed[0]).IsEqualTo("first");
@@ -42,7 +42,7 @@ public class BailTests
         context.AddSpec(new SpecDefinition("third", () => executed.Add("third")));
 
         var runner = SpecRunner.Create().WithBail().Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(executed).Count().IsEqualTo(3);
         await Assert.That(results.All(r => r.Status == SpecStatus.Passed)).IsTrue();
@@ -63,7 +63,7 @@ public class BailTests
         child.AddSpec(new SpecDefinition("never runs", () => executed.Add("child")));
 
         var runner = SpecRunner.Create().WithBail().Build();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(executed).Count().IsEqualTo(1);
         await Assert.That(executed[0]).IsEqualTo("root");
@@ -90,7 +90,7 @@ public class BailTests
         child2.AddSpec(new SpecDefinition("c2 spec", () => executed.Add("child2")));
 
         var runner = SpecRunner.Create().WithBail().Build();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(executed).Count().IsEqualTo(1);
         await Assert.That(results).Count().IsEqualTo(3);
@@ -112,7 +112,7 @@ public class BailTests
         context.AddSpec(new SpecDefinition("still runs", () => executed.Add("second")));
 
         var runner = new SpecRunner(); // No bail
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
@@ -150,7 +150,7 @@ public class BailTests
             .WithBail()
             .Build();
 
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         // Should have at least one failure and some skipped
         await Assert.That(results.Any(r => r.Status == SpecStatus.Failed)).IsTrue();
@@ -173,7 +173,7 @@ public class BailTests
             .WithBail()
             .Build();
 
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).Count().IsEqualTo(4);
         await Assert.That(results[0].Spec.Description).IsEqualTo("spec0");
@@ -220,7 +220,7 @@ public class BailTests
         context.AddSpec(new SpecDefinition("skipped", () => { }));
 
         var runner = SpecRunner.Create().WithBail().Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(afterAllRan).IsTrue();
     }
@@ -241,7 +241,7 @@ public class BailTests
         child.AddSpec(new SpecDefinition("skipped", () => { }));
 
         var runner = SpecRunner.Create().WithBail().Build();
-        runner.Run(root);
+        await runner.RunAsync(root);
 
         // Child's beforeAll should not run since the context is skipped entirely
         await Assert.That(childBeforeAllRan).IsFalse();
@@ -260,7 +260,7 @@ public class BailTests
         context.AddSpec(new SpecDefinition("skipped2", () => { }));
 
         var runner = SpecRunner.Create().WithBail().Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results[1].Status).IsEqualTo(SpecStatus.Skipped);
@@ -281,7 +281,7 @@ public class BailTests
         }));
 
         var runner = SpecRunner.Create().WithBail().Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(executed).Count().IsEqualTo(3);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
@@ -295,7 +295,7 @@ public class BailTests
         var context = new SpecContext("empty");
 
         var runner = SpecRunner.Create().WithBail().Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).IsEmpty();
     }
@@ -310,12 +310,12 @@ public class BailTests
         var runner = SpecRunner.Create().WithBail().Build();
 
         // First run - should bail
-        var results1 = runner.Run(context);
+        var results1 = await runner.RunAsync(context);
         await Assert.That(results1[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results1[1].Status).IsEqualTo(SpecStatus.Skipped);
 
         // Second run - should also work (bail state reset)
-        var results2 = runner.Run(context);
+        var results2 = await runner.RunAsync(context);
         await Assert.That(results2[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results2[1].Status).IsEqualTo(SpecStatus.Skipped);
     }

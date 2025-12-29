@@ -4,6 +4,16 @@ namespace DraftSpec.Cli;
 
 public class SpecFinder : ISpecFinder
 {
+    private readonly IFileSystem _fileSystem;
+
+    /// <summary>
+    /// Creates a SpecFinder with the given file system abstraction.
+    /// </summary>
+    public SpecFinder(IFileSystem fileSystem)
+    {
+        _fileSystem = fileSystem;
+    }
+
     /// <summary>
     /// Find spec files at the given path.
     /// </summary>
@@ -32,16 +42,16 @@ public class SpecFinder : ISpecFinder
             // Generic error message to avoid leaking internal paths
             throw new SecurityException("Path must be within the base directory");
 
-        if (File.Exists(fullPath))
+        if (_fileSystem.FileExists(fullPath))
         {
             if (!fullPath.EndsWith(".spec.csx", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException($"File must end with .spec.csx: {path}");
             return [fullPath];
         }
 
-        if (Directory.Exists(fullPath))
+        if (_fileSystem.DirectoryExists(fullPath))
         {
-            var specs = Directory.GetFiles(fullPath, "*.spec.csx", SearchOption.AllDirectories)
+            var specs = _fileSystem.GetFiles(fullPath, "*.spec.csx", SearchOption.AllDirectories)
                 .OrderBy(f => f)
                 .ToList();
 

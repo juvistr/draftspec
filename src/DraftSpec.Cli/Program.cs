@@ -1,6 +1,5 @@
 using System.Security;
 using DraftSpec.Cli;
-using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,40 +24,45 @@ static async Task<int> Run(string[] args)
     // Set up dependency injection
     var services = new ServiceCollection();
     services.AddDraftSpec();
-
-    // Load plugins from default directory
-    var pluginLoader = new PluginLoader();
     using var serviceProvider = services.BuildServiceProvider();
 
+    // Load plugins from default directory
+    var pluginLoader = serviceProvider.GetRequiredService<IPluginLoader>();
     var formatterRegistry = serviceProvider.GetRequiredService<ICliFormatterRegistry>();
     pluginLoader.RegisterFormatters(formatterRegistry);
 
+    // Get command from factory
+    var commandFactory = serviceProvider.GetRequiredService<ICommandFactory>();
+    var command = commandFactory.Create(options.Command);
+
+    if (command == null)
+        return ShowUsage($"Unknown command: {options.Command}");
+
+    var console = serviceProvider.GetRequiredService<IConsole>();
+
     try
     {
-        return options.Command switch
-        {
-            "run" => RunCommand.Execute(options, formatterRegistry),
-            "watch" => await WatchCommand.ExecuteAsync(options),
-            "init" => InitCommand.Execute(options),
-            "new" => NewCommand.Execute(options),
-            "list" => await ListCommand.ExecuteAsync(options),
-            _ => ShowUsage($"Unknown command: {options.Command}")
-        };
+        return await command.ExecuteAsync(options);
     }
     catch (ArgumentException ex)
     {
-        ShowError(ex.Message);
+        console.WriteError($"Error: {ex.Message}");
+        return 1;
+    }
+    catch (InvalidOperationException ex)
+    {
+        console.WriteError($"Error: {ex.Message}");
         return 1;
     }
     catch (SecurityException ex)
     {
-        ShowError(ex.Message);
+        console.WriteError($"Error: {ex.Message}");
         return 1;
     }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
     {
         // File system errors - show message without internal details
-        ShowError(ex.Message);
+        console.WriteError($"Error: {ex.Message}");
         return 1;
     }
     catch (Exception
@@ -69,19 +73,12 @@ static async Task<int> Run(string[] args)
     {
         // Unexpected errors - show details in debug mode
 #if DEBUG
-        ShowError($"{ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+        console.WriteError($"Error: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
 #else
-        ShowError("An unexpected error occurred. Run with --help for usage information.");
+        console.WriteError("Error: An unexpected error occurred. Run with --help for usage information.");
 #endif
         return 1;
     }
-}
-
-static void ShowError(string message)
-{
-    Console.ForegroundColor = ConsoleColor.Red;
-    Console.WriteLine($"Error: {message}");
-    Console.ResetColor();
 }
 
 static int ShowUsage(string? error = null)

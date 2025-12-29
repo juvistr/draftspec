@@ -397,7 +397,7 @@ public class NegationPatternTests
         var ex = await Assert.ThrowsAsync<AssertionException>(async () =>
             await expectation.not.toThrowAsync());
 
-        await Assert.That(ex.Message).Contains("to not throw");
+        await Assert.That(ex!.Message).Contains("to not throw");
     }
 
     [Test]
@@ -435,7 +435,7 @@ public class NegationPatternTests
         var ex = await Assert.ThrowsAsync<AssertionException>(async () =>
             await expectation.not.toThrowAsync<InvalidOperationException>());
 
-        await Assert.That(ex.Message).Contains("to not throw InvalidOperationException");
+        await Assert.That(ex!.Message).Contains("to not throw InvalidOperationException");
     }
 
     #endregion

@@ -61,12 +61,12 @@ public class StaticDslTests
 
         // First run
         describe("first", () => { it("spec1", () => firstRunExecuted = true); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
         Reset();
 
         // Second run - should not see specs from first run
         describe("second", () => { it("spec2", () => secondRunExecuted = true); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(firstRunExecuted).IsTrue();
         await Assert.That(secondRunExecuted).IsTrue();
@@ -99,7 +99,7 @@ public class StaticDslTests
             // No specs
         });
         // Test passes if no exception
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
     }
 
     [Test]
@@ -116,15 +116,15 @@ public class StaticDslTests
         var count = 0;
 
         describe("first", () => { it("spec", () => count++); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
         Reset();
 
         describe("second", () => { it("spec", () => count++); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
         Reset();
 
         describe("third", () => { it("spec", () => count++); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(count).IsEqualTo(3);
     }
@@ -148,7 +148,7 @@ public class StaticDslTests
                             });
                     });
             });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(deepestReached).IsTrue();
     }
@@ -164,7 +164,7 @@ public class StaticDslTests
 
             describe("nested describe", () => { it("also works", () => executed.Add("describe-spec")); });
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("context-spec");
@@ -188,7 +188,7 @@ public class StaticDslTests
                 executed = true;
             });
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).IsTrue();
     }
@@ -226,7 +226,7 @@ public class StaticDslTests
 
             it("spec", () => order.Add("spec"));
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(order).Count().IsEqualTo(5);
         await Assert.That(order[0]).IsEqualTo("beforeAll");
@@ -251,7 +251,7 @@ public class StaticDslTests
                 executed.Add("async");
             });
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("sync");
@@ -270,7 +270,7 @@ public class StaticDslTests
             });
         });
 
-        var results = new SpecRunner().Run(RootContext!);
+        var results = await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
@@ -291,7 +291,7 @@ public class StaticDslTests
         await Assert.That(RootContext).IsNotNull();
         await Assert.That(RootContext!.Description).IsEqualTo("test");
 
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
     }
 
     [Test]
@@ -305,7 +305,7 @@ public class StaticDslTests
         await Assert.That(RootContext!.Children).Count().IsEqualTo(1);
         await Assert.That(RootContext!.Children[0].Description).IsEqualTo("child");
 
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
     }
 
     [Test]

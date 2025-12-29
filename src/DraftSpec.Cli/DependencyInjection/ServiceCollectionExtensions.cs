@@ -1,3 +1,5 @@
+using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.Configuration;
 using DraftSpec.Formatters;
 using DraftSpec.Formatters.Html;
 using DraftSpec.Formatters.JUnit;
@@ -16,11 +18,36 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddDraftSpec(this IServiceCollection services)
     {
-        // Core services
-        services.AddSingleton<ISpecFinder, SpecFinder>();
+        // Infrastructure - Core
+        services.AddSingleton<IConsole, SystemConsole>();
+        services.AddSingleton<IFileSystem, FileSystem>();
+        services.AddSingleton<IEnvironment, SystemEnvironment>();
+        services.AddSingleton<ITimeProvider, SystemTimeProvider>();
+        services.AddSingleton<IProcessRunner, SystemProcessRunner>();
 
-        // Built-in formatters
+        // Infrastructure - Build
+        services.AddSingleton<IBuildCache, InMemoryBuildCache>();
+        services.AddSingleton<IProjectBuilder, DotnetProjectBuilder>();
+        services.AddSingleton<ISpecScriptExecutor, RoslynSpecScriptExecutor>();
+
+        // Infrastructure - Services
+        services.AddSingleton<IProjectResolver, ProjectResolver>();
+        services.AddSingleton<IConfigLoader, ConfigLoader>();
+        services.AddSingleton<ISpecFinder, SpecFinder>();
         services.AddSingleton<ICliFormatterRegistry, CliFormatterRegistry>();
+        services.AddSingleton<IInProcessSpecRunnerFactory, InProcessSpecRunnerFactory>();
+        services.AddSingleton<IFileWatcherFactory, FileWatcherFactory>();
+        services.AddSingleton<IPluginLoader, PluginLoader>();
+
+        // Commands
+        services.AddTransient<RunCommand>();
+        services.AddTransient<WatchCommand>();
+        services.AddTransient<ListCommand>();
+        services.AddTransient<InitCommand>();
+        services.AddTransient<NewCommand>();
+
+        // Factory
+        services.AddSingleton<ICommandFactory, CommandFactory>();
 
         return services;
     }

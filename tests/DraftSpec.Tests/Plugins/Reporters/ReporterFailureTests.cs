@@ -102,7 +102,7 @@ public class ReporterFailureTests
         // Act - Should throw, but want to see if tracking reporter was called
         try
         {
-            runner.Run(context);
+            await runner.RunAsync(context);
         }
         catch (InvalidOperationException)
         {
@@ -133,7 +133,7 @@ public class ReporterFailureTests
             .Build();
 
         // Act
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         // Assert - Both reporters should have been called
         await Assert.That(reporter1.RunStartingCalled).IsTrue();
@@ -165,7 +165,7 @@ public class ReporterFailureTests
         // Act
         try
         {
-            runner.Run(context);
+            await runner.RunAsync(context);
         }
         catch (InvalidOperationException)
         {
@@ -195,7 +195,7 @@ public class ReporterFailureTests
         List<SpecResult>? results = null;
         try
         {
-            results = runner.Run(context);
+            results = await runner.RunAsync(context);
         }
         catch (InvalidOperationException)
         {

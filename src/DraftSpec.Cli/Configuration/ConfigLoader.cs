@@ -3,9 +3,28 @@ using System.Text.Json;
 namespace DraftSpec.Cli.Configuration;
 
 /// <summary>
+/// Result of loading a configuration file.
+/// </summary>
+public record ConfigLoadResult(
+    DraftSpecProjectConfig? Config,
+    string? Error,
+    string? FilePath)
+{
+    /// <summary>
+    /// Whether the config was loaded successfully.
+    /// </summary>
+    public bool Success => Error == null && Config != null;
+
+    /// <summary>
+    /// Whether a config file was found (even if it failed to parse).
+    /// </summary>
+    public bool Found => FilePath != null;
+}
+
+/// <summary>
 /// Loads project configuration from draftspec.json files.
 /// </summary>
-public static class ConfigLoader
+public class ConfigLoader : IConfigLoader
 {
     /// <summary>
     /// The configuration file name to search for.
@@ -19,23 +38,11 @@ public static class ConfigLoader
         AllowTrailingCommas = true
     };
 
-    /// <summary>
-    /// Result of loading a configuration file.
-    /// </summary>
-    public record ConfigLoadResult(
-        DraftSpecProjectConfig? Config,
-        string? Error,
-        string? FilePath)
-    {
-        /// <summary>
-        /// Whether the config was loaded successfully.
-        /// </summary>
-        public bool Success => Error == null && Config != null;
+    private readonly IEnvironment _environment;
 
-        /// <summary>
-        /// Whether a config file was found (even if it failed to parse).
-        /// </summary>
-        public bool Found => FilePath != null;
+    public ConfigLoader(IEnvironment environment)
+    {
+        _environment = environment;
     }
 
     /// <summary>
@@ -43,9 +50,9 @@ public static class ConfigLoader
     /// </summary>
     /// <param name="directory">Directory to search in. Defaults to current directory.</param>
     /// <returns>The loaded configuration, or null if no config file exists.</returns>
-    public static ConfigLoadResult Load(string? directory = null)
+    public ConfigLoadResult Load(string? directory = null)
     {
-        var searchDir = directory ?? Directory.GetCurrentDirectory();
+        var searchDir = directory ?? _environment.CurrentDirectory;
         var configPath = FindConfigFile(searchDir);
 
         if (configPath == null)

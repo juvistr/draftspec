@@ -179,7 +179,7 @@ public class LargeScaleEdgeCaseTests
         context.AddSpec(new SpecDefinition("pending with emoji ⏳")); // No body
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Spec.Description).IsEqualTo("should pass with emoji ✅");
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
@@ -208,7 +208,7 @@ public class LargeScaleEdgeCaseTests
             context.AddSpec(new SpecDefinition(desc, () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).Count().IsEqualTo(descriptions.Length);
         for (var i = 0; i < descriptions.Length; i++)
@@ -223,7 +223,7 @@ public class LargeScaleEdgeCaseTests
         child.AddSpec(new SpecDefinition("spec with → arrows ← and • bullets", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(results[0].ContextPath[0]).IsEqualTo("root «special» chars");
         await Assert.That(results[0].ContextPath[1]).IsEqualTo("child ™ © ® context");
@@ -240,7 +240,7 @@ public class LargeScaleEdgeCaseTests
         }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results[0].Exception!.Message)
@@ -258,7 +258,7 @@ public class LargeScaleEdgeCaseTests
         context.AddSpec(new SpecDefinition($"spec with {precomposedE} precomposed", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
@@ -278,7 +278,7 @@ public class LargeScaleEdgeCaseTests
         context.AddSpec(new SpecDefinition("spec", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
@@ -294,7 +294,7 @@ public class LargeScaleEdgeCaseTests
         context.AddSpec(new SpecDefinition($"rocket {emoji} launch", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].ContextPath[0]).IsEqualTo($"celebrate {emoji}");
         await Assert.That(results[0].Spec.Description).IsEqualTo($"rocket {emoji} launch");
@@ -335,7 +335,7 @@ public class LargeScaleEdgeCaseTests
         }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);

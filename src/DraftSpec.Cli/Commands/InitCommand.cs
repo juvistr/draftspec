@@ -2,76 +2,73 @@ using System.Text;
 
 namespace DraftSpec.Cli.Commands;
 
-public static class InitCommand
+public class InitCommand : ICommand
 {
-    public static int Execute(CliOptions options)
+    private readonly IConsole _console;
+    private readonly IFileSystem _fileSystem;
+    private readonly IProjectResolver _projectResolver;
+
+    public InitCommand(IConsole console, IFileSystem fileSystem, IProjectResolver projectResolver)
     {
-        var resolver = new ProjectResolver();
+        _console = console;
+        _fileSystem = fileSystem;
+        _projectResolver = projectResolver;
+    }
+
+    public Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
+    {
         var directory = Path.GetFullPath(options.Path);
 
-        if (!Directory.Exists(directory))
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"Directory not found: {directory}");
-            Console.ResetColor();
-            return 1;
-        }
+        if (!_fileSystem.DirectoryExists(directory))
+            throw new ArgumentException($"Directory not found: {directory}");
 
         // Find project
-        var csproj = resolver.FindProject(directory);
-        ProjectResolver.ProjectInfo? info = null;
+        var csproj = _projectResolver.FindProject(directory);
+        ProjectInfo? info = null;
 
         if (csproj == null)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("No .csproj found. Creating spec_helper without project reference.");
-            Console.ResetColor();
+            _console.WriteWarning("No .csproj found. Creating spec_helper without project reference.");
         }
         else
         {
-            info = resolver.GetProjectInfo(csproj);
+            info = _projectResolver.GetProjectInfo(csproj);
             if (info == null)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"Could not get project info for {Path.GetFileName(csproj)}");
-                Console.ResetColor();
+                _console.WriteWarning($"Could not get project info for {Path.GetFileName(csproj)}");
             }
         }
 
         // Generate spec_helper.csx
         var specHelperPath = Path.Combine(directory, "spec_helper.csx");
-        if (File.Exists(specHelperPath) && !options.Force)
+        if (_fileSystem.FileExists(specHelperPath) && !options.Force)
         {
-            Console.WriteLine("spec_helper.csx already exists (use --force to overwrite)");
+            _console.WriteLine("spec_helper.csx already exists (use --force to overwrite)");
         }
         else
         {
             var specHelper = GenerateSpecHelper(info, directory);
-            File.WriteAllText(specHelperPath, specHelper);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Created spec_helper.csx");
-            Console.ResetColor();
+            _fileSystem.WriteAllText(specHelperPath, specHelper);
+            _console.WriteSuccess("Created spec_helper.csx");
         }
 
         // Generate omnisharp.json
         var omnisharpPath = Path.Combine(directory, "omnisharp.json");
-        if (File.Exists(omnisharpPath) && !options.Force)
+        if (_fileSystem.FileExists(omnisharpPath) && !options.Force)
         {
-            Console.WriteLine("omnisharp.json already exists (use --force to overwrite)");
+            _console.WriteLine("omnisharp.json already exists (use --force to overwrite)");
         }
         else
         {
             var omnisharp = GenerateOmnisharp(info?.TargetFramework ?? "net10.0");
-            File.WriteAllText(omnisharpPath, omnisharp);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Created omnisharp.json");
-            Console.ResetColor();
+            _fileSystem.WriteAllText(omnisharpPath, omnisharp);
+            _console.WriteSuccess("Created omnisharp.json");
         }
 
-        return 0;
+        return Task.FromResult(0);
     }
 
-    private static string GenerateSpecHelper(ProjectResolver.ProjectInfo? info, string directory)
+    private static string GenerateSpecHelper(ProjectInfo? info, string directory)
     {
         var sb = new StringBuilder();
         sb.AppendLine("#r \"nuget: DraftSpec\"");

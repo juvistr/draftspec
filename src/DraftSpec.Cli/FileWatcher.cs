@@ -7,7 +7,7 @@ namespace DraftSpec.Cli;
 /// <param name="IsSpecFile">True if a single spec file changed, false if source or multiple files changed</param>
 public record FileChangeInfo(string? FilePath, bool IsSpecFile);
 
-public class FileWatcher : IDisposable
+public class FileWatcher : IFileWatcher
 {
     private readonly List<FileSystemWatcher> _watchers = [];
     private readonly Action<FileChangeInfo> _onChange;

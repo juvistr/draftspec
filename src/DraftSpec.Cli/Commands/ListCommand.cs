@@ -8,27 +8,31 @@ namespace DraftSpec.Cli.Commands;
 /// Lists discovered specs without executing them.
 /// Uses static parsing to discover spec structure from CSX files.
 /// </summary>
-public static class ListCommand
+public class ListCommand : ICommand
 {
-    public static async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
+    private readonly IConsole _console;
+    private readonly IFileSystem _fileSystem;
+
+    public ListCommand(IConsole console, IFileSystem fileSystem)
+    {
+        _console = console;
+        _fileSystem = fileSystem;
+    }
+
+    public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
     {
         // 1. Resolve path
         var projectPath = Path.GetFullPath(options.Path);
 
-        if (!Directory.Exists(projectPath) && !File.Exists(projectPath))
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"Error: Path not found: {projectPath}");
-            Console.ResetColor();
-            return 1;
-        }
+        if (!_fileSystem.DirectoryExists(projectPath) && !_fileSystem.FileExists(projectPath))
+            throw new ArgumentException($"Path not found: {projectPath}");
 
         // 2. Find spec files
         var specFiles = GetSpecFiles(projectPath);
 
         if (specFiles.Count == 0)
         {
-            Console.WriteLine("No spec files found.");
+            _console.WriteLine("No spec files found.");
             return 0;
         }
 
@@ -89,12 +93,12 @@ public static class ListCommand
         // 6. Write to file or stdout
         if (!string.IsNullOrEmpty(options.OutputFile))
         {
-            await File.WriteAllTextAsync(options.OutputFile, output, ct);
-            Console.WriteLine($"Wrote {filteredSpecs.Count} specs to {options.OutputFile}");
+            await _fileSystem.WriteAllTextAsync(options.OutputFile, output, ct);
+            _console.WriteLine($"Wrote {filteredSpecs.Count} specs to {options.OutputFile}");
         }
         else
         {
-            Console.WriteLine(output);
+            _console.WriteLine(output);
         }
 
         return 0;

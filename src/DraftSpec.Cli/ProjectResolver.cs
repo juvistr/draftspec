@@ -1,11 +1,31 @@
 namespace DraftSpec.Cli;
 
 /// <summary>
+/// Project information from MSBuild.
+/// </summary>
+public record ProjectInfo(string TargetPath, string TargetFramework);
+
+/// <summary>
+/// Abstraction for resolving project information.
+/// </summary>
+public interface IProjectResolver
+{
+    /// <summary>
+    /// Find the first .csproj file in the given directory.
+    /// </summary>
+    string? FindProject(string directory);
+
+    /// <summary>
+    /// Query MSBuild for project output path and target framework.
+    /// </summary>
+    ProjectInfo? GetProjectInfo(string csprojPath);
+}
+
+/// <summary>
 /// Resolves project information by querying MSBuild.
 /// </summary>
-public class ProjectResolver
+public class ProjectResolver : IProjectResolver
 {
-    public record ProjectInfo(string TargetPath, string TargetFramework);
 
     /// <summary>
     /// Find the first .csproj file in the given directory.

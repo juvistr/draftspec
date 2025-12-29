@@ -11,7 +11,7 @@ namespace DraftSpec.Tests.Mcp.Tools;
 /// Tests use in-process execution mode to avoid subprocess overhead and McpServer dependency.
 /// </summary>
 [NotInParallel("SpecTools")]
-public class SpecToolsTests
+public class SpecToolsTests : IDisposable
 {
     private readonly SpecExecutionService _executionService;
     private readonly InProcessSpecRunner _inProcessRunner;
@@ -29,6 +29,11 @@ public class SpecToolsTests
             NullLogger<InProcessSpecRunner>.Instance);
         _sessionManager = new SessionManager(
             NullLogger<SessionManager>.Instance);
+    }
+
+    public void Dispose()
+    {
+        _sessionManager.Dispose();
     }
 
     #region run_spec - Basic Execution
@@ -406,6 +411,251 @@ public class SpecToolsTests
         var result = SpecTools.ScaffoldSpecs(structure);
 
         await Assert.That(result).Contains("describe(\"Empty\"");
+    }
+
+    #endregion
+
+    #region run_specs_batch Tests
+
+    [Test]
+    public async Task RunSpecsBatch_EmptySpecs_ReturnsSuccessWithZeroCounts()
+    {
+        var result = await SpecTools.RunSpecsBatch(
+            _executionService,
+            _inProcessRunner,
+            server: null!,
+            specs: [],
+            parallel: true,
+            timeoutSeconds: 10,
+            inProcess: true);
+
+        var json = JsonDocument.Parse(result);
+        await Assert.That(json.RootElement.GetProperty("allPassed").GetBoolean()).IsTrue();
+        await Assert.That(json.RootElement.GetProperty("totalSpecs").GetInt32()).IsEqualTo(0);
+        await Assert.That(json.RootElement.GetProperty("passedSpecs").GetInt32()).IsEqualTo(0);
+        await Assert.That(json.RootElement.GetProperty("failedSpecs").GetInt32()).IsEqualTo(0);
+        await Assert.That(json.RootElement.GetProperty("totalDurationMs").GetDouble()).IsGreaterThanOrEqualTo(0);
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_SingleSpec_ExecutesAndReturnsResult()
+    {
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "Math", Content = "describe(\"Math\", () => { it(\"works\", () => expect(1).toBe(1)); });" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            _executionService,
+            _inProcessRunner,
+            server: null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10,
+            inProcess: true);
+
+        var json = JsonDocument.Parse(result);
+        await Assert.That(json.RootElement.GetProperty("allPassed").GetBoolean()).IsTrue();
+        await Assert.That(json.RootElement.GetProperty("totalSpecs").GetInt32()).IsEqualTo(1);
+        await Assert.That(json.RootElement.GetProperty("passedSpecs").GetInt32()).IsEqualTo(1);
+        await Assert.That(json.RootElement.GetProperty("failedSpecs").GetInt32()).IsEqualTo(0);
+
+        var results = json.RootElement.GetProperty("results");
+        await Assert.That(results.GetArrayLength()).IsEqualTo(1);
+        await Assert.That(results[0].GetProperty("name").GetString()).IsEqualTo("Math");
+        await Assert.That(results[0].GetProperty("success").GetBoolean()).IsTrue();
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_MultipleSpecs_AllExecuted()
+    {
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "Math", Content = "describe(\"Math\", () => { it(\"works\", () => expect(1).toBe(1)); });" },
+            new() { Name = "String", Content = "describe(\"String\", () => { it(\"works\", () => expect(\"a\").toBe(\"a\")); });" },
+            new() { Name = "Bool", Content = "describe(\"Bool\", () => { it(\"works\", () => expect(true).toBeTrue()); });" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            _executionService,
+            _inProcessRunner,
+            server: null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10,
+            inProcess: true);
+
+        var json = JsonDocument.Parse(result);
+        await Assert.That(json.RootElement.GetProperty("totalSpecs").GetInt32()).IsEqualTo(3);
+
+        var results = json.RootElement.GetProperty("results");
+        await Assert.That(results.GetArrayLength()).IsEqualTo(3);
+
+        // Verify all specs are present by name
+        var names = new List<string>();
+        for (int i = 0; i < results.GetArrayLength(); i++)
+        {
+            names.Add(results[i].GetProperty("name").GetString()!);
+        }
+        await Assert.That(names).Contains("Math");
+        await Assert.That(names).Contains("String");
+        await Assert.That(names).Contains("Bool");
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_AllPass_AllPassedTrue()
+    {
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "Pass1", Content = "describe(\"Test\", () => { it(\"passes\", () => expect(1).toBe(1)); });" },
+            new() { Name = "Pass2", Content = "describe(\"Test\", () => { it(\"passes\", () => expect(true).toBeTrue()); });" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            _executionService,
+            _inProcessRunner,
+            server: null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10,
+            inProcess: true);
+
+        var json = JsonDocument.Parse(result);
+        await Assert.That(json.RootElement.GetProperty("allPassed").GetBoolean()).IsTrue();
+        await Assert.That(json.RootElement.GetProperty("passedSpecs").GetInt32()).IsEqualTo(2);
+        await Assert.That(json.RootElement.GetProperty("failedSpecs").GetInt32()).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_SomeFail_AllPassedFalse()
+    {
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "Pass", Content = "describe(\"Test\", () => { it(\"passes\", () => expect(1).toBe(1)); });" },
+            new() { Name = "Fail", Content = "describe(\"Test\", () => { it(\"fails\", () => expect(1).toBe(2)); });" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            _executionService,
+            _inProcessRunner,
+            server: null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10,
+            inProcess: true);
+
+        var json = JsonDocument.Parse(result);
+        await Assert.That(json.RootElement.GetProperty("allPassed").GetBoolean()).IsFalse();
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_CountsPassedAndFailed()
+    {
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "Pass1", Content = "describe(\"Test\", () => { it(\"passes\", () => expect(1).toBe(1)); });" },
+            new() { Name = "Fail1", Content = "describe(\"Test\", () => { it(\"fails\", () => expect(1).toBe(2)); });" },
+            new() { Name = "Pass2", Content = "describe(\"Test\", () => { it(\"passes\", () => expect(true).toBeTrue()); });" },
+            new() { Name = "Fail2", Content = "describe(\"Test\", () => { it(\"fails\", () => expect(false).toBeTrue()); });" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            _executionService,
+            _inProcessRunner,
+            server: null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10,
+            inProcess: true);
+
+        var json = JsonDocument.Parse(result);
+        await Assert.That(json.RootElement.GetProperty("totalSpecs").GetInt32()).IsEqualTo(4);
+        await Assert.That(json.RootElement.GetProperty("passedSpecs").GetInt32()).IsEqualTo(2);
+        await Assert.That(json.RootElement.GetProperty("failedSpecs").GetInt32()).IsEqualTo(2);
+        await Assert.That(json.RootElement.GetProperty("allPassed").GetBoolean()).IsFalse();
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_IncludesTotalDuration()
+    {
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "Test1", Content = "describe(\"Test\", () => { it(\"runs\", () => expect(1).toBe(1)); });" },
+            new() { Name = "Test2", Content = "describe(\"Test\", () => { it(\"runs\", () => expect(2).toBe(2)); });" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            _executionService,
+            _inProcessRunner,
+            server: null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10,
+            inProcess: true);
+
+        var json = JsonDocument.Parse(result);
+        await Assert.That(json.RootElement.TryGetProperty("totalDurationMs", out var duration)).IsTrue();
+        await Assert.That(duration.GetDouble()).IsGreaterThan(0);
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_IncludesNameInResults()
+    {
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "CustomName1", Content = "describe(\"Test\", () => { it(\"runs\", () => expect(1).toBe(1)); });" },
+            new() { Name = "CustomName2", Content = "describe(\"Test\", () => { it(\"runs\", () => expect(2).toBe(2)); });" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            _executionService,
+            _inProcessRunner,
+            server: null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10,
+            inProcess: true);
+
+        var json = JsonDocument.Parse(result);
+        var results = json.RootElement.GetProperty("results");
+
+        await Assert.That(results.GetArrayLength()).IsEqualTo(2);
+
+        var names = new List<string>();
+        for (int i = 0; i < results.GetArrayLength(); i++)
+        {
+            names.Add(results[i].GetProperty("name").GetString()!);
+        }
+
+        await Assert.That(names).Contains("CustomName1");
+        await Assert.That(names).Contains("CustomName2");
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_IncludesReportPerSpec()
+    {
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "Test1", Content = "describe(\"Test\", () => { it(\"spec1\", () => expect(1).toBe(1)); it(\"spec2\", () => expect(2).toBe(2)); });" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            _executionService,
+            _inProcessRunner,
+            server: null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10,
+            inProcess: true);
+
+        var json = JsonDocument.Parse(result);
+        var results = json.RootElement.GetProperty("results");
+
+        await Assert.That(results.GetArrayLength()).IsEqualTo(1);
+
+        var firstResult = results[0];
+        await Assert.That(firstResult.TryGetProperty("report", out var report)).IsTrue();
+        await Assert.That(report.GetProperty("summary").GetProperty("total").GetInt32()).IsEqualTo(2);
     }
 
     #endregion

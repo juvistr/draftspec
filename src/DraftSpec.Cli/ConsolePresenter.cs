@@ -2,75 +2,77 @@ namespace DraftSpec.Cli;
 
 public class ConsolePresenter
 {
+    private readonly IConsole _console;
     private readonly bool _watchMode;
 
-    public ConsolePresenter(bool watchMode = false)
+    public ConsolePresenter(IConsole? console = null, bool watchMode = false)
     {
+        _console = console ?? new SystemConsole();
         _watchMode = watchMode;
     }
 
     public void Clear()
     {
-        if (_watchMode) Console.Clear();
+        if (_watchMode) _console.Clear();
     }
 
     public void ShowHeader(IReadOnlyList<string> specFiles, bool parallel = false, bool isPartialRun = false)
     {
-        Console.ForegroundColor = ConsoleColor.DarkGray;
+        _console.ForegroundColor = ConsoleColor.DarkGray;
         var mode = parallel && specFiles.Count > 1 ? " in parallel" : "";
 
         if (isPartialRun && specFiles.Count == 1)
         {
             var fileName = Path.GetFileName(specFiles[0]);
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {fileName}...");
+            _console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {fileName}...");
         }
         else
         {
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {specFiles.Count} spec file(s){mode}...");
+            _console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Running {specFiles.Count} spec file(s){mode}...");
         }
 
-        Console.ResetColor();
+        _console.ResetColor();
     }
 
     public void ShowBuilding(string project)
     {
         var name = Path.GetFileNameWithoutExtension(project);
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.Write($"  Building {name}... ");
-        Console.ResetColor();
+        _console.ForegroundColor = ConsoleColor.DarkGray;
+        _console.Write($"  Building {name}... ");
+        _console.ResetColor();
     }
 
     public void ShowBuildResult(BuildResult result)
     {
         if (result.Success)
         {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("ok");
+            _console.ForegroundColor = ConsoleColor.Green;
+            _console.WriteLine("ok");
         }
         else
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("failed");
+            _console.ForegroundColor = ConsoleColor.Red;
+            _console.WriteLine("failed");
             if (!string.IsNullOrWhiteSpace(result.Error))
-                Console.WriteLine(result.Error);
+                _console.WriteLine(result.Error);
         }
 
-        Console.ResetColor();
+        _console.ResetColor();
     }
 
     public void ShowBuildSkipped(string project)
     {
         var name = Path.GetFileNameWithoutExtension(project);
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.Write($"  Building {name}... ");
-        Console.ForegroundColor = ConsoleColor.DarkYellow;
-        Console.WriteLine("skipped (no changes)");
-        Console.ResetColor();
+        _console.ForegroundColor = ConsoleColor.DarkGray;
+        _console.Write($"  Building {name}... ");
+        _console.ForegroundColor = ConsoleColor.DarkYellow;
+        _console.WriteLine("skipped (no changes)");
+        _console.ResetColor();
     }
 
     public void ShowSpecsStarting()
     {
-        Console.WriteLine();
+        _console.WriteLine();
     }
 
     public void ShowResult(SpecRunResult result, string basePath)
@@ -79,78 +81,78 @@ public class ConsolePresenter
 
         if (!string.IsNullOrWhiteSpace(result.Output))
         {
-            Console.Write(result.Output);
+            _console.Write(result.Output);
             if (!result.Output.EndsWith('\n'))
-                Console.WriteLine();
+                _console.WriteLine();
         }
 
         if (!string.IsNullOrWhiteSpace(result.Error))
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Write(result.Error);
-            Console.ResetColor();
+            _console.ForegroundColor = ConsoleColor.Red;
+            _console.Write(result.Error);
+            _console.ResetColor();
             if (!result.Error.EndsWith('\n'))
-                Console.WriteLine();
+                _console.WriteLine();
         }
     }
 
     public void ShowSummary(RunSummary summary)
     {
-        Console.WriteLine();
+        _console.WriteLine();
 
         if (summary.Success)
         {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write("PASS");
+            _console.ForegroundColor = ConsoleColor.Green;
+            _console.Write("PASS");
         }
         else
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Write("FAIL");
+            _console.ForegroundColor = ConsoleColor.Red;
+            _console.Write("FAIL");
         }
 
-        Console.ResetColor();
+        _console.ResetColor();
 
-        Console.WriteLine($"  {summary.TotalSpecs} file(s) in {summary.TotalDuration.TotalSeconds:F2}s");
+        _console.WriteLine($"  {summary.TotalSpecs} file(s) in {summary.TotalDuration.TotalSeconds:F2}s");
     }
 
     public void ShowWatching()
     {
-        Console.WriteLine();
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.WriteLine("Watching for changes... (Ctrl+C to quit)");
-        Console.ResetColor();
+        _console.WriteLine();
+        _console.ForegroundColor = ConsoleColor.DarkGray;
+        _console.WriteLine("Watching for changes... (Ctrl+C to quit)");
+        _console.ResetColor();
     }
 
     public void ShowError(string message)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"Error: {message}");
-        Console.ResetColor();
+        _console.ForegroundColor = ConsoleColor.Red;
+        _console.WriteLine($"Error: {message}");
+        _console.ResetColor();
     }
 
     public void ShowRerunning()
     {
         Clear();
-        Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine("File changed, re-running...");
-        Console.ResetColor();
-        Console.WriteLine();
+        _console.ForegroundColor = ConsoleColor.Cyan;
+        _console.WriteLine("File changed, re-running...");
+        _console.ResetColor();
+        _console.WriteLine();
     }
 
     public void ShowCoverageReport(string reportPath)
     {
-        Console.WriteLine();
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.WriteLine($"Coverage report: {reportPath}");
-        Console.ResetColor();
+        _console.WriteLine();
+        _console.ForegroundColor = ConsoleColor.DarkGray;
+        _console.WriteLine($"Coverage report: {reportPath}");
+        _console.ResetColor();
     }
 
     public void ShowCoverageReportGenerated(string format, string path)
     {
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.WriteLine($"Coverage {format} report: {path}");
-        Console.ResetColor();
+        _console.ForegroundColor = ConsoleColor.DarkGray;
+        _console.WriteLine($"Coverage {format} report: {path}");
+        _console.ResetColor();
     }
 
     public void ShowCoverageSummary(double linePercent, double branchPercent)
@@ -158,27 +160,27 @@ public class ConsolePresenter
         var lineColor = GetCoverageColor(linePercent);
         var branchColor = GetCoverageColor(branchPercent);
 
-        Console.Write("Coverage: ");
-        Console.ForegroundColor = lineColor;
-        Console.Write($"{linePercent:F1}% lines");
-        Console.ResetColor();
-        Console.Write(", ");
-        Console.ForegroundColor = branchColor;
-        Console.Write($"{branchPercent:F1}% branches");
-        Console.ResetColor();
-        Console.WriteLine();
+        _console.Write("Coverage: ");
+        _console.ForegroundColor = lineColor;
+        _console.Write($"{linePercent:F1}% lines");
+        _console.ResetColor();
+        _console.Write(", ");
+        _console.ForegroundColor = branchColor;
+        _console.Write($"{branchPercent:F1}% branches");
+        _console.ResetColor();
+        _console.WriteLine();
     }
 
     public void ShowCoverageThresholdWarnings(IEnumerable<string> failures)
     {
-        Console.WriteLine();
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine("Coverage threshold warning:");
+        _console.WriteLine();
+        _console.ForegroundColor = ConsoleColor.Yellow;
+        _console.WriteLine("Coverage threshold warning:");
         foreach (var failure in failures)
         {
-            Console.WriteLine($"  {failure}");
+            _console.WriteLine($"  {failure}");
         }
-        Console.ResetColor();
+        _console.ResetColor();
     }
 
     private static ConsoleColor GetCoverageColor(double percent) => percent switch

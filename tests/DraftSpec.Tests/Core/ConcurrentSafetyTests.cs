@@ -46,12 +46,12 @@ public class ConcurrentSafetyTests
 
         // Assert - All chains should be retrieved without exceptions
         await Assert.That(exceptions).IsEmpty();
-        await Assert.That(results).HasCount().EqualTo(100);
+        await Assert.That(results).Count().IsEqualTo(100);
 
         // All results should have the same content (cached chain)
         foreach (var chain in results)
         {
-            await Assert.That(chain).HasCount().EqualTo(2);
+            await Assert.That(chain).Count().IsEqualTo(2);
         }
     }
 
@@ -125,7 +125,7 @@ public class ConcurrentSafetyTests
         var results = await runner.RunAsync(context);
 
         // Assert - All specs should have executed
-        await Assert.That(results).HasCount().EqualTo(10);
+        await Assert.That(results).Count().IsEqualTo(10);
         await Assert.That(results.All(r => r.Status == SpecStatus.Passed)).IsTrue();
         await Assert.That(sharedCounter).IsEqualTo(10);
     }
@@ -163,7 +163,7 @@ public class ConcurrentSafetyTests
         var results = await runner.RunAsync(context);
 
         // Assert - All specs should complete (some passed, some failed)
-        await Assert.That(results).HasCount().EqualTo(10);
+        await Assert.That(results).Count().IsEqualTo(10);
         await Assert.That(results.Count(r => r.Status == SpecStatus.Passed)).IsEqualTo(5);
         await Assert.That(results.Count(r => r.Status == SpecStatus.Failed)).IsEqualTo(5);
     }
@@ -187,7 +187,7 @@ public class ConcurrentSafetyTests
         var results = await runner.RunAsync(context);
 
         // Assert - All results should be collected
-        await Assert.That(results).HasCount().EqualTo(100);
+        await Assert.That(results).Count().IsEqualTo(100);
         await Assert.That(results.All(r => r.Status == SpecStatus.Passed)).IsTrue();
     }
 
@@ -227,7 +227,7 @@ public class ConcurrentSafetyTests
         var results = await runner.RunAsync(context);
 
         // Assert - Should have 1 failed and rest skipped (some may have started)
-        await Assert.That(results).HasCount().EqualTo(21);
+        await Assert.That(results).Count().IsEqualTo(21);
         await Assert.That(results.Count(r => r.Status == SpecStatus.Failed)).IsEqualTo(1);
         // Most should be skipped (bail should stop most from starting)
         await Assert.That(results.Count(r => r.Status == SpecStatus.Skipped)).IsGreaterThan(0);
@@ -260,7 +260,7 @@ public class ConcurrentSafetyTests
         var results = await runner.RunAsync(context);
 
         // Assert - Only focused specs should run
-        await Assert.That(results).HasCount().EqualTo(15);
+        await Assert.That(results).Count().IsEqualTo(15);
         await Assert.That(results.Count(r => r.Status == SpecStatus.Passed)).IsEqualTo(5);
         await Assert.That(results.Count(r => r.Status == SpecStatus.Skipped)).IsEqualTo(10);
     }

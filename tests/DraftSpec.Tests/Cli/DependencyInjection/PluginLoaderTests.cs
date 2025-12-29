@@ -1,0 +1,390 @@
+using System.Reflection;
+using DraftSpec.Cli;
+using DraftSpec.Cli.DependencyInjection;
+using DraftSpec.Formatters;
+using DraftSpec.Tests.TestHelpers;
+
+namespace DraftSpec.Tests.Cli.DependencyInjection;
+
+/// <summary>
+/// Tests for PluginLoader class.
+/// </summary>
+public class PluginLoaderTests
+{
+    #region Constructor Tests
+
+    [Test]
+    public async Task PluginLoader_NoDirectories_UsesDefaultPluginDirectory()
+    {
+        var scanner = new MockPluginScanner();
+        var assemblyLoader = new MockAssemblyLoader();
+        var console = new MockConsole();
+
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
+
+        // Should use default plugin directory when no directories are specified
+        var plugins = loader.DiscoverPlugins();
+
+        // The scanner should have been called with the default directory
+        await Assert.That(scanner.CheckedDirectories.Count).IsGreaterThan(0);
+    }
+
+    [Test]
+    public async Task PluginLoader_CustomDirectories_UsesProvidedDirectories()
+    {
+        var scanner = new MockPluginScanner();
+        var assemblyLoader = new MockAssemblyLoader();
+        var console = new MockConsole();
+
+        var customDir = "/custom/plugins";
+        var loader = new PluginLoader(scanner, assemblyLoader, console, customDir);
+
+        loader.DiscoverPlugins();
+
+        await Assert.That(scanner.CheckedDirectories).Contains(customDir);
+    }
+
+    #endregion
+
+    #region DiscoverPlugins Tests
+
+    [Test]
+    public async Task DiscoverPlugins_NoDirectoryExists_ReturnsEmpty()
+    {
+        var scanner = new MockPluginScanner();
+        var assemblyLoader = new MockAssemblyLoader();
+        var console = new MockConsole();
+
+        var loader = new PluginLoader(scanner, assemblyLoader, console, "/nonexistent");
+
+        var plugins = loader.DiscoverPlugins();
+
+        await Assert.That(plugins.Count()).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_EmptyDirectory_ReturnsEmpty()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        // No files in the directory
+
+        var assemblyLoader = new MockAssemblyLoader();
+        var console = new MockConsole();
+
+        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+
+        var plugins = loader.DiscoverPlugins();
+
+        await Assert.That(plugins.Count()).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_CachesResults_OnSecondCall()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+
+        var console = new MockConsole();
+        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+
+        // First call
+        var plugins1 = loader.DiscoverPlugins().ToList();
+
+        // Reset counters
+        scanner.CheckedDirectories.Clear();
+        scanner.ScannedDirectories.Clear();
+
+        // Second call
+        var plugins2 = loader.DiscoverPlugins().ToList();
+
+        // Should return cached results without scanning again
+        await Assert.That(scanner.CheckedDirectories.Count).IsEqualTo(0);
+        await Assert.That(plugins1.Count).IsEqualTo(plugins2.Count);
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_LoadError_LogsWarningAndContinues()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.BadPlugin.dll");
+        scanner.AddPluginFile("/plugins", "DraftSpec.GoodPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        // BadPlugin throws exception
+        assemblyLoader.SetLoadException("/plugins/DraftSpec.BadPlugin.dll", new InvalidOperationException("Corrupted assembly"));
+
+        // GoodPlugin loads successfully - use the test formatter type
+        assemblyLoader.AddRealType("/plugins/DraftSpec.GoodPlugin.dll", typeof(TestFormatterWithAttribute));
+
+        var console = new MockConsole();
+        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+
+        var plugins = loader.DiscoverPlugins().ToList();
+
+        // Should have logged error for BadPlugin
+        await Assert.That(console.Errors).Contains("DraftSpec.BadPlugin.dll");
+        await Assert.That(console.Errors).Contains("Corrupted assembly");
+
+        // Should have successfully loaded GoodPlugin
+        await Assert.That(plugins.Count).IsEqualTo(1);
+        await Assert.That(plugins[0].Name).IsEqualTo("testformatter");
+    }
+
+    #endregion
+
+    #region Plugin Detection Tests
+
+    [Test]
+    public async Task DiscoverPlugins_TypeWithDraftSpecPluginAttribute_Discovered()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        // Use a real type that has the attribute
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+
+        var console = new MockConsole();
+        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+
+        var plugins = loader.DiscoverPlugins().ToList();
+
+        await Assert.That(plugins.Count).IsEqualTo(1);
+        await Assert.That(plugins[0].Name).IsEqualTo("testformatter");
+        await Assert.That(plugins[0].Type).IsEqualTo(typeof(TestFormatterWithAttribute));
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_TypeWithoutAttribute_NotDiscovered()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        // Use a real type WITHOUT the attribute
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(FormatterWithoutAttribute));
+
+        var console = new MockConsole();
+        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+
+        var plugins = loader.DiscoverPlugins().ToList();
+
+        await Assert.That(plugins.Count).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_FormatterType_HasFormatterKind()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+
+        var console = new MockConsole();
+        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+
+        var plugins = loader.DiscoverPlugins().ToList();
+
+        await Assert.That(plugins.Count).IsEqualTo(1);
+        await Assert.That(plugins[0].Kind).IsEqualTo(PluginKind.Formatter);
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_NonFormatterType_Skipped()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        // Type with attribute but NOT implementing IFormatter
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(NonFormatterWithAttribute));
+
+        var console = new MockConsole();
+        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+
+        var plugins = loader.DiscoverPlugins().ToList();
+
+        // Should be skipped because it doesn't implement known plugin interfaces
+        await Assert.That(plugins.Count).IsEqualTo(0);
+    }
+
+    #endregion
+
+    #region RegisterFormatters Tests
+
+    [Test]
+    public async Task RegisterFormatters_RegistersDiscoveredFormatters()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.JsonFormatter.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.JsonFormatter.dll", typeof(TestFormatterWithAttribute));
+
+        var console = new MockConsole();
+        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+
+        var registry = new MockFormatterRegistry();
+        loader.RegisterFormatters(registry);
+
+        await Assert.That(registry.RegisteredFormatters).ContainsKey("testformatter");
+    }
+
+    #endregion
+
+    #region Test Types for Plugin Detection
+
+    /// <summary>
+    /// Test formatter with DraftSpecPlugin attribute - should be discovered.
+    /// </summary>
+    [DraftSpecPlugin("testformatter")]
+    public class TestFormatterWithAttribute : IFormatter
+    {
+        public string Format(SpecReport report) => "test output";
+        public string FileExtension => ".test";
+    }
+
+    /// <summary>
+    /// Test formatter WITHOUT DraftSpecPlugin attribute - should NOT be discovered.
+    /// </summary>
+    public class FormatterWithoutAttribute : IFormatter
+    {
+        public string Format(SpecReport report) => "no attribute";
+        public string FileExtension => ".noattr";
+    }
+
+    /// <summary>
+    /// Test type WITH attribute but NOT implementing IFormatter - should be skipped.
+    /// </summary>
+    [DraftSpecPlugin("nonformatter")]
+    public class NonFormatterWithAttribute
+    {
+        public string DoSomething() => "not a formatter";
+    }
+
+    #endregion
+
+    #region Test Helpers - Mocks
+
+    private class MockPluginScanner : IPluginScanner
+    {
+        private readonly HashSet<string> _directories = [];
+        private readonly Dictionary<string, List<string>> _pluginFiles = [];
+
+        public List<string> CheckedDirectories { get; } = [];
+        public List<string> ScannedDirectories { get; } = [];
+
+        public void AddDirectory(string directory)
+        {
+            _directories.Add(directory);
+        }
+
+        public void AddPluginFile(string directory, string fileName)
+        {
+            if (!_pluginFiles.ContainsKey(directory))
+                _pluginFiles[directory] = [];
+
+            _pluginFiles[directory].Add(Path.Combine(directory, fileName));
+        }
+
+        public bool DirectoryExists(string directory)
+        {
+            CheckedDirectories.Add(directory);
+            return _directories.Contains(directory);
+        }
+
+        public IEnumerable<string> FindPluginFiles(string directory)
+        {
+            ScannedDirectories.Add(directory);
+            return _pluginFiles.TryGetValue(directory, out var files) ? files : [];
+        }
+    }
+
+    private class MockAssemblyLoader : IAssemblyLoader
+    {
+        private readonly Dictionary<string, List<Type>> _realTypes = [];
+        private readonly Dictionary<string, Exception> _loadExceptions = [];
+
+        /// <summary>
+        /// Add a real type to be "discovered" from an assembly path.
+        /// </summary>
+        public void AddRealType(string path, Type type)
+        {
+            if (!_realTypes.ContainsKey(path))
+                _realTypes[path] = [];
+            _realTypes[path].Add(type);
+        }
+
+        public void SetLoadException(string path, Exception exception)
+        {
+            _loadExceptions[path] = exception;
+        }
+
+        public Assembly? LoadAssembly(string path)
+        {
+            if (_loadExceptions.TryGetValue(path, out var exception))
+                throw exception;
+
+            // Return the assembly of the first real type, or null
+            if (_realTypes.TryGetValue(path, out var types) && types.Count > 0)
+                return types[0].Assembly;
+
+            return null;
+        }
+
+        public IEnumerable<Type> GetExportedTypes(Assembly assembly)
+        {
+            // Return all real types registered for any path that match this assembly
+            foreach (var kvp in _realTypes)
+            {
+                foreach (var type in kvp.Value)
+                {
+                    if (type.Assembly == assembly)
+                        yield return type;
+                }
+            }
+        }
+
+        public object? CreateInstance(Type type)
+        {
+            return Activator.CreateInstance(type);
+        }
+    }
+
+    private class MockFormatter : IFormatter
+    {
+        public string Format(SpecReport report) => "mock output";
+        public string FileExtension => ".mock";
+    }
+
+    private class MockFormatterRegistry : ICliFormatterRegistry
+    {
+        public Dictionary<string, Func<CliOptions?, IFormatter>> RegisteredFormatters { get; } = [];
+
+        public void Register(string name, Func<CliOptions?, IFormatter> factory)
+        {
+            RegisteredFormatters[name] = factory;
+        }
+
+        public IFormatter? GetFormatter(string name, CliOptions? options = null)
+        {
+            return RegisteredFormatters.TryGetValue(name, out var factory) ? factory(options) : null;
+        }
+
+        public IEnumerable<string> Names => RegisteredFormatters.Keys;
+    }
+
+    #endregion
+}

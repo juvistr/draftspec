@@ -102,7 +102,7 @@ public class EdgeCaseTests
         current.AddSpec(new SpecDefinition("deepest spec", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
@@ -119,7 +119,7 @@ public class EdgeCaseTests
         level5.AddSpec(new SpecDefinition("deep spec", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(level1);
+        var results = await runner.RunAsync(level1);
 
         await Assert.That(results[0].ContextPath).IsEquivalentTo([
             "level1", "level2", "level3", "level4", "level5"
@@ -154,7 +154,7 @@ public class EdgeCaseTests
         l3.AddSpec(new SpecDefinition("spec", () => hookOrder.Add("spec")));
 
         var runner = new SpecRunner();
-        runner.Run(l1);
+        await runner.RunAsync(l1);
 
         await Assert.That(hookOrder).IsEquivalentTo([
             "before-L1", "before-L2", "before-L3", "spec"
@@ -171,7 +171,7 @@ public class EdgeCaseTests
         current.AddSpec(new SpecDefinition("bottom", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
@@ -189,7 +189,7 @@ public class EdgeCaseTests
         for (var i = 0; i < 100; i++) context.AddSpec(new SpecDefinition($"spec {i}", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).Count().IsEqualTo(100);
         await Assert.That(results.All(r => r.Status == SpecStatus.Passed)).IsTrue();
@@ -207,7 +207,7 @@ public class EdgeCaseTests
         }
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(results).Count().IsEqualTo(50);
     }
@@ -231,7 +231,7 @@ public class EdgeCaseTests
         }
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results.Count(r => r.Status == SpecStatus.Passed)).IsEqualTo(5);
         await Assert.That(results.Count(r => r.Status == SpecStatus.Failed)).IsEqualTo(5);
@@ -258,7 +258,7 @@ public class EdgeCaseTests
         context.AddSpec(new SpecDefinition("", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Spec.Description).IsEqualTo("");
@@ -271,7 +271,7 @@ public class EdgeCaseTests
         context.AddSpec(new SpecDefinition("1 + 1 = 2 ✓", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Spec.Description).IsEqualTo("1 + 1 = 2 ✓");
         await Assert.That(results[0].ContextPath[0]).IsEqualTo("数学测试 🧮");
@@ -285,7 +285,7 @@ public class EdgeCaseTests
         context.AddSpec(new SpecDefinition("spec", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].ContextPath[0]).IsEqualTo(longDesc);
     }
@@ -297,7 +297,7 @@ public class EdgeCaseTests
         context.AddSpec(new SpecDefinition("pending spec")); // No body
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Pending);
     }
@@ -308,7 +308,7 @@ public class EdgeCaseTests
         var context = new SpecContext("empty context");
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).IsEmpty();
     }
@@ -324,7 +324,7 @@ public class EdgeCaseTests
         context.AddSpec(new SpecDefinition("throws null", () => throw null!));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
     }
@@ -341,7 +341,7 @@ public class EdgeCaseTests
         }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results[0].Exception).IsTypeOf<AggregateException>();
@@ -355,7 +355,7 @@ public class EdgeCaseTests
             () => throw new TaskCanceledException("Operation was canceled")));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results[0].Exception).IsTypeOf<TaskCanceledException>();

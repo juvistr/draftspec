@@ -20,7 +20,7 @@ public class DslTests
         var executed = false;
 
         describe("root", () => { it("spec", () => executed = true); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).IsTrue();
     }
@@ -31,7 +31,7 @@ public class DslTests
         var path = new List<string>();
 
         describe("outer", () => { describe("inner", () => { it("spec", () => path.Add("executed")); }); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(path).Contains("executed");
     }
@@ -44,7 +44,7 @@ public class DslTests
         describe("first", () => { it("spec1", () => executed.Add("first")); });
 
         describe("second", () => { it("spec2", () => executed.Add("second")); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("first");
@@ -65,7 +65,7 @@ public class DslTests
                         describe("level3", () => { describe("level4", () => { it("deep spec", () => depth = 4); }); });
                     });
             });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(depth).IsEqualTo(4);
     }
@@ -80,7 +80,7 @@ public class DslTests
         var executed = false;
 
         describe("feature", () => { context("when condition", () => { it("behaves", () => executed = true); }); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).IsTrue();
     }
@@ -95,7 +95,7 @@ public class DslTests
         var executed = false;
 
         describe("test", () => { it("runs", () => executed = true); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).IsTrue();
     }
@@ -106,7 +106,7 @@ public class DslTests
         // Pending specs don't execute but are tracked
         describe("test", () => { it("pending spec"); });
         // This test verifies the API doesn't throw
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
     }
 
     [Test]
@@ -120,7 +120,7 @@ public class DslTests
             it("second", () => count++);
             it("third", () => count++);
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(count).IsEqualTo(3);
     }
@@ -149,7 +149,7 @@ public class DslTests
             fit("focused", () => executed.Add("focused"));
             it("also skipped", () => executed.Add("also skipped"));
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(1);
         await Assert.That(executed[0]).IsEqualTo("focused");
@@ -166,7 +166,7 @@ public class DslTests
             it("skipped", () => executed.Add("skipped"));
             fit("focused2", () => executed.Add("focused2"));
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("focused1");
@@ -184,7 +184,7 @@ public class DslTests
 
             describe("inner", () => { fit("focused inner", () => executed.Add("focused inner")); });
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(1);
         await Assert.That(executed[0]).IsEqualTo("focused inner");
@@ -200,7 +200,7 @@ public class DslTests
         var executed = false;
 
         describe("test", () => { xit("skipped", () => executed = true); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).IsFalse();
     }
@@ -209,7 +209,7 @@ public class DslTests
     public async Task Xit_WithoutBody_DoesNotThrow()
     {
         describe("test", () => { xit("skipped without body"); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
         // No assertion needed - test passes if no exception
     }
 
@@ -224,7 +224,7 @@ public class DslTests
             xit("skipped", () => executed.Add("skipped"));
             it("second", () => executed.Add("second"));
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("first");
@@ -246,7 +246,7 @@ public class DslTests
             it("spec1", () => order.Add("spec1"));
             it("spec2", () => order.Add("spec2"));
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(order).IsEquivalentTo([
             "before", "spec1",
@@ -265,7 +265,7 @@ public class DslTests
             it("spec1", () => order.Add("spec1"));
             it("spec2", () => order.Add("spec2"));
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(order).IsEquivalentTo([
             "spec1", "after",
@@ -301,7 +301,7 @@ public class DslTests
             it("spec2", () => { });
             it("spec3", () => { });
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(count).IsEqualTo(1);
     }
@@ -317,7 +317,7 @@ public class DslTests
             it("spec1", () => { });
             it("spec2", () => { });
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(count).IsEqualTo(1);
     }
@@ -348,11 +348,11 @@ public class DslTests
         var secondRunCount = 0;
 
         describe("first", () => { it("spec", () => firstRunCount++); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
         Reset();
 
         describe("second", () => { it("spec", () => secondRunCount++); });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(firstRunCount).IsEqualTo(1);
         await Assert.That(secondRunCount).IsEqualTo(1);
@@ -406,7 +406,7 @@ public class DslTests
                 it("spec", () => order.Add("spec"));
             });
         });
-        new SpecRunner().Run(RootContext!);
+        await new SpecRunner().RunAsync(RootContext!);
 
         await Assert.That(order).IsEquivalentTo([
             "before:outer",

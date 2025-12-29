@@ -7,7 +7,7 @@ public class FocusModeTests
     {
         var spec = new FocusedSpecTest();
         var runner = new SpecRunner();
-        var results = runner.Run(spec);
+        var results = await runner.RunAsync(spec);
 
         await Assert.That(results).Count().IsEqualTo(4);
 
@@ -27,7 +27,7 @@ public class FocusModeTests
     {
         var spec = new MultipleFocusedSpecsTest();
         var runner = new SpecRunner();
-        var results = runner.Run(spec);
+        var results = await runner.RunAsync(spec);
 
         var focused1 = results.First(r => r.Spec.Description == "focused 1");
         var focused2 = results.First(r => r.Spec.Description == "focused 2");
@@ -43,7 +43,7 @@ public class FocusModeTests
     {
         var spec = new NestedFocusedSpecTest();
         var runner = new SpecRunner();
-        var results = runner.Run(spec);
+        var results = await runner.RunAsync(spec);
 
         var outer = results.First(r => r.Spec.Description == "outer spec");
         var inner = results.First(r => r.Spec.Description == "inner focused");
@@ -57,7 +57,7 @@ public class FocusModeTests
     {
         var spec = new NoFocusedSpecsTest();
         var runner = new SpecRunner();
-        var results = runner.Run(spec);
+        var results = await runner.RunAsync(spec);
 
         await Assert.That(results.All(r => r.Status == SpecStatus.Passed)).IsTrue();
     }
@@ -67,7 +67,7 @@ public class FocusModeTests
     {
         var spec = new SkippedSpecTest();
         var runner = new SpecRunner();
-        var results = runner.Run(spec);
+        var results = await runner.RunAsync(spec);
 
         var normal = results.First(r => r.Spec.Description == "normal");
         var skipped = results.First(r => r.Spec.Description == "skipped");

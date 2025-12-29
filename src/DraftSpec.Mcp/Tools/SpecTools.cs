@@ -142,6 +142,7 @@ public static class SpecTools
                  "Returns aggregated summary and individual results.")]
     public static async Task<string> RunSpecsBatch(
         SpecExecutionService executionService,
+        InProcessSpecRunner inProcessRunner,
         McpServer server,
         [Description("Array of specs to execute, each with a name and content")]
         List<BatchSpecInput> specs,
@@ -149,6 +150,9 @@ public static class SpecTools
         bool parallel = true,
         [Description("Timeout per spec in seconds (default: 10, max: 60)")]
         int timeoutSeconds = 10,
+        [Description("Execute in-process using Roslyn scripting for faster execution (default: false). " +
+                     "Skips subprocess overhead but shares process state.")]
+        bool inProcess = false,
         CancellationToken cancellationToken = default)
     {
         if (specs == null || specs.Count == 0)
@@ -175,6 +179,12 @@ public static class SpecTools
         async Task ReportBatchProgress(string specName, int index)
         {
             completedSpecs++;
+
+            if (server == null)
+            {
+                return;
+            }
+
             var progressData = new
             {
                 progressToken = "batch_execution",
@@ -192,15 +202,22 @@ public static class SpecTools
 
         List<NamedSpecResult> results;
 
+        // Helper to execute a single spec
+        async Task<RunSpecResult> ExecuteOneAsync(string content)
+        {
+            if (inProcess)
+            {
+                return await inProcessRunner.ExecuteAsync(content, timeout, cancellationToken);
+            }
+            return await executionService.ExecuteSpecAsync(content, timeout, cancellationToken);
+        }
+
         if (parallel)
         {
             // Execute all specs in parallel
             var tasks = specs.Select(async (spec, index) =>
             {
-                var result = await executionService.ExecuteSpecAsync(
-                    spec.Content,
-                    timeout,
-                    cancellationToken);
+                var result = await ExecuteOneAsync(spec.Content);
 
                 await ReportBatchProgress(spec.Name, index);
 
@@ -224,10 +241,7 @@ public static class SpecTools
             for (var i = 0; i < specs.Count; i++)
             {
                 var spec = specs[i];
-                var result = await executionService.ExecuteSpecAsync(
-                    spec.Content,
-                    timeout,
-                    cancellationToken);
+                var result = await ExecuteOneAsync(spec.Content);
 
                 await ReportBatchProgress(spec.Name, i);
 

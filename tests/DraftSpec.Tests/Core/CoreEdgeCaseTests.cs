@@ -82,7 +82,7 @@ public class CoreEdgeCaseTests
 
         await Assert.That(report.Summary.Total).IsEqualTo(1);
         await Assert.That(report.Summary.Passed).IsEqualTo(1);
-        await Assert.That(report.Contexts).HasCount().EqualTo(1);
+        await Assert.That(report.Contexts).Count().IsEqualTo(1);
 
         // Navigate to the deepest context
         var ctx = report.Contexts[0];
@@ -93,7 +93,7 @@ public class CoreEdgeCaseTests
         await Assert.That(ctx.Description).IsEqualTo("level2");
         ctx = ctx.Contexts[0];
         await Assert.That(ctx.Description).IsEqualTo("level3");
-        await Assert.That(ctx.Specs).HasCount().EqualTo(1);
+        await Assert.That(ctx.Specs).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -150,8 +150,8 @@ public class CoreEdgeCaseTests
         var report = SpecReportBuilder.Build(root, results);
 
         await Assert.That(report.Summary.Total).IsEqualTo(2);
-        await Assert.That(report.Contexts).HasCount().EqualTo(1);
-        await Assert.That(report.Contexts[0].Contexts).HasCount().EqualTo(2);
+        await Assert.That(report.Contexts).Count().IsEqualTo(1);
+        await Assert.That(report.Contexts[0].Contexts).Count().IsEqualTo(2);
     }
 
     [Test]
@@ -168,7 +168,7 @@ public class CoreEdgeCaseTests
 
         await Assert.That(report.Summary.Total).IsEqualTo(0);
         // Context with unmatched specs should still appear with unknown status
-        await Assert.That(report.Contexts).HasCount().EqualTo(1);
+        await Assert.That(report.Contexts).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -378,7 +378,7 @@ public class CoreEdgeCaseTests
 
         await Assert.That(spec.Tags).Contains("unit");
         await Assert.That(spec.Tags).Contains("fast");
-        await Assert.That(spec.Tags).HasCount().EqualTo(2);
+        await Assert.That(spec.Tags).Count().IsEqualTo(2);
     }
 
     [Test]

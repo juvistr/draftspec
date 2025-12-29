@@ -66,10 +66,31 @@ public class DraftSpecPluginAttribute : Attribute
 public class PluginLoader : IPluginLoader
 {
     private readonly string[] _pluginDirectories;
+    private readonly IPluginScanner _scanner;
+    private readonly IAssemblyLoader _assemblyLoader;
+    private readonly IConsole _console;
     private readonly List<PluginInfo> _discoveredPlugins = [];
 
+    /// <summary>
+    /// Creates a new PluginLoader with default implementations.
+    /// </summary>
     public PluginLoader(params string[] pluginDirectories)
+        : this(new SystemPluginScanner(), new IsolatedAssemblyLoader(), new SystemConsole(), pluginDirectories)
     {
+    }
+
+    /// <summary>
+    /// Creates a new PluginLoader with custom implementations for testability.
+    /// </summary>
+    public PluginLoader(
+        IPluginScanner scanner,
+        IAssemblyLoader assemblyLoader,
+        IConsole console,
+        params string[] pluginDirectories)
+    {
+        _scanner = scanner;
+        _assemblyLoader = assemblyLoader;
+        _console = console;
         _pluginDirectories = pluginDirectories.Length > 0
             ? pluginDirectories
             : [GetDefaultPluginDirectory()];
@@ -88,10 +109,10 @@ public class PluginLoader : IPluginLoader
 
         foreach (var directory in _pluginDirectories)
         {
-            if (!Directory.Exists(directory))
+            if (!_scanner.DirectoryExists(directory))
                 continue;
 
-            foreach (var dllPath in Directory.GetFiles(directory, "DraftSpec.*.dll"))
+            foreach (var dllPath in _scanner.FindPluginFiles(directory))
                 try
                 {
                     var plugins = LoadPluginsFromAssembly(dllPath);
@@ -100,19 +121,20 @@ public class PluginLoader : IPluginLoader
                 catch (Exception ex)
                 {
                     // Log but don't fail - plugin loading should be resilient
-                    Console.Error.WriteLine($"Warning: Failed to load plugin from {dllPath}: {ex.Message}");
+                    _console.WriteError($"Warning: Failed to load plugin from {dllPath}: {ex.Message}");
                 }
         }
 
         return _discoveredPlugins;
     }
 
-    private static IEnumerable<PluginInfo> LoadPluginsFromAssembly(string assemblyPath)
+    private IEnumerable<PluginInfo> LoadPluginsFromAssembly(string assemblyPath)
     {
-        var context = new PluginLoadContext(assemblyPath);
-        var assembly = context.LoadFromAssemblyPath(assemblyPath);
+        var assembly = _assemblyLoader.LoadAssembly(assemblyPath);
+        if (assembly == null)
+            yield break;
 
-        foreach (var type in assembly.GetExportedTypes())
+        foreach (var type in _assemblyLoader.GetExportedTypes(assembly))
         {
             var attribute = type.GetCustomAttribute<DraftSpecPluginAttribute>();
             if (attribute == null)
@@ -133,7 +155,7 @@ public class PluginLoader : IPluginLoader
         foreach (var plugin in DiscoverPlugins().Where(p => p.Kind == PluginKind.Formatter))
             registry.Register(plugin.Name, _ =>
             {
-                var instance = Activator.CreateInstance(plugin.Type);
+                var instance = _assemblyLoader.CreateInstance(plugin.Type);
                 return (IFormatter)instance!;
             });
     }

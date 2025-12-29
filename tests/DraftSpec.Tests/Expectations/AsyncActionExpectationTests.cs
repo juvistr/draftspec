@@ -37,7 +37,7 @@ public class AsyncActionExpectationTests
         var ex = await Assert.ThrowsAsync<AssertionException>(async () =>
             await expectation.toThrowAsync<InvalidOperationException>());
 
-        await Assert.That(ex.Message).Contains("to throw InvalidOperationException");
+        await Assert.That(ex!.Message).Contains("to throw InvalidOperationException");
         await Assert.That(ex.Message).Contains("but threw ArgumentException");
     }
 
@@ -55,7 +55,7 @@ public class AsyncActionExpectationTests
         var ex = await Assert.ThrowsAsync<AssertionException>(async () =>
             await expectation.toThrowAsync<InvalidOperationException>());
 
-        await Assert.That(ex.Message).Contains("to throw InvalidOperationException");
+        await Assert.That(ex!.Message).Contains("to throw InvalidOperationException");
         await Assert.That(ex.Message).Contains("no exception was thrown");
     }
 
@@ -123,7 +123,7 @@ public class AsyncActionExpectationTests
         var ex = await Assert.ThrowsAsync<AssertionException>(async () =>
             await expectation.toThrowAsync());
 
-        await Assert.That(ex.Message).Contains("to throw an exception");
+        await Assert.That(ex!.Message).Contains("to throw an exception");
         await Assert.That(ex.Message).Contains("no exception was thrown");
     }
 
@@ -159,7 +159,7 @@ public class AsyncActionExpectationTests
         var ex = await Assert.ThrowsAsync<AssertionException>(async () =>
             await expectation.toNotThrowAsync());
 
-        await Assert.That(ex.Message).Contains("to not throw");
+        await Assert.That(ex!.Message).Contains("to not throw");
         await Assert.That(ex.Message).Contains("InvalidOperationException");
         await Assert.That(ex.Message).Contains("oops");
     }

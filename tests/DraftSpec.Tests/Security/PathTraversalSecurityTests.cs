@@ -1,75 +1,38 @@
 using System.Security;
 using DraftSpec.Cli;
+using DraftSpec.Tests.TestHelpers;
 
 namespace DraftSpec.Tests.Security;
 
 /// <summary>
-/// Tests for path traversal security vulnerability (CWE-22).
-/// These tests verify that the path validation cannot be bypassed using prefix attacks.
-///
-/// VULNERABILITY: The current implementation uses StartsWith without trailing separator:
-///   if (!fullPath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
-///
-/// ATTACK: "/var/app/specs-evil/file".StartsWith("/var/app/specs") = TRUE (bypass!)
-///
-/// These tests should FAIL with current implementation and PASS after fix.
+/// Unit tests for path traversal security (CWE-22) in SpecFinder.
+/// Uses mocked file system to test path validation logic in isolation.
 /// </summary>
 public class PathTraversalSecurityTests
 {
-    private string _testBaseDir = null!;
-    private string _siblingDir = null!;
-
-    [Before(Test)]
-    public async Task Setup()
-    {
-        // Create test directories
-        _testBaseDir = Path.Combine(Path.GetTempPath(), $"draftspec-test-{Guid.NewGuid():N}");
-        _siblingDir = _testBaseDir + "-evil"; // Sibling directory with same prefix
-
-        Directory.CreateDirectory(_testBaseDir);
-        Directory.CreateDirectory(_siblingDir);
-
-        // Create a spec file in the sibling directory
-        await File.WriteAllTextAsync(
-            Path.Combine(_siblingDir, "malicious.spec.csx"),
-            "// malicious spec");
-
-        await Task.CompletedTask;
-    }
-
-    [After(Test)]
-    public async Task Cleanup()
-    {
-        if (Directory.Exists(_testBaseDir))
-            Directory.Delete(_testBaseDir, true);
-        if (Directory.Exists(_siblingDir))
-            Directory.Delete(_siblingDir, true);
-
-        await Task.CompletedTask;
-    }
-
-    #region Prefix Bypass Attack Tests (CRITICAL - Should FAIL with current code)
+    #region Prefix Bypass Attack Tests
 
     /// <summary>
-    /// CRITICAL: This test exposes the path traversal bypass vulnerability.
-    /// The attack uses a sibling directory with the same prefix as the base directory.
-    ///
-    /// Example: base="/var/app/specs" attack="/var/app/specs-evil/malicious.spec.csx"
-    /// Current code: "/var/app/specs-evil".StartsWith("/var/app/specs") = TRUE (VULNERABLE)
-    /// Fixed code: "/var/app/specs-evil".StartsWith("/var/app/specs/") = FALSE (SECURE)
+    /// Sibling directory with same prefix should be rejected.
+    /// Attack: base="/var/app/specs" evil="/var/app/specs-evil/malicious.spec.csx"
+    /// Without trailing separator: "/var/app/specs-evil".StartsWith("/var/app/specs") = TRUE (VULNERABLE)
+    /// With trailing separator: "/var/app/specs-evil".StartsWith("/var/app/specs/") = FALSE (SECURE)
     /// </summary>
     [Test]
-    public async Task FindSpecs_SiblingDirectoryWithSamePrefix_ShouldThrowSecurityException()
+    public async Task FindSpecs_SiblingDirectoryWithSamePrefix_ThrowsSecurityException()
     {
-        var finder = new SpecFinder();
+        var baseDir = Path.Combine(Path.GetTempPath(), "specs");
+        var siblingDir = Path.Combine(Path.GetTempPath(), "specs-evil");
+        var maliciousFile = Path.Combine(siblingDir, "malicious.spec.csx");
 
-        // Try to access a file in a sibling directory that shares the base prefix
-        // This SHOULD throw SecurityException but currently doesn't due to missing trailing separator
-        var maliciousPath = Path.Combine(_siblingDir, "malicious.spec.csx");
+        var mockFs = new MockFileSystem();
+        mockFs.AddFile(maliciousFile);
+
+        var finder = new SpecFinder(mockFs);
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
-            finder.FindSpecs(maliciousPath, _testBaseDir);
+            finder.FindSpecs(maliciousFile, baseDir);
             return Task.CompletedTask;
         });
 
@@ -77,17 +40,21 @@ public class PathTraversalSecurityTests
         await Assert.That(exception!.Message).Contains("within");
     }
 
-    /// <summary>
-    /// Test that the sibling directory itself is rejected.
-    /// </summary>
     [Test]
-    public async Task FindSpecs_SiblingDirectory_ShouldThrowSecurityException()
+    public async Task FindSpecs_SiblingDirectory_ThrowsSecurityException()
     {
-        var finder = new SpecFinder();
+        var baseDir = Path.Combine(Path.GetTempPath(), "myapp");
+        var siblingDir = Path.Combine(Path.GetTempPath(), "myapp-compromised");
+
+        var mockFs = new MockFileSystem();
+        mockFs.AddDirectory(siblingDir);
+        mockFs.AddFilesInDirectory(siblingDir, ["test.spec.csx"]);
+
+        var finder = new SpecFinder(mockFs);
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
-            finder.FindSpecs(_siblingDir, _testBaseDir);
+            finder.FindSpecs(siblingDir, baseDir);
             return Task.CompletedTask;
         });
 
@@ -96,57 +63,53 @@ public class PathTraversalSecurityTests
 
     #endregion
 
-    #region Case Sensitivity Tests (Platform-specific)
+    #region Case Sensitivity Tests
 
-    /// <summary>
-    /// On Unix systems, path comparison should be case-sensitive.
-    /// "/var/App/specs" should NOT match base "/var/app/specs"
-    /// </summary>
     [Test]
-    public async Task FindSpecs_OnUnix_PathComparisonShouldBeCaseSensitive()
+    public async Task FindSpecs_OnUnix_PathComparisonIsCaseSensitive()
     {
-        // Skip on Windows - case insensitive filesystem
         if (OperatingSystem.IsWindows()) return;
 
-        // Create directory with different case
-        var differentCaseDir = _testBaseDir.Replace("draftspec", "DraftSpec");
+        var baseDir = "/tmp/draftspec-test";
+        var differentCaseDir = "/tmp/DraftSpec-Test";
 
-        // Can't test if names are identical
-        if (differentCaseDir == _testBaseDir) return;
+        var mockFs = new MockFileSystem();
+        mockFs.AddDirectory(differentCaseDir);
 
-        // On Unix, this should be treated as a different directory
-        // The test verifies case-sensitive comparison is used
-        var finder = new SpecFinder();
+        var finder = new SpecFinder(mockFs);
 
-        // If we're on a case-sensitive filesystem, these are different paths
-        // This behavior is correct and should not throw SecurityException
-        // since it's genuinely a different path - test passes if no exception
-        await Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// On Windows, path comparison should be case-insensitive.
-    /// "/VAR/APP/SPECS" should match base "/var/app/specs"
-    /// </summary>
-    [Test]
-    public async Task FindSpecs_OnWindows_PathComparisonShouldBeCaseInsensitive()
-    {
-        if (!OperatingSystem.IsWindows()) return;
-
-        var finder = new SpecFinder();
-
-        // On Windows, different case should still be within base directory
-        var upperCasePath = _testBaseDir.ToUpperInvariant();
-
-        // This should NOT throw (it's the same directory on Windows)
-        // But it will throw ArgumentException because no specs exist
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        // On Unix with case-sensitive comparison, these are different directories
+        // so differentCaseDir should be rejected as outside baseDir
+        var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
-            finder.FindSpecs(upperCasePath, _testBaseDir);
+            finder.FindSpecs(differentCaseDir, baseDir);
             return Task.CompletedTask;
         });
 
-        // Should get "No specs found" not "Security exception"
+        await Assert.That(exception).IsNotNull();
+    }
+
+    [Test]
+    public async Task FindSpecs_OnWindows_PathComparisonIsCaseInsensitive()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        var baseDir = @"C:\Projects\specs";
+        var upperCasePath = @"C:\PROJECTS\SPECS";
+
+        var mockFs = new MockFileSystem();
+        mockFs.AddDirectory(upperCasePath);
+
+        var finder = new SpecFinder(mockFs);
+
+        // On Windows, different case should still be within base directory
+        // Should get "No specs found" not SecurityException
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        {
+            finder.FindSpecs(upperCasePath, baseDir);
+            return Task.CompletedTask;
+        });
+
         await Assert.That(exception!.Message).Contains("No");
     }
 
@@ -154,42 +117,37 @@ public class PathTraversalSecurityTests
 
     #region Path Normalization Tests
 
-    /// <summary>
-    /// Paths with redundant separators should be normalized before comparison.
-    /// </summary>
     [Test]
-    public async Task FindSpecs_PathWithRedundantSeparators_ShouldNormalize()
+    public async Task FindSpecs_PathWithDotDot_ThrowsSecurityException()
     {
-        var finder = new SpecFinder();
+        var baseDir = Path.Combine(Path.GetTempPath(), "safe", "specs");
+        var escapePath = Path.Combine(baseDir, "..", "..", "etc", "passwd.spec.csx");
 
-        // Path with redundant separators that normalizes to within base
-        var pathWithExtraSeps = _testBaseDir + Path.DirectorySeparatorChar + Path.DirectorySeparatorChar + "subdir";
+        var mockFs = new MockFileSystem();
+        var finder = new SpecFinder(mockFs);
 
-        // Should get ArgumentException (not found) rather than SecurityException
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
-            finder.FindSpecs(pathWithExtraSeps, _testBaseDir);
+            finder.FindSpecs(escapePath, baseDir);
             return Task.CompletedTask;
         });
 
-        await Assert.That(exception!.Message).Contains("not found");
+        await Assert.That(exception).IsNotNull();
     }
 
-    /// <summary>
-    /// Paths with dot segments should be normalized.
-    /// /base/./subdir should equal /base/subdir
-    /// </summary>
     [Test]
-    public async Task FindSpecs_PathWithDotSegment_ShouldNormalize()
+    public async Task FindSpecs_PathWithDotSegment_Normalizes()
     {
-        var finder = new SpecFinder();
+        var baseDir = Path.Combine(Path.GetTempPath(), "base");
+        var pathWithDot = Path.Combine(baseDir, ".", "subdir");
 
-        var pathWithDot = Path.Combine(_testBaseDir, ".", "subdir");
+        var mockFs = new MockFileSystem();
+        var finder = new SpecFinder(mockFs);
 
-        // Should normalize and either find specs or throw ArgumentException (not SecurityException)
+        // Path normalizes to within base, but doesn't exist
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
         {
-            finder.FindSpecs(pathWithDot, _testBaseDir);
+            finder.FindSpecs(pathWithDot, baseDir);
             return Task.CompletedTask;
         });
 
@@ -200,24 +158,79 @@ public class PathTraversalSecurityTests
 
     #region Error Message Security Tests
 
-    /// <summary>
-    /// Security exception messages should not leak the actual base path.
-    /// </summary>
     [Test]
-    public async Task SecurityException_ShouldNotLeakBasePath()
+    public async Task SecurityException_DoesNotLeakBasePath()
     {
-        var finder = new SpecFinder();
+        var baseDir = "/secret/internal/path/specs";
+        var attackPath = "/etc/passwd.spec.csx";
+
+        var mockFs = new MockFileSystem();
+        var finder = new SpecFinder(mockFs);
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
-            finder.FindSpecs("/etc/passwd.spec.csx", _testBaseDir);
+            finder.FindSpecs(attackPath, baseDir);
             return Task.CompletedTask;
         });
 
-        // Message should be generic, not exposing internal paths
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).DoesNotContain(_testBaseDir);
+        await Assert.That(exception!.Message).DoesNotContain(baseDir);
         await Assert.That(exception.Message).Contains("within");
+    }
+
+    #endregion
+
+    #region Valid Path Tests
+
+    [Test]
+    public async Task FindSpecs_ValidFileWithinBase_ReturnsFile()
+    {
+        var baseDir = Path.Combine(Path.GetTempPath(), "project");
+        var specFile = Path.Combine(baseDir, "test.spec.csx");
+
+        var mockFs = new MockFileSystem();
+        mockFs.AddFile(specFile);
+
+        var finder = new SpecFinder(mockFs);
+
+        var result = finder.FindSpecs(specFile, baseDir);
+
+        await Assert.That(result).Count().IsEqualTo(1);
+        await Assert.That(result[0]).IsEqualTo(specFile);
+    }
+
+    [Test]
+    public async Task FindSpecs_ValidDirectoryWithinBase_ReturnsSpecs()
+    {
+        var baseDir = Path.Combine(Path.GetTempPath(), "project");
+        var specsDir = Path.Combine(baseDir, "specs");
+
+        var mockFs = new MockFileSystem();
+        mockFs.AddDirectory(specsDir);
+        mockFs.AddFilesInDirectory(specsDir, ["one.spec.csx", "two.spec.csx"]);
+
+        var finder = new SpecFinder(mockFs);
+
+        var result = finder.FindSpecs(specsDir, baseDir);
+
+        await Assert.That(result).Count().IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task FindSpecs_NestedDirectoryWithinBase_ReturnsSpecs()
+    {
+        var baseDir = Path.Combine(Path.GetTempPath(), "project");
+        var nestedDir = Path.Combine(baseDir, "src", "tests", "specs");
+
+        var mockFs = new MockFileSystem();
+        mockFs.AddDirectory(nestedDir);
+        mockFs.AddFilesInDirectory(nestedDir, ["nested.spec.csx"]);
+
+        var finder = new SpecFinder(mockFs);
+
+        var result = finder.FindSpecs(nestedDir, baseDir);
+
+        await Assert.That(result).Count().IsEqualTo(1);
     }
 
     #endregion

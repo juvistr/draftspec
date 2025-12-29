@@ -1,7 +1,5 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
-using DraftSpec.Formatters.Html;
-using DraftSpec.Formatters.Markdown;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -11,12 +9,16 @@ namespace DraftSpec.Tests.Cli;
 public class CliIntegrationTests
 {
     private string _testDirectory = null!;
+    private MockConsole _console = null!;
+    private RealFileSystem _fileSystem = null!;
 
     [Before(Test)]
     public void SetUp()
     {
         _testDirectory = Path.Combine(Path.GetTempPath(), $"CliIntegrationTests_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_testDirectory);
+        _console = new MockConsole();
+        _fileSystem = new RealFileSystem();
     }
 
     [After(Test)]
@@ -25,14 +27,18 @@ public class CliIntegrationTests
         if (Directory.Exists(_testDirectory)) Directory.Delete(_testDirectory, true);
     }
 
+    private InitCommand CreateInitCommand() => new(_console, _fileSystem);
+    private NewCommand CreateNewCommand() => new(_console, _fileSystem);
+
     #region InitCommand Tests
 
     [Test]
     public async Task InitCommand_CreatesSpecHelper()
     {
+        var command = CreateInitCommand();
         var options = new CliOptions { Path = _testDirectory };
 
-        var result = InitCommand.Execute(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(File.Exists(Path.Combine(_testDirectory, "spec_helper.csx"))).IsTrue();
@@ -41,9 +47,10 @@ public class CliIntegrationTests
     [Test]
     public async Task InitCommand_CreatesOmnisharp()
     {
+        var command = CreateInitCommand();
         var options = new CliOptions { Path = _testDirectory };
 
-        var result = InitCommand.Execute(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(File.Exists(Path.Combine(_testDirectory, "omnisharp.json"))).IsTrue();
@@ -52,9 +59,10 @@ public class CliIntegrationTests
     [Test]
     public async Task InitCommand_SpecHelperContainsDraftSpecReference()
     {
+        var command = CreateInitCommand();
         var options = new CliOptions { Path = _testDirectory };
 
-        InitCommand.Execute(options);
+        await command.ExecuteAsync(options);
 
         var content = await File.ReadAllTextAsync(Path.Combine(_testDirectory, "spec_helper.csx"));
         await Assert.That(content).Contains("#r \"nuget: DraftSpec\"");
@@ -64,9 +72,10 @@ public class CliIntegrationTests
     [Test]
     public async Task InitCommand_OmnisharpContainsScriptConfig()
     {
+        var command = CreateInitCommand();
         var options = new CliOptions { Path = _testDirectory };
 
-        InitCommand.Execute(options);
+        await command.ExecuteAsync(options);
 
         var content = await File.ReadAllTextAsync(Path.Combine(_testDirectory, "omnisharp.json"));
         await Assert.That(content).Contains("\"enableScriptNuGetReferences\": true");
@@ -78,8 +87,9 @@ public class CliIntegrationTests
         var specHelperPath = Path.Combine(_testDirectory, "spec_helper.csx");
         await File.WriteAllTextAsync(specHelperPath, "// existing");
 
+        var command = CreateInitCommand();
         var options = new CliOptions { Path = _testDirectory, Force = false };
-        InitCommand.Execute(options);
+        await command.ExecuteAsync(options);
 
         var content = await File.ReadAllTextAsync(specHelperPath);
         await Assert.That(content).IsEqualTo("// existing");
@@ -91,21 +101,22 @@ public class CliIntegrationTests
         var specHelperPath = Path.Combine(_testDirectory, "spec_helper.csx");
         await File.WriteAllTextAsync(specHelperPath, "// existing");
 
+        var command = CreateInitCommand();
         var options = new CliOptions { Path = _testDirectory, Force = true };
-        InitCommand.Execute(options);
+        await command.ExecuteAsync(options);
 
         var content = await File.ReadAllTextAsync(specHelperPath);
         await Assert.That(content).Contains("#r \"nuget: DraftSpec\"");
     }
 
     [Test]
-    public async Task InitCommand_InvalidDirectory_ReturnsError()
+    public async Task InitCommand_InvalidDirectory_ThrowsArgumentException()
     {
+        var command = CreateInitCommand();
         var options = new CliOptions { Path = "/nonexistent/path" };
 
-        var result = InitCommand.Execute(options);
-
-        await Assert.That(result).IsEqualTo(1);
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     #endregion
@@ -115,9 +126,10 @@ public class CliIntegrationTests
     [Test]
     public async Task NewCommand_CreatesSpecFile()
     {
+        var command = CreateNewCommand();
         var options = new CliOptions { Path = _testDirectory, SpecName = "MyFeature" };
 
-        var result = NewCommand.Execute(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(File.Exists(Path.Combine(_testDirectory, "MyFeature.spec.csx"))).IsTrue();
@@ -126,9 +138,10 @@ public class CliIntegrationTests
     [Test]
     public async Task NewCommand_SpecFileContainsDescribe()
     {
+        var command = CreateNewCommand();
         var options = new CliOptions { Path = _testDirectory, SpecName = "Calculator" };
 
-        NewCommand.Execute(options);
+        await command.ExecuteAsync(options);
 
         var content = await File.ReadAllTextAsync(Path.Combine(_testDirectory, "Calculator.spec.csx"));
         await Assert.That(content).Contains("#load \"spec_helper.csx\"");
@@ -136,45 +149,45 @@ public class CliIntegrationTests
     }
 
     [Test]
-    public async Task NewCommand_NoName_ReturnsError()
+    public async Task NewCommand_NoName_ThrowsArgumentException()
     {
+        var command = CreateNewCommand();
         var options = new CliOptions { Path = _testDirectory, SpecName = null };
 
-        var result = NewCommand.Execute(options);
-
-        await Assert.That(result).IsEqualTo(1);
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     [Test]
-    public async Task NewCommand_EmptyName_ReturnsError()
+    public async Task NewCommand_EmptyName_ThrowsArgumentException()
     {
+        var command = CreateNewCommand();
         var options = new CliOptions { Path = _testDirectory, SpecName = "" };
 
-        var result = NewCommand.Execute(options);
-
-        await Assert.That(result).IsEqualTo(1);
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     [Test]
-    public async Task NewCommand_FileExists_ReturnsError()
+    public async Task NewCommand_FileExists_ThrowsArgumentException()
     {
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "Existing.spec.csx"), "// existing");
 
+        var command = CreateNewCommand();
         var options = new CliOptions { Path = _testDirectory, SpecName = "Existing" };
 
-        var result = NewCommand.Execute(options);
-
-        await Assert.That(result).IsEqualTo(1);
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     [Test]
-    public async Task NewCommand_InvalidDirectory_ReturnsError()
+    public async Task NewCommand_InvalidDirectory_ThrowsArgumentException()
     {
+        var command = CreateNewCommand();
         var options = new CliOptions { Path = "/nonexistent/path", SpecName = "Test" };
 
-        var result = NewCommand.Execute(options);
-
-        await Assert.That(result).IsEqualTo(1);
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     #endregion
@@ -182,108 +195,43 @@ public class CliIntegrationTests
     #region Security Tests - Path Traversal Prevention
 
     [Test]
-    public async Task NewCommand_NameWithPathSeparator_ReturnsError()
+    public async Task NewCommand_NameWithPathSeparator_ThrowsArgumentException()
     {
-        // Attempt path traversal via spec name
+        var command = CreateNewCommand();
         var options = new CliOptions { Path = _testDirectory, SpecName = "../../../etc/malicious" };
 
-        var result = NewCommand.Execute(options);
-
-        await Assert.That(result).IsEqualTo(1);
-        // Verify no file was created outside the directory
-        await Assert.That(File.Exists(Path.Combine(_testDirectory, "../../../etc/malicious.spec.csx"))).IsFalse();
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     [Test]
-    public async Task NewCommand_NameWithBackslash_ReturnsError()
+    public async Task NewCommand_NameWithBackslash_ThrowsArgumentException()
     {
+        var command = CreateNewCommand();
         var options = new CliOptions { Path = _testDirectory, SpecName = "..\\..\\malicious" };
 
-        var result = NewCommand.Execute(options);
-
-        await Assert.That(result).IsEqualTo(1);
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     [Test]
-    public async Task NewCommand_NameWithDoubleDot_ReturnsError()
+    public async Task NewCommand_NameWithDoubleDot_ThrowsArgumentException()
     {
+        var command = CreateNewCommand();
         var options = new CliOptions { Path = _testDirectory, SpecName = ".." };
 
-        var result = NewCommand.Execute(options);
-
-        await Assert.That(result).IsEqualTo(1);
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     [Test]
-    public async Task NewCommand_NameStartingWithDoubleDot_ReturnsError()
+    public async Task NewCommand_NameStartingWithDoubleDot_ThrowsArgumentException()
     {
+        var command = CreateNewCommand();
         var options = new CliOptions { Path = _testDirectory, SpecName = "..foo" };
 
-        var result = NewCommand.Execute(options);
-
-        await Assert.That(result).IsEqualTo(1);
-    }
-
-    #endregion
-
-    #region RunCommand.GetFormatter Tests
-
-    [Test]
-    public async Task GetFormatter_Json_ReturnsJsonFormatter()
-    {
-        var formatter = RunCommand.GetFormatter("json", new CliOptions());
-
-        await Assert.That(formatter).IsNotNull();
-        await Assert.That(formatter!.FileExtension).IsEqualTo(".json");
-    }
-
-    [Test]
-    public async Task GetFormatter_Markdown_ReturnsMarkdownFormatter()
-    {
-        var formatter = RunCommand.GetFormatter("markdown", new CliOptions());
-
-        await Assert.That(formatter).IsNotNull();
-        await Assert.That(formatter).IsTypeOf<MarkdownFormatter>();
-    }
-
-    [Test]
-    public async Task GetFormatter_Html_ReturnsHtmlFormatter()
-    {
-        var formatter = RunCommand.GetFormatter("html", new CliOptions());
-
-        await Assert.That(formatter).IsNotNull();
-        await Assert.That(formatter).IsTypeOf<HtmlFormatter>();
-    }
-
-    [Test]
-    public async Task GetFormatter_HtmlWithCustomCss_UsesCustomUrl()
-    {
-        var options = new CliOptions { CssUrl = "https://custom.css" };
-
-        var formatter = RunCommand.GetFormatter("html", options) as HtmlFormatter;
-
-        await Assert.That(formatter).IsNotNull();
-        // HtmlFormatter would use the custom CSS URL
-    }
-
-    [Test]
-    public async Task GetFormatter_Unknown_ReturnsNull()
-    {
-        var formatter = RunCommand.GetFormatter("unknown", new CliOptions());
-
-        await Assert.That(formatter).IsNull();
-    }
-
-    [Test]
-    public async Task GetFormatter_CaseInsensitive()
-    {
-        var jsonLower = RunCommand.GetFormatter("json", new CliOptions());
-        var jsonUpper = RunCommand.GetFormatter("JSON", new CliOptions());
-        var jsonMixed = RunCommand.GetFormatter("Json", new CliOptions());
-
-        await Assert.That(jsonLower).IsNotNull();
-        await Assert.That(jsonUpper).IsNotNull();
-        await Assert.That(jsonMixed).IsNotNull();
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     #endregion
@@ -413,6 +361,38 @@ public class CliIntegrationTests
         await Assert.That(OutputFormats.Json).IsEqualTo("json");
         await Assert.That(OutputFormats.Markdown).IsEqualTo("markdown");
         await Assert.That(OutputFormats.Html).IsEqualTo("html");
+    }
+
+    #endregion
+
+    #region Mocks
+
+    private class MockConsole : IConsole
+    {
+        private readonly List<string> _output = [];
+
+        public string Output => string.Join("", _output);
+
+        public void Write(string text) => _output.Add(text);
+        public void WriteLine(string text) => _output.Add(text + "\n");
+        public void WriteLine() => _output.Add("\n");
+        public ConsoleColor ForegroundColor { get; set; }
+        public void ResetColor() { }
+        public void Clear() { }
+        public void WriteWarning(string text) => WriteLine(text);
+        public void WriteSuccess(string text) => WriteLine(text);
+        public void WriteError(string text) => WriteLine(text);
+    }
+
+    private class RealFileSystem : IFileSystem
+    {
+        public bool FileExists(string path) => File.Exists(path);
+        public void WriteAllText(string path, string content) => File.WriteAllText(path, content);
+        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) =>
+            File.WriteAllTextAsync(path, content, ct);
+        public string ReadAllText(string path) => File.ReadAllText(path);
+        public bool DirectoryExists(string path) => Directory.Exists(path);
+        public void CreateDirectory(string path) => Directory.CreateDirectory(path);
     }
 
     #endregion

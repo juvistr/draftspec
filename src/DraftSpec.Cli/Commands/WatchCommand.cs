@@ -1,28 +1,44 @@
-using DraftSpec.Cli.Configuration;
+using DraftSpec.Cli.Services;
 using DraftSpec.Formatters;
 
 namespace DraftSpec.Cli.Commands;
 
-public static class WatchCommand
+public class WatchCommand : ICommand
 {
-    public static async Task<int> ExecuteAsync(CliOptions options)
+    private readonly ISpecFinder _specFinder;
+    private readonly IInProcessSpecRunnerFactory _runnerFactory;
+    private readonly IFileWatcherFactory _watcherFactory;
+    private readonly IConsole _console;
+    private readonly IConfigLoader _configLoader;
+
+    public WatchCommand(
+        ISpecFinder specFinder,
+        IInProcessSpecRunnerFactory runnerFactory,
+        IFileWatcherFactory watcherFactory,
+        IConsole console,
+        IConfigLoader configLoader)
+    {
+        _specFinder = specFinder;
+        _runnerFactory = runnerFactory;
+        _watcherFactory = watcherFactory;
+        _console = console;
+        _configLoader = configLoader;
+    }
+
+    public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
     {
         // Load project configuration from draftspec.json
-        var configResult = ConfigLoader.Load(options.Path);
+        var configResult = _configLoader.Load(options.Path);
         if (configResult.Error != null)
-        {
-            Console.Error.WriteLine($"Error: {configResult.Error}");
-            return 1;
-        }
+            throw new InvalidOperationException(configResult.Error);
 
         if (configResult.Config != null)
             options.ApplyDefaults(configResult.Config);
 
         var path = options.Path;
-        var finder = new SpecFinder();
-        var presenter = new ConsolePresenter(true);
+        var presenter = new ConsolePresenter(_console, watchMode: true);
 
-        var cts = new CancellationTokenSource();
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
         Console.CancelKeyPress += (_, e) =>
         {
@@ -37,7 +53,7 @@ public static class WatchCommand
         {
             presenter.Clear();
 
-            var runner = new InProcessSpecRunner(
+            var runner = _runnerFactory.Create(
                 options.FilterTags,
                 options.ExcludeTags,
                 options.FilterName,
@@ -59,7 +75,7 @@ public static class WatchCommand
                 {
                     var legacyResult = new SpecRunResult(
                         result.SpecFile,
-                        FormatConsoleOutput(result.Report),
+                        ConsoleOutputFormatter.Format(result.Report),
                         result.Error?.Message ?? "",
                         result.Success ? 0 : 1,
                         result.Duration);
@@ -94,7 +110,7 @@ public static class WatchCommand
 
         async Task RunAll()
         {
-            allSpecFiles = finder.FindSpecs(path);
+            allSpecFiles = _specFinder.FindSpecs(path);
             await RunSpecs(allSpecFiles);
         }
 
@@ -110,7 +126,7 @@ public static class WatchCommand
         }
 
         // Set up watcher
-        using var watcher = new FileWatcher(path, change =>
+        using var watcher = _watcherFactory.Create(path, change =>
         {
             presenter.ShowRerunning();
 
@@ -148,49 +164,9 @@ public static class WatchCommand
             // Normal exit via Ctrl+C
         }
 
-        Console.WriteLine();
-        Console.WriteLine("Stopped watching.");
+        _console.WriteLine();
+        _console.WriteLine("Stopped watching.");
 
         return lastSummary?.Success == true ? 0 : 1;
-    }
-
-    private static string FormatConsoleOutput(SpecReport report)
-    {
-        var lines = new List<string>();
-
-        void FormatContext(SpecContextReport ctx, int indent)
-        {
-            var prefix = new string(' ', indent * 2);
-            lines.Add($"{prefix}{ctx.Description}");
-
-            foreach (var spec in ctx.Specs)
-            {
-                var status = spec.Status switch
-                {
-                    "passed" => "✓",
-                    "failed" => "✗",
-                    "pending" => "○",
-                    "skipped" => "-",
-                    _ => "?"
-                };
-                lines.Add($"{prefix}  {status} {spec.Description}");
-                if (!string.IsNullOrEmpty(spec.Error))
-                {
-                    lines.Add($"{prefix}    {spec.Error}");
-                }
-            }
-
-            foreach (var child in ctx.Contexts)
-            {
-                FormatContext(child, indent + 1);
-            }
-        }
-
-        foreach (var ctx in report.Contexts)
-        {
-            FormatContext(ctx, 0);
-        }
-
-        return string.Join(Environment.NewLine, lines);
     }
 }

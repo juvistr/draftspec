@@ -9,7 +9,7 @@ public class HookOrderingTests
 
         var spec = new HookTestSpec(executionOrder);
         var runner = new SpecRunner();
-        var results = runner.Run(spec);
+        var results = await runner.RunAsync(spec);
 
         // Find the innermost spec result
         var innerSpec = results.First(r => r.Spec.Description == "runs in inner context");
@@ -34,7 +34,7 @@ public class HookOrderingTests
 
         var spec = new HookTestSpec(executionOrder);
         var runner = new SpecRunner();
-        runner.Run(spec);
+        await runner.RunAsync(spec);
 
         // Verify afterEach order: inner → outer → root
         var afterEachCalls = executionOrder
@@ -55,7 +55,7 @@ public class HookOrderingTests
 
         var spec = new HookTestSpecWithMultipleSpecs(executionOrder);
         var runner = new SpecRunner();
-        runner.Run(spec);
+        await runner.RunAsync(spec);
 
         // beforeAll should run once per context, not per spec
         var beforeAllCalls = executionOrder
@@ -75,7 +75,7 @@ public class HookOrderingTests
 
         var spec = new HookTestSpec(executionOrder);
         var runner = new SpecRunner();
-        runner.Run(spec);
+        await runner.RunAsync(spec);
 
         // Expected order for a single spec in nested contexts:
         // beforeAll(root) → beforeAll(outer) → beforeAll(inner)

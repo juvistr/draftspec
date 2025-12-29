@@ -47,8 +47,8 @@ public class SpecResourcesTests
     public async Task ListSpecs_WithSpecFiles_ReturnsFiles()
     {
         // Create test spec files
-        File.WriteAllText(Path.Combine(_tempDir, "test.spec.csx"), "// spec content");
-        File.WriteAllText(Path.Combine(_tempDir, "another.spec.csx"), "// another spec");
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, "test.spec.csx"), "// spec content");
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, "another.spec.csx"), "// another spec");
 
         var result = SpecResources.ListSpecs(_tempDir);
         var json = JsonDocument.Parse(result);
@@ -63,8 +63,8 @@ public class SpecResourcesTests
         // Create nested structure
         var subDir = Path.Combine(_tempDir, "nested");
         Directory.CreateDirectory(subDir);
-        File.WriteAllText(Path.Combine(_tempDir, "root.spec.csx"), "// root");
-        File.WriteAllText(Path.Combine(subDir, "nested.spec.csx"), "// nested");
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, "root.spec.csx"), "// root");
+        await File.WriteAllTextAsync(Path.Combine(subDir, "nested.spec.csx"), "// nested");
 
         var result = SpecResources.ListSpecs(_tempDir);
         var json = JsonDocument.Parse(result);
@@ -75,9 +75,9 @@ public class SpecResourcesTests
     [Test]
     public async Task ListSpecs_IgnoresNonSpecFiles()
     {
-        File.WriteAllText(Path.Combine(_tempDir, "test.spec.csx"), "// spec");
-        File.WriteAllText(Path.Combine(_tempDir, "other.csx"), "// not a spec");
-        File.WriteAllText(Path.Combine(_tempDir, "readme.md"), "# readme");
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, "test.spec.csx"), "// spec");
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, "other.csx"), "// not a spec");
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, "readme.md"), "# readme");
 
         var result = SpecResources.ListSpecs(_tempDir);
         var json = JsonDocument.Parse(result);
@@ -98,7 +98,7 @@ public class SpecResourcesTests
     public async Task ListSpecs_IncludesFileMetadata()
     {
         var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        File.WriteAllText(specPath, "// spec content here");
+        await File.WriteAllTextAsync(specPath, "// spec content here");
 
         var result = SpecResources.ListSpecs(_tempDir);
         var json = JsonDocument.Parse(result);
@@ -118,7 +118,7 @@ public class SpecResourcesTests
     {
         // CWD is _tempDir from SetUp
         var content = "describe('test', () => { it('works', () => { }); });";
-        File.WriteAllText("test.spec.csx", content);
+        await File.WriteAllTextAsync("test.spec.csx", content);
 
         var result = SpecResources.GetSpec("test.spec.csx");
         var json = JsonDocument.Parse(result);
@@ -149,7 +149,7 @@ public class SpecResourcesTests
     public async Task GetSpec_NonCsxFile_ReturnsError()
     {
         // CWD is _tempDir from SetUp
-        File.WriteAllText("test.txt", "not a spec");
+        await File.WriteAllTextAsync("test.txt", "not a spec");
 
         var result = SpecResources.GetSpec("test.txt");
         var json = JsonDocument.Parse(result);
@@ -162,7 +162,7 @@ public class SpecResourcesTests
     public async Task GetSpec_RelativePath_Works()
     {
         // CWD is already set to _tempDir by SetUp
-        File.WriteAllText("test.spec.csx", "// content");
+        await File.WriteAllTextAsync("test.spec.csx", "// content");
 
         var result = SpecResources.GetSpec("test.spec.csx");
         var json = JsonDocument.Parse(result);
@@ -174,7 +174,7 @@ public class SpecResourcesTests
     public async Task GetSpec_IncludesMetadata()
     {
         // CWD is _tempDir from SetUp
-        File.WriteAllText("mytest.spec.csx", "// spec");
+        await File.WriteAllTextAsync("mytest.spec.csx", "// spec");
 
         var result = SpecResources.GetSpec("mytest.spec.csx");
         var json = JsonDocument.Parse(result);
@@ -193,7 +193,7 @@ public class SpecResourcesTests
     {
         // CWD is _tempDir from SetUp
         // Create a file in _tempDir
-        File.WriteAllText("test.spec.csx", "// content");
+        await File.WriteAllTextAsync("test.spec.csx", "// content");
 
         // Create a subdirectory and change to it
         Directory.CreateDirectory("subdir");
@@ -213,7 +213,7 @@ public class SpecResourcesTests
     {
         // CWD is _tempDir from SetUp
         var parentSpecPath = Path.Combine(_tempDir, "test.spec.csx");
-        File.WriteAllText(parentSpecPath, "// content");
+        await File.WriteAllTextAsync(parentSpecPath, "// content");
 
         // Create a subdirectory and change to it
         Directory.CreateDirectory("subdir");
@@ -232,7 +232,7 @@ public class SpecResourcesTests
     public async Task GetSpec_PathWithinWorkingDirectory_Succeeds()
     {
         // CWD is already _tempDir from SetUp
-        File.WriteAllText("test.spec.csx", "// content");
+        await File.WriteAllTextAsync("test.spec.csx", "// content");
 
         var result = SpecResources.GetSpec("test.spec.csx");
         var json = JsonDocument.Parse(result);
@@ -249,7 +249,7 @@ public class SpecResourcesTests
     public async Task GetSpecMetadata_ExistingFile_ReturnsMetadata()
     {
         // CWD is _tempDir from SetUp
-        File.WriteAllText("test.spec.csx", "describe('Test', () => { it('works'); });");
+        await File.WriteAllTextAsync("test.spec.csx", "describe('Test', () => { it('works'); });");
 
         var result = SpecResources.GetSpecMetadata("test.spec.csx");
         var json = JsonDocument.Parse(result);
@@ -262,7 +262,7 @@ public class SpecResourcesTests
     public async Task GetSpecMetadata_CountsDescribeBlocks()
     {
         // CWD is _tempDir from SetUp
-        File.WriteAllText("test.spec.csx", @"
+        await File.WriteAllTextAsync("test.spec.csx", @"
 describe('First', () => {
     describe('Nested', () => { });
 });
@@ -279,7 +279,7 @@ describe('Second', () => { });
     public async Task GetSpecMetadata_CountsItSpecs()
     {
         // CWD is _tempDir from SetUp
-        File.WriteAllText("test.spec.csx", @"
+        await File.WriteAllTextAsync("test.spec.csx", @"
 describe('Test', () => {
     it('first', () => { });
     it('second', () => { });
@@ -315,7 +315,7 @@ describe('Test', () => {
     public async Task GetSpecMetadata_IncludesTimestamps()
     {
         // CWD is _tempDir from SetUp
-        File.WriteAllText("test.spec.csx", "// spec");
+        await File.WriteAllTextAsync("test.spec.csx", "// spec");
 
         var result = SpecResources.GetSpecMetadata("test.spec.csx");
         var json = JsonDocument.Parse(result);
@@ -332,7 +332,7 @@ describe('Test', () => {
     public async Task GetSpecMetadata_PathOutsideWorkingDirectory_ReturnsError()
     {
         // CWD is _tempDir from SetUp
-        File.WriteAllText("test.spec.csx", "// content");
+        await File.WriteAllTextAsync("test.spec.csx", "// content");
 
         // Create a subdirectory and change to it
         Directory.CreateDirectory("subdir");
@@ -352,7 +352,7 @@ describe('Test', () => {
     {
         // CWD is _tempDir from SetUp
         var parentSpecPath = Path.Combine(_tempDir, "test.spec.csx");
-        File.WriteAllText(parentSpecPath, "// content");
+        await File.WriteAllTextAsync(parentSpecPath, "// content");
 
         // Create a subdirectory and change to it
         Directory.CreateDirectory("subdir");
@@ -371,7 +371,7 @@ describe('Test', () => {
     public async Task GetSpecMetadata_PathWithinWorkingDirectory_Succeeds()
     {
         // CWD is already _tempDir from SetUp
-        File.WriteAllText("test.spec.csx", "// content");
+        await File.WriteAllTextAsync("test.spec.csx", "// content");
 
         var result = SpecResources.GetSpecMetadata("test.spec.csx");
         var json = JsonDocument.Parse(result);

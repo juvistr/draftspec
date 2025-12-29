@@ -23,7 +23,7 @@ public class ReporterTests
 
         var builder = new SpecRunnerBuilder().WithConfiguration(config);
         var runner = builder.Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         // Verify events: starting, spec completions, then run completed is called separately
         await Assert.That(events[0]).IsEqualTo("starting:2");
@@ -45,7 +45,7 @@ public class ReporterTests
 
         var builder = new SpecRunnerBuilder().WithConfiguration(config);
         var runner = builder.Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(reporter.ReceivedTotalSpecs).IsEqualTo(3);
     }
@@ -63,7 +63,7 @@ public class ReporterTests
 
         var builder = new SpecRunnerBuilder().WithConfiguration(config);
         var runner = builder.Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(reporter.ReceivedResults.Count).IsGreaterThanOrEqualTo(2);
         await Assert.That(reporter.ReceivedResults[0].Status).IsEqualTo(SpecStatus.Passed);
@@ -84,7 +84,7 @@ public class ReporterTests
 
         var builder = new SpecRunnerBuilder().WithConfiguration(config);
         var runner = builder.Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(events1).Contains("spec:spec");
         await Assert.That(events2).Contains("spec:spec");

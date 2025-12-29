@@ -81,7 +81,7 @@ public class InProcessCoverageTrackerTests
         tracker.RecordLineHit("file3.cs", 30);
 
         var coverage = tracker.GetTotalCoverage();
-        await Assert.That(coverage).HasCount().EqualTo(3);
+        await Assert.That(coverage).Count().IsEqualTo(3);
     }
 
     #endregion
@@ -170,8 +170,8 @@ public class InProcessCoverageTrackerTests
         tracker.RecordLineHit("test.cs", 10);
         tracker.RecordBranchHit("test.cs", 10, 2, 4);
 
-        var coverage = tracker.GetTotalCoverage();
-        await Assert.That(coverage["test.cs"].BranchHits).IsNotNull();
+        var coverage = tracker.GetTotalCoverage()!;
+        await Assert.That(coverage["test.cs"].BranchHits!).IsNotNull();
         await Assert.That(coverage["test.cs"].BranchHits![10].Covered).IsEqualTo(2);
         await Assert.That(coverage["test.cs"].BranchHits![10].Total).IsEqualTo(4);
     }
@@ -217,7 +217,7 @@ public class InProcessCoverageTrackerTests
         await Task.WhenAll(tasks);
 
         var coverage = tracker.GetTotalCoverage();
-        await Assert.That(coverage).HasCount().EqualTo(100); // 100 files
+        await Assert.That(coverage).Count().IsEqualTo(100); // 100 files
     }
 
     #endregion

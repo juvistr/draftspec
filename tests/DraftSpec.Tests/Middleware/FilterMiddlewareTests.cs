@@ -64,7 +64,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithNameFilter("add")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
@@ -78,7 +78,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithNameFilter("subtract")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
     }
@@ -93,7 +93,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithNameFilter("Calculator.*addition.*two")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
@@ -107,7 +107,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithNameFilter("adds numbers")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
@@ -168,7 +168,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithNameExcludeFilter("slow")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
     }
@@ -182,7 +182,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithNameExcludeFilter("slow")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
@@ -197,7 +197,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithNameExcludeFilter("deprecated")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
     }
@@ -211,7 +211,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithNameExcludeFilter("slow")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
     }
@@ -226,7 +226,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithNameExcludeFilter(".*_001_.*")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
         await Assert.That(results[1].Status).IsEqualTo(SpecStatus.Passed);
@@ -245,7 +245,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithTagFilter("slow")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
@@ -259,7 +259,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithTagFilter("slow")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
     }
@@ -273,7 +273,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithTagFilter("slow")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
     }
@@ -287,7 +287,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithTagFilter("slow", "integration")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
@@ -301,7 +301,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithTagFilter("slow")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
@@ -327,7 +327,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithoutTags("slow")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
     }
@@ -341,7 +341,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithoutTags("slow")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
@@ -355,7 +355,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithoutTags("slow")
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }
@@ -374,7 +374,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithFilter(ctx => ctx.Spec.Description.Contains("one"))
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
         await Assert.That(results[1].Status).IsEqualTo(SpecStatus.Skipped);
@@ -390,7 +390,7 @@ public class FilterMiddlewareTests
         var runner = new SpecRunnerBuilder()
             .WithFilter(ctx => ctx.ContextPath.Contains("math"))
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
     }

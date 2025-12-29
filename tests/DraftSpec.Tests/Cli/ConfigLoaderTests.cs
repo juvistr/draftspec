@@ -48,13 +48,13 @@ public class ConfigLoaderTests
     public async Task Load_LoadsConfig_WhenFileExists()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, """
-            {
-              "parallel": true,
-              "bail": true,
-              "timeout": 5000
-            }
-            """);
+        await File.WriteAllTextAsync(configPath, """
+                                                 {
+                                                   "parallel": true,
+                                                   "bail": true,
+                                                   "timeout": 5000
+                                                 }
+                                                 """);
 
         var result = _loader.Load(_tempDir);
 
@@ -69,23 +69,23 @@ public class ConfigLoaderTests
     public async Task Load_SupportsAllConfigOptions()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, """
-            {
-              "specPattern": "**/*.spec.csx",
-              "timeout": 10000,
-              "parallel": true,
-              "maxParallelism": 4,
-              "reporters": ["console", "json"],
-              "outputDirectory": "./test-results",
-              "tags": {
-                "include": ["unit", "fast"],
-                "exclude": ["slow", "integration"]
-              },
-              "bail": true,
-              "noCache": true,
-              "format": "json"
-            }
-            """);
+        await File.WriteAllTextAsync(configPath, """
+                                                 {
+                                                   "specPattern": "**/*.spec.csx",
+                                                   "timeout": 10000,
+                                                   "parallel": true,
+                                                   "maxParallelism": 4,
+                                                   "reporters": ["console", "json"],
+                                                   "outputDirectory": "./test-results",
+                                                   "tags": {
+                                                     "include": ["unit", "fast"],
+                                                     "exclude": ["slow", "integration"]
+                                                   },
+                                                   "bail": true,
+                                                   "noCache": true,
+                                                   "format": "json"
+                                                 }
+                                                 """);
 
         var result = _loader.Load(_tempDir);
 
@@ -109,7 +109,7 @@ public class ConfigLoaderTests
     public async Task Load_ReturnsError_WhenJsonIsInvalid()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, "{ invalid json }");
+        await File.WriteAllTextAsync(configPath, "{ invalid json }");
 
         var result = _loader.Load(_tempDir);
 
@@ -123,7 +123,7 @@ public class ConfigLoaderTests
     public async Task Load_ReturnsError_WhenTimeoutIsInvalid()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, """{ "timeout": -1 }""");
+        await File.WriteAllTextAsync(configPath, """{ "timeout": -1 }""");
 
         var result = _loader.Load(_tempDir);
 
@@ -135,7 +135,7 @@ public class ConfigLoaderTests
     public async Task Load_ReturnsError_WhenMaxParallelismIsInvalid()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, """{ "maxParallelism": 0 }""");
+        await File.WriteAllTextAsync(configPath, """{ "maxParallelism": 0 }""");
 
         var result = _loader.Load(_tempDir);
 
@@ -147,13 +147,13 @@ public class ConfigLoaderTests
     public async Task Load_IgnoresUnknownProperties()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, """
-            {
-              "parallel": true,
-              "unknownProperty": "value",
-              "anotherUnknown": 123
-            }
-            """);
+        await File.WriteAllTextAsync(configPath, """
+                                                 {
+                                                   "parallel": true,
+                                                   "unknownProperty": "value",
+                                                   "anotherUnknown": 123
+                                                 }
+                                                 """);
 
         var result = _loader.Load(_tempDir);
 
@@ -165,13 +165,13 @@ public class ConfigLoaderTests
     public async Task Load_SupportsCaseInsensitivePropertyNames()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, """
-            {
-              "Parallel": true,
-              "BAIL": true,
-              "NoCache": true
-            }
-            """);
+        await File.WriteAllTextAsync(configPath, """
+                                                 {
+                                                   "Parallel": true,
+                                                   "BAIL": true,
+                                                   "NoCache": true
+                                                 }
+                                                 """);
 
         var result = _loader.Load(_tempDir);
 
@@ -185,14 +185,14 @@ public class ConfigLoaderTests
     public async Task Load_SupportsJsonComments()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, """
-            {
-              // This is a comment
-              "parallel": true,
-              /* Block comment */
-              "bail": true
-            }
-            """);
+        await File.WriteAllTextAsync(configPath, """
+                                                 {
+                                                   // This is a comment
+                                                   "parallel": true,
+                                                   /* Block comment */
+                                                   "bail": true
+                                                 }
+                                                 """);
 
         var result = _loader.Load(_tempDir);
 
@@ -204,12 +204,12 @@ public class ConfigLoaderTests
     public async Task Load_SupportsTrailingCommas()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, """
-            {
-              "parallel": true,
-              "bail": true,
-            }
-            """);
+        await File.WriteAllTextAsync(configPath, """
+                                                 {
+                                                   "parallel": true,
+                                                   "bail": true,
+                                                 }
+                                                 """);
 
         var result = _loader.Load(_tempDir);
 
@@ -232,7 +232,7 @@ public class ConfigLoaderTests
     public async Task FindConfigFile_ReturnsPath_WhenFound()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, "{}");
+        await File.WriteAllTextAsync(configPath, "{}");
 
         var result = ConfigLoader.FindConfigFile(_tempDir);
 
@@ -243,9 +243,9 @@ public class ConfigLoaderTests
     public async Task FindConfigFile_WorksWithFilePath()
     {
         var configPath = Path.Combine(_tempDir, ConfigLoader.ConfigFileName);
-        File.WriteAllText(configPath, "{}");
+        await File.WriteAllTextAsync(configPath, "{}");
         var specFile = Path.Combine(_tempDir, "test.spec.csx");
-        File.WriteAllText(specFile, "");
+        await File.WriteAllTextAsync(specFile, "");
 
         var result = ConfigLoader.FindConfigFile(specFile);
 

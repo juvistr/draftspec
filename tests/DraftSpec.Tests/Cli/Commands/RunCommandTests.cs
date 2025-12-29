@@ -61,7 +61,7 @@ public class RunCommandTests
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(runner.RunAllCalled).IsTrue();
-        await Assert.That(runner.LastSpecFiles).HasCount().EqualTo(2);
+        await Assert.That(runner.LastSpecFiles).Count().IsEqualTo(2);
     }
 
     [Test]
@@ -458,9 +458,11 @@ public class RunCommandTests
         public IReadOnlyList<string>? LastSpecFiles { get; private set; }
         public bool LastParallelFlag { get; private set; }
 
+#pragma warning disable CS0067 // Events required by interface but not used in mock
         public event Action<string>? OnBuildStarted;
         public event Action<BuildResult>? OnBuildCompleted;
         public event Action<string>? OnBuildSkipped;
+#pragma warning restore CS0067
 
         public Task<InProcessRunResult> RunFileAsync(string specFile, CancellationToken ct = default)
         {

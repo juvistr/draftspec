@@ -81,8 +81,8 @@ public class SpecContextTests
         var chain2 = context2.GetBeforeEachChain();
 
         // Should have hooks
-        await Assert.That(chain1).HasCount().EqualTo(1);
-        await Assert.That(chain2).HasCount().EqualTo(1);
+        await Assert.That(chain1).Count().IsEqualTo(1);
+        await Assert.That(chain2).Count().IsEqualTo(1);
         // Should be different instances
         await Assert.That(ReferenceEquals(chain1, chain2)).IsFalse();
     }
@@ -97,8 +97,8 @@ public class SpecContextTests
         var chain2 = context2.GetAfterEachChain();
 
         // Should have hooks
-        await Assert.That(chain1).HasCount().EqualTo(1);
-        await Assert.That(chain2).HasCount().EqualTo(1);
+        await Assert.That(chain1).Count().IsEqualTo(1);
+        await Assert.That(chain2).Count().IsEqualTo(1);
         // Should be different instances
         await Assert.That(ReferenceEquals(chain1, chain2)).IsFalse();
     }
@@ -112,7 +112,7 @@ public class SpecContextTests
         var childChain = child.GetBeforeEachChain();
 
         // Child should inherit parent's hook
-        await Assert.That(childChain).HasCount().EqualTo(1);
+        await Assert.That(childChain).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -124,7 +124,7 @@ public class SpecContextTests
         var childChain = child.GetAfterEachChain();
 
         // Child should inherit parent's hook
-        await Assert.That(childChain).HasCount().EqualTo(1);
+        await Assert.That(childChain).Count().IsEqualTo(1);
     }
 
     #endregion

@@ -185,7 +185,7 @@ public class CliCoreIntegrationTests
             throw new CustomTestException("Custom error message", 42);
         }));
 
-        var results = new SpecRunner().Run(context);
+        var results = await new SpecRunner().RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results[0].Exception).IsTypeOf<CustomTestException>();
@@ -220,7 +220,7 @@ public class CliCoreIntegrationTests
         grandchild.AddSpec(new SpecDefinition("deep failure", () =>
             throw new Exception("Deep nested error")));
 
-        var results = new SpecRunner().Run(root);
+        var results = await new SpecRunner().RunAsync(root);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results[0].Exception!.Message).IsEqualTo("Deep nested error");
@@ -299,11 +299,11 @@ public class CliCoreIntegrationTests
         var runner = new SpecRunner();
 
         // First run
-        runner.Run(context);
+        await runner.RunAsync(context);
         var firstCount = buildCount;
 
         // Second run - should use cached result
-        runner.Run(context);
+        await runner.RunAsync(context);
         var secondCount = buildCount;
 
         // Both runs should execute the spec

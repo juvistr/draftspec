@@ -8,20 +8,33 @@ namespace DraftSpec.Cli.Coverage;
 /// </summary>
 public class CoverageRunner : IDisposable
 {
+    private readonly IProcessRunner _processRunner;
+    private readonly IFileSystem _fileSystem;
+    private readonly ICoverageFormatterFactory _formatterFactory;
     private readonly string _outputDirectory;
     private readonly string _format;
     private readonly string _sessionId;
     private readonly string _coverageFile;
-    private Process? _serverProcess;
+    private IProcessHandle? _serverProcess;
     private bool _serverStarted;
     private bool _disposed;
 
-    public CoverageRunner(string outputDirectory, string format = "cobertura")
+    public CoverageRunner(
+        string outputDirectory,
+        string format = "cobertura",
+        IProcessRunner? processRunner = null,
+        IFileSystem? fileSystem = null,
+        ICoverageFormatterFactory? formatterFactory = null)
     {
         _outputDirectory = outputDirectory;
         _format = format.ToLowerInvariant();
         _sessionId = $"draftspec-{Guid.NewGuid():N}";
         _coverageFile = Path.Combine(_outputDirectory, $"coverage.{GetFileExtension()}");
+
+        // Use defaults for backward compatibility
+        _processRunner = processRunner ?? new SystemProcessRunner();
+        _fileSystem = fileSystem ?? new FileSystem();
+        _formatterFactory = formatterFactory ?? new CoverageFormatterFactory();
     }
 
     /// <summary>
@@ -61,28 +74,27 @@ public class CoverageRunner : IDisposable
         EnsureOutputDirectory();
 
         // Start: dotnet-coverage collect --server-mode --session-id {id} -o {file} -f {format}
-        var args = new[]
-        {
-            "collect",
-            "--server-mode",
-            "--session-id", _sessionId,
-            "-o", _coverageFile,
-            "-f", _format
-        };
-
         var startInfo = new ProcessStartInfo
         {
             FileName = "dotnet-coverage",
-            Arguments = string.Join(" ", args.Select(QuoteIfNeeded)),
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true
         };
 
+        startInfo.ArgumentList.Add("collect");
+        startInfo.ArgumentList.Add("--server-mode");
+        startInfo.ArgumentList.Add("--session-id");
+        startInfo.ArgumentList.Add(_sessionId);
+        startInfo.ArgumentList.Add("-o");
+        startInfo.ArgumentList.Add(_coverageFile);
+        startInfo.ArgumentList.Add("-f");
+        startInfo.ArgumentList.Add(_format);
+
         try
         {
-            _serverProcess = Process.Start(startInfo);
+            _serverProcess = _processRunner.StartProcess(startInfo);
             _serverStarted = true;
 
             // Give the server a moment to initialize
@@ -119,7 +131,7 @@ public class CoverageRunner : IDisposable
                 commandToWrap
             };
 
-            return ProcessHelper.Run(
+            return _processRunner.Run(
                 "dotnet-coverage",
                 connectArgs,
                 workingDirectory,
@@ -137,7 +149,7 @@ public class CoverageRunner : IDisposable
             commandToWrap
         };
 
-        return ProcessHelper.Run(
+        return _processRunner.Run(
             "dotnet-coverage",
             collectArgs,
             workingDirectory,
@@ -153,8 +165,7 @@ public class CoverageRunner : IDisposable
             return false;
 
         // Send shutdown command
-        var args = new[] { "shutdown", _sessionId };
-        var result = ProcessHelper.Run("dotnet-coverage", args);
+        var result = _processRunner.Run("dotnet-coverage", ["shutdown", _sessionId]);
 
         // Wait for server process to exit
         if (_serverProcess != null)
@@ -170,7 +181,7 @@ public class CoverageRunner : IDisposable
         }
 
         _serverStarted = false;
-        return result.Success && File.Exists(_coverageFile);
+        return result.Success && _fileSystem.FileExists(_coverageFile);
     }
 
     /// <summary>
@@ -179,7 +190,7 @@ public class CoverageRunner : IDisposable
     /// </summary>
     public string? GetCoverageFile()
     {
-        return File.Exists(_coverageFile) ? _coverageFile : null;
+        return _fileSystem.FileExists(_coverageFile) ? _coverageFile : null;
     }
 
     /// <summary>
@@ -191,7 +202,7 @@ public class CoverageRunner : IDisposable
     {
         var result = new Dictionary<string, string>();
 
-        if (!File.Exists(_coverageFile))
+        if (!_fileSystem.FileExists(_coverageFile))
             return result;
 
         var report = CoberturaParser.TryParseFile(_coverageFile);
@@ -200,13 +211,13 @@ public class CoverageRunner : IDisposable
 
         foreach (var format in formats)
         {
-            var formatter = GetFormatter(format);
+            var formatter = _formatterFactory.GetFormatter(format);
             if (formatter == null)
                 continue;
 
             var outputPath = Path.Combine(_outputDirectory, $"coverage{formatter.FileExtension}");
             var content = formatter.Format(report);
-            File.WriteAllText(outputPath, content);
+            _fileSystem.WriteAllText(outputPath, content);
             result[format] = outputPath;
         }
 
@@ -226,33 +237,23 @@ public class CoverageRunner : IDisposable
 
         foreach (var format in formats)
         {
-            var formatter = GetFormatter(format);
+            var formatter = _formatterFactory.GetFormatter(format);
             if (formatter == null)
                 continue;
 
             var outputPath = Path.Combine(_outputDirectory, $"coverage{formatter.FileExtension}");
             var content = formatter.Format(report);
-            File.WriteAllText(outputPath, content);
+            _fileSystem.WriteAllText(outputPath, content);
             result[format] = outputPath;
         }
 
         return result;
     }
 
-    /// <summary>
-    /// Get a coverage formatter by name.
-    /// </summary>
-    private static ICoverageFormatter? GetFormatter(string format) => format.ToLowerInvariant() switch
-    {
-        "html" => new CoverageHtmlFormatter(),
-        "json" => new CoverageJsonFormatter(),
-        _ => null
-    };
-
     private void EnsureOutputDirectory()
     {
-        if (!Directory.Exists(_outputDirectory))
-            Directory.CreateDirectory(_outputDirectory);
+        if (!_fileSystem.DirectoryExists(_outputDirectory))
+            _fileSystem.CreateDirectory(_outputDirectory);
     }
 
     /// <summary>

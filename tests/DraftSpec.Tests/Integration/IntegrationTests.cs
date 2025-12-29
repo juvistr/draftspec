@@ -66,7 +66,7 @@ public class IntegrationTests
             .WithTimeout(1000)
             .Build();
 
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
         await Assert.That(attempts).IsEqualTo(3);
@@ -86,7 +86,7 @@ public class IntegrationTests
         context.AddSpec(new SpecDefinition("spec2", () => { }));
 
         var runner = new SpecRunnerBuilder().WithConfiguration(configuration).Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(specCompletedCalls).Count().IsEqualTo(2);
         await Assert.That(specCompletedCalls[0].Spec.Description).IsEqualTo("spec1");
@@ -105,7 +105,7 @@ public class IntegrationTests
             .WithFilter(ctx => ctx.Spec.Tags.Contains("integration"))
             .Build();
 
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).Count().IsEqualTo(2);
         var passedCount = results.Count(r => r.Status == SpecStatus.Passed);

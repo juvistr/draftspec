@@ -18,10 +18,19 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddDraftSpec(this IServiceCollection services)
     {
-        // Infrastructure
+        // Infrastructure - Core
         services.AddSingleton<IConsole, SystemConsole>();
         services.AddSingleton<IFileSystem, FileSystem>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
+        services.AddSingleton<ITimeProvider, SystemTimeProvider>();
+        services.AddSingleton<IProcessRunner, SystemProcessRunner>();
+
+        // Infrastructure - Build
+        services.AddSingleton<IBuildCache, InMemoryBuildCache>();
+        services.AddSingleton<IProjectBuilder, DotnetProjectBuilder>();
+        services.AddSingleton<ISpecScriptExecutor, RoslynSpecScriptExecutor>();
+
+        // Infrastructure - Services
         services.AddSingleton<IProjectResolver, ProjectResolver>();
         services.AddSingleton<IConfigLoader, ConfigLoader>();
         services.AddSingleton<ISpecFinder, SpecFinder>();

@@ -14,7 +14,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("passes", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
@@ -28,7 +28,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("fails", () => throw expectedException));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
@@ -46,7 +46,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("third", () => executed.Add("third")));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).Count().IsEqualTo(3);
         await Assert.That(executed).Count().IsEqualTo(3);
@@ -66,7 +66,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("slow spec", () => Thread.Sleep(10)));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Duration.TotalMilliseconds).IsGreaterThan(5);
     }
@@ -82,7 +82,7 @@ public class SpecRunnerTests
         }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results[0].Duration.TotalMilliseconds).IsGreaterThan(5);
@@ -99,7 +99,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("pending spec")); // No body = pending
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Pending);
     }
@@ -114,7 +114,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("executes", () => executed = true));
 
         var runner = new SpecRunner();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(executed).IsTrue();
     }
@@ -130,7 +130,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("skipped", () => { }) { IsSkipped = true });
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
     }
@@ -143,7 +143,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("skipped", () => executed = true) { IsSkipped = true });
 
         var runner = new SpecRunner();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(executed).IsFalse();
     }
@@ -160,7 +160,7 @@ public class SpecRunnerTests
         child.AddSpec(new SpecDefinition("returns sum", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(results[0].ContextPath).Count().IsEqualTo(2);
         await Assert.That(results[0].ContextPath[0]).IsEqualTo("Calculator");
@@ -175,7 +175,7 @@ public class SpecRunnerTests
         child.AddSpec(new SpecDefinition("returns sum", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(results[0].FullDescription).IsEqualTo("Calculator add returns sum");
     }
@@ -189,7 +189,7 @@ public class SpecRunnerTests
         level3.AddSpec(new SpecDefinition("deep spec", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(level1);
+        var results = await runner.RunAsync(level1);
 
         await Assert.That(results[0].ContextPath).Count().IsEqualTo(3);
         await Assert.That(results[0].FullDescription).IsEqualTo("Level1 Level2 Level3 deep spec");
@@ -213,7 +213,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("spec2", () => { }));
 
         var runner = new SpecRunner();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(beforeAllCount).IsEqualTo(1);
     }
@@ -232,7 +232,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("spec2", () => { }));
 
         var runner = new SpecRunner();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(afterAllCount).IsEqualTo(1);
     }
@@ -250,7 +250,7 @@ public class SpecRunnerTests
         context.AddSpec(new SpecDefinition("fails", () => throw new Exception()));
 
         var runner = new SpecRunner();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(afterAllRan).IsTrue();
     }
@@ -265,7 +265,7 @@ public class SpecRunnerTests
         var context = new SpecContext("empty");
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results).IsEmpty();
     }
@@ -277,7 +277,7 @@ public class SpecRunnerTests
         var _ = new SpecContext("child", root); // Empty child
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(results).IsEmpty();
     }
@@ -297,7 +297,7 @@ public class SpecRunnerTests
         child.AddSpec(new SpecDefinition("child spec", () => executed.Add("child")));
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(results).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("root");
@@ -317,7 +317,7 @@ public class SpecRunnerTests
         root.AddSpec(new SpecDefinition("third", () => order.Add("3")));
 
         var runner = new SpecRunner();
-        runner.Run(root);
+        await runner.RunAsync(root);
 
         // Root specs first (in order), then children
         await Assert.That(order[0]).IsEqualTo("1");

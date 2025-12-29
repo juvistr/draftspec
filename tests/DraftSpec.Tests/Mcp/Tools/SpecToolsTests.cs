@@ -11,7 +11,7 @@ namespace DraftSpec.Tests.Mcp.Tools;
 /// Tests use in-process execution mode to avoid subprocess overhead and McpServer dependency.
 /// </summary>
 [NotInParallel("SpecTools")]
-public class SpecToolsTests
+public class SpecToolsTests : IDisposable
 {
     private readonly SpecExecutionService _executionService;
     private readonly InProcessSpecRunner _inProcessRunner;
@@ -29,6 +29,11 @@ public class SpecToolsTests
             NullLogger<InProcessSpecRunner>.Instance);
         _sessionManager = new SessionManager(
             NullLogger<SessionManager>.Instance);
+    }
+
+    public void Dispose()
+    {
+        _sessionManager.Dispose();
     }
 
     #region run_spec - Basic Execution

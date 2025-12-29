@@ -195,7 +195,7 @@ public class PathTraversalSecurityTests
 
         var result = finder.FindSpecs(specFile, baseDir);
 
-        await Assert.That(result).HasCount().EqualTo(1);
+        await Assert.That(result).Count().IsEqualTo(1);
         await Assert.That(result[0]).IsEqualTo(specFile);
     }
 
@@ -213,7 +213,7 @@ public class PathTraversalSecurityTests
 
         var result = finder.FindSpecs(specsDir, baseDir);
 
-        await Assert.That(result).HasCount().EqualTo(2);
+        await Assert.That(result).Count().IsEqualTo(2);
     }
 
     [Test]
@@ -230,7 +230,7 @@ public class PathTraversalSecurityTests
 
         var result = finder.FindSpecs(nestedDir, baseDir);
 
-        await Assert.That(result).HasCount().EqualTo(1);
+        await Assert.That(result).Count().IsEqualTo(1);
     }
 
     #endregion

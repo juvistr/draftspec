@@ -307,7 +307,7 @@ public class WebhookReporterTests
 
         await reporter.OnRunCompletedAsync(report);
 
-        await Assert.That(handler.LastCustomHeaders).ContainsKey("X-Custom-Header");
+        await Assert.That(handler.LastCustomHeaders!).ContainsKey("X-Custom-Header");
         await Assert.That(handler.LastCustomHeaders!["X-Custom-Header"]).IsEqualTo("custom-value");
     }
 

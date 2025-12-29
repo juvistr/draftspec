@@ -20,7 +20,7 @@ public class PerformanceTests
 
         var sw = Stopwatch.StartNew();
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
         sw.Stop();
 
         // Baseline: should complete in under 1 second
@@ -37,7 +37,7 @@ public class PerformanceTests
 
         var sw = Stopwatch.StartNew();
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
         sw.Stop();
 
         // Baseline: should complete in under 5 seconds
@@ -63,7 +63,7 @@ public class PerformanceTests
 
         var sw = Stopwatch.StartNew();
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
         sw.Stop();
 
         // Should complete without stack overflow
@@ -84,7 +84,7 @@ public class PerformanceTests
         current.AddSpec(new SpecDefinition("very deep spec", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0].ContextPath).Count().IsEqualTo(100);
@@ -123,7 +123,7 @@ public class PerformanceTests
 
         var sw = Stopwatch.StartNew();
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
         sw.Stop();
 
         // 10 specs * 10 beforeEach * 2 (before + after) = 200 hook calls
@@ -241,7 +241,7 @@ public class PerformanceTests
 
         var sw = Stopwatch.StartNew();
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
         sw.Stop();
 
         // Only the focused spec should run
@@ -258,7 +258,7 @@ public class PerformanceTests
         for (var i = 0; i < 1000; i++) root.AddSpec(new SpecDefinition($"spec {i}", () => { }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
 
         // All specs should run when none are focused
         await Assert.That(results.Count(r => r.Status == SpecStatus.Passed)).IsEqualTo(1000);
@@ -278,7 +278,7 @@ public class PerformanceTests
         var runner = new SpecRunner();
 
         var sw = Stopwatch.StartNew();
-        runner.Run(context);
+        await runner.RunAsync(context);
         sw.Stop();
 
         // Store baseline for comparison
@@ -297,7 +297,7 @@ public class PerformanceTests
             .Build();
 
         var sw = Stopwatch.StartNew();
-        runner.Run(context);
+        await runner.RunAsync(context);
         sw.Stop();
 
         // Should have minimal overhead when specs don't fail
@@ -318,7 +318,7 @@ public class PerformanceTests
             .Build();
 
         var sw = Stopwatch.StartNew();
-        runner.Run(context);
+        await runner.RunAsync(context);
         sw.Stop();
 
         // Multiple middleware should still be efficient
@@ -388,7 +388,7 @@ public class PerformanceTests
         }
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         // After running, results should be available
         await Assert.That(results).Count().IsEqualTo(100);
@@ -422,7 +422,7 @@ public class PerformanceTests
 
         var sw = Stopwatch.StartNew();
         var runner = new SpecRunner();
-        var results = runner.Run(root);
+        var results = await runner.RunAsync(root);
         sw.Stop();
 
         await Assert.That(results).Count().IsEqualTo(10000);

@@ -38,7 +38,7 @@ public class CoberturaParserTests
 
         await Assert.That(report).IsNotNull();
         await Assert.That(report.Source).IsEqualTo("/src");
-        await Assert.That(report.Files).HasCount().EqualTo(1);
+        await Assert.That(report.Files).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -128,7 +128,7 @@ public class CoberturaParserTests
 
         var report = CoberturaParser.Parse(xml);
 
-        await Assert.That(report.Files).HasCount().EqualTo(2);
+        await Assert.That(report.Files).Count().IsEqualTo(2);
         await Assert.That(report.Summary.TotalLines).IsEqualTo(4);
         await Assert.That(report.Summary.CoveredLines).IsEqualTo(3);
         await Assert.That(report.Summary.LinePercent).IsEqualTo(75.0);
@@ -204,7 +204,7 @@ public class CoberturaParserTests
         var report = CoberturaParser.Parse(xml);
         var file = report.Files[0];
 
-        await Assert.That(file.Lines).HasCount().EqualTo(2);
+        await Assert.That(file.Lines).Count().IsEqualTo(2);
         await Assert.That(file.Lines[0].LineNumber).IsEqualTo(10);
         await Assert.That(file.Lines[0].Hits).IsEqualTo(5);
         await Assert.That(file.Lines[1].LineNumber).IsEqualTo(11);

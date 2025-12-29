@@ -44,7 +44,7 @@ public class CoverageThresholdCheckerTests
         var result = _checker.Check(report, thresholds);
 
         await Assert.That(result.Passed).IsFalse();
-        await Assert.That(result.Failures).HasCount().EqualTo(1);
+        await Assert.That(result.Failures).Count().IsEqualTo(1);
         await Assert.That(result.Failures[0]).Contains("Line coverage");
         await Assert.That(result.Failures[0]).Contains("70.0%");
         await Assert.That(result.Failures[0]).Contains("80%");
@@ -108,7 +108,7 @@ public class CoverageThresholdCheckerTests
         var result = _checker.Check(report, thresholds);
 
         await Assert.That(result.Passed).IsFalse();
-        await Assert.That(result.Failures).HasCount().EqualTo(1);
+        await Assert.That(result.Failures).Count().IsEqualTo(1);
         await Assert.That(result.Failures[0]).Contains("Line");
     }
 
@@ -123,7 +123,7 @@ public class CoverageThresholdCheckerTests
         var result = _checker.Check(report, thresholds);
 
         await Assert.That(result.Passed).IsFalse();
-        await Assert.That(result.Failures).HasCount().EqualTo(1);
+        await Assert.That(result.Failures).Count().IsEqualTo(1);
         await Assert.That(result.Failures[0]).Contains("Branch");
     }
 
@@ -138,7 +138,7 @@ public class CoverageThresholdCheckerTests
         var result = _checker.Check(report, thresholds);
 
         await Assert.That(result.Passed).IsFalse();
-        await Assert.That(result.Failures).HasCount().EqualTo(2);
+        await Assert.That(result.Failures).Count().IsEqualTo(2);
     }
 
     #endregion

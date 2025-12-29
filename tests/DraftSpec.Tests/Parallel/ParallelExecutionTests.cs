@@ -121,7 +121,7 @@ public class ParallelExecutionTests
         }
 
         var runner = new SpecRunner(); // No parallel execution
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         // Sequential execution preserves declaration order
         for (var i = 0; i < 5; i++) await Assert.That(order[i]).IsEqualTo(i);
@@ -166,7 +166,7 @@ public class ParallelExecutionTests
             .WithParallelExecution(1) // Effectively sequential
             .Build();
 
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         // With parallelism of 1, should be sequential
         for (var i = 0; i < 5; i++) await Assert.That(order[i]).IsEqualTo(i);

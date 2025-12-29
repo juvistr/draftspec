@@ -62,7 +62,7 @@ public class PluginIntegrationTests
         context.AddSpec(new SpecDefinition("spec3", () => throw new Exception("fail")));
 
         var runner = new SpecRunnerBuilder().WithConfiguration(configuration).Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         // Verify run starting and spec completion events are received
         await Assert.That(reporter.RunStartedCalled).IsTrue();
@@ -82,7 +82,7 @@ public class PluginIntegrationTests
         context.AddSpec(new SpecDefinition("third", () => { }));
 
         var runner = new SpecRunnerBuilder().WithConfiguration(configuration).Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         // Verify events received in order: RunStarting, then specs in order
         await Assert.That(reporter.EventOrder).Count().IsGreaterThanOrEqualTo(4);
@@ -105,7 +105,7 @@ public class PluginIntegrationTests
         context.AddSpec(new SpecDefinition("spec", () => { }));
 
         var runner = new SpecRunnerBuilder().WithConfiguration(configuration).Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         // Both reporters should receive run starting and spec completion events
         await Assert.That(reporter1.RunStartedCalled).IsTrue();
@@ -132,7 +132,7 @@ public class PluginIntegrationTests
             .Use(new OrderTrackingMiddleware("third", executionOrder))
             .Build();
 
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         // Middleware wraps: first wraps second wraps third wraps spec
         // Execution order: first-before, second-before, third-before, spec, third-after, second-after, first-after
@@ -160,7 +160,7 @@ public class PluginIntegrationTests
             .WithRetry(5)
             .Build();
 
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
         await Assert.That(attempts).IsEqualTo(3);
@@ -179,7 +179,7 @@ public class PluginIntegrationTests
             .WithFilter(ctx => ctx.Spec.Tags.Contains("run"))
             .Build();
 
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(executedSpecs).Contains("included");
         await Assert.That(executedSpecs).DoesNotContain("excluded");
@@ -197,7 +197,7 @@ public class PluginIntegrationTests
             .Use(new ResultModifyingMiddleware())
             .Build();
 
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         // The middleware should have changed the result
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
@@ -223,7 +223,7 @@ public class PluginIntegrationTests
         context.AddSpec(new SpecDefinition("spec2", () => { }));
         context.AddSpec(new SpecDefinition("spec3", () => { }));
 
-        new SpecRunner().Run(context);
+        await new SpecRunner().RunAsync(context);
 
         await Assert.That(sharedState.Counter).IsEqualTo(3);
     }

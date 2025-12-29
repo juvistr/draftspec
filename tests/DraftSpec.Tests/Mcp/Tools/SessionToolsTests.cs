@@ -8,7 +8,7 @@ namespace DraftSpec.Tests.Mcp.Tools;
 /// <summary>
 /// Integration tests for SessionTools MCP methods.
 /// </summary>
-public class SessionToolsTests
+public class SessionToolsTests : IDisposable
 {
     private readonly SessionManager _sessionManager;
 
@@ -16,6 +16,11 @@ public class SessionToolsTests
     {
         _sessionManager = new SessionManager(
             NullLogger<SessionManager>.Instance);
+    }
+
+    public void Dispose()
+    {
+        _sessionManager.Dispose();
     }
 
     private static SessionManager CreateFreshManager() =>

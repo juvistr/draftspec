@@ -54,7 +54,7 @@ public class WatchCommandTests
         await command.ExecuteAsync(options, cts.Token);
 
         await Assert.That(runner.RunAllCalled).IsTrue();
-        await Assert.That(runner.LastSpecFiles).HasCount().EqualTo(2);
+        await Assert.That(runner.LastSpecFiles).Count().IsEqualTo(2);
     }
 
     [Test]
@@ -164,7 +164,7 @@ public class WatchCommandTests
 
         // Wait a bit more then cancel
         await Task.Delay(50);
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await task;
 
@@ -194,7 +194,7 @@ public class WatchCommandTests
         watcherFactory.TriggerChange(new FileChangeInfo("/specs/test1.spec.csx", true));
 
         await Task.Delay(50);
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await task;
 
@@ -224,7 +224,7 @@ public class WatchCommandTests
         watcherFactory.TriggerChange(new FileChangeInfo("/src/MyClass.cs", false));
 
         await Task.Delay(50);
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await task;
 
@@ -269,7 +269,7 @@ public class WatchCommandTests
         watcherFactory.TriggerChange(new FileChangeInfo("/some/file.cs", false));
 
         await Task.Delay(50);
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await task;
 
@@ -296,7 +296,7 @@ public class WatchCommandTests
         watcherFactory.TriggerChange(new FileChangeInfo("/file.cs", false));
 
         await Task.Delay(50);
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await task;
 
@@ -344,7 +344,7 @@ public class WatchCommandTests
         var command = CreateCommand(specFiles: ["test.spec.csx"]);
 
         var cts = new CancellationTokenSource();
-        cts.Cancel(); // Cancel immediately
+        await cts.CancelAsync(); // Cancel immediately
 
         var options = new CliOptions { Path = "." };
 
@@ -493,21 +493,24 @@ public class WatchCommandTests
         public bool OnBuildCompletedRegistered { get; private set; }
         public bool OnBuildSkippedRegistered { get; private set; }
 
+#pragma warning disable CS0067 // Backing fields stored but not invoked (mock only tracks registration)
         private event Action<string>? _onBuildStarted;
+        private event Action<BuildResult>? _onBuildCompleted;
+        private event Action<string>? _onBuildSkipped;
+#pragma warning restore CS0067
+
         public event Action<string>? OnBuildStarted
         {
             add { _onBuildStarted += value; OnBuildStartedRegistered = true; }
             remove { _onBuildStarted -= value; }
         }
 
-        private event Action<BuildResult>? _onBuildCompleted;
         public event Action<BuildResult>? OnBuildCompleted
         {
             add { _onBuildCompleted += value; OnBuildCompletedRegistered = true; }
             remove { _onBuildCompleted -= value; }
         }
 
-        private event Action<string>? _onBuildSkipped;
         public event Action<string>? OnBuildSkipped
         {
             add { _onBuildSkipped += value; OnBuildSkippedRegistered = true; }

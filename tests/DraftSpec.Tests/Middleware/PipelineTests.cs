@@ -27,7 +27,7 @@ public class PipelineTests
         }));
 
         var runner = new SpecRunnerBuilder().WithRetry(2).Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
         await Assert.That(attempts).IsEqualTo(2);
@@ -42,7 +42,7 @@ public class PipelineTests
         context.AddSpec(new SpecDefinition("slow", async () => await Task.Delay(10_000)));
 
         var runner = new SpecRunnerBuilder().WithTimeout(100).Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
         await Assert.That(results[0].Exception).IsTypeOf<TimeoutException>();
@@ -58,7 +58,7 @@ public class PipelineTests
         var runner = new SpecRunnerBuilder()
             .Use(new TestMiddleware(() => middlewareCalled = true))
             .Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(middlewareCalled).IsTrue();
     }
@@ -79,7 +79,7 @@ public class PipelineTests
             .Use(new TestMiddleware(() => order.Add("second")))
             .Use(new TestMiddleware(() => order.Add("third")))
             .Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(order[0]).IsEqualTo("first");
         await Assert.That(order[1]).IsEqualTo("second");
@@ -106,7 +106,7 @@ public class PipelineTests
             .WithRetry(2)
             .WithTimeout(50)
             .Build();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         // Should pass on second attempt after first timed out
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
@@ -128,7 +128,7 @@ public class PipelineTests
             .Use(new StateWriterMiddleware("shared-key", "test-value"))
             .Use(new StateReaderMiddleware("shared-key", v => capturedValue = v))
             .Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(capturedValue).IsEqualTo("test-value");
     }
@@ -157,7 +157,7 @@ public class PipelineTests
         var runner = new SpecRunnerBuilder()
             .Use(new WrapperMiddleware(() => order.Add("middleware-start"), () => order.Add("middleware-end")))
             .Build();
-        runner.Run(context);
+        await runner.RunAsync(context);
 
         await Assert.That(order[0]).IsEqualTo("middleware-start");
         await Assert.That(order[1]).IsEqualTo("before");
@@ -231,7 +231,7 @@ public class PipelineTests
                 () => cleanupRan = true))
             .Build();
 
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         await Assert.That(cleanupRan).IsTrue();
         await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
@@ -273,7 +273,7 @@ public class PipelineTests
         Assert.Throws<InvalidOperationException>(() => runner.Run(context));
 
         // Cleanup should run in reverse order (inner to outer)
-        await Assert.That(cleanupOrder).HasCount().EqualTo(2);
+        await Assert.That(cleanupOrder).Count().IsEqualTo(2);
         await Assert.That(cleanupOrder[0]).IsEqualTo("middle");
         await Assert.That(cleanupOrder[1]).IsEqualTo("outer");
     }

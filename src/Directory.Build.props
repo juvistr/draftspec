@@ -1,4 +1,7 @@
 <Project>
+    <!-- Import root Directory.Build.props -->
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
     <PropertyGroup>
         <!-- MinVer configuration - version derived from git tags -->
         <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
@@ -14,7 +17,6 @@
         <Copyright>Copyright (c) 2025 juvistr</Copyright>
 
         <!-- Shared build settings -->
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>

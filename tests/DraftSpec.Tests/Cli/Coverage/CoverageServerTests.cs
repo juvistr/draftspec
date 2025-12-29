@@ -297,7 +297,7 @@ public class CoverageServerTests
         server.Start();
         server.Shutdown();
 
-        await Assert.That(processRunner.RunCalls).HasCount().EqualTo(1);
+        await Assert.That(processRunner.RunCalls).Count().IsEqualTo(1);
         var (fileName, args) = processRunner.RunCalls[0];
         await Assert.That(fileName).IsEqualTo("dotnet-coverage");
         await Assert.That(args.First()).IsEqualTo("shutdown");
@@ -387,7 +387,7 @@ public class CoverageServerTests
         server.Dispose();
 
         // Verify shutdown was called (which calls Run with shutdown command)
-        await Assert.That(processRunner.RunCalls).HasCount().EqualTo(1);
+        await Assert.That(processRunner.RunCalls).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -453,7 +453,7 @@ public class CoverageServerTests
         server.Dispose(); // Second dispose should be no-op
 
         // Only one shutdown call should have been made
-        await Assert.That(processRunner.RunCalls).HasCount().EqualTo(1);
+        await Assert.That(processRunner.RunCalls).Count().IsEqualTo(1);
     }
 
     #endregion

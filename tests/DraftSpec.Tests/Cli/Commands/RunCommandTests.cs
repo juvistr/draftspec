@@ -89,6 +89,212 @@ public class RunCommandTests
 
     #endregion
 
+    #region Format and Output Tests
+
+    [Test]
+    public async Task ExecuteAsync_JsonFormat_ReturnsJsonOutput()
+    {
+        var console = new MockConsole();
+        // failedCount must be 0 for Success to be true
+        var runner = new MockRunner(success: true, passedCount: 5, failedCount: 0);
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["test.spec.csx"]);
+
+        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("\"summary\"");
+        await Assert.That(console.Output).Contains("\"passed\":");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_UnknownFormat_ThrowsArgumentException()
+    {
+        var command = CreateCommand(specFiles: ["test.spec.csx"]);
+        var options = new CliOptions { Path = ".", Format = "unknown-format" };
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ConsoleFormat_DisplaysDirectly()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner(success: true, passedCount: 3);
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["test.spec.csx"]);
+
+        var options = new CliOptions { Path = ".", Format = OutputFormats.Console };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        // Console format shows summary info with file count and status
+        await Assert.That(console.Output).Contains("1 spec file");
+        await Assert.That(console.Output).Contains("PASS");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_OutputFile_WritesToFileAndShowsMessage()
+    {
+        var console = new MockConsole();
+        var fileSystem = new TrackingFileSystem();
+        var command = CreateCommand(
+            console: console,
+            specFiles: ["test.spec.csx"],
+            fileSystem: fileSystem);
+
+        var options = new CliOptions { Path = ".", Format = OutputFormats.Json, OutputFile = "report.json" };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(fileSystem.WrittenFiles.Count).IsEqualTo(1);
+        await Assert.That(console.Output).Contains("Report written to");
+        await Assert.That(console.Output).Contains("report.json");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_NoOutputFile_OutputsToConsole()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner(success: true, passedCount: 1);
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["test.spec.csx"]);
+
+        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("\"summary\"");
+    }
+
+    #endregion
+
+    #region MergeReports Tests (via ExecuteAsync)
+
+    [Test]
+    public async Task ExecuteAsync_SingleResult_PreservesCounts()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner(success: true, passedCount: 5, failedCount: 0, pendingCount: 2);
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["single.spec.csx"]);
+
+        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("\"passed\": 5");
+        await Assert.That(console.Output).Contains("\"pending\": 2");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_MultipleResults_AggregatesCounts()
+    {
+        var console = new MockConsole();
+        // failedCount > 0 means the run fails (returns 1)
+        var runner = new MockRunner(success: true, passedCount: 3, failedCount: 1, pendingCount: 1);
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["first.spec.csx", "second.spec.csx", "third.spec.csx"]);
+
+        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var result = await command.ExecuteAsync(options);
+
+        // With failed tests, return code is 1
+        await Assert.That(result).IsEqualTo(1);
+        // 3 files × 3 passed each = 9 passed
+        await Assert.That(console.Output).Contains("\"passed\": 9");
+        // 3 files × 1 failed each = 3 failed
+        await Assert.That(console.Output).Contains("\"failed\": 3");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_EmptyResults_ReturnsEmptyReport()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner(success: true, passedCount: 0, failedCount: 0);
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["empty.spec.csx"]);
+
+        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("\"total\": 0");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_MixedPassFail_SumsCorrectly()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner(success: false, passedCount: 10, failedCount: 2, pendingCount: 0, skippedCount: 3);
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["mixed.spec.csx"]);
+
+        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var result = await command.ExecuteAsync(options);
+
+        // Failed run returns 1
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(console.Output).Contains("\"passed\": 10");
+        await Assert.That(console.Output).Contains("\"failed\": 2");
+        await Assert.That(console.Output).Contains("\"skipped\": 3");
+    }
+
+    #endregion
+
+    #region Parallel Execution Tests
+
+    [Test]
+    public async Task ExecuteAsync_ParallelTrue_PassesParallelFlag()
+    {
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(runnerFactory: runnerFactory, specFiles: ["test.spec.csx"]);
+
+        var options = new CliOptions { Path = ".", Parallel = true };
+        await command.ExecuteAsync(options);
+
+        await Assert.That(runner.LastParallelFlag).IsTrue();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ParallelFalse_PassesSequentialFlag()
+    {
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(runnerFactory: runnerFactory, specFiles: ["test.spec.csx"]);
+
+        var options = new CliOptions { Path = ".", Parallel = false };
+        await command.ExecuteAsync(options);
+
+        await Assert.That(runner.LastParallelFlag).IsFalse();
+    }
+
+    #endregion
+
     #region OutputFile Security Tests
 
     [Test]
@@ -226,11 +432,28 @@ public class RunCommandTests
     private class MockRunner : IInProcessSpecRunner
     {
         private readonly bool _success;
+        private readonly int _passedCount;
+        private readonly int _failedCount;
+        private readonly int _pendingCount;
+        private readonly int _skippedCount;
 
-        public MockRunner(bool success = true) => _success = success;
+        public MockRunner(
+            bool success = true,
+            int passedCount = 0,
+            int failedCount = 0,
+            int pendingCount = 0,
+            int skippedCount = 0)
+        {
+            _success = success;
+            _passedCount = passedCount;
+            _failedCount = failedCount;
+            _pendingCount = pendingCount;
+            _skippedCount = skippedCount;
+        }
 
         public bool RunAllCalled { get; private set; }
         public IReadOnlyList<string>? LastSpecFiles { get; private set; }
+        public bool LastParallelFlag { get; private set; }
 
         public event Action<string>? OnBuildStarted;
         public event Action<BuildResult>? OnBuildCompleted;
@@ -238,25 +461,38 @@ public class RunCommandTests
 
         public Task<InProcessRunResult> RunFileAsync(string specFile, CancellationToken ct = default)
         {
-            return Task.FromResult(new InProcessRunResult(
-                specFile,
-                new SpecReport { Summary = new SpecSummary() },
-                TimeSpan.Zero,
-                _success ? null : new Exception("Test failed")));
+            return Task.FromResult(CreateResult(specFile));
         }
 
         public Task<InProcessRunSummary> RunAllAsync(IReadOnlyList<string> specFiles, bool parallel = false, CancellationToken ct = default)
         {
             RunAllCalled = true;
             LastSpecFiles = specFiles;
+            LastParallelFlag = parallel;
 
-            var results = specFiles.Select(f => new InProcessRunResult(
-                f,
-                new SpecReport { Summary = new SpecSummary() },
-                TimeSpan.Zero,
-                _success ? null : new Exception("Test failed"))).ToList();
+            var results = specFiles.Select(CreateResult).ToList();
 
             return Task.FromResult(new InProcessRunSummary(results, TimeSpan.Zero));
+        }
+
+        private InProcessRunResult CreateResult(string specFile)
+        {
+            var total = _passedCount + _failedCount + _pendingCount + _skippedCount;
+            return new InProcessRunResult(
+                specFile,
+                new SpecReport
+                {
+                    Summary = new SpecSummary
+                    {
+                        Total = total,
+                        Passed = _passedCount,
+                        Failed = _failedCount,
+                        Pending = _pendingCount,
+                        Skipped = _skippedCount
+                    }
+                },
+                TimeSpan.Zero,
+                _success ? null : new Exception("Test failed"));
         }
 
         public void ClearBuildCache() { }

@@ -132,6 +132,13 @@ public class RunCommand : ICommand
 
         foreach (var result in summary.Results)
         {
+            // Check for compilation errors with enhanced diagnostics
+            if (result.Error is CompilationDiagnosticException compilationError)
+            {
+                presenter.ShowCompilationError(compilationError);
+                continue;
+            }
+
             // Convert to legacy format for presenter
             var legacyResult = new SpecRunResult(
                 result.SpecFile,

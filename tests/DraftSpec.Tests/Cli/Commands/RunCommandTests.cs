@@ -89,13 +89,104 @@ public class RunCommandTests
 
     #endregion
 
+    #region OutputFile Security Tests
+
+    [Test]
+    public async Task ExecuteAsync_OutputFile_PathTraversal_ThrowsSecurityException()
+    {
+        var command = CreateCommand(specFiles: ["test.spec.csx"]);
+        var options = new CliOptions { Path = ".", OutputFile = "../../../etc/malicious.json" };
+
+        await Assert.ThrowsAsync<System.Security.SecurityException>(
+            async () => await command.ExecuteAsync(options));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_OutputFile_DoubleDots_ThrowsSecurityException()
+    {
+        var command = CreateCommand(specFiles: ["test.spec.csx"]);
+        var options = new CliOptions { Path = ".", OutputFile = "../output.json" };
+
+        await Assert.ThrowsAsync<System.Security.SecurityException>(
+            async () => await command.ExecuteAsync(options));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_OutputFile_ParentDirectory_ThrowsSecurityException()
+    {
+        var command = CreateCommand(specFiles: ["test.spec.csx"]);
+        var options = new CliOptions { Path = ".", OutputFile = ".." };
+
+        await Assert.ThrowsAsync<System.Security.SecurityException>(
+            async () => await command.ExecuteAsync(options));
+    }
+
+    [Test]
+    [Arguments("/etc/passwd")]
+    [Arguments("/tmp/outside/output.json")]
+    public async Task ExecuteAsync_OutputFile_AbsolutePathOutsideCurrentDir_ThrowsSecurityException(string outputPath)
+    {
+        // Skip on Windows since these paths don't make sense there
+        if (OperatingSystem.IsWindows())
+            return;
+
+        var command = CreateCommand(specFiles: ["test.spec.csx"]);
+        var options = new CliOptions { Path = ".", OutputFile = outputPath };
+
+        await Assert.ThrowsAsync<System.Security.SecurityException>(
+            async () => await command.ExecuteAsync(options));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_OutputFile_ValidRelativePath_DoesNotThrow()
+    {
+        var fileSystem = new TrackingFileSystem();
+        var command = CreateCommand(specFiles: ["test.spec.csx"], fileSystem: fileSystem);
+        var options = new CliOptions { Path = ".", OutputFile = "output.json" };
+
+        // Should not throw SecurityException - may fail for other reasons but that's okay
+        var result = await command.ExecuteAsync(options);
+
+        // If we get here, no SecurityException was thrown
+        await Assert.That(true).IsTrue();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_OutputFile_SubdirectoryPath_DoesNotThrow()
+    {
+        var fileSystem = new TrackingFileSystem();
+        var command = CreateCommand(specFiles: ["test.spec.csx"], fileSystem: fileSystem);
+        var options = new CliOptions { Path = ".", OutputFile = "reports/output.json" };
+
+        // Should not throw SecurityException
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(true).IsTrue();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_OutputFile_CurrentDirPrefix_DoesNotThrow()
+    {
+        var fileSystem = new TrackingFileSystem();
+        var command = CreateCommand(specFiles: ["test.spec.csx"], fileSystem: fileSystem);
+        var options = new CliOptions { Path = ".", OutputFile = "./output.json" };
+
+        // Should not throw SecurityException
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(true).IsTrue();
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static RunCommand CreateCommand(
         MockConsole? console = null,
         MockConfigLoader? configLoader = null,
         MockRunnerFactory? runnerFactory = null,
-        IReadOnlyList<string>? specFiles = null)
+        IReadOnlyList<string>? specFiles = null,
+        IFileSystem? fileSystem = null)
     {
         var specs = specFiles ?? [];
         return new RunCommand(
@@ -104,7 +195,7 @@ public class RunCommandTests
             console ?? new MockConsole(),
             new MockFormatterRegistry(),
             configLoader ?? new MockConfigLoader(),
-            new MockFileSystem());
+            fileSystem ?? new MockFileSystem());
     }
 
     #endregion
@@ -215,6 +306,22 @@ public class RunCommandTests
         public bool FileExists(string path) => false;
         public void WriteAllText(string path, string content) { }
         public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) => Task.CompletedTask;
+        public string ReadAllText(string path) => "";
+        public bool DirectoryExists(string path) => true;
+        public void CreateDirectory(string path) { }
+    }
+
+    private class TrackingFileSystem : IFileSystem
+    {
+        public List<(string Path, string Content)> WrittenFiles { get; } = [];
+
+        public bool FileExists(string path) => false;
+        public void WriteAllText(string path, string content) => WrittenFiles.Add((path, content));
+        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default)
+        {
+            WrittenFiles.Add((path, content));
+            return Task.CompletedTask;
+        }
         public string ReadAllText(string path) => "";
         public bool DirectoryExists(string path) => true;
         public void CreateDirectory(string path) { }

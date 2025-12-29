@@ -1,65 +1,45 @@
 namespace DraftSpec.Cli.Commands;
 
-public static class NewCommand
+public class NewCommand : ICommand
 {
-    public static int Execute(CliOptions options)
+    private readonly IConsole _console;
+    private readonly IFileSystem _fileSystem;
+
+    public NewCommand(IConsole console, IFileSystem fileSystem)
+    {
+        _console = console;
+        _fileSystem = fileSystem;
+    }
+
+    public Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
     {
         var name = options.SpecName;
         if (string.IsNullOrEmpty(name))
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("Usage: draftspec new <Name>");
-            Console.ResetColor();
-            return 1;
-        }
+            throw new ArgumentException("Usage: draftspec new <Name>");
 
         // Security: Validate spec name doesn't contain path separators
-        try
-        {
-            PathValidator.ValidateFileName(name);
-        }
-        catch (ArgumentException ex)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"Invalid spec name: {ex.Message}");
-            Console.ResetColor();
-            return 1;
-        }
+        PathValidator.ValidateFileName(name);
 
         var directory = Path.GetFullPath(options.Path);
 
-        if (!Directory.Exists(directory))
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"Directory not found: {directory}");
-            Console.ResetColor();
-            return 1;
-        }
+        if (!_fileSystem.DirectoryExists(directory))
+            throw new ArgumentException($"Directory not found: {directory}");
 
         var specHelperPath = Path.Combine(directory, "spec_helper.csx");
-        if (!File.Exists(specHelperPath))
+        if (!_fileSystem.FileExists(specHelperPath))
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("Warning: spec_helper.csx not found. Run 'draftspec init' first.");
-            Console.ResetColor();
+            _console.WriteWarning("Warning: spec_helper.csx not found. Run 'draftspec init' first.");
         }
 
         var specPath = Path.Combine(directory, $"{name}.spec.csx");
-        if (File.Exists(specPath))
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"{name}.spec.csx already exists");
-            Console.ResetColor();
-            return 1;
-        }
+        if (_fileSystem.FileExists(specPath))
+            throw new ArgumentException($"{name}.spec.csx already exists");
 
         var specContent = GenerateSpec(name);
-        File.WriteAllText(specPath, specContent);
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine($"Created {name}.spec.csx");
-        Console.ResetColor();
+        _fileSystem.WriteAllText(specPath, specContent);
+        _console.WriteSuccess($"Created {name}.spec.csx");
 
-        return 0;
+        return Task.FromResult(0);
     }
 
     private static string GenerateSpec(string name)

@@ -8,13 +8,13 @@ public class DotnetProjectBuilder : IProjectBuilder
     private readonly IFileSystem _fileSystem;
     private readonly IProcessRunner _processRunner;
     private readonly IBuildCache _buildCache;
-    private readonly ITimeProvider _timeProvider;
+    private readonly DraftSpec.ITimeProvider _timeProvider;
 
     public DotnetProjectBuilder(
         IFileSystem fileSystem,
         IProcessRunner processRunner,
         IBuildCache buildCache,
-        ITimeProvider timeProvider)
+        DraftSpec.ITimeProvider timeProvider)
     {
         _fileSystem = fileSystem;
         _processRunner = processRunner;

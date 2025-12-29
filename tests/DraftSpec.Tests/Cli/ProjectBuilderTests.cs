@@ -320,19 +320,19 @@ file class MockProcessRunner : IProcessRunner
 /// <summary>
 /// Mock time provider for testing.
 /// </summary>
-file class MockTimeProvider : ITimeProvider
+file class MockTimeProvider : DraftSpec.ITimeProvider
 {
     public DateTime CurrentUtcNow { get; set; } = DateTime.UtcNow;
     public DateTime UtcNow => CurrentUtcNow;
 
     private readonly MockStopwatch _stopwatch = new();
-    public IStopwatch StartNew() => _stopwatch;
+    public DraftSpec.IStopwatch StartNew() => _stopwatch;
 }
 
 /// <summary>
 /// Mock stopwatch for testing.
 /// </summary>
-file class MockStopwatch : IStopwatch
+file class MockStopwatch : DraftSpec.IStopwatch
 {
     public TimeSpan Elapsed => TimeSpan.FromMilliseconds(100);
     public void Stop() { }

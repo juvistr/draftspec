@@ -36,9 +36,10 @@ public record InProcessRunSummary(
 /// </summary>
 public class InProcessSpecRunner : IInProcessSpecRunner
 {
-    private readonly ITimeProvider _timeProvider;
+    private readonly DraftSpec.ITimeProvider _timeProvider;
     private readonly IProjectBuilder _projectBuilder;
     private readonly ISpecScriptExecutor _scriptExecutor;
+    private readonly IDslManager _dslManager;
     private readonly string? _filterTags;
     private readonly string? _excludeTags;
     private readonly string? _filterName;
@@ -49,9 +50,10 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         string? excludeTags = null,
         string? filterName = null,
         string? excludeName = null,
-        ITimeProvider? timeProvider = null,
+        DraftSpec.ITimeProvider? timeProvider = null,
         IProjectBuilder? projectBuilder = null,
-        ISpecScriptExecutor? scriptExecutor = null)
+        ISpecScriptExecutor? scriptExecutor = null,
+        IDslManager? dslManager = null)
     {
         _filterTags = filterTags;
         _excludeTags = excludeTags;
@@ -59,9 +61,10 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         _excludeName = excludeName;
 
         // Use defaults for backward compatibility
-        _timeProvider = timeProvider ?? new SystemTimeProvider();
+        _timeProvider = timeProvider ?? new DraftSpec.SystemTimeProvider();
         _projectBuilder = projectBuilder ?? CreateDefaultProjectBuilder();
         _scriptExecutor = scriptExecutor ?? new RoslynSpecScriptExecutor();
+        _dslManager = dslManager ?? new DslManager();
 
         // Wire up build events from project builder to this runner
         _projectBuilder.OnBuildStarted += project => OnBuildStarted?.Invoke(project);
@@ -91,7 +94,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             var outputDir = _projectBuilder.FindOutputDirectory(workingDir);
 
             // Reset DSL state before execution
-            Dsl.Reset();
+            _dslManager.Reset();
 
             // Execute script via script executor
             var rootContext = await _scriptExecutor.ExecuteAsync(fullPath, outputDir, ct);
@@ -141,7 +144,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         }
         finally
         {
-            Dsl.Reset();
+            _dslManager.Reset();
         }
     }
 
@@ -243,7 +246,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         var fileSystem = new FileSystem();
         var processRunner = new SystemProcessRunner();
         var buildCache = new InMemoryBuildCache();
-        var timeProvider = new SystemTimeProvider();
+        var timeProvider = new DraftSpec.SystemTimeProvider();
         return new DotnetProjectBuilder(fileSystem, processRunner, buildCache, timeProvider);
     }
 }

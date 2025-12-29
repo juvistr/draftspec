@@ -96,6 +96,46 @@ public class ConsolePresenter
         }
     }
 
+    /// <summary>
+    /// Shows a compilation error with enhanced diagnostic information and discovered specs.
+    /// </summary>
+    public void ShowCompilationError(CompilationDiagnosticException exception)
+    {
+        var relativePath = Path.GetFileName(exception.SpecFile);
+
+        // Show file header with error indicator
+        _console.ForegroundColor = ConsoleColor.Red;
+        _console.WriteLine($"❌ {relativePath} - Compilation failed");
+        _console.ResetColor();
+        _console.WriteLine();
+
+        // Show formatted error with source context
+        _console.WriteLine(exception.FormattedMessage);
+        _console.WriteLine();
+
+        // Show discovered specs if any
+        if (exception.DiscoveredSpecs.Count > 0)
+        {
+            _console.ForegroundColor = ConsoleColor.Yellow;
+            _console.WriteLine($"Found {exception.DiscoveredSpecs.Count} spec(s) in this file (unable to execute due to compilation error):");
+            _console.ResetColor();
+
+            foreach (var spec in exception.DiscoveredSpecs)
+            {
+                var contextPath = spec.ContextPath.Count > 0
+                    ? string.Join(" > ", spec.ContextPath) + " > "
+                    : "";
+                var lineInfo = spec.LineNumber > 0 ? $" (line {spec.LineNumber})" : "";
+
+                _console.ForegroundColor = ConsoleColor.DarkGray;
+                _console.WriteLine($"  - {contextPath}{spec.Description}{lineInfo}");
+                _console.ResetColor();
+            }
+
+            _console.WriteLine();
+        }
+    }
+
     public void ShowSummary(RunSummary summary)
     {
         _console.WriteLine();

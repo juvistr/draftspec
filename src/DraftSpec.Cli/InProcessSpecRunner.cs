@@ -1,5 +1,7 @@
 using DraftSpec.Configuration;
 using DraftSpec.Formatters;
+using DraftSpec.TestingPlatform;
+using Microsoft.CodeAnalysis.Scripting;
 
 namespace DraftSpec.Cli;
 
@@ -40,6 +42,8 @@ public class InProcessSpecRunner : IInProcessSpecRunner
     private readonly IProjectBuilder _projectBuilder;
     private readonly ISpecScriptExecutor _scriptExecutor;
     private readonly IDslManager _dslManager;
+    private readonly ICompilationDiagnosticFormatter _diagnosticFormatter;
+    private readonly IFileSystem _fileSystem;
     private readonly string? _filterTags;
     private readonly string? _excludeTags;
     private readonly string? _filterName;
@@ -57,7 +61,9 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         DraftSpec.ITimeProvider? timeProvider = null,
         IProjectBuilder? projectBuilder = null,
         ISpecScriptExecutor? scriptExecutor = null,
-        IDslManager? dslManager = null)
+        IDslManager? dslManager = null,
+        ICompilationDiagnosticFormatter? diagnosticFormatter = null,
+        IFileSystem? fileSystem = null)
     {
         _filterTags = filterTags;
         _excludeTags = excludeTags;
@@ -71,6 +77,8 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         _projectBuilder = projectBuilder ?? CreateDefaultProjectBuilder();
         _scriptExecutor = scriptExecutor ?? new RoslynSpecScriptExecutor();
         _dslManager = dslManager ?? new DslManager();
+        _fileSystem = fileSystem ?? new FileSystem();
+        _diagnosticFormatter = diagnosticFormatter ?? new CompilationDiagnosticFormatter(_fileSystem);
 
         // Wire up build events from project builder to this runner
         _projectBuilder.OnBuildStarted += project => OnBuildStarted?.Invoke(project);
@@ -133,6 +141,36 @@ public class InProcessSpecRunner : IInProcessSpecRunner
 
             stopwatch.Stop();
             return new InProcessRunResult(specFile, report, stopwatch.Elapsed);
+        }
+        catch (CompilationErrorException compilationEx)
+        {
+            stopwatch.Stop();
+
+            // Format the compilation error with source context
+            var formattedError = _diagnosticFormatter.Format(compilationEx);
+
+            // Use static parsing to discover specs despite the compilation error
+            var parser = new StaticSpecParser(workingDir);
+            var parseResult = await parser.ParseFileAsync(fullPath, ct);
+
+            // Create enhanced exception with discovered specs
+            var enhancedException = new CompilationDiagnosticException(
+                compilationEx.Message,
+                formattedError,
+                fullPath,
+                parseResult.Specs,
+                compilationEx);
+
+            return new InProcessRunResult(
+                specFile,
+                new SpecReport
+                {
+                    Timestamp = _timeProvider.UtcNow,
+                    Source = fullPath,
+                    Summary = new SpecSummary { Failed = 1 }
+                },
+                stopwatch.Elapsed,
+                enhancedException);
         }
         catch (Exception ex)
         {

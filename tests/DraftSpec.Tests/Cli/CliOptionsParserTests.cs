@@ -489,4 +489,154 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region List Command Options
+
+    [Test]
+    public async Task Parse_ListCommand_SetsCommand()
+    {
+        var options = CliOptionsParser.Parse(["list", "."]);
+
+        await Assert.That(options.Command).IsEqualTo("list");
+        await Assert.That(options.Path).IsEqualTo(".");
+    }
+
+    [Test]
+    public async Task Parse_ListFormatOption_SetsListFormat()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "--list-format", "json"]);
+
+        await Assert.That(options.ListFormat).IsEqualTo("json");
+    }
+
+    [Test]
+    public async Task Parse_ListFormatDefaultIsTree()
+    {
+        var options = CliOptionsParser.Parse(["list", "."]);
+
+        await Assert.That(options.ListFormat).IsEqualTo("tree");
+    }
+
+    [Test]
+    public async Task Parse_ListFormatIsCaseInsensitive()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "--list-format", "JSON"]);
+
+        await Assert.That(options.ListFormat).IsEqualTo("json");
+    }
+
+    [Test]
+    public async Task Parse_ListFormatWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "--list-format"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--list-format requires a value");
+    }
+
+    [Test]
+    public async Task Parse_ShowLineNumbers_SetsShowLineNumbers()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "--show-line-numbers"]);
+
+        await Assert.That(options.ShowLineNumbers).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_NoLineNumbers_ClearsShowLineNumbers()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "--no-line-numbers"]);
+
+        await Assert.That(options.ShowLineNumbers).IsFalse();
+    }
+
+    [Test]
+    public async Task Parse_ShowLineNumbersDefaultIsTrue()
+    {
+        var options = CliOptionsParser.Parse(["list", "."]);
+
+        await Assert.That(options.ShowLineNumbers).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_FocusedOnlyFlag_SetsFocusedOnly()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "--focused-only"]);
+
+        await Assert.That(options.FocusedOnly).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_PendingOnlyFlag_SetsPendingOnly()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "--pending-only"]);
+
+        await Assert.That(options.PendingOnly).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_SkippedOnlyFlag_SetsSkippedOnly()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "--skipped-only"]);
+
+        await Assert.That(options.SkippedOnly).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_StatusFiltersDefaultAreFalse()
+    {
+        var options = CliOptionsParser.Parse(["list", "."]);
+
+        await Assert.That(options.FocusedOnly).IsFalse();
+        await Assert.That(options.PendingOnly).IsFalse();
+        await Assert.That(options.SkippedOnly).IsFalse();
+    }
+
+    [Test]
+    public async Task Parse_MultipleStatusFilters_SetsAll()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "--focused-only", "--pending-only"]);
+
+        await Assert.That(options.FocusedOnly).IsTrue();
+        await Assert.That(options.PendingOnly).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_ListWithFilterName_SetsFilterName()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "--filter-name", "Calculator"]);
+
+        await Assert.That(options.FilterName).IsEqualTo("Calculator");
+    }
+
+    [Test]
+    public async Task Parse_ListWithOutput_SetsOutputFile()
+    {
+        var options = CliOptionsParser.Parse(["list", ".", "-o", "specs.json"]);
+
+        await Assert.That(options.OutputFile).IsEqualTo("specs.json");
+    }
+
+    [Test]
+    public async Task Parse_ListAllOptions_SetsAll()
+    {
+        var options = CliOptionsParser.Parse([
+            "list", "./specs",
+            "--list-format", "flat",
+            "--no-line-numbers",
+            "--focused-only",
+            "-o", "output.txt",
+            "--filter-name", "User"
+        ]);
+
+        await Assert.That(options.Command).IsEqualTo("list");
+        await Assert.That(options.Path).IsEqualTo("./specs");
+        await Assert.That(options.ListFormat).IsEqualTo("flat");
+        await Assert.That(options.ShowLineNumbers).IsFalse();
+        await Assert.That(options.FocusedOnly).IsTrue();
+        await Assert.That(options.OutputFile).IsEqualTo("output.txt");
+        await Assert.That(options.FilterName).IsEqualTo("User");
+    }
+
+    #endregion
 }

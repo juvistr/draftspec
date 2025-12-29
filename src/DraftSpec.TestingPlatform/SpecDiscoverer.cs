@@ -8,7 +8,7 @@ namespace DraftSpec.TestingPlatform;
 /// then flattens the tree into a list of DiscoveredSpec instances with stable IDs.
 /// If a file fails to compile, falls back to static parsing to still discover spec structure.
 /// </remarks>
-internal sealed class SpecDiscoverer
+public sealed class SpecDiscoverer
 {
     private readonly string _projectDirectory;
     private readonly CsxScriptHost _scriptHost;

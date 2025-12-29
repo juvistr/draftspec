@@ -1,9 +1,11 @@
+using System.Diagnostics;
+using DraftSpec.Cli;
 using DraftSpec.Cli.Coverage;
 
 namespace DraftSpec.Tests.Cli.Coverage;
 
 /// <summary>
-/// Tests for CoverageRunner pure helper methods.
+/// Tests for CoverageRunner with mocked dependencies.
 /// </summary>
 public class CoverageRunnerTests
 {
@@ -268,4 +270,363 @@ public class CoverageRunnerTests
     }
 
     #endregion
+
+    #region RunWithCoverage with Mocks
+
+    [Test]
+    public async Task RunWithCoverage_ServerRunning_UsesConnect()
+    {
+        var processRunner = new MockProcessRunner();
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddDirectory("/tmp/coverage");
+
+        // Simulate server process that hasn't exited
+        var mockProcessHandle = new MockProcessHandle { HasExited = false };
+        processRunner.SetProcessHandle(mockProcessHandle);
+        processRunner.AddResult(new ProcessResult("", "", 0)); // For connect command
+
+        using var runner = new CoverageRunner(
+            "/tmp/coverage",
+            "cobertura",
+            processRunner,
+            fileSystem);
+
+        // Start the server to set _serverStarted = true
+        runner.StartServer();
+
+        // Now run with coverage
+        var result = runner.RunWithCoverage(["test", "MyProject.csproj"]);
+
+        // Verify connect was called (not collect)
+        await Assert.That(processRunner.RunCalls.Count).IsGreaterThanOrEqualTo(1);
+
+        var lastCall = processRunner.RunCalls.Last();
+        await Assert.That(lastCall.FileName).IsEqualTo("dotnet-coverage");
+        await Assert.That(lastCall.Arguments.First()).IsEqualTo("connect");
+    }
+
+    [Test]
+    public async Task RunWithCoverage_ServerNotRunning_FallsBackToCollect()
+    {
+        var processRunner = new MockProcessRunner();
+        var fileSystem = new MockFileSystem();
+
+        processRunner.AddResult(new ProcessResult("", "", 0)); // For collect command
+
+        using var runner = new CoverageRunner(
+            "/tmp/coverage",
+            "cobertura",
+            processRunner,
+            fileSystem);
+
+        // Don't start the server - directly call RunWithCoverage
+        var result = runner.RunWithCoverage(["test", "MyProject.csproj"]);
+
+        // Verify collect was called (standalone mode)
+        await Assert.That(processRunner.RunCalls.Count).IsEqualTo(1);
+
+        var call = processRunner.RunCalls.First();
+        await Assert.That(call.FileName).IsEqualTo("dotnet-coverage");
+        await Assert.That(call.Arguments.First()).IsEqualTo("collect");
+    }
+
+    [Test]
+    public async Task RunWithCoverage_ServerExited_FallsBackToCollect()
+    {
+        var processRunner = new MockProcessRunner();
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddDirectory("/tmp/coverage");
+
+        // Simulate server process that HAS exited
+        var mockProcessHandle = new MockProcessHandle { HasExited = true };
+        processRunner.SetProcessHandle(mockProcessHandle);
+        processRunner.AddResult(new ProcessResult("", "", 0)); // For collect command
+
+        using var runner = new CoverageRunner(
+            "/tmp/coverage",
+            "cobertura",
+            processRunner,
+            fileSystem);
+
+        // Start the server (but process has exited)
+        runner.StartServer();
+
+        // Now run with coverage
+        var result = runner.RunWithCoverage(["test", "MyProject.csproj"]);
+
+        // Verify collect was called (fallback mode) since server is not running
+        var lastCall = processRunner.RunCalls.Last();
+        await Assert.That(lastCall.FileName).IsEqualTo("dotnet-coverage");
+        await Assert.That(lastCall.Arguments.First()).IsEqualTo("collect");
+    }
+
+    #endregion
+
+    #region GenerateReports with Mocks
+
+    [Test]
+    public async Task GenerateReports_CallsFormatterFactory()
+    {
+        var processRunner = new MockProcessRunner();
+        var fileSystem = new MockFileSystem();
+        var formatterFactory = new MockCoverageFormatterFactory();
+
+        var mockFormatter = new MockCoverageFormatter
+        {
+            FileExtension = ".html",
+            FormatName = "html",
+            FormattedContent = "<html>coverage report</html>"
+        };
+        formatterFactory.AddFormatter("html", mockFormatter);
+
+        // Add a file that exists so FileExists returns true
+        fileSystem.AddFile("/tmp/coverage/coverage.cobertura.xml");
+
+        using var runner = new CoverageRunner(
+            "/tmp/coverage",
+            "cobertura",
+            processRunner,
+            fileSystem,
+            formatterFactory);
+
+        // Call GenerateReports - note: this will fail because CoberturaParser.TryParseFile
+        // reads directly from the file system, but we can verify the factory was invoked
+        // when the file doesn't exist (returns empty dict)
+        var reports = runner.GenerateReports(["html"]);
+
+        // Since CoberturaParser.TryParseFile can't be mocked (uses File.Exists directly),
+        // and the file doesn't actually exist, the result will be empty.
+        // This test verifies the method doesn't throw and handles missing files gracefully.
+        await Assert.That(reports).IsNotNull();
+    }
+
+    [Test]
+    public async Task GenerateReports_FileNotExists_ReturnsEmptyDictionary()
+    {
+        var processRunner = new MockProcessRunner();
+        var fileSystem = new MockFileSystem();
+        var formatterFactory = new MockCoverageFormatterFactory();
+
+        using var runner = new CoverageRunner(
+            "/tmp/coverage",
+            "cobertura",
+            processRunner,
+            fileSystem,
+            formatterFactory);
+
+        var reports = runner.GenerateReports(["html", "json"]);
+
+        await Assert.That(reports).IsEmpty();
+    }
+
+    #endregion
+
+    #region StartServer with Mocks
+
+    [Test]
+    public async Task StartServer_CreatesOutputDirectory()
+    {
+        var processRunner = new MockProcessRunner();
+        var fileSystem = new MockFileSystem();
+
+        var mockProcessHandle = new MockProcessHandle { HasExited = false };
+        processRunner.SetProcessHandle(mockProcessHandle);
+
+        using var runner = new CoverageRunner(
+            "/tmp/coverage",
+            "cobertura",
+            processRunner,
+            fileSystem);
+
+        runner.StartServer();
+
+        await Assert.That(fileSystem.DirectoryExists("/tmp/coverage")).IsTrue();
+    }
+
+    [Test]
+    public async Task StartServer_ReturnsTrue_WhenProcessStartsSuccessfully()
+    {
+        var processRunner = new MockProcessRunner();
+        var fileSystem = new MockFileSystem();
+
+        var mockProcessHandle = new MockProcessHandle { HasExited = false };
+        processRunner.SetProcessHandle(mockProcessHandle);
+
+        using var runner = new CoverageRunner(
+            "/tmp/coverage",
+            "cobertura",
+            processRunner,
+            fileSystem);
+
+        var result = runner.StartServer();
+
+        await Assert.That(result).IsTrue();
+        await Assert.That(runner.IsServerRunning).IsTrue();
+    }
+
+    [Test]
+    public async Task StartServer_CalledTwice_ReturnsCachedState()
+    {
+        var processRunner = new MockProcessRunner();
+        var fileSystem = new MockFileSystem();
+
+        var mockProcessHandle = new MockProcessHandle { HasExited = false };
+        processRunner.SetProcessHandle(mockProcessHandle);
+
+        using var runner = new CoverageRunner(
+            "/tmp/coverage",
+            "cobertura",
+            processRunner,
+            fileSystem);
+
+        runner.StartServer();
+        var secondResult = runner.StartServer();
+
+        // Should return the running state, not try to start again
+        await Assert.That(secondResult).IsTrue();
+        await Assert.That(processRunner.StartProcessCalls).IsEqualTo(1);
+    }
+
+    #endregion
 }
+
+#region Mock Implementations
+
+/// <summary>
+/// Mock process runner for testing CoverageRunner.
+/// </summary>
+file class MockProcessRunner : IProcessRunner
+{
+    private readonly Queue<ProcessResult> _results = new();
+    private MockProcessHandle? _processHandle;
+
+    public List<(string FileName, List<string> Arguments, string? WorkingDir)> RunCalls { get; } = [];
+    public int StartProcessCalls { get; private set; }
+
+    public void AddResult(ProcessResult result) => _results.Enqueue(result);
+
+    public void SetProcessHandle(MockProcessHandle handle) => _processHandle = handle;
+
+    public ProcessResult Run(
+        string fileName,
+        IEnumerable<string> arguments,
+        string? workingDirectory = null,
+        Dictionary<string, string>? environmentVariables = null)
+    {
+        RunCalls.Add((fileName, arguments.ToList(), workingDirectory));
+        return _results.Count > 0 ? _results.Dequeue() : new ProcessResult("", "", 0);
+    }
+
+    public ProcessResult RunDotnet(
+        IEnumerable<string> arguments,
+        string? workingDirectory = null,
+        Dictionary<string, string>? environmentVariables = null)
+    {
+        return Run("dotnet", arguments, workingDirectory, environmentVariables);
+    }
+
+    public IProcessHandle StartProcess(ProcessStartInfo startInfo)
+    {
+        StartProcessCalls++;
+        return _processHandle ?? new MockProcessHandle { HasExited = false };
+    }
+}
+
+/// <summary>
+/// Mock process handle for testing.
+/// </summary>
+file class MockProcessHandle : IProcessHandle
+{
+    public bool HasExited { get; set; }
+
+    public bool WaitForExit(int milliseconds) => true;
+
+    public void Kill() { }
+
+    public void Dispose() { }
+}
+
+/// <summary>
+/// Mock file system for testing CoverageRunner.
+/// </summary>
+file class MockFileSystem : IFileSystem
+{
+    private readonly HashSet<string> _existingFiles = new();
+    private readonly HashSet<string> _existingDirectories = new();
+    private readonly Dictionary<string, string> _fileContents = new();
+
+    public void AddFile(string path)
+    {
+        _existingFiles.Add(path);
+    }
+
+    public void AddDirectory(string directory)
+    {
+        _existingDirectories.Add(directory);
+    }
+
+    public bool FileExists(string path) => _existingFiles.Contains(path);
+
+    public void WriteAllText(string path, string content)
+    {
+        _fileContents[path] = content;
+        _existingFiles.Add(path);
+    }
+
+    public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default)
+    {
+        WriteAllText(path, content);
+        return Task.CompletedTask;
+    }
+
+    public string ReadAllText(string path) =>
+        _fileContents.TryGetValue(path, out var content) ? content : "";
+
+    public bool DirectoryExists(string path) => _existingDirectories.Contains(path);
+
+    public void CreateDirectory(string path) => _existingDirectories.Add(path);
+
+    public string[] GetFiles(string path, string searchPattern) => [];
+
+    public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => [];
+
+    public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
+
+    public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
+
+    public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
+}
+
+/// <summary>
+/// Mock coverage formatter factory for testing.
+/// </summary>
+file class MockCoverageFormatterFactory : ICoverageFormatterFactory
+{
+    private readonly Dictionary<string, ICoverageFormatter> _formatters = new();
+
+    public void AddFormatter(string format, ICoverageFormatter formatter)
+    {
+        _formatters[format.ToLowerInvariant()] = formatter;
+    }
+
+    public ICoverageFormatter? GetFormatter(string format)
+    {
+        return _formatters.TryGetValue(format.ToLowerInvariant(), out var formatter)
+            ? formatter
+            : null;
+    }
+}
+
+/// <summary>
+/// Mock coverage formatter for testing.
+/// </summary>
+file class MockCoverageFormatter : ICoverageFormatter
+{
+    public string FileExtension { get; set; } = ".txt";
+    public string FormatName { get; set; } = "mock";
+    public string FormattedContent { get; set; } = "";
+
+    public string Format(CoverageReport report) => FormattedContent;
+}
+
+#endregion

@@ -1,5 +1,3 @@
-using DraftSpec.Scripting;
-
 namespace DraftSpec.Cli;
 
 /// <summary>
@@ -15,16 +13,4 @@ public interface ISpecScriptExecutor
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The root spec context, or null if no specs were defined.</returns>
     Task<SpecContext?> ExecuteAsync(string specFile, string outputDirectory, CancellationToken ct = default);
-}
-
-/// <summary>
-/// Implementation that uses CsxScriptHost for Roslyn-based script execution.
-/// </summary>
-public class RoslynSpecScriptExecutor : ISpecScriptExecutor
-{
-    public async Task<SpecContext?> ExecuteAsync(string specFile, string outputDirectory, CancellationToken ct = default)
-    {
-        var scriptHost = new CsxScriptHost(outputDirectory);
-        return await scriptHost.ExecuteAsync(specFile, ct);
-    }
 }

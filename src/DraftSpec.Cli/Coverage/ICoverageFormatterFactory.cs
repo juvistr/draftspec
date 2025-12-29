@@ -12,16 +12,3 @@ public interface ICoverageFormatterFactory
     /// <returns>The formatter, or null if format is not supported.</returns>
     ICoverageFormatter? GetFormatter(string format);
 }
-
-/// <summary>
-/// Implementation that creates coverage formatters.
-/// </summary>
-public class CoverageFormatterFactory : ICoverageFormatterFactory
-{
-    public ICoverageFormatter? GetFormatter(string format) => format.ToLowerInvariant() switch
-    {
-        "html" => new CoverageHtmlFormatter(),
-        "json" => new CoverageJsonFormatter(),
-        _ => null
-    };
-}

@@ -1,13 +1,23 @@
 using System.Security;
 using DraftSpec.Cli;
+using DraftSpec.Tests.TestHelpers;
 
 namespace DraftSpec.Tests.Cli;
 
 /// <summary>
-/// Tests for path validation security measures.
+/// Unit tests for path validation security measures.
+/// Uses mocked file system to test validation logic in isolation.
 /// </summary>
 public class PathValidationTests
 {
+    private MockFileSystem _mockFs = null!;
+
+    [Before(Test)]
+    public void SetUp()
+    {
+        _mockFs = new MockFileSystem();
+    }
+
     #region Output Path Validation Tests
 
     [Test]
@@ -90,8 +100,8 @@ public class PathValidationTests
     [Test]
     public async Task SpecFinder_PathOutsideBase_ThrowsSecurityException()
     {
-        var finder = new SpecFinder();
-        var baseDir = Directory.GetCurrentDirectory();
+        var finder = new SpecFinder(_mockFs);
+        var baseDir = Path.Combine(Path.GetTempPath(), "base");
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
@@ -105,8 +115,8 @@ public class PathValidationTests
     [Test]
     public async Task SpecFinder_AbsolutePathOutsideBase_ThrowsSecurityException()
     {
-        var finder = new SpecFinder();
-        var baseDir = Directory.GetCurrentDirectory();
+        var finder = new SpecFinder(_mockFs);
+        var baseDir = Path.Combine(Path.GetTempPath(), "base");
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
@@ -120,8 +130,8 @@ public class PathValidationTests
     [Test]
     public async Task SpecFinder_TraversalInPath_ThrowsSecurityException()
     {
-        var finder = new SpecFinder();
-        var baseDir = Directory.GetCurrentDirectory();
+        var finder = new SpecFinder(_mockFs);
+        var baseDir = Path.Combine(Path.GetTempPath(), "base");
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
@@ -135,13 +145,14 @@ public class PathValidationTests
     [Test]
     public async Task SpecFinder_PathWithinBase_ThrowsArgumentExceptionNotSecurity()
     {
-        var finder = new SpecFinder();
-        var baseDir = Directory.GetCurrentDirectory();
+        var finder = new SpecFinder(_mockFs);
+        var baseDir = Path.Combine(Path.GetTempPath(), "base");
+        var pathWithinBase = Path.Combine(baseDir, "nonexistent.spec.csx");
 
         // This should throw ArgumentException (file not found) not SecurityException
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
         {
-            finder.FindSpecs("nonexistent.spec.csx", baseDir);
+            finder.FindSpecs(pathWithinBase, baseDir);
             return Task.CompletedTask;
         });
 
@@ -155,8 +166,8 @@ public class PathValidationTests
     [Test]
     public async Task SecurityException_ContainsHelpfulMessage()
     {
-        var finder = new SpecFinder();
-        var baseDir = Directory.GetCurrentDirectory();
+        var finder = new SpecFinder(_mockFs);
+        var baseDir = Path.Combine(Path.GetTempPath(), "base");
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {

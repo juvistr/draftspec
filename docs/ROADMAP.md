@@ -1,153 +1,88 @@
 # DraftSpec Roadmap
 
-This roadmap tracks priorities for the v1.0 release and beyond, based on a comprehensive code review (December 2025).
+This roadmap tracks development priorities from the initial v0.4.0 release through future milestones.
 
 ---
 
-## v1.0 Blockers (P0)
+## Current Status: v0.4.x (Production Ready)
 
-Must complete before v1.0 release.
+**Released December 2025** - All foundational work complete.
 
-### Security ✅ Complete
-
-- [x] **Temp file race condition** - `src/DraftSpec.Cli/SpecFileRunner.cs:131-178` ✅
-  - Use `FileMode.CreateNew` for atomic file creation
-  - Prevents symlink attack (CWE-367 TOCTOU)
-  - See [ADR-006](./adr/006-security-hardening.md)
-
-- [x] **Path traversal bypass** - `src/DraftSpec.Cli/SpecFinder.cs:20-24` ✅
-  - Normalize paths with trailing separator
-  - Use case-sensitive comparison on Unix
-
-- [x] **JSON deserialization limits** - `src/DraftSpec.Formatters.Abstractions/SpecReport.cs:19-27` ✅
-  - Add `MaxDepth = 64` to `JsonSerializerOptions`
-  - Add 10MB size limit with early rejection
-
-### Test Coverage ✅ Complete
-
-- [x] **DSL module tests** - `tests/DraftSpec.Tests/Dsl/StaticDslTests.cs` ✅
-  - 24 tests covering state isolation, configuration, edge cases, async execution
-  - Coverage improved from ~30% to 90%+
-
-- [x] **HtmlFormatter tests** - `tests/DraftSpec.Tests/Formatters/HtmlFormatterTests.cs` ✅
-  - 24 tests including XSS prevention validation
-  - Coverage improved from 0% to 90%+
-
-- [x] **MarkdownFormatter tests** - `tests/DraftSpec.Tests/Formatters/MarkdownFormatterTests.cs` ✅
-  - 21 tests covering all markdown syntax and formatting
-  - Coverage improved from 0% to 90%+
+| Area | Status | Highlights |
+|------|--------|------------|
+| Core DSL | Complete | `describe`/`it`/`expect` API, hooks, focus/skip/pending |
+| Security | Complete | Path traversal protection, temp file hardening, JSON limits |
+| Performance | Complete | Zero-allocation assertions, incremental builds, parallel execution |
+| Architecture | Complete | DI container, plugin discovery, result streaming |
+| Test Coverage | ~90% | 515+ tests across all modules |
+| Static Parsing | Complete | Roslyn-based spec discovery from CSX files |
+| MTP Integration | Complete | Microsoft.Testing.Platform support for IDE integration |
 
 ---
 
-## High Value (P1)
+## v0.5.0: CLI Foundation
 
-High-impact improvements after v1.0 blockers.
+**Theme**: Core CLI commands leveraging static parsing for fast spec discovery.
 
-### Performance
+| Issue | Feature | Priority |
+|-------|---------|----------|
+| [#186](https://github.com/juvistr/draftspec/issues/186) | `draftspec list` - Discover and display specs | HIGH |
+| [#187](https://github.com/juvistr/draftspec/issues/187) | `draftspec validate --static` - Pre-execution validation | HIGH |
+| [#188](https://github.com/juvistr/draftspec/issues/188) | Line number filtering (`file:line` syntax) | HIGH |
+| [#190](https://github.com/juvistr/draftspec/issues/190) | Enhanced compilation error messages | HIGH |
+| [#189](https://github.com/juvistr/draftspec/issues/189) | Context-level filtering (`--context` flag) | MEDIUM |
+| [#191](https://github.com/juvistr/draftspec/issues/191) | JSON schema for discovery output | DOCS |
 
-- [x] **Build parallelization** - `src/DraftSpec.Cli/SpecFileRunner.cs:64-79` ✅
-  - Build projects in different directories in parallel when --parallel flag is used
-  - Projects within same directory still built sequentially (may have interdependencies)
-
-- [x] **Reporter batching** - `src/DraftSpec/SpecRunner.cs` ✅
-  - `OnSpecsBatchCompletedAsync` method for batch notification
-  - Parallel notification to multiple reporters via `Task.WhenAll`
-  - 30-50% faster with multiple reporters
-
-- [x] **Watch mode debounce** - `src/DraftSpec.Cli/FileWatcher.cs` ✅
-  - Replaced Task.Run + CancellationTokenSource with single reusable Timer
-  - No allocations on rapid file changes (60-80% reduction)
-
-- [x] **Incremental builds** - `src/DraftSpec.Cli/SpecFileRunner.cs` ✅
-  - Track source file modification times per directory
-  - Skip rebuilds when no .cs or .csproj changes detected
-  - OnBuildSkipped event for UI feedback in watch mode
-
-### Security
-
-- [x] **FileReporter path validation** - `src/DraftSpec/Plugins/Reporters/FileReporter.cs` ✅
-  - Validate output paths are within allowed directories
-  - Uses same pattern as SpecFinder (trailing separator, platform-aware)
-  - 14 tests in `tests/DraftSpec.Tests/Reporters/FileReporterTests.cs`
-
-- [x] **Safe error messages** - `src/DraftSpec.Cli/Program.cs`, `RunCommand.cs` ✅
-  - Generic catch-all prevents stack trace leakage
-  - SecurityException handling added
-  - Platform-aware path validation (case-sensitive on Unix)
-  - Error messages use user-provided paths, not internal paths
-
-### Testing
-
-- [x] **CLI integration tests** - `tests/DraftSpec.Tests/Cli/CliIntegrationTests.cs` ✅
-  - 30 tests covering InitCommand, NewCommand, GetFormatter, SpecFinder, CliOptions
-  - Coverage improved from ~40% to ~70%
+**Key Dependency**: #186 (`draftspec list`) unblocks all other v0.5.0 features.
 
 ---
 
-## Architecture (P2) ✅ Complete
+## v0.6.0: CI/CD Integration
 
-Structural improvements for maintainability.
+**Theme**: Features that optimize CI pipelines and development workflows.
 
-- [x] **Remove Core→Formatters.Console dependency** - `src/DraftSpec/DraftSpec.csproj` ✅
-  - Removed project reference from Core to Formatters.Console
-  - Added `IConsoleFormatter` property to `DraftSpecConfiguration`
-  - Plain text fallback in `SpecExecutor` when no formatter configured
-
-- [x] **Null checks in Expectation** - `src/DraftSpec/Expectations/Expectation.cs:89-154` ✅
-  - Added guards for comparison methods: toBeGreaterThan, toBeLessThan, toBeAtLeast, toBeAtMost, toBeInRange
-  - Proper error messages with Expression fallback
-
-- [x] **StringBuilder optimization** - `src/DraftSpec.Formatters.Html/HtmlFormatter.cs`, `MarkdownFormatter.cs` ✅
-  - Replaced List<string> + string.Join with direct StringBuilder appends
-  - Eliminates intermediate allocations in summary output
-
-- [x] **Interface extraction** - `ISpecFileRunner`, `ISpecFinder` ✅
-  - `src/DraftSpec.Cli/ISpecFinder.cs` - FindSpecs interface
-  - `src/DraftSpec.Cli/ISpecFileRunner.cs` - Full runner interface with events
-  - Enables dependency injection and testing
-
-- [x] **AsyncLocal state management** - `src/DraftSpec/Spec.cs` ✅
-  - Static `Dsl` keeps AsyncLocal (necessary for CSX scripts)
-  - `Spec` class refactored to instance fields for clean isolation
-  - No API changes - internal improvement only
+| Issue | Feature | Priority |
+|-------|---------|----------|
+| [#192](https://github.com/juvistr/draftspec/issues/192) | Parallel test partitioning (`--partition`) | HIGH |
+| [#193](https://github.com/juvistr/draftspec/issues/193) | Incremental watch mode (only re-run changed specs) | HIGH |
+| [#194](https://github.com/juvistr/draftspec/issues/194) | Pre-flight validation for CI pipelines | MEDIUM |
+| [#196](https://github.com/juvistr/draftspec/issues/196) | Spec count statistics before run | LOW |
+| [#195](https://github.com/juvistr/draftspec/issues/195) | GitHub Actions workflow templates | DOCS |
 
 ---
 
-## Future (P3) ✅ Complete
+## v0.7.0: Test Intelligence
 
-Nice-to-have enhancements.
+**Theme**: Smart test selection and historical analysis.
 
-- [x] **Result streaming** - Reduce memory for large test suites ✅
-  - `StreamingStats` class for progressive statistic tracking
-  - `StreamingConsoleReporter` outputs dots/symbols as specs complete
-  - Thread-safe tracking via `Interlocked` operations
-- [x] **DI container** - Replace ad-hoc service registry ✅
-  - `Microsoft.Extensions.DependencyInjection` integration in CLI
-  - `IFormatterRegistry` for name-based formatter lookup
-  - `ServiceCollectionExtensions.AddDraftSpec()` for easy setup
-- [x] **Plugin discovery** - Auto-load plugins from assemblies ✅
-  - `PluginLoader` scans `DraftSpec.*.dll` files in plugins directory
-  - `[DraftSpecPlugin("name")]` attribute for marking discoverable plugins
-  - Isolated `AssemblyLoadContext` for plugin loading
-- [x] **Performance benchmarks** - BenchmarkDotNet suite for regression testing ✅
-  - `benchmarks/DraftSpec.Benchmarks/` project with 26 benchmarks
-  - SpecRunner, ReportBuilder, Formatter, and Expectation benchmarks
-  - Memory diagnostics enabled via `[MemoryDiagnoser]`
-  - Baseline captured in `docs/BENCHMARK_BASELINE.md`
+| Issue | Feature | Priority |
+|-------|---------|----------|
+| [#197](https://github.com/juvistr/draftspec/issues/197) | Test impact analysis (`--affected-by`) | HIGH |
+| [#198](https://github.com/juvistr/draftspec/issues/198) | Dependency graph from `#load` directives | MEDIUM |
+| [#199](https://github.com/juvistr/draftspec/issues/199) | Flaky test detection and quarantine | MEDIUM |
+| [#201](https://github.com/juvistr/draftspec/issues/201) | Result caching for watch mode | MEDIUM |
+| [#200](https://github.com/juvistr/draftspec/issues/200) | Runtime estimation from historical data | LOW |
 
 ---
 
-## Current Status
+## v0.8.0: Future Enhancements
 
-| Area | Grade | Notes |
-|------|-------|-------|
-| Code Quality | A | Modern C#, good docs, clean layering |
-| Security | A | All P0 + P1 security issues resolved ✅ |
-| Architecture | A | P2 + P3 complete, DI container + plugin discovery ✅ |
-| Performance | A | Zero-allocation assertions, benchmarks, streaming ✅ |
-| Test Coverage | ~90% | 515 tests, comprehensive coverage ✅ |
+**Theme**: Advanced DX features and ecosystem expansion.
 
-**Overall:** P0, P1, P2, and P3 complete. Production ready with extensible plugin architecture.
+| Issue | Feature | Priority |
+|-------|---------|----------|
+| [#206](https://github.com/juvistr/draftspec/issues/206) | Enhanced MTP Test Explorer integration | MEDIUM |
+| [#207](https://github.com/juvistr/draftspec/issues/207) | Spec authoring best practices guide | DOCS |
+| [#202](https://github.com/juvistr/draftspec/issues/202) | Living documentation generation | LOW |
+| [#203](https://github.com/juvistr/draftspec/issues/203) | Spec coverage mapping | LOW |
+| [#204](https://github.com/juvistr/draftspec/issues/204) | Interactive spec selection (`--interactive`) | LOW |
+| [#205](https://github.com/juvistr/draftspec/issues/205) | Rider/VS Code CodeLens plugins | LOW |
+
+---
+
+## Tracking
+
+All features above are tracked in the [Static Parsing Epic (#185)](https://github.com/juvistr/draftspec/issues/185).
 
 ---
 

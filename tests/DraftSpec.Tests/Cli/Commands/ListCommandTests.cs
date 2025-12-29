@@ -7,59 +7,55 @@ namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
 /// Tests for ListCommand.
-/// These tests use the file system for spec discovery.
+/// These tests use the real file system for spec discovery.
 /// </summary>
 [NotInParallel]
 public class ListCommandTests
 {
     private string _tempDir = null!;
-    private TextWriter _originalOut = null!;
-    private StringWriter _consoleOutput = null!;
+    private MockConsole _console = null!;
+    private RealFileSystem _fileSystem = null!;
 
     [Before(Test)]
     public void SetUp()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_list_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
-
-        // Capture console output
-        _originalOut = Console.Out;
-        _consoleOutput = new StringWriter();
-        Console.SetOut(_consoleOutput);
+        _console = new MockConsole();
+        _fileSystem = new RealFileSystem();
     }
 
     [After(Test)]
     public void TearDown()
     {
-        Console.SetOut(_originalOut);
-        _consoleOutput.Dispose();
-
         if (Directory.Exists(_tempDir))
             Directory.Delete(_tempDir, recursive: true);
     }
 
+    private ListCommand CreateCommand() => new(_console, _fileSystem);
+
     #region Path Validation
 
     [Test]
-    public async Task Execute_NonexistentPath_ReturnsError()
+    public async Task ExecuteAsync_NonexistentPath_ThrowsArgumentException()
     {
+        var command = CreateCommand();
         var options = new CliOptions { Path = "/nonexistent/path" };
 
-        var result = await ListCommand.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_consoleOutput.ToString()).Contains("Path not found");
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     [Test]
-    public async Task Execute_EmptyDirectory_ReturnsNoSpecs()
+    public async Task ExecuteAsync_EmptyDirectory_ReturnsNoSpecs()
     {
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_consoleOutput.ToString()).Contains("No spec files found");
+        await Assert.That(_console.Output).Contains("No spec files found");
     }
 
     #endregion
@@ -67,25 +63,26 @@ public class ListCommandTests
     #region Spec Discovery
 
     [Test]
-    public async Task Execute_SingleSpecFile_DiscoverSpecs()
+    public async Task ExecuteAsync_SingleSpecFile_DiscoverSpecs()
     {
         var specFile = CreateSpecFile("test.spec.csx", """
             describe("Calculator", () => {
                 it("adds numbers", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = specFile };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         await Assert.That(output).Contains("Calculator");
         await Assert.That(output).Contains("adds numbers");
     }
 
     [Test]
-    public async Task Execute_DirectoryWithSpecs_DiscoverAllSpecs()
+    public async Task ExecuteAsync_DirectoryWithSpecs_DiscoverAllSpecs()
     {
         CreateSpecFile("math.spec.csx", """
             describe("Math", () => {
@@ -97,18 +94,19 @@ public class ListCommandTests
                 it("concatenates", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         await Assert.That(output).Contains("Math");
         await Assert.That(output).Contains("String");
     }
 
     [Test]
-    public async Task Execute_NestedContexts_DiscoverAll()
+    public async Task ExecuteAsync_NestedContexts_DiscoverAll()
     {
         CreateSpecFile("nested.spec.csx", """
             describe("Parent", () => {
@@ -117,12 +115,13 @@ public class ListCommandTests
                 });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         await Assert.That(output).Contains("Parent");
         await Assert.That(output).Contains("Child");
         await Assert.That(output).Contains("nested spec");
@@ -133,51 +132,54 @@ public class ListCommandTests
     #region Spec Types
 
     [Test]
-    public async Task Execute_PendingSpec_ShowsPending()
+    public async Task ExecuteAsync_PendingSpec_ShowsPending()
     {
         CreateSpecFile("pending.spec.csx", """
             describe("Feature", () => {
                 it("pending spec");
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_consoleOutput.ToString()).Contains("[PENDING]");
+        await Assert.That(_console.Output).Contains("[PENDING]");
     }
 
     [Test]
-    public async Task Execute_SkippedSpec_ShowsSkipped()
+    public async Task ExecuteAsync_SkippedSpec_ShowsSkipped()
     {
         CreateSpecFile("skipped.spec.csx", """
             describe("Feature", () => {
                 xit("skipped spec", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_consoleOutput.ToString()).Contains("[SKIPPED]");
+        await Assert.That(_console.Output).Contains("[SKIPPED]");
     }
 
     [Test]
-    public async Task Execute_FocusedSpec_ShowsFocused()
+    public async Task ExecuteAsync_FocusedSpec_ShowsFocused()
     {
         CreateSpecFile("focused.spec.csx", """
             describe("Feature", () => {
                 fit("focused spec", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_consoleOutput.ToString()).Contains("[FOCUSED]");
+        await Assert.That(_console.Output).Contains("[FOCUSED]");
     }
 
     #endregion
@@ -185,7 +187,7 @@ public class ListCommandTests
     #region Filters
 
     [Test]
-    public async Task Execute_FocusedOnlyFilter_ShowsOnlyFocused()
+    public async Task ExecuteAsync_FocusedOnlyFilter_ShowsOnlyFocused()
     {
         CreateSpecFile("mixed.spec.csx", """
             describe("Feature", () => {
@@ -193,18 +195,19 @@ public class ListCommandTests
                 fit("focused spec", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, FocusedOnly = true, ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         await Assert.That(output).Contains("focused spec");
         await Assert.That(output).DoesNotContain("regular spec");
     }
 
     [Test]
-    public async Task Execute_PendingOnlyFilter_ShowsOnlyPending()
+    public async Task ExecuteAsync_PendingOnlyFilter_ShowsOnlyPending()
     {
         CreateSpecFile("mixed.spec.csx", """
             describe("Feature", () => {
@@ -212,18 +215,19 @@ public class ListCommandTests
                 it("pending spec");
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, PendingOnly = true, ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         await Assert.That(output).Contains("pending spec");
         await Assert.That(output).DoesNotContain("regular spec");
     }
 
     [Test]
-    public async Task Execute_SkippedOnlyFilter_ShowsOnlySkipped()
+    public async Task ExecuteAsync_SkippedOnlyFilter_ShowsOnlySkipped()
     {
         CreateSpecFile("mixed.spec.csx", """
             describe("Feature", () => {
@@ -231,18 +235,19 @@ public class ListCommandTests
                 xit("skipped spec", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SkippedOnly = true, ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         await Assert.That(output).Contains("skipped spec");
         await Assert.That(output).DoesNotContain("regular spec");
     }
 
     [Test]
-    public async Task Execute_FilterName_MatchesSubstring()
+    public async Task ExecuteAsync_FilterName_MatchesSubstring()
     {
         CreateSpecFile("filter.spec.csx", """
             describe("Feature", () => {
@@ -250,18 +255,19 @@ public class ListCommandTests
                 it("subtract numbers", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, FilterName = "add", ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         await Assert.That(output).Contains("add numbers");
         await Assert.That(output).DoesNotContain("subtract");
     }
 
     [Test]
-    public async Task Execute_FilterName_MatchesRegex()
+    public async Task ExecuteAsync_FilterName_MatchesRegex()
     {
         CreateSpecFile("filter.spec.csx", """
             describe("Feature", () => {
@@ -270,12 +276,13 @@ public class ListCommandTests
                 it("subtract 1", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, FilterName = "add \\d", ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         await Assert.That(output).Contains("add 1");
         await Assert.That(output).Contains("add 2");
         await Assert.That(output).DoesNotContain("subtract");
@@ -286,57 +293,60 @@ public class ListCommandTests
     #region Output Formats
 
     [Test]
-    public async Task Execute_TreeFormat_ShowsTreeStructure()
+    public async Task ExecuteAsync_TreeFormat_ShowsTreeStructure()
     {
         CreateSpecFile("tree.spec.csx", """
             describe("Root", () => {
                 it("spec1", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, ListFormat = "tree" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         // Tree format uses box-drawing characters
         await Assert.That(output).Contains("tree.spec.csx");
         await Assert.That(output).Contains("Root");
     }
 
     [Test]
-    public async Task Execute_FlatFormat_OneLinePerSpec()
+    public async Task ExecuteAsync_FlatFormat_OneLinePerSpec()
     {
         CreateSpecFile("flat.spec.csx", """
             describe("Context", () => {
                 it("spec1", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         // Flat format shows file:line and context path
         await Assert.That(output).Contains("flat.spec.csx:");
         await Assert.That(output).Contains("Context > spec1");
     }
 
     [Test]
-    public async Task Execute_JsonFormat_ValidJson()
+    public async Task ExecuteAsync_JsonFormat_ValidJson()
     {
         CreateSpecFile("json.spec.csx", """
             describe("JsonTest", () => {
                 it("spec1", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, ListFormat = "json" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         // JSON format contains expected structure
         await Assert.That(output).Contains("\"specs\"");
         await Assert.That(output).Contains("\"summary\"");
@@ -344,7 +354,7 @@ public class ListCommandTests
     }
 
     [Test]
-    public async Task Execute_JsonFormat_IncludesSummary()
+    public async Task ExecuteAsync_JsonFormat_IncludesSummary()
     {
         CreateSpecFile("summary.spec.csx", """
             describe("Summary", () => {
@@ -352,27 +362,29 @@ public class ListCommandTests
                 it("spec2", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, ListFormat = "json" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         await Assert.That(output).Contains("\"totalSpecs\": 2");
     }
 
     [Test]
-    public async Task Execute_InvalidFormat_ThrowsError()
+    public async Task ExecuteAsync_InvalidFormat_ThrowsError()
     {
         CreateSpecFile("test.spec.csx", """
             describe("Test", () => {
                 it("spec", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, ListFormat = "invalid" };
 
-        await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await ListCommand.ExecuteAsync(options));
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await command.ExecuteAsync(options));
     }
 
     #endregion
@@ -380,36 +392,38 @@ public class ListCommandTests
     #region Line Numbers
 
     [Test]
-    public async Task Execute_ShowLineNumbers_IncludesLineNumbers()
+    public async Task ExecuteAsync_ShowLineNumbers_IncludesLineNumbers()
     {
         CreateSpecFile("lines.spec.csx", """
             describe("Lines", () => {
                 it("spec with line", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, ShowLineNumbers = true, ListFormat = "tree" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
         // Line numbers appear as :N
-        await Assert.That(_consoleOutput.ToString()).Contains(":"); // Contains line number indicator
+        await Assert.That(_console.Output).Contains(":"); // Contains line number indicator
     }
 
     [Test]
-    public async Task Execute_NoLineNumbers_ExcludesLineNumbers()
+    public async Task ExecuteAsync_NoLineNumbers_ExcludesLineNumbers()
     {
         CreateSpecFile("nolines.spec.csx", """
             describe("NoLines", () => {
                 it("spec without line", () => { });
             });
             """);
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, ShowLineNumbers = false, ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var output = _consoleOutput.ToString();
+        var output = _console.Output;
         // Flat format without line numbers shouldn't have :N pattern before context
         await Assert.That(output).Contains("NoLines > spec without line");
     }
@@ -419,7 +433,7 @@ public class ListCommandTests
     #region Output File
 
     [Test]
-    public async Task Execute_OutputFile_WritesToFile()
+    public async Task ExecuteAsync_OutputFile_WritesToFile()
     {
         CreateSpecFile("output.spec.csx", """
             describe("Output", () => {
@@ -427,9 +441,10 @@ public class ListCommandTests
             });
             """);
         var outputFile = Path.Combine(_tempDir, "output.txt");
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, OutputFile = outputFile, ListFormat = "flat" };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(File.Exists(outputFile)).IsTrue();
@@ -438,7 +453,7 @@ public class ListCommandTests
     }
 
     [Test]
-    public async Task Execute_OutputFile_PrintsConfirmation()
+    public async Task ExecuteAsync_OutputFile_PrintsConfirmation()
     {
         CreateSpecFile("confirm.spec.csx", """
             describe("Confirm", () => {
@@ -446,13 +461,14 @@ public class ListCommandTests
             });
             """);
         var outputFile = Path.Combine(_tempDir, "confirm.txt");
+        var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, OutputFile = outputFile };
 
-        var result = await ListCommand.ExecuteAsync(options);
+        var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_consoleOutput.ToString()).Contains("Wrote");
-        await Assert.That(_consoleOutput.ToString()).Contains(outputFile);
+        await Assert.That(_console.Output).Contains("Wrote");
+        await Assert.That(_console.Output).Contains(outputFile);
     }
 
     #endregion
@@ -464,6 +480,38 @@ public class ListCommandTests
         var filePath = Path.Combine(_tempDir, fileName);
         File.WriteAllText(filePath, content);
         return filePath;
+    }
+
+    #endregion
+
+    #region Mocks
+
+    private class MockConsole : IConsole
+    {
+        private readonly List<string> _output = [];
+
+        public string Output => string.Join("", _output);
+
+        public void Write(string text) => _output.Add(text);
+        public void WriteLine(string text) => _output.Add(text + "\n");
+        public void WriteLine() => _output.Add("\n");
+        public ConsoleColor ForegroundColor { get; set; }
+        public void ResetColor() { }
+        public void Clear() { }
+        public void WriteWarning(string text) => WriteLine(text);
+        public void WriteSuccess(string text) => WriteLine(text);
+        public void WriteError(string text) => WriteLine(text);
+    }
+
+    private class RealFileSystem : IFileSystem
+    {
+        public bool FileExists(string path) => File.Exists(path);
+        public void WriteAllText(string path, string content) => File.WriteAllText(path, content);
+        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) =>
+            File.WriteAllTextAsync(path, content, ct);
+        public string ReadAllText(string path) => File.ReadAllText(path);
+        public bool DirectoryExists(string path) => Directory.Exists(path);
+        public void CreateDirectory(string path) => Directory.CreateDirectory(path);
     }
 
     #endregion

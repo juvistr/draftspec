@@ -125,5 +125,3 @@ describe("Async Patterns", () =>
         });
     });
 });
-
-run();

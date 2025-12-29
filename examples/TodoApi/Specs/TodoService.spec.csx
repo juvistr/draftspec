@@ -282,5 +282,3 @@ describe("TodoService", () =>
         });
     });
 });
-
-run();

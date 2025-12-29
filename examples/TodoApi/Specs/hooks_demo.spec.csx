@@ -122,5 +122,3 @@ describe("Async Hooks Order", () =>
         expect(true).toBeTrue();
     });
 });
-
-run();

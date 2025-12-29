@@ -6,7 +6,7 @@ namespace DraftSpec;
 /// </summary>
 /// <remarks>
 /// This partial class contains the session accessor and core state properties.
-/// See also: Dsl.Context.cs, Dsl.Specs.cs, Dsl.Hooks.cs, Dsl.Expect.cs, Dsl.Run.cs
+/// See also: Dsl.Context.cs, Dsl.Specs.cs, Dsl.Hooks.cs, Dsl.Expect.cs
 /// </remarks>
 public static partial class Dsl
 {
@@ -33,4 +33,10 @@ public static partial class Dsl
         get => Session.RootContext;
         internal set => Session.RootContext = value;
     }
+
+    /// <summary>
+    /// Reset all DSL state for a clean execution context.
+    /// Used by in-process execution modes (CLI, MTP).
+    /// </summary>
+    public static void Reset() => Session.Reset();
 }

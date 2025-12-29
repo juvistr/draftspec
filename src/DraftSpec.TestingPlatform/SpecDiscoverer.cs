@@ -1,3 +1,5 @@
+using DraftSpec.Scripting;
+
 namespace DraftSpec.TestingPlatform;
 
 /// <summary>

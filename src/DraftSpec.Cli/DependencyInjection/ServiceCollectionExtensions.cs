@@ -18,7 +18,6 @@ public static class ServiceCollectionExtensions
     {
         // Core services
         services.AddSingleton<ISpecFinder, SpecFinder>();
-        services.AddSingleton<ISpecFileRunner, SpecFileRunner>();
 
         // Built-in formatters
         services.AddSingleton<ICliFormatterRegistry, CliFormatterRegistry>();

@@ -31,7 +31,14 @@ public partial class SpecExecutionService
 
                                         {0}
 
-                                        run(json: true);
+                                        // Execute specs and output JSON
+                                        if (RootContext != null)
+                                        {{
+                                            var runner = new DraftSpec.SpecRunner();
+                                            var results = runner.Run(RootContext);
+                                            var report = DraftSpec.SpecReportBuilder.Build(RootContext, results);
+                                            Console.WriteLine(report.ToJson());
+                                        }}
                                         """;
 
     public SpecExecutionService(

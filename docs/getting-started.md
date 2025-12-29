@@ -52,14 +52,12 @@ describe("Math", () =>
         expect(3 * 4).toBe(12);
     });
 });
-
-run();
 ```
 
 Run it:
 
 ```bash
-dotnet script example.spec.csx
+draftspec run example.spec.csx
 ```
 
 Output:
@@ -116,8 +114,6 @@ describe("Calculator", () =>
         });
     });
 });
-
-run();
 ```
 
 Run with the CLI:
@@ -175,8 +171,6 @@ describe("Feature", () =>
 
     it("uses shared fixture", () => { /* ... */ });
 });
-
-run();
 ```
 
 ### File Naming

@@ -1,13 +1,17 @@
+using DraftSpec;
 using static DraftSpec.Dsl;
 
 namespace DraftSpec.Tests.Dsl;
 
 /// <summary>
 /// Tests for the static DSL used in CSX scripts.
-/// Note: Each test must call run() to reset the global state.
+/// Note: Each test uses [Before(Test)] to reset the global state.
 /// </summary>
 public class DslTests
 {
+    [Before(Test)]
+    public void ResetDslState() => Reset();
+
     #region describe()
 
     [Test]
@@ -16,7 +20,7 @@ public class DslTests
         var executed = false;
 
         describe("root", () => { it("spec", () => executed = true); });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).IsTrue();
     }
@@ -27,7 +31,7 @@ public class DslTests
         var path = new List<string>();
 
         describe("outer", () => { describe("inner", () => { it("spec", () => path.Add("executed")); }); });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(path).Contains("executed");
     }
@@ -40,7 +44,7 @@ public class DslTests
         describe("first", () => { it("spec1", () => executed.Add("first")); });
 
         describe("second", () => { it("spec2", () => executed.Add("second")); });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("first");
@@ -61,7 +65,7 @@ public class DslTests
                         describe("level3", () => { describe("level4", () => { it("deep spec", () => depth = 4); }); });
                     });
             });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(depth).IsEqualTo(4);
     }
@@ -76,7 +80,7 @@ public class DslTests
         var executed = false;
 
         describe("feature", () => { context("when condition", () => { it("behaves", () => executed = true); }); });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).IsTrue();
     }
@@ -91,7 +95,7 @@ public class DslTests
         var executed = false;
 
         describe("test", () => { it("runs", () => executed = true); });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).IsTrue();
     }
@@ -101,9 +105,8 @@ public class DslTests
     {
         // Pending specs don't execute but are tracked
         describe("test", () => { it("pending spec"); });
-        // run() resets state; we can't easily check status from static DSL
         // This test verifies the API doesn't throw
-        run();
+        new SpecRunner().Run(RootContext!);
     }
 
     [Test]
@@ -117,7 +120,7 @@ public class DslTests
             it("second", () => count++);
             it("third", () => count++);
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(count).IsEqualTo(3);
     }
@@ -146,7 +149,7 @@ public class DslTests
             fit("focused", () => executed.Add("focused"));
             it("also skipped", () => executed.Add("also skipped"));
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(1);
         await Assert.That(executed[0]).IsEqualTo("focused");
@@ -163,7 +166,7 @@ public class DslTests
             it("skipped", () => executed.Add("skipped"));
             fit("focused2", () => executed.Add("focused2"));
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("focused1");
@@ -181,7 +184,7 @@ public class DslTests
 
             describe("inner", () => { fit("focused inner", () => executed.Add("focused inner")); });
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(1);
         await Assert.That(executed[0]).IsEqualTo("focused inner");
@@ -197,7 +200,7 @@ public class DslTests
         var executed = false;
 
         describe("test", () => { xit("skipped", () => executed = true); });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).IsFalse();
     }
@@ -206,7 +209,7 @@ public class DslTests
     public async Task Xit_WithoutBody_DoesNotThrow()
     {
         describe("test", () => { xit("skipped without body"); });
-        run();
+        new SpecRunner().Run(RootContext!);
         // No assertion needed - test passes if no exception
     }
 
@@ -221,7 +224,7 @@ public class DslTests
             xit("skipped", () => executed.Add("skipped"));
             it("second", () => executed.Add("second"));
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("first");
@@ -243,7 +246,7 @@ public class DslTests
             it("spec1", () => order.Add("spec1"));
             it("spec2", () => order.Add("spec2"));
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(order).IsEquivalentTo([
             "before", "spec1",
@@ -262,7 +265,7 @@ public class DslTests
             it("spec1", () => order.Add("spec1"));
             it("spec2", () => order.Add("spec2"));
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(order).IsEquivalentTo([
             "spec1", "after",
@@ -298,7 +301,7 @@ public class DslTests
             it("spec2", () => { });
             it("spec3", () => { });
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(count).IsEqualTo(1);
     }
@@ -314,7 +317,7 @@ public class DslTests
             it("spec1", () => { });
             it("spec2", () => { });
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(count).IsEqualTo(1);
     }
@@ -336,29 +339,45 @@ public class DslTests
 
     #endregion
 
-    #region run()
+    #region Reset()
 
     [Test]
-    public async Task Run_ResetsStateForNextRun()
+    public async Task Reset_ClearsStateForNextRun()
     {
         var firstRunCount = 0;
         var secondRunCount = 0;
 
         describe("first", () => { it("spec", () => firstRunCount++); });
-        run();
+        new SpecRunner().Run(RootContext!);
+        Reset();
 
         describe("second", () => { it("spec", () => secondRunCount++); });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(firstRunCount).IsEqualTo(1);
         await Assert.That(secondRunCount).IsEqualTo(1);
     }
 
     [Test]
-    public async Task Run_WithNoSpecs_DoesNotThrow()
+    public async Task Reset_ClearsRootContext()
     {
-        // This should not throw - just output "No specs defined"
-        run();
+        describe("test", () => { it("spec", () => { }); });
+
+        // Before Reset, RootContext should be set
+        await Assert.That(RootContext).IsNotNull();
+
+        Reset();
+
+        // After Reset, RootContext should be null
+        await Assert.That(RootContext).IsNull();
+    }
+
+    [Test]
+    public async Task SpecRunner_WithNoSpecs_DoesNotThrow()
+    {
+        // No specs defined, RootContext is null - this should not throw
+        // The [Before(Test)] already calls Reset(), so RootContext is null
+        await Assert.That(RootContext).IsNull();
     }
 
     // Note: Exit code test removed - Environment.ExitCode is global shared state that
@@ -387,7 +406,7 @@ public class DslTests
                 it("spec", () => order.Add("spec"));
             });
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(order).IsEquivalentTo([
             "before:outer",

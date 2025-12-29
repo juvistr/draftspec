@@ -17,8 +17,6 @@ using static DraftSpec.Dsl;
 describe("Calculator", () => {
     it("adds", () => expect(Calculator.Add(1, 2)).toBe(3));
 });
-
-run();
 ```
 
 **Problems with this approach:**
@@ -61,8 +59,6 @@ Individual specs become clean:
 describe("Calculator", () => {
     it("adds", () => expect(Calculator.Add(1, 2)).toBe(3));
 });
-
-run();
 ```
 
 ### 2. CLI commands to initialise infrastructure

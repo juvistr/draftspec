@@ -1,5 +1,3 @@
-using DraftSpec.Configuration;
-
 namespace DraftSpec;
 
 /// <summary>
@@ -10,12 +8,11 @@ namespace DraftSpec;
 /// A SpecSession tracks:
 /// - The spec tree (RootContext, CurrentContext)
 /// - Tags being applied to specs (CurrentTags)
-/// - Execution configuration (RunnerBuilder, Configuration)
 ///
 /// Each async execution context (CSX script, test method) gets its own session
 /// via the static Dsl.Session property which uses AsyncLocal for isolation.
 /// </remarks>
-public class SpecSession : IDisposable
+public class SpecSession
 {
     /// <summary>
     /// Gets or sets the root context containing the spec tree.
@@ -36,35 +33,12 @@ public class SpecSession : IDisposable
     public List<string>? CurrentTags { get; set; }
 
     /// <summary>
-    /// Gets or sets the runner builder for configuring middleware.
-    /// </summary>
-    public SpecRunnerBuilder? RunnerBuilder { get; set; }
-
-    /// <summary>
-    /// Gets or sets the configuration for plugins, formatters, and reporters.
-    /// </summary>
-    public DraftSpecConfiguration? Configuration { get; set; }
-
-    /// <summary>
     /// Resets all session state for a clean execution context.
-    /// Called after run() completes or when explicitly resetting.
     /// </summary>
     public void Reset()
     {
         RootContext = null;
         CurrentContext = null;
         CurrentTags = null;
-        RunnerBuilder = null;
-        Configuration?.Dispose();
-        Configuration = null;
-    }
-
-    /// <summary>
-    /// Disposes the session by resetting all state.
-    /// </summary>
-    public void Dispose()
-    {
-        Reset();
-        GC.SuppressFinalize(this);
     }
 }

@@ -1,3 +1,4 @@
+using DraftSpec;
 using static DraftSpec.Dsl;
 
 namespace DraftSpec.Tests.Dsl;
@@ -29,7 +30,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(5);
         await Assert.That(executed).Contains(1);
@@ -58,7 +59,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(results).Count().IsEqualTo(3);
         await Assert.That(results).Contains("hello:5");
@@ -86,7 +87,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(results).Count().IsEqualTo(3);
         await Assert.That(results).Contains("a1");
@@ -117,7 +118,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(results).Count().IsEqualTo(4);
         await Assert.That(results.All(r => r.a + r.b == r.sum)).IsTrue();
@@ -143,7 +144,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(count).IsEqualTo(2);
     }
@@ -168,7 +169,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(count).IsEqualTo(2);
     }
@@ -193,7 +194,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(count).IsEqualTo(2);
     }
@@ -225,7 +226,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(specNames).Count().IsEqualTo(3);
         await Assert.That(specNames).Contains("positive numbers");
@@ -250,7 +251,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).IsFalse();
     }
@@ -271,7 +272,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(results).Count().IsEqualTo(2);
         await Assert.That(results).Contains("a");
@@ -296,7 +297,7 @@ public class WithDataTests
             });
         });
 
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(count).IsEqualTo(5);
     }

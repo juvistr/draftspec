@@ -550,8 +550,6 @@ describe("Test", () => {
     it("spec at line 5", () => {});  // Line 5
     it("spec at line 6", () => {});  // Line 6
 });
-
-run();
 EOF
 
 # Test exact line match

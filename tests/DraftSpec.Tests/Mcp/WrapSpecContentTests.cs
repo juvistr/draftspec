@@ -30,13 +30,15 @@ public class WrapSpecContentTests
     }
 
     [Test]
-    public async Task WrapSpecContent_AddsRunCall()
+    public async Task WrapSpecContent_AddsExecutionCode()
     {
         var content = """describe("test", () => { it("works", () => {}); });""";
 
         var wrapped = SpecExecutionService.WrapSpecContent(content);
 
-        await Assert.That(wrapped).Contains("run(json: true);");
+        await Assert.That(wrapped).Contains("if (RootContext != null)");
+        await Assert.That(wrapped).Contains("var runner = new DraftSpec.SpecRunner()");
+        await Assert.That(wrapped).Contains("report.ToJson()");
     }
 
     [Test]
@@ -113,8 +115,8 @@ public class WrapSpecContentTests
         // The user's run(json: true) should be commented out
         await Assert.That(wrapped).Contains("// (run handled by server)");
 
-        // The template's run(json: true) should be present at the end
-        await Assert.That(wrapped.TrimEnd()).EndsWith("run(json: true);");
+        // The template's execution code should be present at the end
+        await Assert.That(wrapped).Contains("report.ToJson()");
     }
 
     [Test]
@@ -179,7 +181,7 @@ public class WrapSpecContentTests
         var wrapped = SpecExecutionService.WrapSpecContent("");
 
         await Assert.That(wrapped).Contains("#:package DraftSpec@*");
-        await Assert.That(wrapped).Contains("run(json: true);");
+        await Assert.That(wrapped).Contains("report.ToJson()");
     }
 
     [Test]

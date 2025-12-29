@@ -122,7 +122,6 @@ public class NewCommandTests
         await Assert.That(content).Contains("#load \"spec_helper.csx\"");
         await Assert.That(content).Contains("using static DraftSpec.Dsl;");
         await Assert.That(content).Contains("describe(\"UserService\"");
-        await Assert.That(content).Contains("run();");
     }
 
     [Test]

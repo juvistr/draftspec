@@ -448,8 +448,3 @@ describe("7. Domain-Specific Assertions", () =>
 //     .WithParallelExecution()  // Run specs in parallel
 // );
 
-// ============================================
-// Run all specs
-// ============================================
-
-run();

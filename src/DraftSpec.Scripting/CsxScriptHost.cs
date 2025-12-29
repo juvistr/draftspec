@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 
-namespace DraftSpec.TestingPlatform;
+namespace DraftSpec.Scripting;
 
 /// <summary>
 /// Globals object passed to Roslyn scripts for state sharing.
@@ -23,10 +23,10 @@ public class ScriptGlobals
 /// Roslyn-based script host for compiling and executing CSX spec files in-process.
 /// </summary>
 /// <remarks>
-/// For MTP integration, spec files should NOT call run() - just define describe/it blocks.
-/// The MTP adapter controls discovery and execution.
+/// Spec files should NOT call run() - just define describe/it blocks.
+/// The host controls discovery and execution.
 /// </remarks>
-internal sealed partial class CsxScriptHost
+public sealed partial class CsxScriptHost
 {
     private readonly string _baseDirectory;
     private readonly IReadOnlyList<Assembly> _referenceAssemblies;
@@ -160,7 +160,7 @@ internal sealed partial class CsxScriptHost
 
         // Append code to capture the root context at the end of script execution
         finalBuilder.AppendLine();
-        finalBuilder.AppendLine("// --- Capture context for MTP ---");
+        finalBuilder.AppendLine("// --- Capture context for runner ---");
         finalBuilder.AppendLine("CaptureRootContext?.Invoke(DraftSpec.Dsl.RootContext);");
 
         return (finalBuilder.ToString(), additionalReferences);
@@ -257,7 +257,7 @@ internal sealed partial class CsxScriptHost
                 typeof(Enumerable).Assembly,                // System.Linq
                 typeof(Task).Assembly,                      // System.Threading.Tasks
                 typeof(Dsl).Assembly,                       // DraftSpec
-                typeof(ScriptGlobals).Assembly);            // DraftSpec.TestingPlatform for globals
+                typeof(ScriptGlobals).Assembly);            // DraftSpec.Scripting for globals
 
         // Add reference assemblies provided at construction
         foreach (var assembly in _referenceAssemblies)
@@ -279,7 +279,7 @@ internal sealed partial class CsxScriptHost
             if (fileName.StartsWith("System.", StringComparison.OrdinalIgnoreCase) ||
                 fileName.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) ||
                 fileName.Equals("DraftSpec.dll", StringComparison.OrdinalIgnoreCase) ||
-                fileName.Equals("DraftSpec.TestingPlatform.dll", StringComparison.OrdinalIgnoreCase))
+                fileName.Equals("DraftSpec.Scripting.dll", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

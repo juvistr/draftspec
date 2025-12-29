@@ -1,131 +1,108 @@
 using System.Text.Json;
+using DraftSpec.Formatters;
+using DraftSpec.Internal;
 using static DraftSpec.Dsl;
 
 namespace DraftSpec.Tests.Output;
 
 /// <summary>
-/// Tests for spec output formatting (console and JSON).
-/// These tests must run sequentially due to Console.SetOut manipulation.
+/// Tests for spec report structure and JSON serialization.
 /// </summary>
-[NotInParallel]
 public class OutputTests
 {
-    #region Console Output
+    [Before(Test)]
+    public void SetUp()
+    {
+        Reset();
+    }
+
+    #region Report Structure
 
     [Test]
-    public async Task ConsoleOutput_PassingSpec_ShowsCheckmark()
+    public async Task Report_PassingSpec_HasPassedStatus()
     {
-        var output = CaptureConsoleOutput(() =>
-        {
-            describe("test", () => { it("passes", () => { }); });
-            run();
-        });
+        describe("test", () => { it("passes", () => { }); });
 
-        await Assert.That(output).Contains("✓");
-        await Assert.That(output).Contains("passes");
+        var report = SpecExecutor.Execute(RootContext!);
+
+        await Assert.That(report.Contexts[0].Specs[0].Status).IsEqualTo("passed");
     }
 
     [Test]
-    public async Task ConsoleOutput_FailingSpec_ShowsX()
+    public async Task Report_FailingSpec_HasFailedStatus()
     {
-        var output = CaptureConsoleOutput(() =>
-        {
-            describe("test", () => { it("fails", () => throw new Exception("error")); });
-            run();
-        });
+        describe("test", () => { it("fails", () => throw new Exception("error")); });
 
-        await Assert.That(output).Contains("✗");
-        await Assert.That(output).Contains("fails");
+        var report = SpecExecutor.Execute(RootContext!);
+
+        await Assert.That(report.Contexts[0].Specs[0].Status).IsEqualTo("failed");
     }
 
     [Test]
-    public async Task ConsoleOutput_PendingSpec_ShowsCircle()
+    public async Task Report_PendingSpec_HasPendingStatus()
     {
-        var output = CaptureConsoleOutput(() =>
-        {
-            describe("test", () => { it("pending"); });
-            run();
-        });
+        describe("test", () => { it("pending"); });
 
-        await Assert.That(output).Contains("○");
-        await Assert.That(output).Contains("pending");
+        var report = SpecExecutor.Execute(RootContext!);
+
+        await Assert.That(report.Contexts[0].Specs[0].Status).IsEqualTo("pending");
     }
 
     [Test]
-    public async Task ConsoleOutput_SkippedSpec_ShowsDash()
+    public async Task Report_SkippedSpec_HasSkippedStatus()
     {
-        var output = CaptureConsoleOutput(() =>
-        {
-            describe("test", () => { xit("skipped", () => { }); });
-            run();
-        });
+        describe("test", () => { xit("skipped", () => { }); });
 
-        await Assert.That(output).Contains("-");
-        await Assert.That(output).Contains("skipped");
+        var report = SpecExecutor.Execute(RootContext!);
+
+        await Assert.That(report.Contexts[0].Specs[0].Status).IsEqualTo("skipped");
     }
 
     [Test]
-    public async Task ConsoleOutput_ShowsContextDescription()
+    public async Task Report_ContainsContextDescription()
     {
-        var output = CaptureConsoleOutput(() =>
-        {
-            describe("Calculator", () => { it("adds numbers", () => { }); });
-            run();
-        });
+        describe("Calculator", () => { it("adds numbers", () => { }); });
 
-        await Assert.That(output).Contains("Calculator");
+        var report = SpecExecutor.Execute(RootContext!);
+
+        await Assert.That(report.Contexts[0].Description).IsEqualTo("Calculator");
     }
 
     [Test]
-    public async Task ConsoleOutput_ShowsNestedContexts()
+    public async Task Report_ContainsNestedContexts()
     {
-        var output = CaptureConsoleOutput(() =>
-        {
-            describe("Calculator", () => { describe("add method", () => { it("returns sum", () => { }); }); });
-            run();
-        });
+        describe("Calculator", () => { describe("add method", () => { it("returns sum", () => { }); }); });
 
-        await Assert.That(output).Contains("Calculator");
-        await Assert.That(output).Contains("add method");
+        var report = SpecExecutor.Execute(RootContext!);
+
+        await Assert.That(report.Contexts[0].Description).IsEqualTo("Calculator");
+        await Assert.That(report.Contexts[0].Contexts[0].Description).IsEqualTo("add method");
     }
 
     [Test]
-    public async Task ConsoleOutput_ShowsSummary()
+    public async Task Report_ContainsSummary()
     {
-        var output = CaptureConsoleOutput(() =>
+        describe("test", () =>
         {
-            describe("test", () =>
-            {
-                it("passes", () => { });
-                it("pending");
-            });
-            run();
+            it("passes", () => { });
+            it("pending");
         });
 
-        await Assert.That(output).Contains("2 specs:");
-        await Assert.That(output).Contains("passed");
-        await Assert.That(output).Contains("pending");
+        var report = SpecExecutor.Execute(RootContext!);
+
+        await Assert.That(report.Summary.Total).IsEqualTo(2);
+        await Assert.That(report.Summary.Passed).IsEqualTo(1);
+        await Assert.That(report.Summary.Pending).IsEqualTo(1);
     }
 
     [Test]
-    public async Task ConsoleOutput_ShowsErrorMessage_OnFailure()
+    public async Task Report_ContainsErrorMessage_OnFailure()
     {
-        var output = CaptureConsoleOutput(() =>
-        {
-            describe("test",
-                () => { it("fails", () => throw new InvalidOperationException("specific error message")); });
-            run();
-        });
+        describe("test", () => { it("fails", () => throw new InvalidOperationException("specific error message")); });
 
-        await Assert.That(output).Contains("specific error message");
-    }
+        var report = SpecExecutor.Execute(RootContext!);
 
-    [Test]
-    public async Task ConsoleOutput_NoSpecs_ShowsMessage()
-    {
-        var output = CaptureConsoleOutput(() => { run(); });
-
-        await Assert.That(output).Contains("No specs defined");
+        await Assert.That(report.Contexts[0].Specs[0].Error).Contains("specific error message");
     }
 
     #endregion
@@ -135,29 +112,26 @@ public class OutputTests
     [Test]
     public async Task JsonOutput_ContainsTimestamp()
     {
-        var json = CaptureConsoleOutput(() =>
-        {
-            describe("test", () => { it("spec", () => { }); });
-            run(true);
-        });
+        describe("test", () => { it("spec", () => { }); });
 
+        var report = SpecExecutor.Execute(RootContext!);
+        var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
+
         await Assert.That(doc.RootElement.TryGetProperty("timestamp", out _)).IsTrue();
     }
 
     [Test]
     public async Task JsonOutput_ContainsSummary()
     {
-        var json = CaptureConsoleOutput(() =>
+        describe("test", () =>
         {
-            describe("test", () =>
-            {
-                it("passes", () => { });
-                it("pending");
-            });
-            run(true);
+            it("passes", () => { });
+            it("pending");
         });
 
+        var report = SpecExecutor.Execute(RootContext!);
+        var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var summary = doc.RootElement.GetProperty("summary");
 
@@ -169,12 +143,10 @@ public class OutputTests
     [Test]
     public async Task JsonOutput_ContainsContexts()
     {
-        var json = CaptureConsoleOutput(() =>
-        {
-            describe("Calculator", () => { it("works", () => { }); });
-            run(true);
-        });
+        describe("Calculator", () => { it("works", () => { }); });
 
+        var report = SpecExecutor.Execute(RootContext!);
+        var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var contexts = doc.RootElement.GetProperty("contexts");
 
@@ -185,12 +157,10 @@ public class OutputTests
     [Test]
     public async Task JsonOutput_ContainsSpecDetails()
     {
-        var json = CaptureConsoleOutput(() =>
-        {
-            describe("test", () => { it("spec description", () => { }); });
-            run(true);
-        });
+        describe("test", () => { it("spec description", () => { }); });
 
+        var report = SpecExecutor.Execute(RootContext!);
+        var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var specs = doc.RootElement.GetProperty("contexts")[0].GetProperty("specs");
 
@@ -202,12 +172,10 @@ public class OutputTests
     [Test]
     public async Task JsonOutput_ContainsDuration()
     {
-        var json = CaptureConsoleOutput(() =>
-        {
-            describe("test", () => { it("spec", () => Thread.Sleep(5)); });
-            run(true);
-        });
+        describe("test", () => { it("spec", () => Thread.Sleep(5)); });
 
+        var report = SpecExecutor.Execute(RootContext!);
+        var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var spec = doc.RootElement.GetProperty("contexts")[0].GetProperty("specs")[0];
 
@@ -218,12 +186,10 @@ public class OutputTests
     [Test]
     public async Task JsonOutput_ContainsErrorMessage_OnFailure()
     {
-        var json = CaptureConsoleOutput(() =>
-        {
-            describe("test", () => { it("fails", () => throw new Exception("json error")); });
-            run(true);
-        });
+        describe("test", () => { it("fails", () => throw new Exception("json error")); });
 
+        var report = SpecExecutor.Execute(RootContext!);
+        var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var spec = doc.RootElement.GetProperty("contexts")[0].GetProperty("specs")[0];
 
@@ -234,50 +200,16 @@ public class OutputTests
     [Test]
     public async Task JsonOutput_NestedContexts_PreservesHierarchy()
     {
-        var json = CaptureConsoleOutput(() =>
-        {
-            describe("outer", () => { describe("inner", () => { it("spec", () => { }); }); });
-            run(true);
-        });
+        describe("outer", () => { describe("inner", () => { it("spec", () => { }); }); });
 
+        var report = SpecExecutor.Execute(RootContext!);
+        var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var outer = doc.RootElement.GetProperty("contexts")[0];
         var inner = outer.GetProperty("contexts")[0];
 
         await Assert.That(outer.GetProperty("description").GetString()).IsEqualTo("outer");
         await Assert.That(inner.GetProperty("description").GetString()).IsEqualTo("inner");
-    }
-
-    [Test]
-    public async Task JsonOutput_NoSpecs_ReturnsEmptyObject()
-    {
-        var json = CaptureConsoleOutput(() => { run(true); });
-
-        await Assert.That(json.Trim()).IsEqualTo("{}");
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    private static string CaptureConsoleOutput(Action action)
-    {
-        var originalOut = Console.Out;
-        var sw = new StringWriter();
-        try
-        {
-            Console.SetOut(sw);
-            action();
-            sw.Flush();
-            return sw.ToString();
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            sw.Dispose();
-            // Reset exit code that may have been set
-            Environment.ExitCode = 0;
-        }
     }
 
     #endregion

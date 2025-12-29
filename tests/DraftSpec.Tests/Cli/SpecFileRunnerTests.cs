@@ -245,37 +245,17 @@ public class SpecFileRunnerTests
 
     #endregion
 
-    #region ISpecFileRunner Interface
-
-    [Test]
-    public async Task SpecFileRunner_ImplementsInterface()
-    {
-        var runner = new SpecFileRunner();
-
-        await Assert.That(runner).IsAssignableTo<ISpecFileRunner>();
-    }
-
-    #endregion
-
     #region Build Cache
 
     [Test]
     public async Task ClearBuildCache_DoesNotThrow()
     {
-        var runner = new SpecFileRunner();
+        var runner = new InProcessSpecRunner();
 
         // Should not throw even when cache is empty
         runner.ClearBuildCache();
 
         await Task.CompletedTask;
-    }
-
-    [Test]
-    public async Task SpecFileRunner_NoCache_CanBeConstructed()
-    {
-        var runner = new SpecFileRunner(noCache: true);
-
-        await Assert.That(runner).IsNotNull();
     }
 
     #endregion

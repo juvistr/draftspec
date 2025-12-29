@@ -1,6 +1,5 @@
 using System.Security;
 using DraftSpec.Cli.Configuration;
-using DraftSpec.Cli.Coverage;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Formatters;
 
@@ -18,7 +17,7 @@ public static class RunCommand
         return registry.GetFormatter(name, options);
     }
 
-    public static int Execute(CliOptions options, ICliFormatterRegistry? formatterRegistry = null)
+    public static async Task<int> ExecuteAsync(CliOptions options, ICliFormatterRegistry? formatterRegistry = null, CancellationToken ct = default)
     {
         // Load project configuration from draftspec.json
         var configResult = ConfigLoader.Load(options.Path);
@@ -31,187 +30,186 @@ public static class RunCommand
         if (configResult.Config != null)
             options.ApplyDefaults(configResult.Config);
 
-        // Initialize coverage runner if enabled
-        CoverageRunner? coverageRunner = null;
-        if (options.Coverage)
-        {
-            if (!CoverageToolDetector.IsAvailable)
-            {
-                Console.Error.WriteLine("Error: dotnet-coverage tool is not installed.");
-                Console.Error.WriteLine("Install with: dotnet tool install -g dotnet-coverage");
-                return 1;
-            }
-
-            var coverageOutput = Path.GetFullPath(options.CoverageOutput ?? "./coverage");
-            coverageRunner = new CoverageRunner(coverageOutput, options.CoverageFormat);
-
-            // Start coverage server for efficient multi-file collection
-            if (!coverageRunner.StartServer())
-            {
-                Console.Error.WriteLine("Warning: Failed to start coverage server, falling back to per-file collection.");
-            }
-        }
-
         var finder = new SpecFinder();
-        var runner = new SpecFileRunner(
-            options.NoCache,
+        var runner = new InProcessSpecRunner(
             options.FilterTags,
             options.ExcludeTags,
             options.FilterName,
-            options.ExcludeName,
-            coverageRunner);
+            options.ExcludeName);
 
-        // For non-console formats, we need JSON output from specs
-        var needsJson = options.Format is OutputFormats.Json or OutputFormats.Markdown or OutputFormats.Html;
-        bool hasFailures;
-
-        if (!needsJson)
+        var specFiles = finder.FindSpecs(options.Path);
+        if (specFiles.Count == 0)
         {
-            // Console output - use existing presenter
-            var presenter = new ConsolePresenter(false);
-            runner.OnBuildStarted += presenter.ShowBuilding;
-            runner.OnBuildCompleted += presenter.ShowBuildResult;
+            Console.WriteLine("No spec files found.");
+            return 0;
+        }
 
-            var specFiles = finder.FindSpecs(options.Path);
-            presenter.ShowHeader(specFiles, options.Parallel);
+        // Set up build event handlers for console output
+        var presenter = new ConsolePresenter(false);
+        runner.OnBuildStarted += presenter.ShowBuilding;
+        runner.OnBuildCompleted += presenter.ShowBuildResult;
 
-            var summary = runner.RunAll(specFiles, options.Parallel);
+        // Run all specs
+        var summary = await runner.RunAllAsync(specFiles, options.Parallel, ct);
 
-            presenter.ShowSpecsStarting();
-            foreach (var result in summary.Results) presenter.ShowResult(result, options.Path);
+        // Merge results into a combined report
+        var combinedReport = MergeReports(summary.Results, Path.GetFullPath(options.Path));
 
-            presenter.ShowSummary(summary);
-            hasFailures = !summary.Success;
+        // Format output
+        var needsJson = options.Format is OutputFormats.Json or OutputFormats.Markdown or OutputFormats.Html or OutputFormats.JUnit;
+
+        string output;
+        if (options.Format == OutputFormats.Console)
+        {
+            // Console format - show directly
+            ShowConsoleOutput(summary, options.Path, presenter);
+            output = ""; // Already displayed
+        }
+        else if (options.Format == OutputFormats.Json)
+        {
+            output = combinedReport.ToJson();
         }
         else
         {
-            // JSON/Markdown/HTML - run with JSON output and format
-            var specFilesForJson = finder.FindSpecs(options.Path);
-
-            // Run specs with JSON output via FileReporter (builds projects automatically)
-            var jsonOutputs = new List<string>();
-            hasFailures = false;
-
-            foreach (var specFile in specFilesForJson)
-            {
-                var result = runner.RunWithJsonReporter(specFile);
-                if (!string.IsNullOrWhiteSpace(result.Output))
-                    // Output is now clean JSON from file (not mixed with console output)
-                    jsonOutputs.Add(result.Output);
-                if (!result.Success) hasFailures = true;
-            }
-
-            // Merge all JSON reports into a combined report
-            var combinedReport = ReportMerger.Merge(jsonOutputs, Path.GetFullPath(options.Path));
-
-            string output;
-            if (options.Format == OutputFormats.Json)
-            {
-                output = combinedReport.ToJson();
-            }
-            else
-            {
-                var formatter = GetFormatter(options.Format, options, formatterRegistry)
-                                ?? throw new ArgumentException($"Unknown format: {options.Format}");
-                output = formatter.Format(combinedReport);
-            }
-
-            // Output to file or stdout
-            if (!string.IsNullOrEmpty(options.OutputFile))
-            {
-                // Security: Validate output path is within current directory
-                // Uses same pattern as SpecFinder: trailing separator + platform-aware comparison
-                var outputFullPath = Path.GetFullPath(options.OutputFile);
-                var currentDir = Directory.GetCurrentDirectory();
-                var normalizedBase = currentDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-                var outputDir = Path.GetDirectoryName(outputFullPath) ?? currentDir;
-                var normalizedOutput = outputDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-
-                // Use platform-appropriate case sensitivity
-                var comparison = OperatingSystem.IsWindows()
-                    ? StringComparison.OrdinalIgnoreCase
-                    : StringComparison.Ordinal;
-
-                if (!normalizedOutput.StartsWith(normalizedBase, comparison))
-                    // Generic error - don't expose internal directory structure
-                    throw new SecurityException("Output file must be within current directory");
-
-                File.WriteAllText(outputFullPath, output);
-                Console.WriteLine($"Report written to {options.OutputFile}");
-            }
-            else
-            {
-                Console.WriteLine(output);
-            }
+            var formatter = GetFormatter(options.Format, options, formatterRegistry)
+                            ?? throw new ArgumentException($"Unknown format: {options.Format}");
+            output = formatter.Format(combinedReport);
         }
 
-        // Merge and report coverage if enabled
-        var coverageExitCode = HandleCoverage(coverageRunner, configResult.Config, options);
-        if (coverageExitCode.HasValue)
-            return coverageExitCode.Value;
+        // Output to file or stdout
+        if (!string.IsNullOrEmpty(options.OutputFile))
+        {
+            // Security: Validate output path is within current directory
+            ValidateOutputPath(options.OutputFile);
+            await File.WriteAllTextAsync(options.OutputFile, output, ct);
+            Console.WriteLine($"Report written to {options.OutputFile}");
+        }
+        else if (!string.IsNullOrEmpty(output))
+        {
+            Console.WriteLine(output);
+        }
 
-        return hasFailures ? 1 : 0;
+        return summary.Success ? 0 : 1;
     }
 
     /// <summary>
-    /// Handle coverage shutdown, reporting, and threshold checking.
-    /// Returns an exit code if coverage threshold failed, null otherwise.
+    /// Synchronous entry point for backward compatibility.
     /// </summary>
-    private static int? HandleCoverage(CoverageRunner? coverageRunner, DraftSpecProjectConfig? config, CliOptions options)
+    public static int Execute(CliOptions options, ICliFormatterRegistry? formatterRegistry = null)
     {
-        if (coverageRunner == null)
-            return null;
+        return ExecuteAsync(options, formatterRegistry).GetAwaiter().GetResult();
+    }
 
-        // Shutdown server and finalize coverage file
-        coverageRunner.Shutdown();
+    private static void ShowConsoleOutput(InProcessRunSummary summary, string basePath, ConsolePresenter presenter)
+    {
+        presenter.ShowHeader(summary.Results.Select(r => r.SpecFile).ToList(), false);
+        presenter.ShowSpecsStarting();
 
-        var coverageFile = coverageRunner.GetCoverageFile();
-        if (coverageFile == null)
-            return null;
-
-        Console.WriteLine();
-        Console.WriteLine($"Coverage report: {coverageFile}");
-
-        // Generate additional report formats if requested (CLI option takes precedence)
-        var reportFormatsStr = options.CoverageReportFormats;
-        var reportFormats = !string.IsNullOrEmpty(reportFormatsStr)
-            ? reportFormatsStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
-            : config?.Coverage?.ReportFormats;
-
-        if (reportFormats is { Count: > 0 })
+        foreach (var result in summary.Results)
         {
-            var generatedReports = coverageRunner.GenerateReports(reportFormats);
-            foreach (var (format, path) in generatedReports)
-            {
-                Console.WriteLine($"Coverage {format} report: {path}");
-            }
+            // Convert to legacy format for presenter
+            var legacyResult = new SpecRunResult(
+                result.SpecFile,
+                FormatConsoleOutput(result.Report),
+                result.Error?.Message ?? "",
+                result.Success ? 0 : 1,
+                result.Duration);
+
+            presenter.ShowResult(legacyResult, basePath);
         }
 
-        // Check thresholds if configured
-        var thresholds = config?.Coverage?.Thresholds;
-        if (thresholds != null && (thresholds.Line.HasValue || thresholds.Branch.HasValue))
+        // Show summary
+        var legacySummary = new RunSummary(
+            summary.Results.Select(r => new SpecRunResult(
+                r.SpecFile,
+                "",
+                r.Error?.Message ?? "",
+                r.Success ? 0 : 1,
+                r.Duration)).ToList(),
+            summary.TotalDuration);
+
+        presenter.ShowSummary(legacySummary);
+    }
+
+    private static string FormatConsoleOutput(SpecReport report)
+    {
+        var lines = new List<string>();
+
+        void FormatContext(SpecContextReport ctx, int indent)
         {
-            var checker = new CoverageThresholdChecker();
-            var result = checker.CheckFile(coverageFile, thresholds);
+            var prefix = new string(' ', indent * 2);
+            lines.Add($"{prefix}{ctx.Description}");
 
-            if (result != null)
+            foreach (var spec in ctx.Specs)
             {
-                Console.WriteLine($"Coverage: {result.ActualLinePercent:F1}% lines, {result.ActualBranchPercent:F1}% branches");
-
-                if (!result.Passed)
+                var status = spec.Status switch
                 {
-                    Console.Error.WriteLine();
-                    Console.Error.WriteLine("Coverage threshold check failed:");
-                    foreach (var failure in result.Failures)
-                        Console.Error.WriteLine($"  {failure}");
-                    return 2; // Exit code 2 for coverage threshold failure
+                    "passed" => "✓",
+                    "failed" => "✗",
+                    "pending" => "○",
+                    "skipped" => "-",
+                    _ => "?"
+                };
+                lines.Add($"{prefix}  {status} {spec.Description}");
+                if (!string.IsNullOrEmpty(spec.Error))
+                {
+                    lines.Add($"{prefix}    {spec.Error}");
                 }
             }
+
+            foreach (var child in ctx.Contexts)
+            {
+                FormatContext(child, indent + 1);
+            }
         }
 
-        // Dispose to clean up any remaining resources
-        coverageRunner.Dispose();
+        foreach (var ctx in report.Contexts)
+        {
+            FormatContext(ctx, 0);
+        }
 
-        return null;
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static SpecReport MergeReports(IReadOnlyList<InProcessRunResult> results, string source)
+    {
+        var combined = new SpecReport
+        {
+            Timestamp = DateTime.UtcNow,
+            Source = source,
+            Summary = new SpecSummary
+            {
+                Total = results.Sum(r => r.Report.Summary.Total),
+                Passed = results.Sum(r => r.Report.Summary.Passed),
+                Failed = results.Sum(r => r.Report.Summary.Failed),
+                Pending = results.Sum(r => r.Report.Summary.Pending),
+                Skipped = results.Sum(r => r.Report.Summary.Skipped),
+                DurationMs = results.Sum(r => r.Report.Summary.DurationMs)
+            }
+        };
+
+        // Merge all contexts from all reports
+        foreach (var result in results)
+        {
+            combined.Contexts.AddRange(result.Report.Contexts);
+        }
+
+        return combined;
+    }
+
+    private static void ValidateOutputPath(string outputFile)
+    {
+        var outputFullPath = Path.GetFullPath(outputFile);
+        var currentDir = Directory.GetCurrentDirectory();
+        var normalizedBase = currentDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var outputDir = Path.GetDirectoryName(outputFullPath) ?? currentDir;
+        var normalizedOutput = outputDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        if (!normalizedOutput.StartsWith(normalizedBase, comparison))
+            throw new SecurityException("Output file must be within current directory");
     }
 }

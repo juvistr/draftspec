@@ -1,5 +1,5 @@
 using DraftSpec.Cli.Configuration;
-using DraftSpec.Cli.Coverage;
+using DraftSpec.Formatters;
 
 namespace DraftSpec.Cli.Commands;
 
@@ -18,21 +18,6 @@ public static class WatchCommand
         if (configResult.Config != null)
             options.ApplyDefaults(configResult.Config);
 
-        // Check coverage tool availability if enabled
-        var coverageEnabled = options.Coverage;
-        string? coverageOutput = null;
-        if (coverageEnabled)
-        {
-            if (!CoverageToolDetector.IsAvailable)
-            {
-                Console.Error.WriteLine("Error: dotnet-coverage tool is not installed.");
-                Console.Error.WriteLine("Install with: dotnet tool install -g dotnet-coverage");
-                return 1;
-            }
-
-            coverageOutput = Path.GetFullPath(options.CoverageOutput ?? "./coverage");
-        }
-
         var path = options.Path;
         var finder = new SpecFinder();
         var presenter = new ConsolePresenter(true);
@@ -45,29 +30,18 @@ public static class WatchCommand
             cts.Cancel();
         };
 
-        RunSummary? lastSummary = null;
+        InProcessRunSummary? lastSummary = null;
         IReadOnlyList<string>? allSpecFiles = null;
 
-        void RunSpecs(IReadOnlyList<string> specFiles, bool isPartialRun = false)
+        async Task RunSpecs(IReadOnlyList<string> specFiles, bool isPartialRun = false)
         {
             presenter.Clear();
 
-            // Create fresh coverage runner for each watch iteration
-            CoverageRunner? coverageRunner = null;
-            if (coverageEnabled && coverageOutput != null)
-            {
-                coverageRunner = new CoverageRunner(coverageOutput, options.CoverageFormat);
-                coverageRunner.StartServer();
-            }
-
-            // Create runner with coverage for this iteration
-            var runner = new SpecFileRunner(
-                options.NoCache,
+            var runner = new InProcessSpecRunner(
                 options.FilterTags,
                 options.ExcludeTags,
                 options.FilterName,
-                options.ExcludeName,
-                coverageRunner);
+                options.ExcludeName);
 
             runner.OnBuildStarted += presenter.ShowBuilding;
             runner.OnBuildCompleted += presenter.ShowBuildResult;
@@ -77,58 +51,91 @@ public static class WatchCommand
             {
                 presenter.ShowHeader(specFiles, options.Parallel, isPartialRun);
 
-                lastSummary = runner.RunAll(specFiles, options.Parallel);
+                lastSummary = await runner.RunAllAsync(specFiles, options.Parallel, cts.Token);
 
                 presenter.ShowSpecsStarting();
-                foreach (var result in lastSummary.Results) presenter.ShowResult(result, path);
 
-                presenter.ShowSummary(lastSummary);
+                foreach (var result in lastSummary.Results)
+                {
+                    var legacyResult = new SpecRunResult(
+                        result.SpecFile,
+                        FormatConsoleOutput(result.Report),
+                        result.Error?.Message ?? "",
+                        result.Success ? 0 : 1,
+                        result.Duration);
 
-                // Handle coverage after each run (warnings only, don't exit)
-                HandleCoverageInWatchMode(coverageRunner, configResult.Config, options, presenter);
+                    presenter.ShowResult(legacyResult, path);
+                }
+
+                // Convert to legacy summary for presenter
+                var legacySummary = new RunSummary(
+                    lastSummary.Results.Select(r => new SpecRunResult(
+                        r.SpecFile,
+                        "",
+                        r.Error?.Message ?? "",
+                        r.Success ? 0 : 1,
+                        r.Duration)).ToList(),
+                    lastSummary.TotalDuration);
+
+                presenter.ShowSummary(legacySummary);
+            }
+            catch (OperationCanceledException)
+            {
+                // Watch was cancelled
+                throw;
             }
             catch (ArgumentException ex)
             {
                 presenter.ShowError(ex.Message);
             }
-            finally
-            {
-                coverageRunner?.Dispose();
-            }
 
             presenter.ShowWatching();
         }
 
-        void RunAll()
+        async Task RunAll()
         {
             allSpecFiles = finder.FindSpecs(path);
-            RunSpecs(allSpecFiles);
+            await RunSpecs(allSpecFiles);
         }
 
         // Initial run
-        RunAll();
+        try
+        {
+            await RunAll();
+        }
+        catch (OperationCanceledException)
+        {
+            // Exit immediately if cancelled during initial run
+            return lastSummary?.Success == true ? 0 : 1;
+        }
 
         // Set up watcher
         using var watcher = new FileWatcher(path, change =>
         {
             presenter.ShowRerunning();
 
-            // Selective re-run: if only one spec file changed, run just that one
-            if (change.IsSpecFile && change.FilePath != null)
+            try
             {
-                // Verify the changed file is in our spec list
-                var changedSpec = allSpecFiles?.FirstOrDefault(f =>
-                    string.Equals(Path.GetFullPath(f), change.FilePath, StringComparison.OrdinalIgnoreCase));
-
-                if (changedSpec != null)
+                // Selective re-run: if only one spec file changed, run just that one
+                if (change.IsSpecFile && change.FilePath != null)
                 {
-                    RunSpecs([changedSpec], true);
-                    return;
-                }
-            }
+                    var changedSpec = allSpecFiles?.FirstOrDefault(f =>
+                        string.Equals(Path.GetFullPath(f), change.FilePath, StringComparison.OrdinalIgnoreCase));
 
-            // Full run: source file changed, multiple files changed, or file not in list
-            RunAll();
+                    if (changedSpec != null)
+                    {
+                        RunSpecs([changedSpec], true).GetAwaiter().GetResult();
+                        return;
+                    }
+                }
+
+                // Full run: source file changed, multiple files changed, or file not in list
+                RunAll().GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                // Ignore - watcher will stop
+            }
         });
 
         // Wait for cancellation
@@ -147,59 +154,43 @@ public static class WatchCommand
         return lastSummary?.Success == true ? 0 : 1;
     }
 
-    /// <summary>
-    /// Handle coverage in watch mode - shutdown server, generate reports, show warnings.
-    /// Unlike run mode, this doesn't exit on threshold failure.
-    /// </summary>
-    private static void HandleCoverageInWatchMode(
-        CoverageRunner? coverageRunner,
-        DraftSpecProjectConfig? config,
-        CliOptions options,
-        ConsolePresenter presenter)
+    private static string FormatConsoleOutput(SpecReport report)
     {
-        if (coverageRunner == null)
-            return;
+        var lines = new List<string>();
 
-        // Shutdown server and finalize coverage file
-        coverageRunner.Shutdown();
-
-        var coverageFile = coverageRunner.GetCoverageFile();
-        if (coverageFile == null)
-            return;
-
-        presenter.ShowCoverageReport(coverageFile);
-
-        // Generate additional report formats if requested
-        var reportFormatsStr = options.CoverageReportFormats;
-        var reportFormats = !string.IsNullOrEmpty(reportFormatsStr)
-            ? reportFormatsStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
-            : config?.Coverage?.ReportFormats;
-
-        if (reportFormats is { Count: > 0 })
+        void FormatContext(SpecContextReport ctx, int indent)
         {
-            var generatedReports = coverageRunner.GenerateReports(reportFormats);
-            foreach (var (format, path) in generatedReports)
+            var prefix = new string(' ', indent * 2);
+            lines.Add($"{prefix}{ctx.Description}");
+
+            foreach (var spec in ctx.Specs)
             {
-                presenter.ShowCoverageReportGenerated(format, path);
-            }
-        }
-
-        // Check thresholds and show warnings (don't exit)
-        var thresholds = config?.Coverage?.Thresholds;
-        if (thresholds != null && (thresholds.Line.HasValue || thresholds.Branch.HasValue))
-        {
-            var checker = new CoverageThresholdChecker();
-            var result = checker.CheckFile(coverageFile, thresholds);
-
-            if (result != null)
-            {
-                presenter.ShowCoverageSummary(result.ActualLinePercent, result.ActualBranchPercent);
-
-                if (!result.Passed)
+                var status = spec.Status switch
                 {
-                    presenter.ShowCoverageThresholdWarnings(result.Failures);
+                    "passed" => "✓",
+                    "failed" => "✗",
+                    "pending" => "○",
+                    "skipped" => "-",
+                    _ => "?"
+                };
+                lines.Add($"{prefix}  {status} {spec.Description}");
+                if (!string.IsNullOrEmpty(spec.Error))
+                {
+                    lines.Add($"{prefix}    {spec.Error}");
                 }
             }
+
+            foreach (var child in ctx.Contexts)
+            {
+                FormatContext(child, indent + 1);
+            }
         }
+
+        foreach (var ctx in report.Contexts)
+        {
+            FormatContext(ctx, 0);
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 }

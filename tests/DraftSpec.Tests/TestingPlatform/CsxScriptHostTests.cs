@@ -1,4 +1,4 @@
-using DraftSpec.TestingPlatform;
+using DraftSpec.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 
 namespace DraftSpec.Tests.TestingPlatform;

@@ -45,13 +45,15 @@ public class SpecExecutionServiceTests
     }
 
     [Test]
-    public async Task WrapSpecContent_AddsRunCall()
+    public async Task WrapSpecContent_AddsExecutionCode()
     {
         var content = "describe('test', () => {});";
 
         var wrapped = SpecExecutionService.WrapSpecContent(content);
 
-        await Assert.That(wrapped).Contains("run(json: true);");
+        await Assert.That(wrapped).Contains("if (RootContext != null)");
+        await Assert.That(wrapped).Contains("var runner = new DraftSpec.SpecRunner()");
+        await Assert.That(wrapped).Contains("report.ToJson()");
     }
 
     [Test]
@@ -96,10 +98,10 @@ public class SpecExecutionServiceTests
 
         var wrapped = SpecExecutionService.WrapSpecContent(content);
 
-        // Should have exactly one run call (the one we add with json: true)
-        var matches = System.Text.RegularExpressions.Regex.Matches(wrapped, @"run\s*\(");
-        await Assert.That(matches.Count).IsEqualTo(1);
-        await Assert.That(wrapped).Contains("run(json: true);");
+        // User's run() should be commented out
+        await Assert.That(wrapped).Contains("// (run handled by server)");
+        // Should have our execution code
+        await Assert.That(wrapped).Contains("report.ToJson()");
     }
 
     [Test]
@@ -109,8 +111,8 @@ public class SpecExecutionServiceTests
 
         var wrapped = SpecExecutionService.WrapSpecContent(content);
 
-        // Should have our run call with json: true
-        await Assert.That(wrapped).Contains("run(json: true);");
+        // Should have our execution code instead of run()
+        await Assert.That(wrapped).Contains("report.ToJson()");
         await Assert.That(wrapped).DoesNotContain("run(json: false)");
     }
 
@@ -121,9 +123,10 @@ public class SpecExecutionServiceTests
 
         var wrapped = SpecExecutionService.WrapSpecContent(content);
 
-        // Should have only our run call
-        var matches = System.Text.RegularExpressions.Regex.Matches(wrapped, @"run\s*\(");
-        await Assert.That(matches.Count).IsEqualTo(1);
+        // User's run call should be commented out
+        await Assert.That(wrapped).Contains("// (run handled by server)");
+        // Should have our execution code
+        await Assert.That(wrapped).Contains("var runner = new DraftSpec.SpecRunner()");
     }
 
     [Test]

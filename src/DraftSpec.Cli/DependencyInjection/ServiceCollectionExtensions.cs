@@ -1,3 +1,5 @@
+using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.Configuration;
 using DraftSpec.Formatters;
 using DraftSpec.Formatters.Html;
 using DraftSpec.Formatters.JUnit;
@@ -16,11 +18,24 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddDraftSpec(this IServiceCollection services)
     {
-        // Core services
+        // Infrastructure
+        services.AddSingleton<IConsole, SystemConsole>();
+        services.AddSingleton<IFileSystem, FileSystem>();
+        services.AddSingleton<IConfigLoader, ConfigLoader>();
         services.AddSingleton<ISpecFinder, SpecFinder>();
-
-        // Built-in formatters
         services.AddSingleton<ICliFormatterRegistry, CliFormatterRegistry>();
+        services.AddSingleton<IInProcessSpecRunnerFactory, InProcessSpecRunnerFactory>();
+        services.AddSingleton<IFileWatcherFactory, FileWatcherFactory>();
+
+        // Commands
+        services.AddTransient<RunCommand>();
+        services.AddTransient<WatchCommand>();
+        services.AddTransient<ListCommand>();
+        services.AddTransient<InitCommand>();
+        services.AddTransient<NewCommand>();
+
+        // Factory
+        services.AddSingleton<ICommandFactory, CommandFactory>();
 
         return services;
     }

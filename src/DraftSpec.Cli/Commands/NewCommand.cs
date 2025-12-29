@@ -71,8 +71,6 @@ public static class NewCommand
                  describe("{{name}}", () => {
                      it("works", () => pending());
                  });
-
-                 run();
                  """;
     }
 }

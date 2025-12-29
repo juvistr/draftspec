@@ -5,6 +5,7 @@
         <ProjectReference Include="..\DraftSpec.Formatters.Markdown\DraftSpec.Formatters.Markdown.csproj"/>
         <ProjectReference Include="..\DraftSpec.Formatters.Html\DraftSpec.Formatters.Html.csproj"/>
         <ProjectReference Include="..\DraftSpec.Formatters.JUnit\DraftSpec.Formatters.JUnit.csproj"/>
+        <ProjectReference Include="..\DraftSpec.Scripting\DraftSpec.Scripting.csproj"/>
         <ProjectReference Include="..\DraftSpec.TestingPlatform\DraftSpec.TestingPlatform.csproj"/>
     </ItemGroup>
 

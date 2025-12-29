@@ -46,8 +46,11 @@ jobs:
         env:
           MinVerVersionOverride: ${{ steps.version.outputs.version }}
 
-      - name: Run tests
+      - name: Run unit tests
         run: dotnet run --project tests/DraftSpec.Tests --no-build -c Release
+
+      - name: Run CLI integration tests
+        run: dotnet run --project tests/DraftSpec.Cli.IntegrationTests --no-build -c Release
 
       - name: Pack
         run: dotnet pack --no-build -c Release

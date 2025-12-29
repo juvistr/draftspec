@@ -3,21 +3,24 @@
 [![CI](https://github.com/juvistr/draftspec/actions/workflows/ci.yml/badge.svg)](https://github.com/juvistr/draftspec/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/juvistr/draftspec/graph/badge.svg)](https://codecov.io/gh/juvistr/draftspec)
 
-> ⚠️ **Alpha** - Experimental, expect breaking changes
+> **Alpha** - API stabilizing, expect some breaking changes
 
-RSpec-inspired testing for .NET.
+RSpec-inspired BDD testing framework for .NET 10.
 
-DraftSpec brings the elegant `describe`/`it`/`expect` syntax to .NET, filling the gap left by abandoned BDD frameworks
-like NSpec. Write expressive specs as scripts or traditional test classes.
+DraftSpec brings the elegant `describe`/`it`/`expect` syntax to .NET, filling the gap left by abandoned BDD frameworks like NSpec.
 
-> **Requires .NET 8+** for CSX scripts via dotnet-script, or **.NET 10+** for file-based apps.
+## Requirements
+
+- **.NET 10 SDK**
 
 ## Quick Start
 
-**1. Install dotnet-script:**
+### Option 1: CLI Tool
+
+**1. Install the CLI:**
 
 ```bash
-dotnet tool install -g dotnet-script
+dotnet tool install -g DraftSpec.Cli --prerelease
 ```
 
 **2. Create a spec file** (`Calculator.spec.csx`):
@@ -38,25 +41,44 @@ describe("Calculator", () =>
         expect(-1 + -1).toBe(-2);
     });
 });
-
-run();
 ```
 
 **3. Run it:**
 
 ```bash
-dotnet script Calculator.spec.csx
+draftspec run Calculator.spec.csx
 ```
 
 **Output:**
 
 ```
 Calculator
-  ✓ adds numbers
-  ✓ handles negatives
+  adds numbers
+  handles negatives
 
 2 passed
 ```
+
+### Option 2: dotnet test Integration
+
+Run specs via `dotnet test` with full IDE Test Explorer support:
+
+```bash
+# Add package to your test project
+dotnet add package DraftSpec.TestingPlatform --prerelease
+
+# Add spec files (*.spec.csx) to your project
+# Run tests
+dotnet test
+```
+
+Features:
+- Visual Studio / VS Code / Rider Test Explorer integration
+- Click-to-navigate from test results to source
+- Built-in code coverage collection
+- Standard `dotnet test` CI/CD integration
+
+See [MTP Integration Guide](docs/mtp-integration.md) for full documentation.
 
 ## Features
 
@@ -92,6 +114,8 @@ describe("Database", () =>
     it("inserts record", () => { /* ... */ });
 });
 ```
+
+Hook execution order: `beforeAll` -> `before` (parent to child) -> spec -> `after` (child to parent) -> `afterAll`
 
 ### Async Support
 
@@ -143,7 +167,7 @@ expect(() => Divide(1, 0)).toThrow<DivideByZeroException>();
 expect(() => SafeOperation()).toNotThrow();
 ```
 
-### CLI Tool
+## CLI Reference
 
 ```bash
 # Run specs
@@ -165,32 +189,6 @@ draftspec run . --exclude-tags slow   # Exclude specs with these tags
 draftspec run . --bail                # Stop on first failure
 ```
 
-### dotnet test Integration (MTP)
-
-Run specs via `dotnet test` with full IDE Test Explorer support:
-
-```bash
-# Create a test project
-dotnet new classlib -n MyProject.Specs
-cd MyProject.Specs
-dotnet add package DraftSpec.TestingPlatform
-
-# Add spec files (*.spec.csx)
-# Run tests
-dotnet test
-
-# With coverage
-dotnet test --collect:"XPlat Code Coverage"
-```
-
-Features:
-- Visual Studio / VS Code / Rider Test Explorer integration
-- Click-to-navigate from test results to source
-- Built-in code coverage collection
-- Standard `dotnet test` CI/CD integration
-
-See [MTP Integration Guide](docs/mtp-integration.md) for full documentation.
-
 ### Configuration File
 
 Create a `draftspec.json` in your project for persistent settings:
@@ -211,19 +209,23 @@ Create a `draftspec.json` in your project for persistent settings:
 
 CLI options override config file values.
 
-### MCP Server (AI Integration)
+## Output Formats
 
-DraftSpec includes an MCP server for AI-assisted testing:
+- **Console** - Human-readable output (default)
+- **JSON** - Structured results for tooling
+- **HTML** - Visual report for browsers
+- **Markdown** - For documentation and GitHub
+- **JUnit** - For CI/CD integration
+
+## MCP Server (AI Integration)
+
+DraftSpec includes an MCP server for AI-assisted testing workflows:
 
 ```bash
-# Add to Claude Desktop, VS Code, etc.
 dotnet run --project src/DraftSpec.Mcp
 ```
 
-> ⚠️ **Security Warning:** The MCP server executes arbitrary C# code with full process privileges. See [SECURITY.md](SECURITY.md) for:
-> - Security model and trust assumptions
-> - Deployment recommendations
-> - Container isolation guidance
+> **Security Warning:** The MCP server executes arbitrary C# code with full process privileges. See [SECURITY.md](SECURITY.md) for deployment recommendations and container isolation guidance.
 
 **Tools:**
 
@@ -233,63 +235,7 @@ dotnet run --project src/DraftSpec.Mcp
 | `scaffold_specs` | Generate pending specs from a structured description |
 | `parse_assertion` | Convert natural language to `expect()` syntax |
 
-**parse_assertion** - Convert natural language assertions to DraftSpec code:
-
-```json
-// Input
-{ "naturalLanguage": "should be greater than 5", "variableName": "count" }
-
-// Output
-{ "success": true, "code": "expect(count).toBeGreaterThan(5)", "confidence": 0.95 }
-```
-
-Supported patterns:
-- `"should not be null"` → `expect(x).toNotBeNull()`
-- `"should contain 'hello'"` → `expect(x).toContain("hello")`
-- `"should have 3 items"` → `expect(x).toHaveCount(3)`
-- `"should throw ArgumentException"` → `expect(() => x).toThrow<ArgumentException>()`
-
-**scaffold_specs** - Generate spec scaffolds for BDD (behavior-first) or characterisation (code-first) workflows:
-
-```json
-{
-  "description": "UserService",
-  "contexts": [
-    { "description": "Create", "specs": ["creates user", "hashes password"] },
-    { "description": "GetById", "specs": ["returns user when found", "returns null when not found"] }
-  ]
-}
-```
-
-Output:
-```csharp
-describe("UserService", () =>
-{
-    describe("Create", () =>
-    {
-        it("creates user");
-        it("hashes password");
-    });
-
-    describe("GetById", () =>
-    {
-        it("returns user when found");
-        it("returns null when not found");
-    });
-});
-```
-
-Agents can scaffold specs, then fill in assertions using `run_spec` to verify.
-
-### Middleware & Plugins
-
-```csharp
-configure(runner => runner
-    .WithRetry(3)                     // Retry failed specs
-    .WithTimeout(5000)                // 5 second timeout
-    .WithParallelExecution()          // Run specs in parallel
-);
-```
+See [MCP documentation](docs/mcp.md) for detailed usage.
 
 ## Documentation
 
@@ -298,13 +244,15 @@ configure(runner => runner
 - **[Assertions](docs/assertions.md)** - Full expect() API reference
 - **[CLI Reference](docs/cli.md)** - Command-line options
 - **[MTP Integration](docs/mtp-integration.md)** - dotnet test and IDE integration
-- **[Configuration](docs/configuration.md)** - Middleware and plugins
+- **[Configuration](docs/configuration.md)** - Settings and customization
+
+## Status
+
+**Alpha (v0.4.x)** - Core functionality is stable with 2000+ tests and 80%+ code coverage. API is stabilizing but may have breaking changes before v1.0.
 
 ## Contributing
 
 We use a PR-based workflow with branch protection on `main`.
-
-### Development
 
 ```bash
 # Clone and build
@@ -316,46 +264,10 @@ dotnet build
 dotnet run --project tests/DraftSpec.Tests
 
 # Create a branch for your changes
-git checkout -b feature/your-feature
+git checkout -b feat/your-feature
 ```
 
-### Pull Request Process
-
-1. Create a feature branch from `main`
-2. Make your changes with tests
-3. Push and open a PR
-4. CI runs automatically (build, test, pack)
-5. After review and approval, squash-merge to `main`
-
-### Releases
-
-Releases are triggered by pushing version tags:
-
-```bash
-git tag v0.1.0-alpha.1
-git push origin v0.1.0-alpha.1
-```
-
-This triggers the publish workflow which:
-- Builds and tests the code
-- Packs NuGet packages (version from tag via MinVer)
-- Publishes to nuget.org
-- Creates a GitHub Release with auto-generated notes
-
-### Branch Protection (Maintainers)
-
-Recommended settings for `main`:
-- Require PR reviews before merging
-- Require status checks (CI workflow)
-- Require linear history (squash merging)
-- No direct pushes to main
-
-## Status
-
-**Alpha** - This is an early experiment, built in roughly a day with AI assistance. It works, but expect rough edges,
-missing features, and breaking changes.
-
-If you try it and hit issues, feedback is welcome via GitHub issues.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## License
 

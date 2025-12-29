@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DraftSpec is an RSpec-inspired testing framework for .NET 10, filling the gap left by abandoned frameworks like NSpec. Supports both CSX scripts (recommended) and class-based specs.
+DraftSpec is an RSpec-inspired BDD testing framework for .NET 10, filling the gap left by abandoned frameworks like NSpec. Run specs via the CLI tool (`draftspec run`) or `dotnet test` with MTP integration.
 
 ## Build and Test Commands
 
@@ -12,8 +12,9 @@ DraftSpec is an RSpec-inspired testing framework for .NET 10, filling the gap le
 dotnet build                                          # Build all projects
 dotnet run --project tests/DraftSpec.Tests            # Run TUnit tests
 
-# Run CSX specs
-cd examples/TodoApi && dotnet script Specs/features_showcase.spec.csx
+# Run specs via CLI
+draftspec run examples/TodoApi/Specs                  # Run all specs in directory
+draftspec run examples/TodoApi/Specs/TodoService.spec.csx  # Run single file
 ```
 
 ## Project Structure
@@ -22,15 +23,17 @@ cd examples/TodoApi && dotnet script Specs/features_showcase.spec.csx
 DraftSpec.sln
 src/
   DraftSpec/                      # Core library
-    Dsl.cs                        # Static DSL for CSX: describe/it/expect
+    Dsl.cs                        # Static DSL: describe/it/expect
     Spec.cs                       # Class-based DSL (alternative)
     Expectations/                 # Jest-style assertions (Expectation<T>, etc.)
     SpecContext.cs                # Nested block with children, specs, hooks
     SpecDefinition.cs             # Single spec: description, body, flags
     SpecResult.cs                 # Execution result with ContextPath
     SpecRunner.cs                 # Tree walker, executes specs
-  DraftSpec.Cli/                  # CLI tool (dotnet tool)
-  DraftSpec.Formatters.*/         # Output formatters (Console, Html, Markdown)
+  DraftSpec.Cli/                  # CLI tool: draftspec run/watch/list
+  DraftSpec.TestingPlatform/      # MTP adapter for dotnet test integration
+  DraftSpec.Mcp/                  # MCP server for AI-assisted testing
+  DraftSpec.Formatters.*/         # Output formatters (Console, Html, Markdown, Json)
 examples/
   TodoApi/                        # Comprehensive example project
     spec_helper.csx               # Shared setup + fixtures
@@ -43,7 +46,7 @@ tests/
   DraftSpec.Tests/                # TUnit tests for internals
 ```
 
-## CSX Specs (Recommended)
+## Spec File Format
 
 ```csharp
 // TodoService.spec.csx
@@ -67,7 +70,7 @@ describe("TodoService", () =>
 });
 ```
 
-Run with: `draftspec run Specs/TodoService.spec.csx`
+Run with: `draftspec run TodoService.spec.csx`
 
 ## Assertions (expect API)
 

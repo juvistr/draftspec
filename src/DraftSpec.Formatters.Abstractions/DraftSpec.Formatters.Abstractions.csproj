@@ -8,7 +8,7 @@
         <!-- NuGet Package Configuration -->
         <PackageId>DraftSpec.Formatters.Abstractions</PackageId>
         <Description>Abstractions for DraftSpec formatters. Use this to create custom output formatters for test results.</Description>
-        <PackageTags>testing;bdd;formatters;abstractions</PackageTags>
+        <PackageTags>testing;bdd;formatters;extensibility</PackageTags>
     </PropertyGroup>
 
 </Project>

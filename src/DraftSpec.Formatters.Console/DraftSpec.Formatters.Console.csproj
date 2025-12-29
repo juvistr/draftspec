@@ -12,7 +12,7 @@
         <!-- NuGet Package Configuration -->
         <PackageId>DraftSpec.Formatters.Console</PackageId>
         <Description>Console output formatter for DraftSpec with colored output and progress indicators.</Description>
-        <PackageTags>testing;bdd;formatters;console</PackageTags>
+        <PackageTags>testing;bdd;formatters;console;terminal</PackageTags>
     </PropertyGroup>
 
 </Project>

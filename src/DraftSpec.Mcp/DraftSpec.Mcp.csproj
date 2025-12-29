@@ -7,7 +7,7 @@
         <Nullable>enable</Nullable>
         <PackageId>DraftSpec.Mcp</PackageId>
         <Description>MCP server for DraftSpec - run specs from AI assistants</Description>
-        <PackageTags>testing;bdd;mcp;model-context-protocol;ai</PackageTags>
+        <PackageTags>testing;bdd;mcp;model-context-protocol;ai;llm</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

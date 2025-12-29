@@ -238,6 +238,134 @@ run();
 
 ---
 
+### draftspec list
+
+Discover and list specs without executing them. Uses static parsing to analyze spec structure from CSX files.
+
+```bash
+draftspec list <path> [options]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<path>` | File or directory to scan. Defaults to current directory (`.`) |
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--list-format <format>` | Output format: `tree` (default), `flat`, `json` |
+| `--show-line-numbers` | Show line numbers (default: true) |
+| `--no-line-numbers` | Hide line numbers |
+| `--focused-only` | Show only focused specs (`fit`) |
+| `--pending-only` | Show only pending specs (no body) |
+| `--skipped-only` | Show only skipped specs (`xit`) |
+| `--filter-name <pattern>` | Filter by spec name (regex or substring) |
+| `--filter-tags <tags>` | Filter by tags (comma-separated) |
+| `-o, --output <file>` | Write output to file instead of stdout |
+
+**Examples:**
+
+```bash
+# List all specs in tree format (default)
+draftspec list .
+
+# List specs in flat format (one line per spec, grep-friendly)
+draftspec list . --list-format flat
+
+# Export specs as JSON for tooling integration
+draftspec list . --list-format json -o specs.json
+
+# Show only focused specs
+draftspec list . --focused-only
+
+# Show only pending specs
+draftspec list . --pending-only
+
+# Filter by name pattern
+draftspec list . --filter-name "User"
+
+# Hide line numbers
+draftspec list . --no-line-numbers
+```
+
+**Output Formats:**
+
+**Tree format** (default):
+```
+features_showcase.spec.csx
+├─ DraftSpec Features
+│  ├─ Basic Syntax
+│  │  ├─ [.] describes behavior with 'it' :15
+│  │  ├─ [?] marks pending specs :20
+│  │  └─ [-] explicitly skips specs with 'xit' :25
+│  └─ Assertions
+│     └─ [.] uses expect API :32
+
+Summary: 4 specs (1 pending, 1 skipped) in 1 file
+```
+
+Icons:
+- `[.]` - Regular spec
+- `[*]` - Focused spec (`fit`)
+- `[-]` - Skipped spec (`xit`)
+- `[?]` - Pending spec (no body)
+- `[!]` - Compilation error
+
+**Flat format**:
+```
+features_showcase.spec.csx:15  DraftSpec Features > Basic Syntax > describes behavior with 'it'
+features_showcase.spec.csx:20  DraftSpec Features > Basic Syntax > marks pending specs [PENDING]
+features_showcase.spec.csx:25  DraftSpec Features > Basic Syntax > explicitly skips specs with 'xit' [SKIPPED]
+```
+
+**JSON format**:
+```json
+{
+  "specs": [
+    {
+      "id": "features_showcase.spec.csx:DraftSpec Features/Basic Syntax/describes behavior",
+      "description": "describes behavior with 'it'",
+      "displayName": "DraftSpec Features > Basic Syntax > describes behavior with 'it'",
+      "contextPath": ["DraftSpec Features", "Basic Syntax"],
+      "relativeSourceFile": "features_showcase.spec.csx",
+      "lineNumber": 15,
+      "type": "regular",
+      "isPending": false,
+      "isSkipped": false,
+      "isFocused": false
+    }
+  ],
+  "summary": {
+    "totalSpecs": 85,
+    "focusedCount": 0,
+    "skippedCount": 5,
+    "pendingCount": 3,
+    "errorCount": 0,
+    "totalFiles": 4
+  },
+  "errors": []
+}
+```
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success (specs found or no specs) |
+| `1` | Error (invalid path, invalid options) |
+
+**Use Cases:**
+
+- **CI/CD**: Generate spec inventory for test planning
+- **IDE Integration**: Pre-populate test trees without execution
+- **Documentation**: Export spec structure for review
+- **Analysis**: Find focused/skipped specs before commits
+
+---
+
 ## Output Formats
 
 ### Console (default)

@@ -152,6 +152,43 @@ public static class CliOptionsParser
                 options.CoverageReportFormats = args[++i].ToLowerInvariant();
                 options.ExplicitlySet.Add(nameof(CliOptions.CoverageReportFormats));
             }
+            // List command options
+            else if (arg == "--list-format")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--list-format requires a value (tree, flat, json)";
+                    return options;
+                }
+
+                options.ListFormat = args[++i].ToLowerInvariant();
+                options.ExplicitlySet.Add(nameof(CliOptions.ListFormat));
+            }
+            else if (arg == "--show-line-numbers")
+            {
+                options.ShowLineNumbers = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.ShowLineNumbers));
+            }
+            else if (arg == "--no-line-numbers")
+            {
+                options.ShowLineNumbers = false;
+                options.ExplicitlySet.Add(nameof(CliOptions.ShowLineNumbers));
+            }
+            else if (arg == "--focused-only")
+            {
+                options.FocusedOnly = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.FocusedOnly));
+            }
+            else if (arg == "--pending-only")
+            {
+                options.PendingOnly = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.PendingOnly));
+            }
+            else if (arg == "--skipped-only")
+            {
+                options.SkippedOnly = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.SkippedOnly));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

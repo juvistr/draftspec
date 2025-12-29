@@ -41,6 +41,7 @@ static async Task<int> Run(string[] args)
             "watch" => await WatchCommand.ExecuteAsync(options),
             "init" => InitCommand.Execute(options),
             "new" => NewCommand.Execute(options),
+            "list" => await ListCommand.ExecuteAsync(options),
             _ => ShowUsage($"Unknown command: {options.Command}")
         };
     }
@@ -98,6 +99,7 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("Usage:");
     Console.WriteLine("  draftspec run <path> [options]   Run specs once and exit");
     Console.WriteLine("  draftspec watch <path>           Watch for changes and re-run");
+    Console.WriteLine("  draftspec list <path> [options]  List specs without running them");
     Console.WriteLine("  draftspec init [path]            Initialize spec infrastructure");
     Console.WriteLine("  draftspec new <name> [path]      Create a new spec file");
     Console.WriteLine();
@@ -115,6 +117,14 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("  --coverage-format <fmt>  Coverage format: cobertura, xml (default: cobertura)");
     Console.WriteLine("  --coverage-report-formats <formats>  Additional report formats: html, json");
     Console.WriteLine();
+    Console.WriteLine("List Options:");
+    Console.WriteLine("  --list-format <format>  Output format: tree (default), flat, json");
+    Console.WriteLine("  --show-line-numbers     Show line numbers (default: true)");
+    Console.WriteLine("  --no-line-numbers       Hide line numbers");
+    Console.WriteLine("  --focused-only          Show only focused specs (fit)");
+    Console.WriteLine("  --pending-only          Show only pending specs");
+    Console.WriteLine("  --skipped-only          Show only skipped specs (xit)");
+    Console.WriteLine();
     Console.WriteLine("Path can be:");
     Console.WriteLine("  - A directory (runs all *.spec.csx files recursively)");
     Console.WriteLine("  - A single .spec.csx file");
@@ -127,6 +137,8 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("  draftspec run ./specs --format markdown -o report.md");
     Console.WriteLine("  draftspec run ./specs --coverage");
     Console.WriteLine("  draftspec watch .");
+    Console.WriteLine("  draftspec list . --list-format json -o specs.json");
+    Console.WriteLine("  draftspec list . --focused-only");
 
     return error != null ? 1 : 0;
 }

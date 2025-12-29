@@ -86,6 +86,35 @@ public class CliOptions
     /// </summary>
     public string? CoverageReportFormats { get; set; }
 
+    // List command options
+
+    /// <summary>
+    /// Output format for the list command: tree, flat, or json.
+    /// Default: tree
+    /// </summary>
+    public string ListFormat { get; set; } = "tree";
+
+    /// <summary>
+    /// Show line numbers in list output.
+    /// Default: true
+    /// </summary>
+    public bool ShowLineNumbers { get; set; } = true;
+
+    /// <summary>
+    /// Show only focused specs (fit()) in list output.
+    /// </summary>
+    public bool FocusedOnly { get; set; }
+
+    /// <summary>
+    /// Show only pending specs (specs without body) in list output.
+    /// </summary>
+    public bool PendingOnly { get; set; }
+
+    /// <summary>
+    /// Show only skipped specs (xit()) in list output.
+    /// </summary>
+    public bool SkippedOnly { get; set; }
+
     /// <summary>
     /// Apply default values from a project configuration file.
     /// Only applies values that weren't explicitly set via CLI.

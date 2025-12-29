@@ -10,9 +10,10 @@ namespace DraftSpec.Cli.DependencyInjection;
 public interface IPluginLoader
 {
     /// <summary>
-    /// Discovers and loads all plugins from configured directories.
+    /// Discovers and loads all plugins from the specified directories.
     /// </summary>
-    IEnumerable<PluginInfo> DiscoverPlugins();
+    /// <param name="directories">Optional directories to search. If null, uses default plugin directory.</param>
+    IEnumerable<PluginInfo> DiscoverPlugins(string[]? directories = null);
 
     /// <summary>
     /// Registers discovered formatters with the CLI registry.
@@ -65,35 +66,22 @@ public class DraftSpecPluginAttribute : Attribute
 /// </summary>
 public class PluginLoader : IPluginLoader
 {
-    private readonly string[] _pluginDirectories;
     private readonly IPluginScanner _scanner;
     private readonly IAssemblyLoader _assemblyLoader;
     private readonly IConsole _console;
     private readonly List<PluginInfo> _discoveredPlugins = [];
 
     /// <summary>
-    /// Creates a new PluginLoader with default implementations.
-    /// </summary>
-    public PluginLoader(params string[] pluginDirectories)
-        : this(new SystemPluginScanner(), new IsolatedAssemblyLoader(), new SystemConsole(), pluginDirectories)
-    {
-    }
-
-    /// <summary>
-    /// Creates a new PluginLoader with custom implementations for testability.
+    /// Creates a new PluginLoader with injected dependencies.
     /// </summary>
     public PluginLoader(
         IPluginScanner scanner,
         IAssemblyLoader assemblyLoader,
-        IConsole console,
-        params string[] pluginDirectories)
+        IConsole console)
     {
         _scanner = scanner;
         _assemblyLoader = assemblyLoader;
         _console = console;
-        _pluginDirectories = pluginDirectories.Length > 0
-            ? pluginDirectories
-            : [GetDefaultPluginDirectory()];
     }
 
     private static string GetDefaultPluginDirectory()
@@ -102,12 +90,16 @@ public class PluginLoader : IPluginLoader
         return Path.Combine(exeDir ?? ".", "plugins");
     }
 
-    public IEnumerable<PluginInfo> DiscoverPlugins()
+    public IEnumerable<PluginInfo> DiscoverPlugins(string[]? directories = null)
     {
         if (_discoveredPlugins.Count > 0)
             return _discoveredPlugins;
 
-        foreach (var directory in _pluginDirectories)
+        var pluginDirs = directories is { Length: > 0 }
+            ? directories
+            : [GetDefaultPluginDirectory()];
+
+        foreach (var directory in pluginDirs)
         {
             if (!_scanner.DirectoryExists(directory))
                 continue;

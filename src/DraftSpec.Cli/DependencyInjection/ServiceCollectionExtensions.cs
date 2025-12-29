@@ -37,6 +37,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICliFormatterRegistry, CliFormatterRegistry>();
         services.AddSingleton<IInProcessSpecRunnerFactory, InProcessSpecRunnerFactory>();
         services.AddSingleton<IFileWatcherFactory, FileWatcherFactory>();
+        services.AddSingleton<IPluginScanner, SystemPluginScanner>();
+        services.AddSingleton<IAssemblyLoader, IsolatedAssemblyLoader>();
         services.AddSingleton<IPluginLoader, PluginLoader>();
 
         // Commands
@@ -46,22 +48,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ValidateCommand>();
         services.AddTransient<InitCommand>();
         services.AddTransient<NewCommand>();
+        services.AddTransient<SchemaCommand>();
 
         // Factory
         services.AddSingleton<ICommandFactory, CommandFactory>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds plugin discovery from the specified directories.
-    /// </summary>
-    public static IServiceCollection AddPluginDiscovery(
-        this IServiceCollection services,
-        params string[] pluginDirectories)
-    {
-        services.AddSingleton<IPluginLoader>(sp =>
-            new PluginLoader(pluginDirectories));
 
         return services;
     }

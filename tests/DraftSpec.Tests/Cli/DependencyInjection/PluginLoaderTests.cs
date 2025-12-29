@@ -37,9 +37,9 @@ public class PluginLoaderTests
         var console = new MockConsole();
 
         var customDir = "/custom/plugins";
-        var loader = new PluginLoader(scanner, assemblyLoader, console, customDir);
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
 
-        loader.DiscoverPlugins();
+        loader.DiscoverPlugins([customDir]);
 
         await Assert.That(scanner.CheckedDirectories).Contains(customDir);
     }
@@ -55,9 +55,9 @@ public class PluginLoaderTests
         var assemblyLoader = new MockAssemblyLoader();
         var console = new MockConsole();
 
-        var loader = new PluginLoader(scanner, assemblyLoader, console, "/nonexistent");
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
 
-        var plugins = loader.DiscoverPlugins();
+        var plugins = loader.DiscoverPlugins(["/nonexistent"]);
 
         await Assert.That(plugins.Count()).IsEqualTo(0);
     }
@@ -72,9 +72,9 @@ public class PluginLoaderTests
         var assemblyLoader = new MockAssemblyLoader();
         var console = new MockConsole();
 
-        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
 
-        var plugins = loader.DiscoverPlugins();
+        var plugins = loader.DiscoverPlugins(["/plugins"]);
 
         await Assert.That(plugins.Count()).IsEqualTo(0);
     }
@@ -90,17 +90,17 @@ public class PluginLoaderTests
         assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
 
         var console = new MockConsole();
-        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
 
         // First call
-        var plugins1 = loader.DiscoverPlugins().ToList();
+        var plugins1 = loader.DiscoverPlugins(["/plugins"]).ToList();
 
         // Reset counters
         scanner.CheckedDirectories.Clear();
         scanner.ScannedDirectories.Clear();
 
         // Second call
-        var plugins2 = loader.DiscoverPlugins().ToList();
+        var plugins2 = loader.DiscoverPlugins(["/plugins"]).ToList();
 
         // Should return cached results without scanning again
         await Assert.That(scanner.CheckedDirectories.Count).IsEqualTo(0);
@@ -123,9 +123,9 @@ public class PluginLoaderTests
         assemblyLoader.AddRealType("/plugins/DraftSpec.GoodPlugin.dll", typeof(TestFormatterWithAttribute));
 
         var console = new MockConsole();
-        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
 
-        var plugins = loader.DiscoverPlugins().ToList();
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
 
         // Should have logged error for BadPlugin
         await Assert.That(console.Errors).Contains("DraftSpec.BadPlugin.dll");
@@ -152,9 +152,9 @@ public class PluginLoaderTests
         assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
 
         var console = new MockConsole();
-        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
 
-        var plugins = loader.DiscoverPlugins().ToList();
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
 
         await Assert.That(plugins.Count).IsEqualTo(1);
         await Assert.That(plugins[0].Name).IsEqualTo("testformatter");
@@ -173,9 +173,9 @@ public class PluginLoaderTests
         assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(FormatterWithoutAttribute));
 
         var console = new MockConsole();
-        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
 
-        var plugins = loader.DiscoverPlugins().ToList();
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
 
         await Assert.That(plugins.Count).IsEqualTo(0);
     }
@@ -191,9 +191,9 @@ public class PluginLoaderTests
         assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
 
         var console = new MockConsole();
-        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
 
-        var plugins = loader.DiscoverPlugins().ToList();
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
 
         await Assert.That(plugins.Count).IsEqualTo(1);
         await Assert.That(plugins[0].Kind).IsEqualTo(PluginKind.Formatter);
@@ -211,9 +211,9 @@ public class PluginLoaderTests
         assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(NonFormatterWithAttribute));
 
         var console = new MockConsole();
-        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
 
-        var plugins = loader.DiscoverPlugins().ToList();
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
 
         // Should be skipped because it doesn't implement known plugin interfaces
         await Assert.That(plugins.Count).IsEqualTo(0);
@@ -234,7 +234,10 @@ public class PluginLoaderTests
         assemblyLoader.AddRealType("/plugins/DraftSpec.JsonFormatter.dll", typeof(TestFormatterWithAttribute));
 
         var console = new MockConsole();
-        var loader = new PluginLoader(scanner, assemblyLoader, console, "/plugins");
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
+
+        // Discover plugins first with directories
+        loader.DiscoverPlugins(["/plugins"]);
 
         var registry = new MockFormatterRegistry();
         loader.RegisterFormatters(registry);

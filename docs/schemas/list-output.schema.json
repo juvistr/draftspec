@@ -1,0 +1,133 @@
+{
+  "type": "object",
+  "properties": {
+    "specs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "contextPath": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourceFile": {
+            "type": "string"
+          },
+          "relativeSourceFile": {
+            "type": "string"
+          },
+          "lineNumber": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string"
+          },
+          "isPending": {
+            "type": "boolean"
+          },
+          "isSkipped": {
+            "type": "boolean"
+          },
+          "isFocused": {
+            "type": "boolean"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "compilationError": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "description",
+          "displayName",
+          "contextPath",
+          "sourceFile",
+          "relativeSourceFile",
+          "lineNumber",
+          "type",
+          "isPending",
+          "isSkipped",
+          "isFocused",
+          "tags"
+        ]
+      }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "totalSpecs": {
+          "type": "integer"
+        },
+        "focusedCount": {
+          "type": "integer"
+        },
+        "skippedCount": {
+          "type": "integer"
+        },
+        "pendingCount": {
+          "type": "integer"
+        },
+        "errorCount": {
+          "type": "integer"
+        },
+        "totalFiles": {
+          "type": "integer"
+        },
+        "filesWithErrors": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "totalSpecs",
+        "focusedCount",
+        "skippedCount",
+        "pendingCount",
+        "errorCount",
+        "totalFiles",
+        "filesWithErrors"
+      ]
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "message"
+        ]
+      }
+    }
+  },
+  "required": [
+    "specs",
+    "summary",
+    "errors"
+  ]
+}

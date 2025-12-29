@@ -67,7 +67,7 @@ public class CliIntegrationTests
         await command.ExecuteAsync(options);
 
         var content = await File.ReadAllTextAsync(Path.Combine(_testDirectory, "spec_helper.csx"));
-        await Assert.That(content).Contains("#r \"nuget: DraftSpec\"");
+        await Assert.That(content).Contains("#r \"nuget: DraftSpec, *\"");
         await Assert.That(content).Contains("using static DraftSpec.Dsl;");
     }
 
@@ -108,7 +108,7 @@ public class CliIntegrationTests
         await command.ExecuteAsync(options);
 
         var content = await File.ReadAllTextAsync(specHelperPath);
-        await Assert.That(content).Contains("#r \"nuget: DraftSpec\"");
+        await Assert.That(content).Contains("#r \"nuget: DraftSpec, *\"");
     }
 
     [Test]

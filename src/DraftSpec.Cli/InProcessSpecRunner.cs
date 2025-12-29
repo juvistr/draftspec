@@ -38,7 +38,7 @@ public record InProcessRunSummary(
 /// </summary>
 public class InProcessSpecRunner : IInProcessSpecRunner
 {
-    private readonly DraftSpec.ITimeProvider _timeProvider;
+    private readonly DraftSpec.IClock _clock;
     private readonly IProjectBuilder _projectBuilder;
     private readonly ISpecScriptExecutor _scriptExecutor;
     private readonly IDslManager _dslManager;
@@ -58,7 +58,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         string? excludeName = null,
         IReadOnlyList<string>? filterContext = null,
         IReadOnlyList<string>? excludeContext = null,
-        DraftSpec.ITimeProvider? timeProvider = null,
+        DraftSpec.IClock? timeProvider = null,
         IProjectBuilder? projectBuilder = null,
         ISpecScriptExecutor? scriptExecutor = null,
         IDslManager? dslManager = null,
@@ -73,7 +73,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         _excludeContext = excludeContext;
 
         // Use defaults for backward compatibility
-        _timeProvider = timeProvider ?? new DraftSpec.SystemTimeProvider();
+        _clock = timeProvider ?? new DraftSpec.SystemClock();
         _projectBuilder = projectBuilder ?? CreateDefaultProjectBuilder();
         _scriptExecutor = scriptExecutor ?? new RoslynSpecScriptExecutor();
         _dslManager = dslManager ?? new DslManager();
@@ -101,7 +101,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         // Build any projects in the spec's directory first
         _projectBuilder.BuildProjects(workingDir);
 
-        var stopwatch = _timeProvider.StartNew();
+        var stopwatch = _clock.StartNew();
         try
         {
             // Find output directory for assembly resolution
@@ -121,7 +121,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
                     specFile,
                     new SpecReport
                     {
-                        Timestamp = _timeProvider.UtcNow,
+                        Timestamp = _clock.UtcNow,
                         Source = fullPath,
                         Summary = new SpecSummary()
                     },
@@ -165,7 +165,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
                 specFile,
                 new SpecReport
                 {
-                    Timestamp = _timeProvider.UtcNow,
+                    Timestamp = _clock.UtcNow,
                     Source = fullPath,
                     Summary = new SpecSummary { Failed = 1 }
                 },
@@ -179,7 +179,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
                 specFile,
                 new SpecReport
                 {
-                    Timestamp = _timeProvider.UtcNow,
+                    Timestamp = _clock.UtcNow,
                     Source = fullPath,
                     Summary = new SpecSummary { Failed = 1 }
                 },
@@ -200,7 +200,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         bool parallel = false,
         CancellationToken ct = default)
     {
-        var stopwatch = _timeProvider.StartNew();
+        var stopwatch = _clock.StartNew();
 
         // Collect unique directories and build each once
         var directories = specFiles
@@ -302,7 +302,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         var fileSystem = new FileSystem();
         var processRunner = new SystemProcessRunner();
         var buildCache = new InMemoryBuildCache();
-        var timeProvider = new DraftSpec.SystemTimeProvider();
+        var timeProvider = new SystemClock();
         return new DotnetProjectBuilder(fileSystem, processRunner, buildCache, timeProvider);
     }
 }

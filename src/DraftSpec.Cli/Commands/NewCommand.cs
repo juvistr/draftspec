@@ -49,7 +49,7 @@ public class NewCommand : ICommand
                  using static DraftSpec.Dsl;
 
                  describe("{{name}}", () => {
-                     it("works", () => pending());
+                     it("works"); // Pending spec - add implementation
                  });
                  """;
     }

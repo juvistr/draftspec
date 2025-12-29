@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConsole, SystemConsole>();
         services.AddSingleton<IFileSystem, FileSystem>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
-        services.AddSingleton<ITimeProvider, SystemTimeProvider>();
+        services.AddSingleton<DraftSpec.IClock, DraftSpec.SystemClock>();
         services.AddSingleton<IProcessRunner, SystemProcessRunner>();
 
         // Infrastructure - Build

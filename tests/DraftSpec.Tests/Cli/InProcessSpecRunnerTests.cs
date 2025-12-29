@@ -18,7 +18,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var rootContext = CreateTestContext("Calculator", specs: 3);
         scriptExecutor.SetResult(rootContext);
@@ -46,7 +46,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         scriptExecutor.SetResult(null); // No specs defined
 
@@ -72,7 +72,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var exception = new Exception("Script compilation failed");
         scriptExecutor.SetException(exception);
@@ -99,7 +99,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var rootContext = CreateTestContext("Test");
         scriptExecutor.SetResult(rootContext);
@@ -124,7 +124,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var rootContext = CreateTestContext("Test");
         scriptExecutor.SetResult(rootContext);
@@ -149,7 +149,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         scriptExecutor.SetException(new Exception("Error"));
 
@@ -173,7 +173,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var rootContext = CreateTestContext("Test");
         scriptExecutor.SetResult(rootContext);
@@ -203,7 +203,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         scriptExecutor.SetResult(CreateTestContext("Test1", specs: 2));
 
@@ -236,7 +236,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         scriptExecutor.SetResult(CreateTestContext("Test", specs: 5));
 
@@ -267,7 +267,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         scriptExecutor.SetResult(CreateTestContext("Test", specs: 1));
 
@@ -300,7 +300,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider { ElapsedMilliseconds = 250 };
+        var timeProvider = new MockClock { ElapsedMilliseconds = 250 };
 
         scriptExecutor.SetResult(CreateTestContext("Test", specs: 1));
 
@@ -330,7 +330,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         scriptExecutor.SetResult(CreateTestContext("Test", specs: 1));
 
@@ -366,7 +366,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var rootContext = CreateTestContext("Test", specs: 1);
         scriptExecutor.SetResult(rootContext);
@@ -392,7 +392,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var rootContext = CreateTestContext("Test", specs: 1);
         scriptExecutor.SetResult(rootContext);
@@ -418,7 +418,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var rootContext = CreateTestContext("Test", specs: 1);
         scriptExecutor.SetResult(rootContext);
@@ -444,7 +444,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var rootContext = CreateTestContext("Test", specs: 1);
         scriptExecutor.SetResult(rootContext);
@@ -470,7 +470,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var rootContext = CreateTestContext("Test", specs: 3);
         scriptExecutor.SetResult(rootContext);
@@ -503,7 +503,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         scriptExecutor.SetResult(CreateTestContext("Test", specs: 1));
 
@@ -531,7 +531,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         scriptExecutor.SetResult(CreateTestContext("Test", specs: 1));
 
@@ -564,7 +564,7 @@ public class InProcessSpecRunnerTests
         var dslManager = new MockDslManager();
         var projectBuilder = new MockProjectBuilder();
         var scriptExecutor = new MockSpecScriptExecutor();
-        var timeProvider = new MockTimeProvider();
+        var timeProvider = new MockClock();
 
         var runner = new InProcessSpecRunner(
             timeProvider: timeProvider,
@@ -689,7 +689,7 @@ file class MockSpecScriptExecutor : ISpecScriptExecutor
 /// <summary>
 /// Mock time provider for testing.
 /// </summary>
-file class MockTimeProvider : DraftSpec.ITimeProvider
+file class MockClock : DraftSpec.IClock
 {
     public DateTime UtcNow => DateTime.UtcNow;
     public int ElapsedMilliseconds { get; set; } = 100;

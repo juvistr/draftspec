@@ -25,6 +25,7 @@ public class CommandFactory : ICommandFactory
             "validate" => _services.GetRequiredService<ValidateCommand>(),
             "init" => _services.GetRequiredService<InitCommand>(),
             "new" => _services.GetRequiredService<NewCommand>(),
+            "schema" => _services.GetRequiredService<SchemaCommand>(),
             _ => null
         };
     }

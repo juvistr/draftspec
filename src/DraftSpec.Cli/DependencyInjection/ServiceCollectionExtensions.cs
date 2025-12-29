@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<RunCommand>();
         services.AddTransient<WatchCommand>();
         services.AddTransient<ListCommand>();
+        services.AddTransient<ValidateCommand>();
         services.AddTransient<InitCommand>();
         services.AddTransient<NewCommand>();
 

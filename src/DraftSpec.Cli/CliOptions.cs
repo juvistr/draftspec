@@ -115,6 +115,26 @@ public class CliOptions
     /// </summary>
     public bool SkippedOnly { get; set; }
 
+    // Validate command options
+
+    /// <summary>
+    /// Treat warnings as errors (exit code 2 instead of 0).
+    /// Used with validate command.
+    /// </summary>
+    public bool Strict { get; set; }
+
+    /// <summary>
+    /// Show only errors, suppress progress and warnings.
+    /// Used with validate command.
+    /// </summary>
+    public bool Quiet { get; set; }
+
+    /// <summary>
+    /// Specific files to validate (for pre-commit hooks).
+    /// When set, only these files are validated instead of scanning directory.
+    /// </summary>
+    public List<string>? Files { get; set; }
+
     /// <summary>
     /// Apply default values from a project configuration file.
     /// Only applies values that weren't explicitly set via CLI.

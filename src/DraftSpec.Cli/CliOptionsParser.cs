@@ -189,6 +189,31 @@ public static class CliOptionsParser
                 options.SkippedOnly = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.SkippedOnly));
             }
+            // Validate command options
+            else if (arg == "--strict")
+            {
+                options.Strict = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.Strict));
+            }
+            else if (arg is "--quiet" or "-q")
+            {
+                options.Quiet = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.Quiet));
+            }
+            else if (arg == "--files")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--files requires a value (comma-separated file paths)";
+                    return options;
+                }
+
+                var filesArg = args[++i];
+                options.Files = filesArg.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(f => f.Trim())
+                    .ToList();
+                options.ExplicitlySet.Add(nameof(CliOptions.Files));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

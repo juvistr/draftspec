@@ -8,7 +8,7 @@ Complete API reference for DraftSpec's describe/it/expect DSL.
 using static DraftSpec.Dsl;
 ```
 
-This brings all DSL functions into scope: `describe`, `it`, `expect`, hooks, and `run`.
+This brings all DSL functions into scope: `describe`, `it`, `expect`, and hooks.
 
 ---
 
@@ -251,17 +251,17 @@ tag("slow", () =>
 
 ### Filtering by Tag
 
-Use `configure()` to filter specs by tag:
+Use CLI flags to filter specs by tag:
 
-```csharp
-// Run only specs with "fast" tag
-configure(runner => runner.WithTagFilter("fast"));
+```bash
+# Run only specs with "fast" tag
+draftspec run . --tags fast
 
-// Run specs with either "unit" or "fast" tag
-configure(runner => runner.WithTagFilter("unit", "fast"));
+# Run specs with either "unit" or "fast" tag
+draftspec run . --tags unit,fast
 
-// Exclude specs with "slow" tag
-configure(runner => runner.WithoutTags("slow"));
+# Exclude specs with "slow" tag
+draftspec run . --exclude-tags slow
 ```
 
 ---
@@ -386,76 +386,6 @@ describe("Calculator", () =>
 
 ---
 
-## Configuration
-
-### configure(Action\<SpecRunnerBuilder\>)
-
-Configure the spec runner with middleware. Call before `run()`.
-
-```csharp
-configure(runner => runner
-    .WithRetry(3)
-    .WithTimeout(5000)
-    .WithParallelExecution()
-);
-```
-
-**Available options:**
-
-| Method | Description |
-|--------|-------------|
-| `WithRetry(n)` | Retry failed specs up to n times |
-| `WithRetry(n, delayMs)` | Retry with delay between attempts |
-| `WithTimeout(ms)` | Fail specs that exceed timeout |
-| `WithFilter(predicate)` | Custom filter function |
-| `WithNameFilter(pattern)` | Filter by regex pattern on description |
-| `WithTagFilter(tags...)` | Run only specs with any of these tags |
-| `WithoutTags(tags...)` | Exclude specs with any of these tags |
-| `WithParallelExecution()` | Run specs in parallel |
-| `WithParallelExecution(n)` | Run with max n parallel specs |
-| `Use(middleware)` | Add custom middleware |
-
-### configure(Action\<DraftSpecConfiguration\>)
-
-Configure DraftSpec with plugins, formatters, and reporters:
-
-```csharp
-configure(config =>
-{
-    config.UsePlugin<SlackReporterPlugin>();
-    config.AddReporter(new FileReporter("results.json"));
-    config.AddFormatter("custom", new MyFormatter());
-});
-```
-
-See [Configuration](configuration.md) for details.
-
----
-
-## Running Specs
-
-### run(json = false)
-
-Execute all specs and output results. Call at the end of your spec file.
-
-```csharp
-describe("MyTests", () =>
-{
-    it("works", () => expect(true).toBeTrue());
-});
-
-run();  // Console output
-```
-
-**JSON output:**
-```csharp
-run(json: true);  // JSON format for tooling
-```
-
-**Exit code:** Sets `Environment.ExitCode` to 1 if any specs failed.
-
----
-
 ## Complete Example
 
 ```csharp
@@ -463,11 +393,6 @@ run(json: true);  // JSON format for tooling
 using static DraftSpec.Dsl;
 
 var db = new TestDatabase();
-
-configure(runner => runner
-    .WithTimeout(5000)
-    .WithRetry(2)
-);
 
 describe("UserRepository", () =>
 {
@@ -514,9 +439,11 @@ describe("UserRepository", () =>
         });
     });
 });
-
-run();
 ```
+
+Run with: `draftspec run UserRepository.spec.csx`
+
+Filter slow tests: `draftspec run . --exclude-tags slow`
 
 ---
 

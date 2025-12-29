@@ -232,8 +232,6 @@ using static DraftSpec.Dsl;
 describe("UserService", () => {
     it("works", () => pending());
 });
-
-run();
 ```
 
 ---
@@ -635,7 +633,7 @@ Error: draftspec.json: maxParallelism must be a positive number
 
 - Use `--parallel` for multiple spec files
 - Check for slow `beforeAll`/`afterAll` hooks
-- Consider `configure(runner => runner.WithTimeout(5000))`
+- Set timeout via `draftspec.json` or CLI flags
 
 ---
 

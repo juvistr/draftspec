@@ -1,6 +1,6 @@
 # Configuration Reference
 
-Configure DraftSpec with project files, middleware, plugins, formatters, and reporters.
+Configure DraftSpec with project files, CLI flags, and environment variables.
 
 ## Project Configuration (draftspec.json)
 
@@ -81,202 +81,38 @@ The configuration file supports:
 
 ---
 
-## Code Configuration
+## CLI Configuration
 
-DraftSpec also provides code-based configuration for dynamic settings.
+All configuration can be passed via CLI flags. See [CLI Reference](cli.md) for full details.
 
-### Configuration Entry Points
+```bash
+# Tag filtering
+draftspec run . --tags unit,fast
+draftspec run . --exclude-tags slow,integration
 
-1. **`configure(Action<SpecRunnerBuilder>)`** - Configure spec execution (middleware, filtering, parallelism)
-2. **`configure(Action<DraftSpecConfiguration>)`** - Configure the framework (plugins, formatters, reporters)
+# Output control
+draftspec run . --format json -o results.json
+draftspec run . --format html -o report.html
 
-```csharp
-// Runner configuration
-configure(runner => runner
-    .WithRetry(3)
-    .WithTimeout(5000)
-);
-
-// Framework configuration
-configure(config => {
-    config.UsePlugin<MyPlugin>();
-    config.AddReporter(new FileReporter("results.json"));
-});
-
-run();
+# Execution options
+draftspec run . --parallel
+draftspec run . --bail
 ```
 
 ---
 
-## SpecRunnerBuilder
+## Environment Variables
 
-Configure how specs are executed.
-
-### WithRetry(maxRetries, delayMs?)
-
-Retry failed specs up to `maxRetries` times.
-
-```csharp
-configure(runner => runner.WithRetry(3));           // Retry up to 3 times
-configure(runner => runner.WithRetry(3, 1000));     // With 1 second delay between retries
-```
-
-### WithTimeout(timeoutMs)
-
-Fail specs that exceed the timeout.
-
-```csharp
-configure(runner => runner.WithTimeout(5000));      // 5 second timeout
-```
-
-### WithParallelExecution(maxDegreeOfParallelism?)
-
-Run specs within contexts concurrently.
-
-```csharp
-configure(runner => runner.WithParallelExecution());      // Use all processors
-configure(runner => runner.WithParallelExecution(4));     // Max 4 concurrent specs
-```
-
-**Notes:**
-- `beforeAll`/`afterAll` hooks run sequentially at context boundaries
-- `before`/`after` hooks run per-spec (each spec gets its own hook execution)
-- Results maintain original declaration order regardless of execution order
-
-### WithFilter(predicate)
-
-Filter specs with a custom predicate.
-
-```csharp
-configure(runner => runner.WithFilter(ctx =>
-    !ctx.Spec.Description.Contains("slow")
-));
-```
-
-### WithNameFilter(pattern, options?)
-
-Filter specs by regex pattern matching the full description.
-
-```csharp
-configure(runner => runner.WithNameFilter("Calculator.*Add"));
-configure(runner => runner.WithNameFilter("integration", RegexOptions.IgnoreCase));
-```
-
-### WithTagFilter(tags...)
-
-Run only specs with any of the specified tags.
-
-```csharp
-configure(runner => runner.WithTagFilter("fast"));
-configure(runner => runner.WithTagFilter("unit", "integration"));  // OR logic
-```
-
-### WithoutTags(tags...)
-
-Exclude specs with any of the specified tags.
-
-```csharp
-configure(runner => runner.WithoutTags("slow"));
-configure(runner => runner.WithoutTags("flaky", "integration"));
-```
-
-### Use(middleware)
-
-Add custom middleware to the execution pipeline.
-
-```csharp
-configure(runner => runner.Use(new MyMiddleware()));
-```
-
-### Chaining
-
-All methods return the builder for chaining:
-
-```csharp
-configure(runner => runner
-    .WithTimeout(10000)
-    .WithRetry(2)
-    .WithoutTags("slow")
-    .WithParallelExecution()
-);
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DRAFTSPEC_TIMEOUT` | Spec timeout in milliseconds | 30000 |
+| `DRAFTSPEC_PARALLEL` | Enable parallel execution | false |
 
 ---
 
-## DraftSpecConfiguration
+## Middleware (Plugin Authors)
 
-Configure the DraftSpec framework with plugins and services.
-
-### UsePlugin\<T\>()
-
-Register a plugin by type.
-
-```csharp
-configure(config => {
-    config.UsePlugin<SlackNotifierPlugin>();
-    config.UsePlugin<CoveragePlugin>();
-});
-```
-
-### UsePlugin(plugin)
-
-Register a plugin instance.
-
-```csharp
-var slackPlugin = new SlackNotifierPlugin("https://hooks.slack.com/...");
-configure(config => config.UsePlugin(slackPlugin));
-```
-
-### Configure\<T\>(action)
-
-Configure a registered plugin.
-
-```csharp
-configure(config => {
-    config.UsePlugin<SlackNotifierPlugin>();
-    config.Configure<SlackNotifierPlugin>(slack => {
-        slack.Channel = "#testing";
-        slack.NotifyOnFailure = true;
-    });
-});
-```
-
-### AddReporter(reporter)
-
-Register a reporter directly (without a plugin wrapper).
-
-```csharp
-configure(config => {
-    config.AddReporter(new FileReporter("results.json"));
-    config.AddReporter(new ConsoleReporter());
-});
-```
-
-### AddFormatter(name, formatter)
-
-Register a formatter directly.
-
-```csharp
-configure(config => {
-    config.AddFormatter("xml", new XmlFormatter());
-});
-```
-
-### AddService\<T\>(service)
-
-Register a service for dependency injection.
-
-```csharp
-configure(config => {
-    config.AddService<IDatabase>(new TestDatabase());
-});
-```
-
----
-
-## Middleware
-
-Middleware wraps spec execution for cross-cutting concerns.
+Middleware wraps spec execution for cross-cutting concerns. This is for plugin authors extending DraftSpec.
 
 ### ISpecMiddleware Interface
 
@@ -321,61 +157,11 @@ Available properties in middleware:
 | `ContextPath` | `IReadOnlyList<string>` | Path of describe blocks (e.g., ["Calculator", "Add"]) |
 | `State` | `Dictionary<string, object>` | Mutable state bag for passing data between middleware |
 
-### Middleware Patterns
-
-**Retry on failure:**
-```csharp
-public class RetryMiddleware : ISpecMiddleware
-{
-    private readonly int _maxRetries;
-
-    public RetryMiddleware(int maxRetries) => _maxRetries = maxRetries;
-
-    public async Task<SpecResult> ExecuteAsync(
-        SpecExecutionContext ctx,
-        Func<SpecExecutionContext, Task<SpecResult>> next)
-    {
-        SpecResult result = null!;
-        for (int i = 0; i <= _maxRetries; i++)
-        {
-            result = await next(ctx);
-            if (result.Status != SpecStatus.Failed) break;
-        }
-        return result;
-    }
-}
-```
-
-**Short-circuit execution:**
-```csharp
-public class FilterMiddleware : ISpecMiddleware
-{
-    private readonly Func<SpecExecutionContext, bool> _predicate;
-
-    public FilterMiddleware(Func<SpecExecutionContext, bool> predicate)
-        => _predicate = predicate;
-
-    public Task<SpecResult> ExecuteAsync(
-        SpecExecutionContext ctx,
-        Func<SpecExecutionContext, Task<SpecResult>> next)
-    {
-        if (!_predicate(ctx))
-        {
-            return Task.FromResult(new SpecResult(
-                ctx.Spec.Description,
-                SpecStatus.Skipped,
-                "Filtered out"));
-        }
-        return next(ctx);
-    }
-}
-```
-
 ---
 
-## Plugins
+## Plugins (Plugin Authors)
 
-Plugins package reusable functionality.
+Plugins package reusable functionality for extending DraftSpec.
 
 ### IPlugin Interface
 
@@ -469,7 +255,7 @@ public class PerformancePlugin : IMiddlewarePlugin
 
 ---
 
-## Reporters
+## Reporters (Plugin Authors)
 
 Reporters receive events during spec execution.
 
@@ -524,7 +310,7 @@ public class FileReporter : IReporter
 
 ---
 
-## Formatters
+## Formatters (Plugin Authors)
 
 Formatters transform spec reports into output formats.
 
@@ -592,24 +378,13 @@ public class XmlFormatter : IFormatter
 
 ## spec_helper.csx Pattern
 
-Centralize configuration in `spec_helper.csx`:
+Centralize shared references and fixtures in `spec_helper.csx`:
 
 ```csharp
 #r "nuget: DraftSpec"
 #r "bin/Debug/net10.0/MyProject.dll"
 
 using static DraftSpec.Dsl;
-
-// Configure runner
-configure(runner => runner
-    .WithTimeout(10000)
-    .WithRetry(2)
-);
-
-// Configure framework
-configure(config => {
-    config.AddReporter(new ConsoleProgressReporter());
-});
 
 // Shared fixtures
 public class TestDatabase
@@ -632,8 +407,6 @@ describe("MyFeature", () => {
 
     it("works", () => { /* ... */ });
 });
-
-run();
 ```
 
 ---

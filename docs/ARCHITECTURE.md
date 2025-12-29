@@ -72,7 +72,6 @@ describe("Calculator", () =>
 {
     it("adds numbers", () => expect(1 + 1).toBe(2));
 });
-run();
 ```
 
 **Class-based API (Spec.cs)** - Alternative for traditional test classes:
@@ -394,6 +393,7 @@ See [Architecture Decision Records](./adr/) for detailed rationale:
 - **ADR-003:** Middleware pipeline for cross-cutting concerns
 - **ADR-004:** Interface-based plugins for extensibility
 - **ADR-005:** Pre-1.0 breaking changes policy
+- **ADR-007:** Declarative DSL model (scripts define specs, framework controls execution)
 
 ## Project Structure
 

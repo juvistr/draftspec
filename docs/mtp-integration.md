@@ -271,27 +271,6 @@ To migrate from CLI-based specs to MTP:
 1. Create a test project with `DraftSpec.TestingPlatform` reference
 2. Copy your `.spec.csx` files to the test project
 3. Update `#r` paths to use project output directory
-4. Remove standalone `run()` calls (MTP handles execution)
-5. Run `dotnet test`
+4. Run `dotnet test`
 
-### Before (CLI)
-
-```csharp
-#r "nuget: DraftSpec, *"
-using static DraftSpec.Dsl;
-
-describe("Calculator", () => { /* ... */ });
-
-run();  // Explicit run call
-```
-
-### After (MTP)
-
-```csharp
-#r "nuget: DraftSpec, *"
-using static DraftSpec.Dsl;
-
-describe("Calculator", () => { /* ... */ });
-
-// No run() call needed - MTP handles execution
-```
+The same spec files work with both CLI and MTP - no code changes needed.

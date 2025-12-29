@@ -65,11 +65,9 @@ describe("TodoService", () =>
     fit("focused", () => { });  // only focused specs run
     xit("skipped", () => { });  // explicitly skipped
 });
-
-run();
 ```
 
-Run with: `dotnet script Specs/TodoService.spec.csx`
+Run with: `draftspec run Specs/TodoService.spec.csx`
 
 ## Assertions (expect API)
 

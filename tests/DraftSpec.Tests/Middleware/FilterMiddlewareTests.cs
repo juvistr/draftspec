@@ -397,6 +397,155 @@ public class FilterMiddlewareTests
 
     #endregion
 
+    #region Context Filtering
+
+    [Test]
+    public async Task WithContextFilter_MatchesExactContextPath()
+    {
+        var root = new SpecContext("UserService");
+        var child = new SpecContext("CreateAsync", root);
+        child.AddSpec(new SpecDefinition("creates user", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithContextFilter("UserService/CreateAsync")
+            .Build();
+        var results = await runner.RunAsync(root);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
+    }
+
+    [Test]
+    public async Task WithContextFilter_SingleWildcard_MatchesSingleSegment()
+    {
+        var root = new SpecContext("UserService");
+        var child = new SpecContext("CreateAsync", root);
+        child.AddSpec(new SpecDefinition("test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithContextFilter("*/CreateAsync")
+            .Build();
+        var results = await runner.RunAsync(root);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
+    }
+
+    [Test]
+    public async Task WithContextFilter_DoubleWildcard_MatchesMultipleSegments()
+    {
+        var root = new SpecContext("UserService");
+        var level1 = new SpecContext("Admin", root);
+        var level2 = new SpecContext("CreateAsync", level1);
+        level2.AddSpec(new SpecDefinition("test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithContextFilter("**/CreateAsync")
+            .Build();
+        var results = await runner.RunAsync(root);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
+    }
+
+    [Test]
+    public async Task WithContextFilter_NoMatch_SkipsSpec()
+    {
+        var root = new SpecContext("UserService");
+        var child = new SpecContext("CreateAsync", root);
+        child.AddSpec(new SpecDefinition("test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithContextFilter("OrderService/*")
+            .Build();
+        var results = await runner.RunAsync(root);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Skipped);
+    }
+
+    [Test]
+    public async Task WithContextFilter_MultiplePatterns_MatchesAny()
+    {
+        var root = new SpecContext("root");
+        var user = new SpecContext("UserService", root);
+        user.AddSpec(new SpecDefinition("user test", () => { }));
+        var order = new SpecContext("OrderService", root);
+        order.AddSpec(new SpecDefinition("order test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithContextFilter("UserService", "OrderService")
+            .Build();
+        var results = await runner.RunAsync(root);
+
+        await Assert.That(results.Count(r => r.Status == SpecStatus.Passed)).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task WithContextFilter_CaseInsensitive()
+    {
+        var root = new SpecContext("UserService");
+        root.AddSpec(new SpecDefinition("test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithContextFilter("userservice")
+            .Build();
+        var results = await runner.RunAsync(root);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Passed);
+    }
+
+    [Test]
+    public async Task WithContextExcludeFilter_ExcludesMatchingContext()
+    {
+        var root = new SpecContext("root");
+        var legacy = new SpecContext("Legacy", root);
+        legacy.AddSpec(new SpecDefinition("legacy test", () => { }));
+        var modern = new SpecContext("Modern", root);
+        modern.AddSpec(new SpecDefinition("modern test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithContextExcludeFilter("Legacy")
+            .Build();
+        var results = await runner.RunAsync(root);
+
+        await Assert.That(results.Count(r => r.Status == SpecStatus.Passed)).IsEqualTo(1);
+        await Assert.That(results.Count(r => r.Status == SpecStatus.Skipped)).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task WithContextExcludeFilter_WildcardExclusion()
+    {
+        var root = new SpecContext("root");
+        var integration = new SpecContext("Integration", root);
+        var slow = new SpecContext("Slow", integration);
+        slow.AddSpec(new SpecDefinition("slow test", () => { }));
+        var unit = new SpecContext("Unit", root);
+        unit.AddSpec(new SpecDefinition("unit test", () => { }));
+
+        var runner = new SpecRunnerBuilder()
+            .WithContextExcludeFilter("Integration/**")
+            .Build();
+        var results = await runner.RunAsync(root);
+
+        await Assert.That(results.Count(r => r.Status == SpecStatus.Passed)).IsEqualTo(1);
+        await Assert.That(results.First(r => r.Status == SpecStatus.Passed).Spec.Description).IsEqualTo("unit test");
+    }
+
+    [Test]
+    public async Task WithContextFilter_EmptyPatterns_Throws()
+    {
+        var action = () => new SpecRunnerBuilder().WithContextFilter();
+
+        await Assert.That(action).Throws<ArgumentException>();
+    }
+
+    [Test]
+    public async Task WithContextExcludeFilter_EmptyPatterns_Throws()
+    {
+        var action = () => new SpecRunnerBuilder().WithContextExcludeFilter();
+
+        await Assert.That(action).Throws<ArgumentException>();
+    }
+
+    #endregion
+
     private static SpecExecutionContext CreateContext(SpecDefinition spec)
     {
         var specContext = new SpecContext("test");

@@ -44,12 +44,16 @@ public class InProcessSpecRunner : IInProcessSpecRunner
     private readonly string? _excludeTags;
     private readonly string? _filterName;
     private readonly string? _excludeName;
+    private readonly IReadOnlyList<string>? _filterContext;
+    private readonly IReadOnlyList<string>? _excludeContext;
 
     public InProcessSpecRunner(
         string? filterTags = null,
         string? excludeTags = null,
         string? filterName = null,
         string? excludeName = null,
+        IReadOnlyList<string>? filterContext = null,
+        IReadOnlyList<string>? excludeContext = null,
         DraftSpec.ITimeProvider? timeProvider = null,
         IProjectBuilder? projectBuilder = null,
         ISpecScriptExecutor? scriptExecutor = null,
@@ -59,6 +63,8 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         _excludeTags = excludeTags;
         _filterName = filterName;
         _excludeName = excludeName;
+        _filterContext = filterContext;
+        _excludeContext = excludeContext;
 
         // Use defaults for backward compatibility
         _timeProvider = timeProvider ?? new DraftSpec.SystemTimeProvider();
@@ -228,6 +234,18 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         if (!string.IsNullOrEmpty(_excludeName))
         {
             builder.WithNameExcludeFilter(_excludeName);
+        }
+
+        // Add context filter
+        if (_filterContext is { Count: > 0 })
+        {
+            builder.WithContextFilter(_filterContext.ToArray());
+        }
+
+        // Add context exclusion
+        if (_excludeContext is { Count: > 0 })
+        {
+            builder.WithContextExcludeFilter(_excludeContext.ToArray());
         }
 
         return builder;

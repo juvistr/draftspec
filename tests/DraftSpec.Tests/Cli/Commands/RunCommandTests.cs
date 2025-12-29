@@ -426,7 +426,7 @@ public class RunCommandTests
 
         public MockRunnerFactory(MockRunner? runner = null) => _runner = runner;
 
-        public IInProcessSpecRunner Create(string? filterTags = null, string? excludeTags = null, string? filterName = null, string? excludeName = null)
+        public IInProcessSpecRunner Create(string? filterTags = null, string? excludeTags = null, string? filterName = null, string? excludeName = null, IReadOnlyList<string>? filterContext = null, IReadOnlyList<string>? excludeContext = null)
         {
             return _runner ?? new MockRunner();
         }

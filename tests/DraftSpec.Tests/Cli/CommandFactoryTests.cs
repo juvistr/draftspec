@@ -319,7 +319,9 @@ public class CommandFactoryTests
             string? filterTags = null,
             string? excludeTags = null,
             string? filterName = null,
-            string? excludeName = null) => new NullRunner();
+            string? excludeName = null,
+            IReadOnlyList<string>? filterContext = null,
+            IReadOnlyList<string>? excludeContext = null) => new NullRunner();
     }
 
     private class NullRunner : IInProcessSpecRunner

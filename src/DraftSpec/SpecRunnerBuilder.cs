@@ -92,6 +92,83 @@ public class SpecRunnerBuilder
     }
 
     /// <summary>
+    /// Add filter middleware that matches specs by context path patterns.
+    /// Multiple patterns are combined with OR logic (spec runs if ANY pattern matches).
+    /// </summary>
+    /// <param name="patterns">Glob-style patterns with / separator. Supports * (single segment) and ** (any segments).</param>
+    public SpecRunnerBuilder WithContextFilter(params string[] patterns)
+    {
+        if (patterns.Length == 0)
+            throw new ArgumentException("At least one pattern must be specified", nameof(patterns));
+
+        var regexes = patterns.Select(p => new Regex(
+            ContextPatternToRegex(p),
+            RegexOptions.IgnoreCase,
+            RegexTimeout)).ToList();
+
+        return Use(new FilterMiddleware(ctx =>
+            {
+                var contextPathStr = string.Join("/", ctx.ContextPath);
+                return regexes.Any(r => r.IsMatch(contextPathStr));
+            }, $"context does not match patterns: {string.Join(", ", patterns)}"));
+    }
+
+    /// <summary>
+    /// Add filter middleware that excludes specs matching context path patterns.
+    /// Multiple patterns are combined with OR logic (spec is excluded if ANY pattern matches).
+    /// </summary>
+    /// <param name="patterns">Glob-style patterns with / separator. Supports * (single segment) and ** (any segments).</param>
+    public SpecRunnerBuilder WithContextExcludeFilter(params string[] patterns)
+    {
+        if (patterns.Length == 0)
+            throw new ArgumentException("At least one pattern must be specified", nameof(patterns));
+
+        var regexes = patterns.Select(p => new Regex(
+            ContextPatternToRegex(p),
+            RegexOptions.IgnoreCase,
+            RegexTimeout)).ToList();
+
+        return Use(new FilterMiddleware(ctx =>
+            {
+                var contextPathStr = string.Join("/", ctx.ContextPath);
+                return !regexes.Any(r => r.IsMatch(contextPathStr));
+            }, $"context matches excluded patterns: {string.Join(", ", patterns)}"));
+    }
+
+    /// <summary>
+    /// Convert a glob-style context pattern to a regex pattern.
+    /// Supports:
+    /// - * matches a single path segment (anything except /)
+    /// - ** matches any number of path segments (including zero)
+    /// - Literal text is escaped
+    /// </summary>
+    private static string ContextPatternToRegex(string pattern)
+    {
+        // Split by ** first (matches any number of segments)
+        var parts = pattern.Split(["**"], StringSplitOptions.None);
+        var regexParts = new List<string>();
+
+        for (var i = 0; i < parts.Length; i++)
+        {
+            var part = parts[i];
+
+            // Handle single * within each part (matches single segment)
+            var subParts = part.Split('*');
+            var subRegex = string.Join("[^/]*", subParts.Select(Regex.Escape));
+            regexParts.Add(subRegex);
+        }
+
+        // Join with .* (matches any number of segments including /)
+        var fullPattern = string.Join(".*", regexParts);
+
+        // Pattern should match anywhere in the context path (partial match)
+        // Remove leading/trailing slashes for cleaner matching
+        fullPattern = fullPattern.Trim('/');
+
+        return fullPattern;
+    }
+
+    /// <summary>
     /// Add filter middleware that runs only specs with any of the specified tags.
     /// </summary>
     /// <param name="tags">Tags to match (spec runs if it has ANY of these tags)</param>

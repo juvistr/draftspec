@@ -461,13 +461,17 @@ public class WatchCommandTests
         public string? LastExcludeTags { get; private set; }
         public string? LastFilterName { get; private set; }
         public string? LastExcludeName { get; private set; }
+        public IReadOnlyList<string>? LastFilterContext { get; private set; }
+        public IReadOnlyList<string>? LastExcludeContext { get; private set; }
 
-        public IInProcessSpecRunner Create(string? filterTags = null, string? excludeTags = null, string? filterName = null, string? excludeName = null)
+        public IInProcessSpecRunner Create(string? filterTags = null, string? excludeTags = null, string? filterName = null, string? excludeName = null, IReadOnlyList<string>? filterContext = null, IReadOnlyList<string>? excludeContext = null)
         {
             LastFilterTags = filterTags;
             LastExcludeTags = excludeTags;
             LastFilterName = filterName;
             LastExcludeName = excludeName;
+            LastFilterContext = filterContext;
+            LastExcludeContext = excludeContext;
             return _runner ?? new MockRunner();
         }
     }

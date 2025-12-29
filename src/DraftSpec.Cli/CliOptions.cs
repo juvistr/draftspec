@@ -70,6 +70,22 @@ public class CliOptions
     public string? ExcludeName { get; set; }
 
     /// <summary>
+    /// Context patterns to include (glob-style with / separator).
+    /// Only specs within matching contexts will run.
+    /// Supports * (single segment) and ** (multiple segments).
+    /// Example: "UserService/CreateAsync", "*/CreateAsync", "Integration/**"
+    /// </summary>
+    public List<string>? FilterContext { get; set; }
+
+    /// <summary>
+    /// Context patterns to exclude (glob-style with / separator).
+    /// Specs within matching contexts will be skipped.
+    /// Supports * (single segment) and ** (multiple segments).
+    /// Example: "Legacy/*", "**/Slow"
+    /// </summary>
+    public List<string>? ExcludeContext { get; set; }
+
+    /// <summary>
     /// Enable code coverage collection via dotnet-coverage.
     /// </summary>
     public bool Coverage { get; set; }

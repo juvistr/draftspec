@@ -114,6 +114,30 @@ public static class CliOptionsParser
                 options.ExcludeName = args[++i];
                 options.ExplicitlySet.Add(nameof(CliOptions.ExcludeName));
             }
+            else if (arg is "--context" or "-c")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--context requires a value (context pattern with / separator)";
+                    return options;
+                }
+
+                options.FilterContext ??= [];
+                options.FilterContext.Add(args[++i]);
+                options.ExplicitlySet.Add(nameof(CliOptions.FilterContext));
+            }
+            else if (arg == "--exclude-context")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--exclude-context requires a value (context pattern with / separator)";
+                    return options;
+                }
+
+                options.ExcludeContext ??= [];
+                options.ExcludeContext.Add(args[++i]);
+                options.ExplicitlySet.Add(nameof(CliOptions.ExcludeContext));
+            }
             else if (arg == "--coverage")
             {
                 options.Coverage = true;

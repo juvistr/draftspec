@@ -4,10 +4,15 @@ namespace DraftSpec.Tests.Dsl;
 
 /// <summary>
 /// Tests for the tag() and tags() DSL functions.
-/// Note: Each test must call run() to reset the global state.
 /// </summary>
 public class TagTests
 {
+    [Before(Test)]
+    public void SetUp()
+    {
+        Reset();
+    }
+
     #region Single Tag
 
     [Test]
@@ -17,7 +22,6 @@ public class TagTests
 
         var spec = RootContext!.Specs[0];
         var tags = spec.Tags.ToList();
-        run();
 
         await Assert.That(tags).Contains("slow");
     }
@@ -36,7 +40,6 @@ public class TagTests
         var untaggedSpec = RootContext.Specs[1];
         var taggedTags = taggedSpec.Tags.ToList();
         var untaggedTags = untaggedSpec.Tags.ToList();
-        run();
 
         await Assert.That(taggedTags).Contains("slow");
         await Assert.That(untaggedTags).IsEmpty();
@@ -54,7 +57,6 @@ public class TagTests
 
         var spec = RootContext!.Specs[0];
         var tags = spec.Tags.ToList();
-        run();
 
         await Assert.That(tags).Contains("slow");
         await Assert.That(tags).Contains("integration");
@@ -73,7 +75,6 @@ public class TagTests
 
         var untaggedSpec = RootContext!.Specs[1];
         var tags = untaggedSpec.Tags.ToList();
-        run();
 
         await Assert.That(tags).IsEmpty();
     }
@@ -89,7 +90,6 @@ public class TagTests
 
         var spec = RootContext!.Specs[0];
         var specTags = spec.Tags.ToList();
-        run();
 
         await Assert.That(specTags).Contains("slow");
         await Assert.That(specTags).Contains("integration");
@@ -107,7 +107,6 @@ public class TagTests
 
         var spec = RootContext!.Specs[0];
         var specTags = spec.Tags.ToList();
-        run();
 
         await Assert.That(specTags).Contains("slow");
         await Assert.That(specTags).Contains("integration");
@@ -126,7 +125,6 @@ public class TagTests
         var spec = RootContext!.Specs[0];
         var isFocused = spec.IsFocused;
         var tags = spec.Tags.ToList();
-        run();
 
         await Assert.That(isFocused).IsTrue();
         await Assert.That(tags).Contains("slow");
@@ -140,7 +138,6 @@ public class TagTests
         var spec = RootContext!.Specs[0];
         var isSkipped = spec.IsSkipped;
         var tags = spec.Tags.ToList();
-        run();
 
         await Assert.That(isSkipped).IsTrue();
         await Assert.That(tags).Contains("slow");
@@ -154,7 +151,6 @@ public class TagTests
         var spec = RootContext!.Specs[0];
         var isPending = spec.IsPending;
         var tags = spec.Tags.ToList();
-        run();
 
         await Assert.That(isPending).IsTrue();
         await Assert.That(tags).Contains("slow");
@@ -173,7 +169,6 @@ public class TagTests
         var innerContext = RootContext!.Children[0];
         var spec = innerContext.Specs[0];
         var tags = spec.Tags.ToList();
-        run();
 
         await Assert.That(tags).Contains("slow");
     }

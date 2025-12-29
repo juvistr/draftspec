@@ -133,7 +133,6 @@ public class CliIntegrationTests
         var content = await File.ReadAllTextAsync(Path.Combine(_testDirectory, "Calculator.spec.csx"));
         await Assert.That(content).Contains("#load \"spec_helper.csx\"");
         await Assert.That(content).Contains("describe(\"Calculator\"");
-        await Assert.That(content).Contains("run();");
     }
 
     [Test]

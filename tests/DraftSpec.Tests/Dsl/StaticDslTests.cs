@@ -1,15 +1,18 @@
-using DraftSpec.Configuration;
+using DraftSpec;
 using static DraftSpec.Dsl;
 
 namespace DraftSpec.Tests.Dsl;
 
 /// <summary>
-/// Tests for static DSL state management, configuration, and edge cases.
-/// Complements DslTests.cs with focus on state isolation and configuration.
-/// Note: Each test must call run() to reset the global state.
+/// Tests for static DSL state management and edge cases.
+/// Complements DslTests.cs with focus on state isolation.
+/// Note: Each test uses [Before(Test)] to reset the global state.
 /// </summary>
 public class StaticDslTests
 {
+    [Before(Test)]
+    public void ResetDslState() => Reset();
+
     #region State Isolation
 
     [Test]
@@ -20,13 +23,13 @@ public class StaticDslTests
         var task1 = Task.Run(() =>
         {
             describe("task1", () => { it("spec1", () => results.Add("task1")); });
-            run();
+            new SpecRunner().Run(RootContext!);
         });
 
         var task2 = Task.Run(() =>
         {
             describe("task2", () => { it("spec2", () => results.Add("task2")); });
-            run();
+            new SpecRunner().Run(RootContext!);
         });
 
         await Task.WhenAll(task1, task2);
@@ -37,16 +40,16 @@ public class StaticDslTests
     }
 
     [Test]
-    public async Task Run_ResetsAllStaticState()
+    public async Task Reset_ClearsAllStaticState()
     {
         describe("test", () => { it("spec", () => { }); });
 
-        // Before run, RootContext should be set
+        // Before Reset, RootContext should be set
         await Assert.That(RootContext).IsNotNull();
 
-        run();
+        Reset();
 
-        // After run, RootContext should be null
+        // After Reset, RootContext should be null
         await Assert.That(RootContext).IsNull();
     }
 
@@ -58,18 +61,19 @@ public class StaticDslTests
 
         // First run
         describe("first", () => { it("spec1", () => firstRunExecuted = true); });
-        run();
+        new SpecRunner().Run(RootContext!);
+        Reset();
 
         // Second run - should not see specs from first run
         describe("second", () => { it("spec2", () => secondRunExecuted = true); });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(firstRunExecuted).IsTrue();
         await Assert.That(secondRunExecuted).IsTrue();
     }
 
     [Test]
-    public async Task DescribeWithoutRun_StateRemainsUntilRun()
+    public async Task DescribeWithoutReset_StateRemainsUntilReset()
     {
         describe("abandoned", () => { it("never runs", () => { }); });
 
@@ -77,7 +81,7 @@ public class StaticDslTests
         await Assert.That(RootContext).IsNotNull();
 
         // Clean up properly
-        run();
+        Reset();
 
         // Now state is cleared
         await Assert.That(RootContext).IsNull();
@@ -85,136 +89,42 @@ public class StaticDslTests
 
     #endregion
 
-    #region Configuration
-
-    [Test]
-    public async Task Configure_WithRunnerBuilder_AppliesMiddleware()
-    {
-        var specsFiltered = 0;
-
-        // Use filter middleware that allows all specs but tracks calls
-        configure(runner => runner.WithFilter(ctx =>
-        {
-            specsFiltered++;
-            return true; // Allow all specs
-        }));
-
-        describe("test", () =>
-        {
-            it("spec1", () => { });
-            it("spec2", () => { });
-        });
-        run();
-
-        // Filter middleware was called for both specs
-        await Assert.That(specsFiltered).IsEqualTo(2);
-    }
-
-    [Test]
-    public async Task Configure_WithDraftSpecConfiguration_SetsConfiguration()
-    {
-        var configureRan = false;
-
-        configure((DraftSpecConfiguration config) =>
-        {
-            // Configuration is set up - just verify no error
-            configureRan = true;
-        });
-
-        describe("test", () => { it("spec", () => { }); });
-        run();
-
-        await Assert.That(configureRan).IsTrue();
-    }
-
-    [Test]
-    public async Task Configure_MultipleCalls_AccumulateCorrectly()
-    {
-        var filterCount = 0;
-
-        // First configure - add a filter
-        configure(runner => runner.WithFilter(ctx =>
-        {
-            filterCount++;
-            return true;
-        }));
-
-        // Second configure - add timeout (accumulates)
-        configure(runner => runner.WithTimeout(10000));
-
-        describe("test", () => { it("spec", () => { }); });
-        run();
-
-        // Filter middleware was called (proving first configure worked)
-        await Assert.That(filterCount).IsEqualTo(1);
-    }
-
-    [Test]
-    public async Task Configure_ResetAfterRun()
-    {
-        var filterCount = 0;
-
-        configure(runner => runner.WithFilter(ctx =>
-        {
-            filterCount++;
-            return true;
-        }));
-
-        describe("first", () => { it("spec", () => { }); });
-        run();
-
-        // Second run without configure - middleware should not run
-        describe("second", () => { it("spec", () => { }); });
-        run();
-
-        // Filter only called during first run (configuration was reset)
-        await Assert.That(filterCount).IsEqualTo(1);
-    }
-
-    [Test]
-    public async Task Configure_WithoutSpecs_NoError()
-    {
-        configure(runner => runner.WithTimeout(1000));
-
-        // No describe/it calls - test passes if no exception
-        run();
-    }
-
-    #endregion
-
     #region Edge Cases
 
     [Test]
-    public async Task Run_WithEmptyDescribe_Succeeds()
+    public async Task SpecRunner_WithEmptyDescribe_Succeeds()
     {
         describe("empty", () =>
         {
             // No specs
         });
         // Test passes if no exception
-        run();
+        new SpecRunner().Run(RootContext!);
     }
 
     [Test]
-    public async Task Run_CalledWithoutAnySpecs_Succeeds()
+    public async Task SpecRunner_CalledWithoutAnySpecs_Succeeds()
     {
-        // No describe, no it - test passes if no exception
-        run();
+        // No describe, no it - RootContext is null
+        // Test passes if no exception
+        await Assert.That(RootContext).IsNull();
     }
 
     [Test]
-    public async Task Run_CalledMultipleTimes_ResetsEachTime()
+    public async Task Reset_CalledMultipleTimes_ClearsStateEachTime()
     {
         var count = 0;
 
         describe("first", () => { it("spec", () => count++); });
-        run();
+        new SpecRunner().Run(RootContext!);
+        Reset();
 
         describe("second", () => { it("spec", () => count++); });
-        run();
+        new SpecRunner().Run(RootContext!);
+        Reset();
 
         describe("third", () => { it("spec", () => count++); });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(count).IsEqualTo(3);
     }
@@ -238,7 +148,7 @@ public class StaticDslTests
                             });
                     });
             });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(deepestReached).IsTrue();
     }
@@ -254,72 +164,11 @@ public class StaticDslTests
 
             describe("nested describe", () => { it("also works", () => executed.Add("describe-spec")); });
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("context-spec");
         await Assert.That(executed).Contains("describe-spec");
-    }
-
-    #endregion
-
-    #region Environment.ExitCode
-
-    [Test]
-    [NotInParallel(nameof(Environment.ExitCode))]
-    public async Task Run_AllPassed_ExitCodeZero()
-    {
-        // Save original
-        var originalExitCode = Environment.ExitCode;
-
-        describe("test", () => { it("passes", () => { }); });
-        run();
-
-        var exitCode = Environment.ExitCode;
-
-        // Restore
-        Environment.ExitCode = originalExitCode;
-
-        await Assert.That(exitCode).IsEqualTo(0);
-    }
-
-    [Test]
-    [NotInParallel(nameof(Environment.ExitCode))]
-    public async Task Run_AnyFailed_ExitCodeOne()
-    {
-        // Save original
-        var originalExitCode = Environment.ExitCode;
-
-        describe("test", () => { it("fails", () => throw new Exception("intentional")); });
-        run();
-
-        var exitCode = Environment.ExitCode;
-
-        // Restore
-        Environment.ExitCode = originalExitCode;
-
-        await Assert.That(exitCode).IsEqualTo(1);
-    }
-
-    [Test]
-    [NotInParallel(nameof(Environment.ExitCode))]
-    public async Task Run_OnlyPending_ExitCodeZero()
-    {
-        // Save original
-        var originalExitCode = Environment.ExitCode;
-
-        describe("test", () =>
-        {
-            it("pending spec"); // No body = pending
-        });
-        run();
-
-        var exitCode = Environment.ExitCode;
-
-        // Restore
-        Environment.ExitCode = originalExitCode;
-
-        await Assert.That(exitCode).IsEqualTo(0);
     }
 
     #endregion
@@ -339,7 +188,7 @@ public class StaticDslTests
                 executed = true;
             });
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).IsTrue();
     }
@@ -377,7 +226,7 @@ public class StaticDslTests
 
             it("spec", () => order.Add("spec"));
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(order).Count().IsEqualTo(5);
         await Assert.That(order[0]).IsEqualTo("beforeAll");
@@ -402,7 +251,7 @@ public class StaticDslTests
                 executed.Add("async");
             });
         });
-        run();
+        new SpecRunner().Run(RootContext!);
 
         await Assert.That(executed).Count().IsEqualTo(2);
         await Assert.That(executed).Contains("sync");
@@ -410,12 +259,8 @@ public class StaticDslTests
     }
 
     [Test]
-    [NotInParallel(nameof(Environment.ExitCode))]
-    public async Task AsyncSpec_ExceptionPropagates()
+    public async Task AsyncSpec_FailureReportsCorrectly()
     {
-        // Save original
-        var originalExitCode = Environment.ExitCode;
-
         describe("async failure", () =>
         {
             it("throws async", async () =>
@@ -424,14 +269,13 @@ public class StaticDslTests
                 throw new InvalidOperationException("async error");
             });
         });
-        run();
 
-        var exitCode = Environment.ExitCode;
+        var results = new SpecRunner().Run(RootContext!);
 
-        // Restore
-        Environment.ExitCode = originalExitCode;
-
-        await Assert.That(exitCode).IsEqualTo(1);
+        await Assert.That(results).Count().IsEqualTo(1);
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
+        await Assert.That(results[0].Exception).IsNotNull();
+        await Assert.That(results[0].Exception!.Message).Contains("async error");
     }
 
     #endregion
@@ -447,7 +291,7 @@ public class StaticDslTests
         await Assert.That(RootContext).IsNotNull();
         await Assert.That(RootContext!.Description).IsEqualTo("test");
 
-        run();
+        new SpecRunner().Run(RootContext!);
     }
 
     [Test]
@@ -461,17 +305,17 @@ public class StaticDslTests
         await Assert.That(RootContext!.Children).Count().IsEqualTo(1);
         await Assert.That(RootContext!.Children[0].Description).IsEqualTo("child");
 
-        run();
+        new SpecRunner().Run(RootContext!);
     }
 
     [Test]
-    public async Task RootContext_NullAfterRun()
+    public async Task RootContext_NullAfterReset()
     {
         describe("test", () => { it("spec", () => { }); });
 
         await Assert.That(RootContext).IsNotNull();
 
-        run();
+        Reset();
 
         await Assert.That(RootContext).IsNull();
     }

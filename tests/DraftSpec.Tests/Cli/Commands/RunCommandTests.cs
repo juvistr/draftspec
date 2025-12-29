@@ -1,151 +1,223 @@
-using System.Security;
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Formatters;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
-/// Tests for RunCommand.
+/// Tests for RunCommand with mocked dependencies.
 /// </summary>
 public class RunCommandTests
 {
-    #region GetFormatter
+    #region Constructor Dependencies
 
     [Test]
-    public async Task GetFormatter_Json_ReturnsJsonFormatter()
+    public async Task Constructor_WithAllDependencies_Constructs()
     {
-        var options = new CliOptions { Format = OutputFormats.Json };
-
-        var formatter = RunCommand.GetFormatter(OutputFormats.Json, options);
-
-        // The registry has a JSON formatter registered
-        await Assert.That(formatter).IsNotNull();
-        await Assert.That(formatter!.GetType().Name).IsEqualTo("JsonFormatter");
-    }
-
-    [Test]
-    public async Task GetFormatter_Markdown_ReturnsMarkdownFormatter()
-    {
-        var options = new CliOptions { Format = OutputFormats.Markdown };
-
-        var formatter = RunCommand.GetFormatter(OutputFormats.Markdown, options);
-
-        await Assert.That(formatter).IsNotNull();
-        await Assert.That(formatter!.GetType().Name).Contains("Markdown");
-    }
-
-    [Test]
-    public async Task GetFormatter_Html_ReturnsHtmlFormatter()
-    {
-        var options = new CliOptions { Format = OutputFormats.Html };
-
-        var formatter = RunCommand.GetFormatter(OutputFormats.Html, options);
-
-        await Assert.That(formatter).IsNotNull();
-        await Assert.That(formatter!.GetType().Name).Contains("Html");
-    }
-
-    [Test]
-    public async Task GetFormatter_UnknownFormat_ReturnsNull()
-    {
-        var options = new CliOptions { Format = "unknown-format" };
-
-        var formatter = RunCommand.GetFormatter("unknown-format", options);
-
-        await Assert.That(formatter).IsNull();
-    }
-
-    [Test]
-    public async Task GetFormatter_WithCustomRegistry_UsesRegistry()
-    {
-        var options = new CliOptions { Format = "custom" };
-        var mockFormatter = new MockFormatter();
-        var registry = new MockFormatterRegistry(mockFormatter);
-
-        var formatter = RunCommand.GetFormatter("custom", options, registry);
-
-        await Assert.That(formatter).IsSameReferenceAs(mockFormatter);
+        var command = CreateCommand();
+        await Assert.That(command).IsNotNull();
     }
 
     #endregion
 
-    #region Output File Security
+    #region ExecuteAsync Behavior
 
     [Test]
-    [NotInParallel]
-    public async Task Execute_OutputFileOutsideCurrentDirectory_ThrowsSecurityException()
+    public async Task ExecuteAsync_NoSpecsFound_ReturnsZero()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_test_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-        var originalDir = Directory.GetCurrentDirectory();
+        var console = new MockConsole();
+        var command = CreateCommand(console: console, specFiles: []);
 
-        try
-        {
-            Directory.SetCurrentDirectory(tempDir);
+        var options = new CliOptions { Path = "." };
+        var result = await command.ExecuteAsync(options);
 
-            // Create a spec file that will produce output
-            File.WriteAllText(Path.Combine(tempDir, "test.spec.csx"), @"
-#r ""nuget: DraftSpec""
-using static DraftSpec.Dsl;
-describe(""test"", () => { it(""works"", () => { }); });
-run();
-");
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("No spec files found");
+    }
 
-            var options = new CliOptions
-            {
-                Path = tempDir,
-                Format = OutputFormats.Json,
-                OutputFile = "/tmp/outside/report.json"
-            };
+    [Test]
+    public async Task ExecuteAsync_ConfigError_ThrowsInvalidOperation()
+    {
+        var configLoader = new MockConfigLoader(error: "Invalid config file");
+        var command = CreateCommand(configLoader: configLoader, specFiles: ["test.spec.csx"]);
 
-            // The command should throw when trying to write outside current directory
-            // But this requires actually running specs which is slow
-            // So we test the validation logic indirectly
+        var options = new CliOptions { Path = "." };
 
-            // For now, just verify the option exists
-            await Assert.That(options.OutputFile).IsEqualTo("/tmp/outside/report.json");
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(originalDir);
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, recursive: true);
-        }
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await command.ExecuteAsync(options));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithSpecs_RunsAll()
+    {
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(runnerFactory: runnerFactory, specFiles: ["test1.spec.csx", "test2.spec.csx"]);
+
+        var options = new CliOptions { Path = "." };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(runner.RunAllCalled).IsTrue();
+        await Assert.That(runner.LastSpecFiles).HasCount().EqualTo(2);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SuccessfulRun_ReturnsZero()
+    {
+        var command = CreateCommand(specFiles: ["test.spec.csx"]);
+
+        var options = new CliOptions { Path = "." };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_FailedRun_ReturnsOne()
+    {
+        var runner = new MockRunner(success: false);
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(runnerFactory: runnerFactory, specFiles: ["test.spec.csx"]);
+
+        var options = new CliOptions { Path = "." };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
     }
 
     #endregion
 
-    #region Helpers
+    #region Helper Methods
 
-    private class MockFormatter : IFormatter
+    private static RunCommand CreateCommand(
+        MockConsole? console = null,
+        MockConfigLoader? configLoader = null,
+        MockRunnerFactory? runnerFactory = null,
+        IReadOnlyList<string>? specFiles = null)
     {
-        public string FileExtension => ".mock";
-        public string Format(SpecReport report) => "mock output";
+        var specs = specFiles ?? [];
+        return new RunCommand(
+            new MockSpecFinder(specs),
+            runnerFactory ?? new MockRunnerFactory(),
+            console ?? new MockConsole(),
+            new MockFormatterRegistry(),
+            configLoader ?? new MockConfigLoader(),
+            new MockFileSystem());
+    }
+
+    #endregion
+
+    #region Mocks
+
+    private class MockSpecFinder : ISpecFinder
+    {
+        private readonly IReadOnlyList<string> _specs;
+
+        public MockSpecFinder(IReadOnlyList<string> specs) => _specs = specs;
+
+        public IReadOnlyList<string> FindSpecs(string path, string? baseDirectory = null) => _specs;
+    }
+
+    private class MockRunnerFactory : IInProcessSpecRunnerFactory
+    {
+        private readonly MockRunner? _runner;
+
+        public MockRunnerFactory(MockRunner? runner = null) => _runner = runner;
+
+        public IInProcessSpecRunner Create(string? filterTags = null, string? excludeTags = null, string? filterName = null, string? excludeName = null)
+        {
+            return _runner ?? new MockRunner();
+        }
+    }
+
+    private class MockRunner : IInProcessSpecRunner
+    {
+        private readonly bool _success;
+
+        public MockRunner(bool success = true) => _success = success;
+
+        public bool RunAllCalled { get; private set; }
+        public IReadOnlyList<string>? LastSpecFiles { get; private set; }
+
+        public event Action<string>? OnBuildStarted;
+        public event Action<BuildResult>? OnBuildCompleted;
+        public event Action<string>? OnBuildSkipped;
+
+        public Task<InProcessRunResult> RunFileAsync(string specFile, CancellationToken ct = default)
+        {
+            return Task.FromResult(new InProcessRunResult(
+                specFile,
+                new SpecReport { Summary = new SpecSummary() },
+                TimeSpan.Zero,
+                _success ? null : new Exception("Test failed")));
+        }
+
+        public Task<InProcessRunSummary> RunAllAsync(IReadOnlyList<string> specFiles, bool parallel = false, CancellationToken ct = default)
+        {
+            RunAllCalled = true;
+            LastSpecFiles = specFiles;
+
+            var results = specFiles.Select(f => new InProcessRunResult(
+                f,
+                new SpecReport { Summary = new SpecSummary() },
+                TimeSpan.Zero,
+                _success ? null : new Exception("Test failed"))).ToList();
+
+            return Task.FromResult(new InProcessRunSummary(results, TimeSpan.Zero));
+        }
+
+        public void ClearBuildCache() { }
+    }
+
+    private class MockConsole : IConsole
+    {
+        private readonly List<string> _output = [];
+
+        public string Output => string.Join("", _output);
+
+        public void Write(string text) => _output.Add(text);
+        public void WriteLine(string text) => _output.Add(text + "\n");
+        public void WriteLine() => _output.Add("\n");
+        public ConsoleColor ForegroundColor { get; set; }
+        public void ResetColor() { }
+        public void Clear() { }
+        public void WriteWarning(string text) => WriteLine(text);
+        public void WriteSuccess(string text) => WriteLine(text);
+        public void WriteError(string text) => WriteLine(text);
     }
 
     private class MockFormatterRegistry : ICliFormatterRegistry
     {
-        private readonly IFormatter _formatter;
-        private readonly Dictionary<string, Func<CliOptions?, IFormatter>> _factories = new();
+        public IFormatter? GetFormatter(string name, CliOptions? options = null) => null;
+        public void Register(string name, Func<CliOptions?, IFormatter> factory) { }
+        public IEnumerable<string> Names => [];
+    }
 
-        public MockFormatterRegistry(IFormatter formatter)
+    private class MockConfigLoader : IConfigLoader
+    {
+        private readonly string? _error;
+
+        public MockConfigLoader(string? error = null) => _error = error;
+
+        public ConfigLoadResult Load(string? path = null)
         {
-            _formatter = formatter;
-        }
+            if (_error != null)
+                return new ConfigLoadResult(null, _error, null);
 
-        public IFormatter? GetFormatter(string name, CliOptions? options = null)
-        {
-            return name == "custom" ? _formatter : null;
+            return new ConfigLoadResult(null, null, null);
         }
+    }
 
-        public void Register(string name, Func<CliOptions?, IFormatter> factory)
-        {
-            _factories[name] = factory;
-        }
-
-        public IEnumerable<string> Names => _factories.Keys;
+    private class MockFileSystem : IFileSystem
+    {
+        public bool FileExists(string path) => false;
+        public void WriteAllText(string path, string content) { }
+        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) => Task.CompletedTask;
+        public string ReadAllText(string path) => "";
+        public bool DirectoryExists(string path) => true;
+        public void CreateDirectory(string path) { }
     }
 
     #endregion

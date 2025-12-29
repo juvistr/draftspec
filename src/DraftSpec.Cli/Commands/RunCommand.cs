@@ -1,51 +1,61 @@
 using System.Security;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
+using DraftSpec.Cli.Services;
 using DraftSpec.Formatters;
 
 namespace DraftSpec.Cli.Commands;
 
-public static class RunCommand
+public class RunCommand : ICommand
 {
-    /// <summary>
-    /// Get a formatter by name using the provided registry.
-    /// Falls back to built-in formatters if registry is null.
-    /// </summary>
-    public static IFormatter? GetFormatter(string name, CliOptions options, ICliFormatterRegistry? registry = null)
+    private readonly ISpecFinder _specFinder;
+    private readonly IInProcessSpecRunnerFactory _runnerFactory;
+    private readonly IConsole _console;
+    private readonly ICliFormatterRegistry _formatterRegistry;
+    private readonly IConfigLoader _configLoader;
+    private readonly IFileSystem _fileSystem;
+
+    public RunCommand(
+        ISpecFinder specFinder,
+        IInProcessSpecRunnerFactory runnerFactory,
+        IConsole console,
+        ICliFormatterRegistry formatterRegistry,
+        IConfigLoader configLoader,
+        IFileSystem fileSystem)
     {
-        registry ??= new CliFormatterRegistry();
-        return registry.GetFormatter(name, options);
+        _specFinder = specFinder;
+        _runnerFactory = runnerFactory;
+        _console = console;
+        _formatterRegistry = formatterRegistry;
+        _configLoader = configLoader;
+        _fileSystem = fileSystem;
     }
 
-    public static async Task<int> ExecuteAsync(CliOptions options, ICliFormatterRegistry? formatterRegistry = null, CancellationToken ct = default)
+    public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
     {
         // Load project configuration from draftspec.json
-        var configResult = ConfigLoader.Load(options.Path);
+        var configResult = _configLoader.Load(options.Path);
         if (configResult.Error != null)
-        {
-            Console.Error.WriteLine($"Error: {configResult.Error}");
-            return 1;
-        }
+            throw new InvalidOperationException(configResult.Error);
 
         if (configResult.Config != null)
             options.ApplyDefaults(configResult.Config);
 
-        var finder = new SpecFinder();
-        var runner = new InProcessSpecRunner(
+        var runner = _runnerFactory.Create(
             options.FilterTags,
             options.ExcludeTags,
             options.FilterName,
             options.ExcludeName);
 
-        var specFiles = finder.FindSpecs(options.Path);
+        var specFiles = _specFinder.FindSpecs(options.Path);
         if (specFiles.Count == 0)
         {
-            Console.WriteLine("No spec files found.");
+            _console.WriteLine("No spec files found.");
             return 0;
         }
 
         // Set up build event handlers for console output
-        var presenter = new ConsolePresenter(false);
+        var presenter = new ConsolePresenter(_console, watchMode: false);
         runner.OnBuildStarted += presenter.ShowBuilding;
         runner.OnBuildCompleted += presenter.ShowBuildResult;
 
@@ -56,8 +66,6 @@ public static class RunCommand
         var combinedReport = MergeReports(summary.Results, Path.GetFullPath(options.Path));
 
         // Format output
-        var needsJson = options.Format is OutputFormats.Json or OutputFormats.Markdown or OutputFormats.Html or OutputFormats.JUnit;
-
         string output;
         if (options.Format == OutputFormats.Console)
         {
@@ -71,7 +79,7 @@ public static class RunCommand
         }
         else
         {
-            var formatter = GetFormatter(options.Format, options, formatterRegistry)
+            var formatter = _formatterRegistry.GetFormatter(options.Format, options)
                             ?? throw new ArgumentException($"Unknown format: {options.Format}");
             output = formatter.Format(combinedReport);
         }
@@ -81,26 +89,18 @@ public static class RunCommand
         {
             // Security: Validate output path is within current directory
             ValidateOutputPath(options.OutputFile);
-            await File.WriteAllTextAsync(options.OutputFile, output, ct);
-            Console.WriteLine($"Report written to {options.OutputFile}");
+            await _fileSystem.WriteAllTextAsync(options.OutputFile, output, ct);
+            _console.WriteLine($"Report written to {options.OutputFile}");
         }
         else if (!string.IsNullOrEmpty(output))
         {
-            Console.WriteLine(output);
+            _console.WriteLine(output);
         }
 
         return summary.Success ? 0 : 1;
     }
 
-    /// <summary>
-    /// Synchronous entry point for backward compatibility.
-    /// </summary>
-    public static int Execute(CliOptions options, ICliFormatterRegistry? formatterRegistry = null)
-    {
-        return ExecuteAsync(options, formatterRegistry).GetAwaiter().GetResult();
-    }
-
-    private static void ShowConsoleOutput(InProcessRunSummary summary, string basePath, ConsolePresenter presenter)
+    private void ShowConsoleOutput(InProcessRunSummary summary, string basePath, ConsolePresenter presenter)
     {
         presenter.ShowHeader(summary.Results.Select(r => r.SpecFile).ToList(), false);
         presenter.ShowSpecsStarting();
@@ -110,7 +110,7 @@ public static class RunCommand
             // Convert to legacy format for presenter
             var legacyResult = new SpecRunResult(
                 result.SpecFile,
-                FormatConsoleOutput(result.Report),
+                ConsoleOutputFormatter.Format(result.Report),
                 result.Error?.Message ?? "",
                 result.Success ? 0 : 1,
                 result.Duration);
@@ -129,46 +129,6 @@ public static class RunCommand
             summary.TotalDuration);
 
         presenter.ShowSummary(legacySummary);
-    }
-
-    private static string FormatConsoleOutput(SpecReport report)
-    {
-        var lines = new List<string>();
-
-        void FormatContext(SpecContextReport ctx, int indent)
-        {
-            var prefix = new string(' ', indent * 2);
-            lines.Add($"{prefix}{ctx.Description}");
-
-            foreach (var spec in ctx.Specs)
-            {
-                var status = spec.Status switch
-                {
-                    "passed" => "✓",
-                    "failed" => "✗",
-                    "pending" => "○",
-                    "skipped" => "-",
-                    _ => "?"
-                };
-                lines.Add($"{prefix}  {status} {spec.Description}");
-                if (!string.IsNullOrEmpty(spec.Error))
-                {
-                    lines.Add($"{prefix}    {spec.Error}");
-                }
-            }
-
-            foreach (var child in ctx.Contexts)
-            {
-                FormatContext(child, indent + 1);
-            }
-        }
-
-        foreach (var ctx in report.Contexts)
-        {
-            FormatContext(ctx, 0);
-        }
-
-        return string.Join(Environment.NewLine, lines);
     }
 
     private static SpecReport MergeReports(IReadOnlyList<InProcessRunResult> results, string source)

@@ -272,10 +272,25 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
 
         if (filter is TestNodeUidListFilter uidFilter && uidFilter.TestNodeUids.Length > 0)
         {
-            // Run specific tests by ID - execute directly without full discovery
-            // to avoid affecting the state of non-requested tests
+            // Run specific tests by ID - discover to identify compilation errors,
+            // but only report results for requested specs
+            var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken);
+
+            // Filter to only requested IDs
             var requestedIds = uidFilter.TestNodeUids.Select(uid => uid.Value).ToHashSet();
-            executionResults = await _executor.ExecuteByIdsAsync(requestedIds, cancellationToken);
+            var requestedSpecs = discoveryResult.Specs.Where(s => requestedIds.Contains(s.Id)).ToList();
+
+            // Separate into executable and compilation error specs
+            var executableIds = requestedSpecs
+                .Where(s => !s.HasCompilationError)
+                .Select(s => s.Id)
+                .ToHashSet();
+            compilationErrorSpecs = requestedSpecs.Where(s => s.HasCompilationError).ToList();
+
+            // Execute only executable specs (results are filtered to requested IDs in executor)
+            executionResults = executableIds.Count > 0
+                ? await _executor.ExecuteByIdsAsync(executableIds, cancellationToken)
+                : [];
         }
         else
         {

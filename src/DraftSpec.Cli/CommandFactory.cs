@@ -22,6 +22,7 @@ public class CommandFactory : ICommandFactory
             "run" => _services.GetRequiredService<RunCommand>(),
             "watch" => _services.GetRequiredService<WatchCommand>(),
             "list" => _services.GetRequiredService<ListCommand>(),
+            "validate" => _services.GetRequiredService<ValidateCommand>(),
             "init" => _services.GetRequiredService<InitCommand>(),
             "new" => _services.GetRequiredService<NewCommand>(),
             _ => null

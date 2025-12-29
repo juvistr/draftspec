@@ -27,7 +27,7 @@ static async Task<int> Run(string[] args)
     using var serviceProvider = services.BuildServiceProvider();
 
     // Load plugins from default directory
-    var pluginLoader = new PluginLoader();
+    var pluginLoader = serviceProvider.GetRequiredService<IPluginLoader>();
     var formatterRegistry = serviceProvider.GetRequiredService<ICliFormatterRegistry>();
     pluginLoader.RegisterFormatters(formatterRegistry);
 

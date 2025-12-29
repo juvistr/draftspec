@@ -38,6 +38,13 @@ public class ConfigLoader : IConfigLoader
         AllowTrailingCommas = true
     };
 
+    private readonly IEnvironment _environment;
+
+    public ConfigLoader(IEnvironment environment)
+    {
+        _environment = environment;
+    }
+
     /// <summary>
     /// Load configuration from the specified directory or current directory.
     /// </summary>
@@ -45,7 +52,7 @@ public class ConfigLoader : IConfigLoader
     /// <returns>The loaded configuration, or null if no config file exists.</returns>
     public ConfigLoadResult Load(string? directory = null)
     {
-        var searchDir = directory ?? Directory.GetCurrentDirectory();
+        var searchDir = directory ?? _environment.CurrentDirectory;
         var configPath = FindConfigFile(searchDir);
 
         if (configPath == null)

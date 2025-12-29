@@ -1,5 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Tests.TestHelpers;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
@@ -13,6 +14,7 @@ public class InitCommandTests
     private string _tempDir = null!;
     private MockConsole _console = null!;
     private MockFileSystem _fileSystem = null!;
+    private MockProjectResolver _projectResolver = null!;
 
     [Before(Test)]
     public void SetUp()
@@ -22,6 +24,7 @@ public class InitCommandTests
 
         _console = new MockConsole();
         _fileSystem = new MockFileSystem();
+        _projectResolver = new MockProjectResolver();
     }
 
     [After(Test)]
@@ -31,7 +34,7 @@ public class InitCommandTests
             Directory.Delete(_tempDir, recursive: true);
     }
 
-    private InitCommand CreateCommand() => new(_console, _fileSystem);
+    private InitCommand CreateCommand() => new(_console, _fileSystem, _projectResolver);
 
     #region Directory Validation
 

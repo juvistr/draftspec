@@ -1,5 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Configuration;
+using DraftSpec.Tests.TestHelpers;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -10,13 +11,15 @@ public class ConfigLoaderTests
 {
     private string _tempDir = null!;
     private ConfigLoader _loader = null!;
+    private MockEnvironment _environment = null!;
 
     [Before(Test)]
     public void Setup()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec-config-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
-        _loader = new ConfigLoader();
+        _environment = new MockEnvironment { CurrentDirectory = _tempDir };
+        _loader = new ConfigLoader(_environment);
     }
 
     [After(Test)]

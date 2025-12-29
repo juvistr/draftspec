@@ -3,6 +3,7 @@ using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Formatters;
+using DraftSpec.Tests.TestHelpers;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
@@ -392,7 +393,8 @@ public class RunCommandTests
         MockConfigLoader? configLoader = null,
         MockRunnerFactory? runnerFactory = null,
         IReadOnlyList<string>? specFiles = null,
-        IFileSystem? fileSystem = null)
+        IFileSystem? fileSystem = null,
+        IEnvironment? environment = null)
     {
         var specs = specFiles ?? [];
         return new RunCommand(
@@ -401,7 +403,8 @@ public class RunCommandTests
             console ?? new MockConsole(),
             new MockFormatterRegistry(),
             configLoader ?? new MockConfigLoader(),
-            fileSystem ?? new MockFileSystem());
+            fileSystem ?? new MockFileSystem(),
+            environment ?? new MockEnvironment());
     }
 
     #endregion

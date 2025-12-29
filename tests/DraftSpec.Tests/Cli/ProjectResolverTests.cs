@@ -152,7 +152,7 @@ public class ProjectResolverTests
     [Test]
     public async Task ProjectInfo_PreservesProperties()
     {
-        var info = new ProjectResolver.ProjectInfo(
+        var info = new ProjectInfo(
             TargetPath: "/path/to/output.dll",
             TargetFramework: "net10.0");
 

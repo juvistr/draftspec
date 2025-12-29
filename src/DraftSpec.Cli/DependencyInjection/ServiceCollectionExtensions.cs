@@ -21,11 +21,14 @@ public static class ServiceCollectionExtensions
         // Infrastructure
         services.AddSingleton<IConsole, SystemConsole>();
         services.AddSingleton<IFileSystem, FileSystem>();
+        services.AddSingleton<IEnvironment, SystemEnvironment>();
+        services.AddSingleton<IProjectResolver, ProjectResolver>();
         services.AddSingleton<IConfigLoader, ConfigLoader>();
         services.AddSingleton<ISpecFinder, SpecFinder>();
         services.AddSingleton<ICliFormatterRegistry, CliFormatterRegistry>();
         services.AddSingleton<IInProcessSpecRunnerFactory, InProcessSpecRunnerFactory>();
         services.AddSingleton<IFileWatcherFactory, FileWatcherFactory>();
+        services.AddSingleton<IPluginLoader, PluginLoader>();
 
         // Commands
         services.AddTransient<RunCommand>();

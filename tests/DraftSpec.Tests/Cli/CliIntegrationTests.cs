@@ -10,7 +10,8 @@ public class CliIntegrationTests
 {
     private string _testDirectory = null!;
     private MockConsole _console = null!;
-    private RealFileSystem _fileSystem = null!;
+    private FileSystem _fileSystem = null!;
+    private ProjectResolver _projectResolver = null!;
 
     [Before(Test)]
     public void SetUp()
@@ -18,7 +19,8 @@ public class CliIntegrationTests
         _testDirectory = Path.Combine(Path.GetTempPath(), $"CliIntegrationTests_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_testDirectory);
         _console = new MockConsole();
-        _fileSystem = new RealFileSystem();
+        _fileSystem = new FileSystem();
+        _projectResolver = new ProjectResolver();
     }
 
     [After(Test)]
@@ -27,7 +29,7 @@ public class CliIntegrationTests
         if (Directory.Exists(_testDirectory)) Directory.Delete(_testDirectory, true);
     }
 
-    private InitCommand CreateInitCommand() => new(_console, _fileSystem);
+    private InitCommand CreateInitCommand() => new(_console, _fileSystem, _projectResolver);
     private NewCommand CreateNewCommand() => new(_console, _fileSystem);
 
     #region InitCommand Tests
@@ -244,7 +246,7 @@ public class CliIntegrationTests
         var specPath = Path.Combine(_testDirectory, "test.spec.csx");
         await File.WriteAllTextAsync(specPath, "// spec");
 
-        var finder = new SpecFinder();
+        var finder = new SpecFinder(new FileSystem());
         var specs = finder.FindSpecs(specPath, _testDirectory);
 
         await Assert.That(specs).Count().IsEqualTo(1);
@@ -258,7 +260,7 @@ public class CliIntegrationTests
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "two.spec.csx"), "// spec");
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "other.cs"), "// not a spec");
 
-        var finder = new SpecFinder();
+        var finder = new SpecFinder(new FileSystem());
         var specs = finder.FindSpecs(_testDirectory, _testDirectory);
 
         await Assert.That(specs).Count().IsEqualTo(2);
@@ -271,7 +273,7 @@ public class CliIntegrationTests
         Directory.CreateDirectory(subDir);
         await File.WriteAllTextAsync(Path.Combine(subDir, "nested.spec.csx"), "// spec");
 
-        var finder = new SpecFinder();
+        var finder = new SpecFinder(new FileSystem());
         var specs = finder.FindSpecs(_testDirectory, _testDirectory);
 
         await Assert.That(specs).Count().IsEqualTo(1);
@@ -285,7 +287,7 @@ public class CliIntegrationTests
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "a.spec.csx"), "// spec");
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "m.spec.csx"), "// spec");
 
-        var finder = new SpecFinder();
+        var finder = new SpecFinder(new FileSystem());
         var specs = finder.FindSpecs(_testDirectory, _testDirectory);
 
         await Assert.That(specs[0]).Contains("a.spec.csx");
@@ -299,7 +301,7 @@ public class CliIntegrationTests
         var regularFile = Path.Combine(_testDirectory, "test.cs");
         await File.WriteAllTextAsync(regularFile, "// not a spec");
 
-        var finder = new SpecFinder();
+        var finder = new SpecFinder(new FileSystem());
 
         await Assert.That(() => finder.FindSpecs(regularFile, _testDirectory))
             .Throws<ArgumentException>();
@@ -308,7 +310,7 @@ public class CliIntegrationTests
     [Test]
     public async Task SpecFinder_EmptyDirectory_ThrowsArgumentException()
     {
-        var finder = new SpecFinder();
+        var finder = new SpecFinder(new FileSystem());
 
         await Assert.That(() => finder.FindSpecs(_testDirectory, _testDirectory))
             .Throws<ArgumentException>();
@@ -382,25 +384,6 @@ public class CliIntegrationTests
         public void WriteWarning(string text) => WriteLine(text);
         public void WriteSuccess(string text) => WriteLine(text);
         public void WriteError(string text) => WriteLine(text);
-    }
-
-    private class RealFileSystem : IFileSystem
-    {
-        public bool FileExists(string path) => File.Exists(path);
-        public void WriteAllText(string path, string content) => File.WriteAllText(path, content);
-        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) =>
-            File.WriteAllTextAsync(path, content, ct);
-        public string ReadAllText(string path) => File.ReadAllText(path);
-        public bool DirectoryExists(string path) => Directory.Exists(path);
-        public void CreateDirectory(string path) => Directory.CreateDirectory(path);
-        public string[] GetFiles(string path, string searchPattern) => Directory.GetFiles(path, searchPattern);
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) =>
-            Directory.GetFiles(path, searchPattern, searchOption);
-        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) =>
-            Directory.EnumerateFiles(path, searchPattern, searchOption);
-        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) =>
-            Directory.EnumerateDirectories(path, searchPattern);
-        public DateTime GetLastWriteTimeUtc(string path) => File.GetLastWriteTimeUtc(path);
     }
 
     #endregion

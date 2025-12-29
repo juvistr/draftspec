@@ -6,24 +6,25 @@ public class InitCommand : ICommand
 {
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
+    private readonly IProjectResolver _projectResolver;
 
-    public InitCommand(IConsole console, IFileSystem fileSystem)
+    public InitCommand(IConsole console, IFileSystem fileSystem, IProjectResolver projectResolver)
     {
         _console = console;
         _fileSystem = fileSystem;
+        _projectResolver = projectResolver;
     }
 
     public Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
     {
-        var resolver = new ProjectResolver();
         var directory = Path.GetFullPath(options.Path);
 
         if (!_fileSystem.DirectoryExists(directory))
             throw new ArgumentException($"Directory not found: {directory}");
 
         // Find project
-        var csproj = resolver.FindProject(directory);
-        ProjectResolver.ProjectInfo? info = null;
+        var csproj = _projectResolver.FindProject(directory);
+        ProjectInfo? info = null;
 
         if (csproj == null)
         {
@@ -31,7 +32,7 @@ public class InitCommand : ICommand
         }
         else
         {
-            info = resolver.GetProjectInfo(csproj);
+            info = _projectResolver.GetProjectInfo(csproj);
             if (info == null)
             {
                 _console.WriteWarning($"Could not get project info for {Path.GetFileName(csproj)}");
@@ -67,7 +68,7 @@ public class InitCommand : ICommand
         return Task.FromResult(0);
     }
 
-    private static string GenerateSpecHelper(ProjectResolver.ProjectInfo? info, string directory)
+    private static string GenerateSpecHelper(ProjectInfo? info, string directory)
     {
         var sb = new StringBuilder();
         sb.AppendLine("#r \"nuget: DraftSpec\"");

@@ -14,6 +14,7 @@ public class RunCommand : ICommand
     private readonly ICliFormatterRegistry _formatterRegistry;
     private readonly IConfigLoader _configLoader;
     private readonly IFileSystem _fileSystem;
+    private readonly IEnvironment _environment;
 
     public RunCommand(
         ISpecFinder specFinder,
@@ -21,7 +22,8 @@ public class RunCommand : ICommand
         IConsole console,
         ICliFormatterRegistry formatterRegistry,
         IConfigLoader configLoader,
-        IFileSystem fileSystem)
+        IFileSystem fileSystem,
+        IEnvironment environment)
     {
         _specFinder = specFinder;
         _runnerFactory = runnerFactory;
@@ -29,6 +31,7 @@ public class RunCommand : ICommand
         _formatterRegistry = formatterRegistry;
         _configLoader = configLoader;
         _fileSystem = fileSystem;
+        _environment = environment;
     }
 
     public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
@@ -157,10 +160,10 @@ public class RunCommand : ICommand
         return combined;
     }
 
-    private static void ValidateOutputPath(string outputFile)
+    private void ValidateOutputPath(string outputFile)
     {
         var outputFullPath = Path.GetFullPath(outputFile);
-        var currentDir = Directory.GetCurrentDirectory();
+        var currentDir = _environment.CurrentDirectory;
         var normalizedBase = currentDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         var outputDir = Path.GetDirectoryName(outputFullPath) ?? currentDir;
         var normalizedOutput = outputDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;

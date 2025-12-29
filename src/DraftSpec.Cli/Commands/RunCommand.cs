@@ -68,7 +68,9 @@ public class RunCommand : ICommand
             options.FilterTags,
             options.ExcludeTags,
             filterName,
-            options.ExcludeName);
+            options.ExcludeName,
+            options.FilterContext,
+            options.ExcludeContext);
 
         var specFiles = _specFinder.FindSpecs(options.Path);
         if (specFiles.Count == 0)

@@ -57,7 +57,9 @@ public class WatchCommand : ICommand
                 options.FilterTags,
                 options.ExcludeTags,
                 options.FilterName,
-                options.ExcludeName);
+                options.ExcludeName,
+                options.FilterContext,
+                options.ExcludeContext);
 
             runner.OnBuildStarted += presenter.ShowBuilding;
             runner.OnBuildCompleted += presenter.ShowBuildResult;

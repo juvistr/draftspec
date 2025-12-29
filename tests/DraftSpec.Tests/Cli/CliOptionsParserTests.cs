@@ -588,6 +588,111 @@ public class CliOptionsParserTests
 
     #endregion
 
+    #region Context Filtering
+
+    [Test]
+    public async Task Parse_ContextOption_SetsFilterContext()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--context", "UserService/CreateAsync"]);
+
+        await Assert.That(options.FilterContext).IsNotNull();
+        await Assert.That(options.FilterContext!.Count).IsEqualTo(1);
+        await Assert.That(options.FilterContext[0]).IsEqualTo("UserService/CreateAsync");
+    }
+
+    [Test]
+    public async Task Parse_ShortContextOption_SetsFilterContext()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "-c", "UserService"]);
+
+        await Assert.That(options.FilterContext).IsNotNull();
+        await Assert.That(options.FilterContext![0]).IsEqualTo("UserService");
+    }
+
+    [Test]
+    public async Task Parse_MultipleContextOptions_AccumulatesAll()
+    {
+        var options = CliOptionsParser.Parse([
+            "run", ".",
+            "--context", "UserService/*",
+            "--context", "OrderService/*"
+        ]);
+
+        await Assert.That(options.FilterContext).IsNotNull();
+        await Assert.That(options.FilterContext!.Count).IsEqualTo(2);
+        await Assert.That(options.FilterContext).Contains("UserService/*");
+        await Assert.That(options.FilterContext).Contains("OrderService/*");
+    }
+
+    [Test]
+    public async Task Parse_ContextWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--context"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--context requires a value");
+    }
+
+    [Test]
+    public async Task Parse_ExcludeContextOption_SetsExcludeContext()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--exclude-context", "Legacy/*"]);
+
+        await Assert.That(options.ExcludeContext).IsNotNull();
+        await Assert.That(options.ExcludeContext!.Count).IsEqualTo(1);
+        await Assert.That(options.ExcludeContext[0]).IsEqualTo("Legacy/*");
+    }
+
+    [Test]
+    public async Task Parse_MultipleExcludeContextOptions_AccumulatesAll()
+    {
+        var options = CliOptionsParser.Parse([
+            "run", ".",
+            "--exclude-context", "Legacy/*",
+            "--exclude-context", "**/Slow"
+        ]);
+
+        await Assert.That(options.ExcludeContext).IsNotNull();
+        await Assert.That(options.ExcludeContext!.Count).IsEqualTo(2);
+        await Assert.That(options.ExcludeContext).Contains("Legacy/*");
+        await Assert.That(options.ExcludeContext).Contains("**/Slow");
+    }
+
+    [Test]
+    public async Task Parse_ExcludeContextWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--exclude-context"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--exclude-context requires a value");
+    }
+
+    [Test]
+    public async Task Parse_ContextFiltersDefaultAreNull()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.FilterContext).IsNull();
+        await Assert.That(options.ExcludeContext).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_CombinedContextAndExcludeContext_SetsAll()
+    {
+        var options = CliOptionsParser.Parse([
+            "run", ".",
+            "--context", "UserService/**",
+            "--exclude-context", "**/Integration"
+        ]);
+
+        await Assert.That(options.FilterContext).IsNotNull();
+        await Assert.That(options.FilterContext![0]).IsEqualTo("UserService/**");
+        await Assert.That(options.ExcludeContext).IsNotNull();
+        await Assert.That(options.ExcludeContext![0]).IsEqualTo("**/Integration");
+    }
+
+    #endregion
+
     #region List Command Options
 
     [Test]

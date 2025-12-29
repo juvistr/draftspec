@@ -257,7 +257,7 @@ internal static class TestNodeMapper
 
         return new TestMethodIdentifierProperty(
             assemblyFullName: assemblyName,
-            @namespace: "DraftSpec.Specs",
+            @namespace: "",
             typeName: typeName,
             methodName: methodName,
             methodArity: 0,

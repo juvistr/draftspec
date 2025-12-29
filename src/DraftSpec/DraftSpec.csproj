@@ -12,7 +12,7 @@
         <!-- NuGet Package Configuration -->
         <PackageId>DraftSpec</PackageId>
         <Description>RSpec-inspired testing framework for .NET 10. Write expressive specs with describe/it/expect syntax in CSX scripts or test classes.</Description>
-        <PackageTags>testing;bdd;rspec;specs;test-framework;csx;dotnet-script</PackageTags>
+        <PackageTags>testing;bdd;rspec;nspec;specs;test-framework;dotnet;unit-testing</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>

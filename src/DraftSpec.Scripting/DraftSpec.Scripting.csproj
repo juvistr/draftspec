@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Description>Roslyn-based CSX script host for DraftSpec spec execution</Description>
+    <PackageTags>testing;scripting;roslyn;csharp</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

@@ -12,7 +12,7 @@
         <!-- NuGet Package Configuration -->
         <PackageId>DraftSpec.Formatters.Markdown</PackageId>
         <Description>Markdown output formatter for DraftSpec test results. Great for documentation and GitHub integration.</Description>
-        <PackageTags>testing;bdd;formatters;markdown</PackageTags>
+        <PackageTags>testing;bdd;formatters;markdown;documentation</PackageTags>
     </PropertyGroup>
 
 </Project>

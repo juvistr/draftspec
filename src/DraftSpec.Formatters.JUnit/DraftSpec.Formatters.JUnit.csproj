@@ -12,7 +12,7 @@
         <!-- NuGet Package Configuration -->
         <PackageId>DraftSpec.Formatters.JUnit</PackageId>
         <Description>JUnit XML output formatter for DraftSpec test results. Integrates with CI/CD systems like Jenkins, Azure DevOps, and GitHub Actions.</Description>
-        <PackageTags>testing;bdd;formatters;junit;xml;ci-cd</PackageTags>
+        <PackageTags>testing;bdd;formatters;junit;xml;ci-cd;github-actions</PackageTags>
     </PropertyGroup>
 
 </Project>

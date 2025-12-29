@@ -30,7 +30,7 @@
         <!-- NuGet Package Configuration -->
         <PackageId>DraftSpec.Cli</PackageId>
         <Description>CLI tool for running DraftSpec specs. Supports watch mode, multiple output formats (console, JSON, HTML, Markdown), and parallel execution.</Description>
-        <PackageTags>testing;bdd;rspec;cli;dotnet-tool;test-runner</PackageTags>
+        <PackageTags>testing;bdd;rspec;cli;dotnet-tool;test-runner;dotnet</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 

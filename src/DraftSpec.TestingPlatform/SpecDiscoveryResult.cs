@@ -3,7 +3,7 @@ namespace DraftSpec.TestingPlatform;
 /// <summary>
 /// Result of spec discovery, containing both discovered specs and any errors.
 /// </summary>
-public sealed class DiscoveryResult
+public sealed class SpecDiscoveryResult
 {
     /// <summary>
     /// Successfully discovered specs.

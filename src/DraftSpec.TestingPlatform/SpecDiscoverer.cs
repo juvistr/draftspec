@@ -10,7 +10,7 @@ namespace DraftSpec.TestingPlatform;
 /// then flattens the tree into a list of DiscoveredSpec instances with stable IDs.
 /// If a file fails to compile, falls back to static parsing to still discover spec structure.
 /// </remarks>
-public sealed class SpecDiscoverer
+public sealed class SpecDiscoverer : ISpecDiscoverer
 {
     private readonly string _projectDirectory;
     private readonly IScriptHost _scriptHost;
@@ -33,7 +33,7 @@ public sealed class SpecDiscoverer
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Discovery result containing specs and any errors.</returns>
-    public async Task<DiscoveryResult> DiscoverAsync(CancellationToken cancellationToken = default)
+    public async Task<SpecDiscoveryResult> DiscoverAsync(CancellationToken cancellationToken = default)
     {
         var csxFiles = FindSpecFiles();
         var allSpecs = new List<DiscoveredSpec>();
@@ -92,7 +92,7 @@ public sealed class SpecDiscoverer
             }
         }
 
-        return new DiscoveryResult
+        return new SpecDiscoveryResult
         {
             Specs = allSpecs,
             Errors = errors

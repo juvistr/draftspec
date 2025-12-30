@@ -6,7 +6,7 @@ namespace DraftSpec.TestingPlatform;
 /// <summary>
 /// Executes specs for MTP integration with filtering and result capture.
 /// </summary>
-internal sealed class MtpSpecExecutor
+internal sealed class MtpSpecExecutor : IMtpSpecExecutor
 {
     private readonly string _projectDirectory;
     private readonly IScriptHost _scriptHost;

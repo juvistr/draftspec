@@ -1,6 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
-using DraftSpec.Cli.Configuration;
+using DraftSpec.Cli.Pipeline;
 using DraftSpec.Tests.Infrastructure;
 
 namespace DraftSpec.Tests.Cli;
@@ -218,76 +218,54 @@ public class CommandFactoryTests
 
     private static CommandFactory CreateFactory()
     {
-        // Create a minimal service provider with all required services
-        return new CommandFactory(new MockServiceProvider());
+        return new CommandFactory(
+            NullObjects.ConfigApplier,
+            CreateRunCommand,
+            CreateWatchCommand,
+            CreateListCommand,
+            CreateValidateCommand,
+            CreateInitCommand,
+            CreateNewCommand,
+            CreateSchemaCommand);
     }
 
-    /// <summary>
-    /// Service provider with all command dependencies registered.
-    /// </summary>
-    private class MockServiceProvider : IServiceProvider
-    {
-        public object? GetService(Type serviceType)
-        {
-            // Return appropriate mock based on requested type
-            if (serviceType == typeof(RunCommand))
-                return CreateRunCommand();
-            if (serviceType == typeof(WatchCommand))
-                return CreateWatchCommand();
-            if (serviceType == typeof(ListCommand))
-                return CreateListCommand();
-            if (serviceType == typeof(ValidateCommand))
-                return CreateValidateCommand();
-            if (serviceType == typeof(InitCommand))
-                return CreateInitCommand();
-            if (serviceType == typeof(NewCommand))
-                return CreateNewCommand();
-            if (serviceType == typeof(SchemaCommand))
-                return CreateSchemaCommand();
-            if (serviceType == typeof(IConfigLoader))
-                return NullObjects.ConfigLoader;
+    private static RunCommand CreateRunCommand() => new(
+        NullObjects.SpecFinder,
+        NullObjects.RunnerFactory,
+        NullObjects.Console,
+        NullObjects.FormatterRegistry,
+        NullObjects.FileSystem,
+        NullObjects.Environment,
+        NullObjects.StatsCollector,
+        NullObjects.Partitioner);
 
-            return null;
-        }
+    private static WatchCommand CreateWatchCommand() => new(
+        NullObjects.SpecFinder,
+        NullObjects.RunnerFactory,
+        NullObjects.FileWatcherFactory,
+        NullObjects.Console,
+        NullObjects.SpecChangeTracker);
 
-        private static RunCommand CreateRunCommand() => new(
-            NullObjects.SpecFinder,
-            NullObjects.RunnerFactory,
-            NullObjects.Console,
-            NullObjects.FormatterRegistry,
-            NullObjects.FileSystem,
-            NullObjects.Environment,
-            NullObjects.StatsCollector,
-            NullObjects.Partitioner);
+    private static ListCommand CreateListCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem);
 
-        private static WatchCommand CreateWatchCommand() => new(
-            NullObjects.SpecFinder,
-            NullObjects.RunnerFactory,
-            NullObjects.FileWatcherFactory,
-            NullObjects.Console,
-            NullObjects.SpecChangeTracker);
+    private static ValidateCommand CreateValidateCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem);
 
-        private static ListCommand CreateListCommand() => new(
-            NullObjects.Console,
-            NullObjects.FileSystem);
+    private static InitCommand CreateInitCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem,
+        NullObjects.ProjectResolver);
 
-        private static ValidateCommand CreateValidateCommand() => new(
-            NullObjects.Console,
-            NullObjects.FileSystem);
+    private static NewCommand CreateNewCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem);
 
-        private static InitCommand CreateInitCommand() => new(
-            NullObjects.Console,
-            NullObjects.FileSystem,
-            NullObjects.ProjectResolver);
-
-        private static NewCommand CreateNewCommand() => new(
-            NullObjects.Console,
-            NullObjects.FileSystem);
-
-        private static SchemaCommand CreateSchemaCommand() => new(
-            NullObjects.Console,
-            NullObjects.FileSystem);
-    }
+    private static SchemaCommand CreateSchemaCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem);
 
     #endregion
 }

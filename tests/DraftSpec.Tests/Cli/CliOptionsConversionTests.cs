@@ -297,4 +297,94 @@ public class CliOptionsConversionTests
     }
 
     #endregion
+
+    #region ToInitOptions Tests
+
+    [Test]
+    public async Task ToInitOptions_MapsAllProperties()
+    {
+        var cliOptions = new CliOptions
+        {
+            Path = "/init/path",
+            Force = true
+        };
+
+        var initOptions = cliOptions.ToInitOptions();
+
+        await Assert.That(initOptions.Path).IsEqualTo("/init/path");
+        await Assert.That(initOptions.Force).IsTrue();
+    }
+
+    [Test]
+    public async Task ToInitOptions_DefaultValues_CreatesValidOptions()
+    {
+        var cliOptions = new CliOptions();
+
+        var initOptions = cliOptions.ToInitOptions();
+
+        await Assert.That(initOptions).IsNotNull();
+        await Assert.That(initOptions.Path).IsEqualTo(".");
+        await Assert.That(initOptions.Force).IsFalse();
+    }
+
+    #endregion
+
+    #region ToNewOptions Tests
+
+    [Test]
+    public async Task ToNewOptions_MapsAllProperties()
+    {
+        var cliOptions = new CliOptions
+        {
+            Path = "/new/path",
+            SpecName = "MyFeature"
+        };
+
+        var newOptions = cliOptions.ToNewOptions();
+
+        await Assert.That(newOptions.Path).IsEqualTo("/new/path");
+        await Assert.That(newOptions.SpecName).IsEqualTo("MyFeature");
+    }
+
+    [Test]
+    public async Task ToNewOptions_DefaultValues_CreatesValidOptions()
+    {
+        var cliOptions = new CliOptions();
+
+        var newOptions = cliOptions.ToNewOptions();
+
+        await Assert.That(newOptions).IsNotNull();
+        await Assert.That(newOptions.Path).IsEqualTo(".");
+        await Assert.That(newOptions.SpecName).IsNull();
+    }
+
+    #endregion
+
+    #region ToSchemaOptions Tests
+
+    [Test]
+    public async Task ToSchemaOptions_MapsAllProperties()
+    {
+        var cliOptions = new CliOptions
+        {
+            OutputFile = "schema.json"
+        };
+
+        var schemaOptions = cliOptions.ToSchemaOptions();
+
+        await Assert.That(schemaOptions.OutputFile).IsEqualTo("schema.json");
+    }
+
+    [Test]
+    public async Task ToSchemaOptions_DefaultValues_CreatesValidOptions()
+    {
+        var cliOptions = new CliOptions();
+
+        var schemaOptions = cliOptions.ToSchemaOptions();
+
+        await Assert.That(schemaOptions).IsNotNull();
+        await Assert.That(schemaOptions.OutputFile).IsNull();
+    }
+
+    #endregion
 }

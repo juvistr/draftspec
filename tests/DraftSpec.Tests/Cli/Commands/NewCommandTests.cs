@@ -1,5 +1,5 @@
-using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.Options;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
@@ -31,7 +31,7 @@ public class NewCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = null };
+        var options = new NewOptions { Path = _tempDir, SpecName = null };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -42,7 +42,7 @@ public class NewCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = "" };
+        var options = new NewOptions { Path = _tempDir, SpecName = "" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -53,7 +53,7 @@ public class NewCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = "foo/bar" };
+        var options = new NewOptions { Path = _tempDir, SpecName = "foo/bar" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -64,7 +64,7 @@ public class NewCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = "foo\\bar" };
+        var options = new NewOptions { Path = _tempDir, SpecName = "foo\\bar" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -79,7 +79,7 @@ public class NewCommandTests
     {
         // Don't add the directory - it won't exist
         var command = CreateCommand();
-        var options = new CliOptions { Path = "/nonexistent/directory", SpecName = "MySpec" };
+        var options = new NewOptions { Path = "/nonexistent/directory", SpecName = "MySpec" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -94,7 +94,7 @@ public class NewCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = "MyFeature" };
+        var options = new NewOptions { Path = _tempDir, SpecName = "MyFeature" };
 
         var result = await command.ExecuteAsync(options);
 
@@ -108,7 +108,7 @@ public class NewCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = "UserService" };
+        var options = new NewOptions { Path = _tempDir, SpecName = "UserService" };
 
         await command.ExecuteAsync(options);
 
@@ -126,7 +126,7 @@ public class NewCommandTests
         _fileSystem.AddDirectory(_tempDir);
         _fileSystem.AddFile(specPath, "// existing");
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = "Existing" };
+        var options = new NewOptions { Path = _tempDir, SpecName = "Existing" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -139,7 +139,7 @@ public class NewCommandTests
         _fileSystem.AddDirectory(_tempDir);
         _fileSystem.AddFile(specPath, "// original content");
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = "Existing" };
+        var options = new NewOptions { Path = _tempDir, SpecName = "Existing" };
 
         try
         {
@@ -163,7 +163,7 @@ public class NewCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = "MySpec" };
+        var options = new NewOptions { Path = _tempDir, SpecName = "MySpec" };
 
         await command.ExecuteAsync(options);
 
@@ -178,7 +178,7 @@ public class NewCommandTests
         _fileSystem.AddDirectory(_tempDir);
         _fileSystem.AddFile(specHelperPath, "// helper");
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = "MySpec" };
+        var options = new NewOptions { Path = _tempDir, SpecName = "MySpec" };
 
         await command.ExecuteAsync(options);
 
@@ -195,7 +195,7 @@ public class NewCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SpecName = "MySpec" };
+        var options = new NewOptions { Path = _tempDir, SpecName = "MySpec" };
 
         await command.ExecuteAsync(options);
 

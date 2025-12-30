@@ -1,10 +1,6 @@
-using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
-using DraftSpec.Cli.Formatters;
+using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
-using DraftSpec.Cli.Services;
-using DraftSpec.TestingPlatform;
-using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
@@ -19,7 +15,6 @@ public class ListCommandTests
     private string _tempDir = null!;
     private MockConsole _console = null!;
     private RealFileSystem _fileSystem = null!;
-    private MockPartitioner _partitioner = null!;
 
     [Before(Test)]
     public void SetUp()
@@ -28,7 +23,6 @@ public class ListCommandTests
         Directory.CreateDirectory(_tempDir);
         _console = new MockConsole();
         _fileSystem = new RealFileSystem();
-        _partitioner = new MockPartitioner();
     }
 
     [After(Test)]
@@ -38,7 +32,7 @@ public class ListCommandTests
             Directory.Delete(_tempDir, recursive: true);
     }
 
-    private ListCommand CreateCommand() => new(_console, _fileSystem, _partitioner);
+    private ListCommand CreateCommand() => new(_console, _fileSystem);
 
     #region Path Validation
 
@@ -46,7 +40,7 @@ public class ListCommandTests
     public async Task ExecuteAsync_NonexistentPath_ThrowsArgumentException()
     {
         var command = CreateCommand();
-        var options = new CliOptions { Path = "/nonexistent/path" };
+        var options = new ListOptions { Path = "/nonexistent/path" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -56,7 +50,7 @@ public class ListCommandTests
     public async Task ExecuteAsync_EmptyDirectory_ReturnsNoSpecs()
     {
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new ListOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 
@@ -77,7 +71,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = specFile };
+        var options = new ListOptions { Path = specFile };
 
         var result = await command.ExecuteAsync(options);
 
@@ -101,7 +95,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new ListOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 
@@ -122,7 +116,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new ListOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 
@@ -146,7 +140,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Flat };
+        var options = new ListOptions { Path = _tempDir, Format = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -163,7 +157,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Flat };
+        var options = new ListOptions { Path = _tempDir, Format = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -180,7 +174,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Flat };
+        var options = new ListOptions { Path = _tempDir, Format = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -202,7 +196,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, FocusedOnly = true, ListFormat = ListFormat.Flat };
+        var options = new ListOptions { Path = _tempDir, FocusedOnly = true, Format = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -222,7 +216,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, PendingOnly = true, ListFormat = ListFormat.Flat };
+        var options = new ListOptions { Path = _tempDir, PendingOnly = true, Format = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -242,7 +236,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SkippedOnly = true, ListFormat = ListFormat.Flat };
+        var options = new ListOptions { Path = _tempDir, SkippedOnly = true, Format = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -262,7 +256,12 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, FilterName = "add", ListFormat = ListFormat.Flat };
+        var options = new ListOptions
+        {
+            Path = _tempDir,
+            Filter = new FilterOptions { FilterName = "add" },
+            Format = ListFormat.Flat
+        };
 
         var result = await command.ExecuteAsync(options);
 
@@ -283,7 +282,12 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, FilterName = "add \\d", ListFormat = ListFormat.Flat };
+        var options = new ListOptions
+        {
+            Path = _tempDir,
+            Filter = new FilterOptions { FilterName = "add \\d" },
+            Format = ListFormat.Flat
+        };
 
         var result = await command.ExecuteAsync(options);
 
@@ -305,7 +309,12 @@ public class ListCommandTests
             """);
         var command = CreateCommand();
         // Invalid regex pattern (unmatched opening paren) should fall back to substring match
-        var options = new CliOptions { Path = _tempDir, FilterName = "(unclosed", ListFormat = ListFormat.Flat };
+        var options = new ListOptions
+        {
+            Path = _tempDir,
+            Filter = new FilterOptions { FilterName = "(unclosed" },
+            Format = ListFormat.Flat
+        };
 
         var result = await command.ExecuteAsync(options);
 
@@ -329,7 +338,13 @@ public class ListCommandTests
             """);
         var command = CreateCommand();
         // FocusedOnly AND PendingOnly should show both focused and pending (OR logic)
-        var options = new CliOptions { Path = _tempDir, FocusedOnly = true, PendingOnly = true, ListFormat = ListFormat.Flat };
+        var options = new ListOptions
+        {
+            Path = _tempDir,
+            FocusedOnly = true,
+            PendingOnly = true,
+            Format = ListFormat.Flat
+        };
 
         var result = await command.ExecuteAsync(options);
 
@@ -354,13 +369,13 @@ public class ListCommandTests
             """);
         var command = CreateCommand();
         // All three status filters = show focused OR pending OR skipped
-        var options = new CliOptions
+        var options = new ListOptions
         {
             Path = _tempDir,
             FocusedOnly = true,
             PendingOnly = true,
             SkippedOnly = true,
-            ListFormat = ListFormat.Flat
+            Format = ListFormat.Flat
         };
 
         var result = await command.ExecuteAsync(options);
@@ -386,12 +401,12 @@ public class ListCommandTests
             """);
         var command = CreateCommand();
         // FocusedOnly + FilterName "apple" should show only focused specs containing "apple"
-        var options = new CliOptions
+        var options = new ListOptions
         {
             Path = _tempDir,
             FocusedOnly = true,
-            FilterName = "apple",
-            ListFormat = ListFormat.Flat
+            Filter = new FilterOptions { FilterName = "apple" },
+            Format = ListFormat.Flat
         };
 
         var result = await command.ExecuteAsync(options);
@@ -416,7 +431,12 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, FilterTags = "sometag", ListFormat = ListFormat.Flat };
+        var options = new ListOptions
+        {
+            Path = _tempDir,
+            Filter = new FilterOptions { FilterTags = "sometag" },
+            Format = ListFormat.Flat
+        };
 
         var result = await command.ExecuteAsync(options);
 
@@ -439,7 +459,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Tree };
+        var options = new ListOptions { Path = _tempDir, Format = ListFormat.Tree };
 
         var result = await command.ExecuteAsync(options);
 
@@ -459,7 +479,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Flat };
+        var options = new ListOptions { Path = _tempDir, Format = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -479,7 +499,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Json };
+        var options = new ListOptions { Path = _tempDir, Format = ListFormat.Json };
 
         var result = await command.ExecuteAsync(options);
 
@@ -501,7 +521,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Json };
+        var options = new ListOptions { Path = _tempDir, Format = ListFormat.Json };
 
         var result = await command.ExecuteAsync(options);
 
@@ -523,7 +543,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ShowLineNumbers = true, ListFormat = ListFormat.Tree };
+        var options = new ListOptions { Path = _tempDir, ShowLineNumbers = true, Format = ListFormat.Tree };
 
         var result = await command.ExecuteAsync(options);
 
@@ -541,7 +561,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ShowLineNumbers = false, ListFormat = ListFormat.Flat };
+        var options = new ListOptions { Path = _tempDir, ShowLineNumbers = false, Format = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -553,190 +573,6 @@ public class ListCommandTests
 
     #endregion
 
-    #region Partitioning
-
-    [Test]
-    public async Task ExecuteAsync_WithPartition_CallsPartitioner()
-    {
-        CreateSpecFile("a.spec.csx", """
-            describe("A", () => {
-                it("spec a", () => { });
-            });
-            """);
-        CreateSpecFile("b.spec.csx", """
-            describe("B", () => {
-                it("spec b", () => { });
-            });
-            """);
-        var partitioner = new ConfigurablePartitioner();
-        partitioner.SetResult(new PartitionResult(
-            [Path.Combine(_tempDir, "a.spec.csx")],
-            TotalFiles: 2,
-            TotalSpecs: 2,
-            PartitionSpecs: 1));
-        var command = new ListCommand(_console, _fileSystem, partitioner);
-        var options = new CliOptions
-        {
-            Path = _tempDir,
-            Partition = 2,
-            PartitionIndex = 0,
-            PartitionStrategy = PartitionStrategy.File
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(partitioner.PartitionCalled).IsTrue();
-        await Assert.That(_console.Output).Contains("Partition 1 of 2");
-        await Assert.That(_console.Output).Contains("1 file");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_WithPartition_PrintsPartitionInfo()
-    {
-        CreateSpecFile("test.spec.csx", """
-            describe("Test", () => {
-                it("spec", () => { });
-            });
-            """);
-        var partitioner = new ConfigurablePartitioner();
-        partitioner.SetResult(new PartitionResult(
-            [Path.Combine(_tempDir, "test.spec.csx")],
-            TotalFiles: 4,
-            TotalSpecs: 10,
-            PartitionSpecs: 3));
-        var command = new ListCommand(_console, _fileSystem, partitioner);
-        var options = new CliOptions
-        {
-            Path = _tempDir,
-            Partition = 4,
-            PartitionIndex = 2,
-            PartitionStrategy = PartitionStrategy.SpecCount
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        // Partition index is 0-based, but display is 1-based
-        await Assert.That(_console.Output).Contains("Partition 3 of 4");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_WithEmptyPartition_PrintsMessage()
-    {
-        CreateSpecFile("test.spec.csx", """
-            describe("Test", () => {
-                it("spec", () => { });
-            });
-            """);
-        var partitioner = new ConfigurablePartitioner();
-        partitioner.SetResult(new PartitionResult(
-            Files: [],
-            TotalFiles: 1,
-            TotalSpecs: 1,
-            PartitionSpecs: 0));
-        var command = new ListCommand(_console, _fileSystem, partitioner);
-        var options = new CliOptions
-        {
-            Path = _tempDir,
-            Partition = 3,
-            PartitionIndex = 2,
-            PartitionStrategy = PartitionStrategy.File
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("No specs in this partition");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_WithPartition_FiltersToPartitionFiles()
-    {
-        CreateSpecFile("a.spec.csx", """
-            describe("A", () => {
-                it("spec a", () => { });
-            });
-            """);
-        CreateSpecFile("b.spec.csx", """
-            describe("B", () => {
-                it("spec b", () => { });
-            });
-            """);
-        CreateSpecFile("c.spec.csx", """
-            describe("C", () => {
-                it("spec c", () => { });
-            });
-            """);
-        var partitioner = new ConfigurablePartitioner();
-        // Simulate that partition only includes file "b"
-        partitioner.SetResult(new PartitionResult(
-            [Path.Combine(_tempDir, "b.spec.csx")],
-            TotalFiles: 3));
-        var command = new ListCommand(_console, _fileSystem, partitioner);
-        var options = new CliOptions
-        {
-            Path = _tempDir,
-            Partition = 3,
-            PartitionIndex = 1,
-            PartitionStrategy = PartitionStrategy.File,
-            ListFormat = ListFormat.Flat
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        // Only specs from file "b" should be in output
-        await Assert.That(_console.Output).Contains("spec b");
-        await Assert.That(_console.Output).DoesNotContain("spec a");
-        await Assert.That(_console.Output).DoesNotContain("spec c");
-    }
-
-    #endregion
-
-    #region Output File
-
-    [Test]
-    public async Task ExecuteAsync_OutputFile_WritesToFile()
-    {
-        CreateSpecFile("output.spec.csx", """
-            describe("Output", () => {
-                it("writes to file", () => { });
-            });
-            """);
-        var outputFile = Path.Combine(_tempDir, "output.txt");
-        var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, OutputFile = outputFile, ListFormat = ListFormat.Flat };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(File.Exists(outputFile)).IsTrue();
-        var fileContent = await File.ReadAllTextAsync(outputFile);
-        await Assert.That(fileContent).Contains("Output");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_OutputFile_PrintsConfirmation()
-    {
-        CreateSpecFile("confirm.spec.csx", """
-            describe("Confirm", () => {
-                it("spec", () => { });
-            });
-            """);
-        var outputFile = Path.Combine(_tempDir, "confirm.txt");
-        var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, OutputFile = outputFile };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("Wrote");
-        await Assert.That(_console.Output).Contains(outputFile);
-    }
-
-    #endregion
-
     #region Helper Methods
 
     private string CreateSpecFile(string fileName, string content)
@@ -744,56 +580,6 @@ public class ListCommandTests
         var filePath = Path.Combine(_tempDir, fileName);
         File.WriteAllText(filePath, content);
         return filePath;
-    }
-
-    #endregion
-
-    #region Mocks
-
-    // Partitioner-specific mocks
-    private class MockPartitioner : ISpecPartitioner
-    {
-        public IReadOnlyList<string>? LastSpecFiles { get; private set; }
-        public int LastTotalPartitions { get; private set; }
-        public int LastPartitionIndex { get; private set; }
-
-        public Task<PartitionResult> PartitionAsync(
-            IReadOnlyList<string> specFiles,
-            int totalPartitions,
-            int partitionIndex,
-            PartitionStrategy strategy,
-            string projectPath,
-            CancellationToken ct = default)
-        {
-            LastSpecFiles = specFiles;
-            LastTotalPartitions = totalPartitions;
-            LastPartitionIndex = partitionIndex;
-            return Task.FromResult(new PartitionResult(specFiles, specFiles.Count));
-        }
-    }
-
-    /// <summary>
-    /// Configurable partitioner for testing partitioning code paths.
-    /// </summary>
-    private class ConfigurablePartitioner : ISpecPartitioner
-    {
-        private PartitionResult? _result;
-
-        public bool PartitionCalled { get; private set; }
-
-        public void SetResult(PartitionResult result) => _result = result;
-
-        public Task<PartitionResult> PartitionAsync(
-            IReadOnlyList<string> specFiles,
-            int totalPartitions,
-            int partitionIndex,
-            PartitionStrategy strategy,
-            string projectPath,
-            CancellationToken ct = default)
-        {
-            PartitionCalled = true;
-            return Task.FromResult(_result ?? new PartitionResult(specFiles, specFiles.Count));
-        }
     }
 
     #endregion

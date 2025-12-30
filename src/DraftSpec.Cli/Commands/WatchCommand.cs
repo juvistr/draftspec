@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using DraftSpec.Formatters;
@@ -6,13 +7,12 @@ using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Cli.Commands;
 
-public class WatchCommand : ICommand
+public class WatchCommand : ICommand<WatchOptions>
 {
     private readonly ISpecFinder _specFinder;
     private readonly IInProcessSpecRunnerFactory _runnerFactory;
     private readonly IFileWatcherFactory _watcherFactory;
     private readonly IConsole _console;
-    private readonly IConfigLoader _configLoader;
     private readonly ISpecChangeTracker _changeTracker;
 
     public WatchCommand(
@@ -20,27 +20,17 @@ public class WatchCommand : ICommand
         IInProcessSpecRunnerFactory runnerFactory,
         IFileWatcherFactory watcherFactory,
         IConsole console,
-        IConfigLoader configLoader,
         ISpecChangeTracker changeTracker)
     {
         _specFinder = specFinder;
         _runnerFactory = runnerFactory;
         _watcherFactory = watcherFactory;
         _console = console;
-        _configLoader = configLoader;
         _changeTracker = changeTracker;
     }
 
-    public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
+    public async Task<int> ExecuteAsync(WatchOptions options, CancellationToken ct = default)
     {
-        // Load project configuration from draftspec.json
-        var configResult = _configLoader.Load(options.Path);
-        if (configResult.Error != null)
-            throw new InvalidOperationException(configResult.Error);
-
-        if (configResult.Config != null)
-            options.ApplyDefaults(configResult.Config);
-
         var path = options.Path;
         var presenter = new ConsolePresenter(_console, watchMode: true);
 
@@ -60,12 +50,12 @@ public class WatchCommand : ICommand
             presenter.Clear();
 
             var runner = _runnerFactory.Create(
-                options.FilterTags,
-                options.ExcludeTags,
-                options.FilterName,
-                options.ExcludeName,
-                options.FilterContext,
-                options.ExcludeContext);
+                options.Filter.FilterTags,
+                options.Filter.ExcludeTags,
+                options.Filter.FilterName,
+                options.Filter.ExcludeName,
+                options.Filter.FilterContext,
+                options.Filter.ExcludeContext);
 
             runner.OnBuildStarted += presenter.ShowBuilding;
             runner.OnBuildCompleted += presenter.ShowBuildResult;
@@ -142,12 +132,12 @@ public class WatchCommand : ICommand
             presenter.Clear();
 
             var runner = _runnerFactory.Create(
-                options.FilterTags,
-                options.ExcludeTags,
+                options.Filter.FilterTags,
+                options.Filter.ExcludeTags,
                 filterPattern, // Use the filter pattern for changed specs
-                options.ExcludeName,
-                options.FilterContext,
-                options.ExcludeContext);
+                options.Filter.ExcludeName,
+                options.Filter.FilterContext,
+                options.Filter.ExcludeContext);
 
             runner.OnBuildStarted += presenter.ShowBuilding;
             runner.OnBuildCompleted += presenter.ShowBuildResult;

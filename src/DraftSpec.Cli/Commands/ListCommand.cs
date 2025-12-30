@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using DraftSpec.Cli.Formatters;
+using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
 using DraftSpec.TestingPlatform;
@@ -10,7 +11,7 @@ namespace DraftSpec.Cli.Commands;
 /// Lists discovered specs without executing them.
 /// Uses static parsing to discover spec structure from CSX files.
 /// </summary>
-public class ListCommand : ICommand
+public class ListCommand : ICommand<ListOptions>
 {
     /// <summary>
     /// Timeout for regex operations to prevent ReDoS attacks.
@@ -19,16 +20,14 @@ public class ListCommand : ICommand
 
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
-    private readonly ISpecPartitioner _partitioner;
 
-    public ListCommand(IConsole console, IFileSystem fileSystem, ISpecPartitioner partitioner)
+    public ListCommand(IConsole console, IFileSystem fileSystem)
     {
         _console = console;
         _fileSystem = fileSystem;
-        _partitioner = partitioner;
     }
 
-    public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
+    public async Task<int> ExecuteAsync(ListOptions options, CancellationToken ct = default)
     {
         // 1. Resolve path
         var projectPath = Path.GetFullPath(options.Path);
@@ -45,31 +44,7 @@ public class ListCommand : ICommand
             return 0;
         }
 
-        // 3. Apply partitioning if specified
-        if (options.Partition.HasValue && options.PartitionIndex.HasValue)
-        {
-            var partitionResult = await _partitioner.PartitionAsync(
-                specFiles,
-                options.Partition.Value,
-                options.PartitionIndex.Value,
-                options.PartitionStrategy,
-                projectPath,
-                ct);
-
-            _console.ForegroundColor = ConsoleColor.DarkGray;
-            _console.WriteLine($"Partition {options.PartitionIndex + 1} of {options.Partition}: {partitionResult.Files.Count} file(s)");
-            _console.ResetColor();
-
-            specFiles = partitionResult.Files.ToList();
-
-            if (specFiles.Count == 0)
-            {
-                _console.WriteLine("No specs in this partition.");
-                return 0;
-            }
-        }
-
-        // 4. Use static parser to discover specs (no execution)
+        // 3. Use static parser to discover specs (no execution)
         var parser = new StaticSpecParser(projectPath);
         var allSpecs = new List<DiscoveredSpec>();
         var allErrors = new List<DiscoveryError>();
@@ -116,23 +91,15 @@ public class ListCommand : ICommand
             }
         }
 
-        // 5. Apply filters
+        // 4. Apply filters
         var filteredSpecs = ApplyFilters(allSpecs, options);
 
-        // 6. Format output based on ListFormat
+        // 5. Format output based on ListFormat
         var formatter = CreateFormatter(options);
         var output = formatter.Format(filteredSpecs, allErrors);
 
-        // 7. Write to file or stdout
-        if (!string.IsNullOrEmpty(options.OutputFile))
-        {
-            await _fileSystem.WriteAllTextAsync(options.OutputFile, output, ct);
-            _console.WriteLine($"Wrote {filteredSpecs.Count} specs to {options.OutputFile}");
-        }
-        else
-        {
-            _console.WriteLine(output);
-        }
+        // 6. Write output
+        _console.WriteLine(output);
 
         return 0;
     }
@@ -168,7 +135,7 @@ public class ListCommand : ICommand
 
     private static IReadOnlyList<DiscoveredSpec> ApplyFilters(
         IReadOnlyList<DiscoveredSpec> specs,
-        CliOptions options)
+        ListOptions options)
     {
         var filtered = specs.AsEnumerable();
 
@@ -183,33 +150,33 @@ public class ListCommand : ICommand
         }
 
         // Pattern filter on name (AND'd with status filters)
-        if (!string.IsNullOrEmpty(options.FilterName))
+        if (!string.IsNullOrEmpty(options.Filter.FilterName))
         {
             try
             {
-                var regex = new Regex(options.FilterName, RegexOptions.IgnoreCase, RegexTimeout);
+                var regex = new Regex(options.Filter.FilterName, RegexOptions.IgnoreCase, RegexTimeout);
                 filtered = filtered.Where(s => regex.IsMatch(s.DisplayName));
             }
             catch (RegexParseException)
             {
                 // Fall back to simple substring match
-                var pattern = options.FilterName;
+                var pattern = options.Filter.FilterName;
                 filtered = filtered.Where(s =>
                     s.DisplayName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
             }
             catch (RegexMatchTimeoutException)
             {
                 // Pattern caused timeout - fall back to substring match
-                var pattern = options.FilterName;
+                var pattern = options.Filter.FilterName;
                 filtered = filtered.Where(s =>
                     s.DisplayName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
             }
         }
 
         // Tag filter (AND'd with other filters)
-        if (!string.IsNullOrEmpty(options.FilterTags))
+        if (!string.IsNullOrEmpty(options.Filter.FilterTags))
         {
-            var tags = options.FilterTags.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            var tags = options.Filter.FilterTags.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(t => t.Trim())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -219,14 +186,14 @@ public class ListCommand : ICommand
         return filtered.ToList();
     }
 
-    private static IListFormatter CreateFormatter(CliOptions options)
+    private static IListFormatter CreateFormatter(ListOptions options)
     {
-        return options.ListFormat switch
+        return options.Format switch
         {
             ListFormat.Tree => new TreeListFormatter(options.ShowLineNumbers),
             ListFormat.Flat => new FlatListFormatter(options.ShowLineNumbers),
             ListFormat.Json => new JsonListFormatter(),
-            _ => throw new ArgumentOutOfRangeException(nameof(options.ListFormat), options.ListFormat, "Unknown list format")
+            _ => throw new ArgumentOutOfRangeException(nameof(options.Format), options.Format, "Unknown list format")
         };
     }
 }

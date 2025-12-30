@@ -1,9 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
-using DraftSpec.Cli.Configuration;
+using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Watch;
-using DraftSpec.Formatters;
-using DraftSpec.TestingPlatform;
 using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
@@ -37,7 +35,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(100); // Cancel quickly to exit watch loop
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
         var result = await command.ExecuteAsync(options, cts.Token);
 
         // With no specs, the run is successful (no failures), so returns 0
@@ -54,42 +52,11 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(100);
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
         await command.ExecuteAsync(options, cts.Token);
 
         await Assert.That(runner.RunAllCalled).IsTrue();
         await Assert.That(runner.LastSpecFiles).Count().IsEqualTo(2);
-    }
-
-    [Test]
-    public async Task ExecuteAsync_ConfigError_ThrowsInvalidOperation()
-    {
-        var configLoader = new MockConfigLoader(error: "Invalid config file");
-        var command = CreateCommand(configLoader: configLoader, specFiles: ["test.spec.csx"]);
-
-        var options = new CliOptions { Path = "." };
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await command.ExecuteAsync(options));
-    }
-
-    [Test]
-    public async Task ExecuteAsync_ConfigLoaded_AppliesDefaults()
-    {
-        var config = new DraftSpecProjectConfig { Parallel = true };
-        var configLoader = new MockConfigLoader(config: config);
-        var runner = new MockRunner();
-        var runnerFactory = new MockRunnerFactory(runner);
-        var command = CreateCommand(configLoader: configLoader, runnerFactory: runnerFactory, specFiles: ["test.spec.csx"]);
-
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(100);
-
-        var options = new CliOptions { Path = "." };
-        await command.ExecuteAsync(options, cts.Token);
-
-        // Config defaults are applied - parallel should be true now
-        await Assert.That(options.Parallel).IsTrue();
     }
 
     [Test]
@@ -102,7 +69,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(100);
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
         var result = await command.ExecuteAsync(options, cts.Token);
 
         await Assert.That(result).IsEqualTo(0);
@@ -118,7 +85,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(100);
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
         var result = await command.ExecuteAsync(options, cts.Token);
 
         await Assert.That(result).IsEqualTo(1);
@@ -137,7 +104,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(100);
 
-        var options = new CliOptions { Path = "/some/path" };
+        var options = new WatchOptions { Path = "/some/path" };
         await command.ExecuteAsync(options, cts.Token);
 
         await Assert.That(watcherFactory.CreateCalled).IsTrue();
@@ -155,7 +122,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(200);
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
 
         // Start the command in background
         var task = command.ExecuteAsync(options, cts.Token);
@@ -188,7 +155,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(200);
 
-        var options = new CliOptions { Path = "/specs" };
+        var options = new WatchOptions { Path = "/specs" };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
@@ -218,7 +185,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(200);
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
@@ -249,7 +216,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(100);
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
         await command.ExecuteAsync(options, cts.Token);
 
         await Assert.That(console.Output).Contains("Stopped watching");
@@ -265,7 +232,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(200);
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
@@ -292,7 +259,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(200);
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
@@ -321,13 +288,16 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(100);
 
-        var options = new CliOptions
+        var options = new WatchOptions
         {
             Path = ".",
-            FilterTags = "unit",
-            ExcludeTags = "slow",
-            FilterName = "should pass",
-            ExcludeName = "integration"
+            Filter = new FilterOptions
+            {
+                FilterTags = "unit",
+                ExcludeTags = "slow",
+                FilterName = "should pass",
+                ExcludeName = "integration"
+            }
         };
 
         await command.ExecuteAsync(options, cts.Token);
@@ -350,7 +320,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         await cts.CancelAsync(); // Cancel immediately
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         await command.ExecuteAsync(options, cts.Token);
@@ -370,7 +340,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(50); // Cancel during the run
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
         var result = await command.ExecuteAsync(options, cts.Token);
 
         // Returns based on lastSummary state (may be null → 1, or success → 0)
@@ -392,7 +362,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(100);
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
         await command.ExecuteAsync(options, cts.Token);
 
         await Assert.That(runner.OnBuildStartedRegistered).IsTrue();
@@ -424,7 +394,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(300);
 
-        var options = new CliOptions { Path = "/specs", Incremental = true };
+        var options = new WatchOptions { Path = "/specs", Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
@@ -468,7 +438,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(300);
 
-        var options = new CliOptions { Path = "/specs", Incremental = true };
+        var options = new WatchOptions { Path = "/specs", Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
@@ -518,7 +488,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(300);
 
-        var options = new CliOptions { Path = "/specs", Incremental = true };
+        var options = new WatchOptions { Path = "/specs", Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
@@ -564,7 +534,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(300);
 
-        var options = new CliOptions { Path = "/specs", Incremental = true };
+        var options = new WatchOptions { Path = "/specs", Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
@@ -609,7 +579,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(300);
 
-        var options = new CliOptions { Path = "/specs", Incremental = true };
+        var options = new WatchOptions { Path = "/specs", Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
@@ -740,7 +710,7 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(100);
 
-        var options = new CliOptions { Path = "." };
+        var options = new WatchOptions { Path = "." };
         await command.ExecuteAsync(options, cts.Token);
 
         // Should show error and continue (not crash)
@@ -753,7 +723,6 @@ public class WatchCommandTests
 
     private static WatchCommand CreateCommand(
         MockConsole? console = null,
-        MockConfigLoader? configLoader = null,
         MockRunnerFactory? runnerFactory = null,
         MockFileWatcherFactory? watcherFactory = null,
         IReadOnlyList<string>? specFiles = null)
@@ -764,13 +733,11 @@ public class WatchCommandTests
             runnerFactory ?? new MockRunnerFactory(),
             watcherFactory ?? new MockFileWatcherFactory(),
             console ?? new MockConsole(),
-            configLoader ?? new MockConfigLoader(),
             NullObjects.SpecChangeTracker);
     }
 
     private static WatchCommand CreateCommandWithChangeTracker(
         MockConsole? console = null,
-        MockConfigLoader? configLoader = null,
         MockRunnerFactory? runnerFactory = null,
         MockFileWatcherFactory? watcherFactory = null,
         ISpecChangeTracker? changeTracker = null,
@@ -782,99 +749,7 @@ public class WatchCommandTests
             runnerFactory ?? new MockRunnerFactory(),
             watcherFactory ?? new MockFileWatcherFactory(),
             console ?? new MockConsole(),
-            configLoader ?? new MockConfigLoader(),
             changeTracker ?? NullObjects.SpecChangeTracker);
-    }
-
-    #endregion
-
-    #region Mocks
-
-    private class MockConfigLoader : IConfigLoader
-    {
-        private readonly string? _error;
-        private readonly DraftSpecProjectConfig? _config;
-
-        public MockConfigLoader(string? error = null, DraftSpecProjectConfig? config = null)
-        {
-            _error = error;
-            _config = config;
-        }
-
-        public ConfigLoadResult Load(string? path = null)
-        {
-            if (_error != null)
-                return new ConfigLoadResult(null, _error, null);
-
-            return new ConfigLoadResult(_config, null, _config != null ? "draftspec.json" : null);
-        }
-    }
-
-    private class MockFileWatcherFactory : IFileWatcherFactory
-    {
-        private Action<FileChangeInfo>? _onChange;
-
-        public bool CreateCalled { get; private set; }
-        public string? LastPath { get; private set; }
-        public bool OnChangeCallbackInvoked { get; private set; }
-
-        public IFileWatcher Create(string path, Action<FileChangeInfo> onChange, int debounceMs = 200)
-        {
-            CreateCalled = true;
-            LastPath = path;
-            _onChange = onChange;
-            return new MockFileWatcher();
-        }
-
-        public void TriggerChange(FileChangeInfo change)
-        {
-            OnChangeCallbackInvoked = true;
-            _onChange?.Invoke(change);
-        }
-    }
-
-    private class MockFileWatcher : IFileWatcher
-    {
-        public void Dispose() { }
-    }
-
-    private class ConfigurableSpecChangeTracker : ISpecChangeTracker
-    {
-        private readonly bool _hasChanges;
-        private readonly bool _hasDynamicSpecs;
-        private readonly IReadOnlyList<SpecChange> _changes;
-
-        public bool RecordStateCalled { get; private set; }
-        public string? LastRecordedFilePath { get; private set; }
-
-        public ConfigurableSpecChangeTracker(
-            bool hasChanges = false,
-            bool hasDynamicSpecs = false,
-            IReadOnlyList<SpecChange>? changes = null)
-        {
-            _hasChanges = hasChanges;
-            _hasDynamicSpecs = hasDynamicSpecs;
-            _changes = changes ?? [];
-        }
-
-        public void RecordState(string filePath, StaticParseResult parseResult)
-        {
-            RecordStateCalled = true;
-            LastRecordedFilePath = filePath;
-        }
-
-        public SpecChangeSet GetChanges(string filePath, StaticParseResult newResult, bool dependencyChanged)
-        {
-            if (!_hasChanges)
-                return new SpecChangeSet(filePath, [], HasDynamicSpecs: false, DependencyChanged: false);
-
-            return new SpecChangeSet(filePath, _changes, _hasDynamicSpecs, dependencyChanged);
-        }
-
-        public bool HasState(string filePath) => true;
-        public void Clear() { }
-        public void RecordDependency(string dependencyPath, DateTime lastModified) { }
-        public bool HasDependencyChanged(string dependencyPath, DateTime currentModified) => false;
     }
 
     #endregion

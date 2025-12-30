@@ -2,7 +2,7 @@ using System.Text;
 
 namespace DraftSpec.Cli.Commands;
 
-public class InitCommand : ICommand
+public class InitCommand : ICommand<CliOptions>
 {
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;

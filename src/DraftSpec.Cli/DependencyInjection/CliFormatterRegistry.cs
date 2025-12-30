@@ -10,7 +10,7 @@ namespace DraftSpec.Cli.DependencyInjection;
 /// </summary>
 public class CliFormatterRegistry : ICliFormatterRegistry
 {
-    private readonly Dictionary<string, Func<CliOptions?, IFormatter>> _factories =
+    private readonly Dictionary<string, Func<string?, IFormatter>> _factories =
         new(StringComparer.OrdinalIgnoreCase);
 
     public CliFormatterRegistry()
@@ -18,19 +18,19 @@ public class CliFormatterRegistry : ICliFormatterRegistry
         // Register built-in formatters
         Register(OutputFormats.Json, _ => new JsonFormatter());
         Register(OutputFormats.Markdown, _ => new MarkdownFormatter());
-        Register(OutputFormats.Html, opts => new HtmlFormatter(new HtmlOptions
+        Register(OutputFormats.Html, cssUrl => new HtmlFormatter(new HtmlOptions
         {
-            CssUrl = opts?.CssUrl ?? "https://cdnjs.cloudflare.com/ajax/libs/simpledotcss/2.3.7/simple.min.css"
+            CssUrl = cssUrl ?? "https://cdnjs.cloudflare.com/ajax/libs/simpledotcss/2.3.7/simple.min.css"
         }));
         Register(OutputFormats.JUnit, _ => new JUnitFormatter());
     }
 
-    public IFormatter? GetFormatter(string name, CliOptions? options = null)
+    public IFormatter? GetFormatter(string name, string? cssUrl = null)
     {
-        return _factories.TryGetValue(name, out var factory) ? factory(options) : null;
+        return _factories.TryGetValue(name, out var factory) ? factory(cssUrl) : null;
     }
 
-    public void Register(string name, Func<CliOptions?, IFormatter> factory)
+    public void Register(string name, Func<string?, IFormatter> factory)
     {
         _factories[name] = factory;
     }

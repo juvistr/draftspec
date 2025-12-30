@@ -10,13 +10,12 @@ using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Cli.Commands;
 
-public class RunCommand : ICommand
+public class RunCommand : ICommand<RunOptions>
 {
     private readonly ISpecFinder _specFinder;
     private readonly IInProcessSpecRunnerFactory _runnerFactory;
     private readonly IConsole _console;
     private readonly ICliFormatterRegistry _formatterRegistry;
-    private readonly IConfigLoader _configLoader;
     private readonly IFileSystem _fileSystem;
     private readonly IEnvironment _environment;
     private readonly ISpecStatsCollector _statsCollector;
@@ -27,7 +26,6 @@ public class RunCommand : ICommand
         IInProcessSpecRunnerFactory runnerFactory,
         IConsole console,
         ICliFormatterRegistry formatterRegistry,
-        IConfigLoader configLoader,
         IFileSystem fileSystem,
         IEnvironment environment,
         ISpecStatsCollector statsCollector,
@@ -37,26 +35,17 @@ public class RunCommand : ICommand
         _runnerFactory = runnerFactory;
         _console = console;
         _formatterRegistry = formatterRegistry;
-        _configLoader = configLoader;
         _fileSystem = fileSystem;
         _environment = environment;
         _statsCollector = statsCollector;
         _partitioner = partitioner;
     }
 
-    public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
+    public async Task<int> ExecuteAsync(RunOptions options, CancellationToken ct = default)
     {
-        // Load project configuration from draftspec.json
-        var configResult = _configLoader.Load(options.Path);
-        if (configResult.Error != null)
-            throw new InvalidOperationException(configResult.Error);
-
-        if (configResult.Config != null)
-            options.ApplyDefaults(configResult.Config);
-
         // Apply line number filtering if specified
-        var filterName = options.FilterName;
-        if (options.LineFilters is { Count: > 0 })
+        var filterName = options.Filter.FilterName;
+        if (options.Filter.LineFilters is { Count: > 0 })
         {
             var lineFilterPattern = await BuildLineFilterPatternAsync(options, ct);
             if (!string.IsNullOrEmpty(lineFilterPattern))
@@ -73,12 +62,12 @@ public class RunCommand : ICommand
         }
 
         var runner = _runnerFactory.Create(
-            options.FilterTags,
-            options.ExcludeTags,
+            options.Filter.FilterTags,
+            options.Filter.ExcludeTags,
             filterName,
-            options.ExcludeName,
-            options.FilterContext,
-            options.ExcludeContext);
+            options.Filter.ExcludeName,
+            options.Filter.FilterContext,
+            options.Filter.ExcludeContext);
 
         var specFiles = _specFinder.FindSpecs(options.Path);
         if (specFiles.Count == 0)
@@ -96,19 +85,19 @@ public class RunCommand : ICommand
             projectPath = Path.GetDirectoryName(projectPath)!;
 
         // Apply partitioning if specified
-        if (options.Partition.HasValue && options.PartitionIndex.HasValue)
+        if (options.Partition.IsEnabled)
         {
             var partitionResult = await _partitioner.PartitionAsync(
                 specFiles,
-                options.Partition.Value,
-                options.PartitionIndex.Value,
-                options.PartitionStrategy,
+                options.Partition.Total!.Value,
+                options.Partition.Index!.Value,
+                options.Partition.Strategy,
                 projectPath,
                 ct);
 
             // Show partition info
             _console.ForegroundColor = ConsoleColor.DarkGray;
-            _console.WriteLine($"Partition {options.PartitionIndex + 1} of {options.Partition}: {partitionResult.Files.Count} file(s) of {partitionResult.TotalFiles} total");
+            _console.WriteLine($"Partition {options.Partition.Index + 1} of {options.Partition.Total}: {partitionResult.Files.Count} file(s) of {partitionResult.TotalFiles} total");
             if (partitionResult.PartitionSpecs.HasValue)
             {
                 _console.WriteLine($"  {partitionResult.PartitionSpecs} spec(s) of {partitionResult.TotalSpecs} total");
@@ -164,7 +153,7 @@ public class RunCommand : ICommand
         }
         else
         {
-            var formatter = _formatterRegistry.GetFormatter(options.Format.ToCliString(), options)
+            var formatter = _formatterRegistry.GetFormatter(options.Format.ToCliString(), options.CssUrl)
                             ?? throw new ArgumentException($"Unknown format: {options.Format}");
             output = formatter.Format(combinedReport);
         }
@@ -269,7 +258,7 @@ public class RunCommand : ICommand
     /// Builds a regex pattern to match specs at specified line numbers.
     /// Uses static parsing to discover spec structure and line numbers.
     /// </summary>
-    private async Task<string?> BuildLineFilterPatternAsync(CliOptions options, CancellationToken ct)
+    private async Task<string?> BuildLineFilterPatternAsync(RunOptions options, CancellationToken ct)
     {
         var matchingDisplayNames = new List<string>();
         var projectPath = Path.GetFullPath(options.Path);
@@ -280,7 +269,7 @@ public class RunCommand : ICommand
 
         var parser = new StaticSpecParser(projectPath);
 
-        foreach (var filter in options.LineFilters!)
+        foreach (var filter in options.Filter.LineFilters!)
         {
             var filePath = Path.GetFullPath(filter.File, projectPath);
 

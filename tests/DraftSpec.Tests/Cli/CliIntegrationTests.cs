@@ -1,6 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options.Enums;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -364,27 +365,6 @@ public class CliIntegrationTests
         await Assert.That(OutputFormats.Json).IsEqualTo("json");
         await Assert.That(OutputFormats.Markdown).IsEqualTo("markdown");
         await Assert.That(OutputFormats.Html).IsEqualTo("html");
-    }
-
-    #endregion
-
-    #region Mocks
-
-    private class MockConsole : IConsole
-    {
-        private readonly List<string> _output = [];
-
-        public string Output => string.Join("", _output);
-
-        public void Write(string text) => _output.Add(text);
-        public void WriteLine(string text) => _output.Add(text + "\n");
-        public void WriteLine() => _output.Add("\n");
-        public ConsoleColor ForegroundColor { get; set; }
-        public void ResetColor() { }
-        public void Clear() { }
-        public void WriteWarning(string text) => WriteLine(text);
-        public void WriteSuccess(string text) => WriteLine(text);
-        public void WriteError(string text) => WriteLine(text);
     }
 
     #endregion

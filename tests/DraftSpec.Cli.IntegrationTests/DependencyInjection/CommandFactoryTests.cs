@@ -4,13 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace DraftSpec.Cli.IntegrationTests.DependencyInjection;
 
 /// <summary>
-/// Tests that verify CommandFactory can create all commands.
-/// This tests the integration between DI container and command resolution.
+/// Tests that verify CommandFactory can create command executors.
+/// The factory now returns executor functions that wrap command invocation.
 /// </summary>
 public class CommandFactoryTests
 {
     /// <summary>
-    /// Verifies CommandFactory can create all known commands.
+    /// Verifies CommandFactory can create executors for all known commands.
     /// </summary>
     [Test]
     public async Task CommandFactory_CanCreateAllCommands()
@@ -24,10 +24,10 @@ public class CommandFactoryTests
 
         foreach (var cmd in commands)
         {
-            var command = factory.Create(cmd);
-            await Assert.That(command)
+            var executor = factory.Create(cmd);
+            await Assert.That(executor)
                 .IsNotNull()
-                .Because($"Command '{cmd}' must be creatable via factory");
+                .Because($"Command '{cmd}' must have a creatable executor");
         }
     }
 
@@ -46,10 +46,10 @@ public class CommandFactoryTests
 
         foreach (var cmd in variations)
         {
-            var command = factory.Create(cmd);
-            await Assert.That(command)
+            var executor = factory.Create(cmd);
+            await Assert.That(executor)
                 .IsNotNull()
-                .Because($"Command '{cmd}' (case variation) should be creatable");
+                .Because($"Command '{cmd}' (case variation) should have a creatable executor");
         }
     }
 
@@ -64,42 +64,45 @@ public class CommandFactoryTests
         using var provider = services.BuildServiceProvider();
         var factory = provider.GetRequiredService<ICommandFactory>();
 
-        var command = factory.Create("nonexistent");
+        var executor = factory.Create("nonexistent");
 
-        await Assert.That(command).IsNull()
+        await Assert.That(executor).IsNull()
             .Because("Unknown commands should return null");
     }
 
     /// <summary>
-    /// Verifies each command type is correct.
+    /// Verifies each command executor is creatable.
+    /// The factory now returns executor functions, not command instances.
     /// </summary>
     [Test]
-    [Arguments("run", "RunCommand")]
-    [Arguments("watch", "WatchCommand")]
-    [Arguments("list", "ListCommand")]
-    [Arguments("validate", "ValidateCommand")]
-    [Arguments("init", "InitCommand")]
-    [Arguments("new", "NewCommand")]
-    [Arguments("schema", "SchemaCommand")]
-    public async Task CommandFactory_ReturnsCorrectCommandType(string commandName, string expectedTypeName)
+    [Arguments("run")]
+    [Arguments("watch")]
+    [Arguments("list")]
+    [Arguments("validate")]
+    [Arguments("init")]
+    [Arguments("new")]
+    [Arguments("schema")]
+    public async Task CommandFactory_ReturnsExecutorForCommand(string commandName)
     {
         var services = new ServiceCollection();
         services.AddDraftSpec();
         using var provider = services.BuildServiceProvider();
         var factory = provider.GetRequiredService<ICommandFactory>();
 
-        var command = factory.Create(commandName);
+        var executor = factory.Create(commandName);
 
-        await Assert.That(command).IsNotNull();
-        await Assert.That(command!.GetType().Name).IsEqualTo(expectedTypeName)
-            .Because($"'{commandName}' should create {expectedTypeName}");
+        await Assert.That(executor).IsNotNull()
+            .Because($"'{commandName}' should have a creatable executor function");
+        // Executors are Func<CliOptions, CancellationToken, Task<int>>
+        await Assert.That(executor!.GetType().FullName).Contains("Func")
+            .Because("Factory should return an executor function");
     }
 
     /// <summary>
-    /// Verifies commands are transient (new instance each time).
+    /// Verifies executor functions are created fresh each call.
     /// </summary>
     [Test]
-    public async Task CommandFactory_CreatesNewInstancesEachTime()
+    public async Task CommandFactory_CreatesNewExecutorsEachTime()
     {
         var services = new ServiceCollection();
         services.AddDraftSpec();
@@ -110,6 +113,6 @@ public class CommandFactoryTests
         var run2 = factory.Create("run");
 
         await Assert.That(ReferenceEquals(run1, run2)).IsFalse()
-            .Because("Commands should be transient instances");
+            .Because("Executor functions should be new instances each time");
     }
 }

@@ -1,14 +1,15 @@
 namespace DraftSpec.Cli;
 
 /// <summary>
-/// Interface for CLI commands. All commands implement this for uniform invocation.
+/// Generic interface for CLI commands with type-safe options.
 /// </summary>
-public interface ICommand
+/// <typeparam name="TOptions">The command-specific options type.</typeparam>
+public interface ICommand<in TOptions>
 {
     /// <summary>
     /// Execute the command.
     /// </summary>
-    /// <param name="options">CLI options parsed from command line</param>
+    /// <param name="options">Command-specific options</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>Exit code: 0 for success, non-zero for failure</returns>
     /// <remarks>
@@ -16,5 +17,5 @@ public interface ICommand
     /// which will be caught and presented uniformly by Program.cs.
     /// Return non-zero exit codes for expected failures (e.g., test failures).
     /// </remarks>
-    Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default);
+    Task<int> ExecuteAsync(TOptions options, CancellationToken ct = default);
 }

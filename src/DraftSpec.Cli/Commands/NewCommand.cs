@@ -1,6 +1,6 @@
 namespace DraftSpec.Cli.Commands;
 
-public class NewCommand : ICommand
+public class NewCommand : ICommand<CliOptions>
 {
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;

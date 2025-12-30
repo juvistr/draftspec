@@ -31,18 +31,18 @@ static async Task<int> Run(string[] args)
     var formatterRegistry = serviceProvider.GetRequiredService<ICliFormatterRegistry>();
     pluginLoader.RegisterFormatters(formatterRegistry);
 
-    // Get command from factory
+    // Get command executor from factory
     var commandFactory = serviceProvider.GetRequiredService<ICommandFactory>();
-    var command = commandFactory.Create(options.Command);
+    var executor = commandFactory.Create(options.Command);
 
-    if (command == null)
+    if (executor == null)
         return ShowUsage($"Unknown command: {options.Command}");
 
     var console = serviceProvider.GetRequiredService<IConsole>();
 
     try
     {
-        return await command.ExecuteAsync(options);
+        return await executor(options, CancellationToken.None);
     }
     catch (ArgumentException ex)
     {

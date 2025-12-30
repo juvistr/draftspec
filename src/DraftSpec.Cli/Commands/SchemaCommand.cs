@@ -9,7 +9,7 @@ namespace DraftSpec.Cli.Commands;
 /// Outputs the JSON schema for the `draftspec list --format json` output.
 /// Uses .NET's JsonSchemaExporter to generate the schema from DTOs.
 /// </summary>
-public class SchemaCommand : ICommand
+public class SchemaCommand : ICommand<CliOptions>
 {
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;

@@ -154,8 +154,8 @@ public static class NullObjects
 
     private class NullFormatterRegistry : ICliFormatterRegistry
     {
-        public IFormatter? GetFormatter(string name, CliOptions? options = null) => null;
-        public void Register(string name, Func<CliOptions?, IFormatter> factory) { }
+        public IFormatter? GetFormatter(string name, string? cssUrl = null) => null;
+        public void Register(string name, Func<string?, IFormatter> factory) { }
         public IEnumerable<string> Names => [];
     }
 

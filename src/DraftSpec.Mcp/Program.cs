@@ -11,6 +11,7 @@ builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = Lo
 
 // Register services
 builder.Services.AddSingleton<TempFileManager>();
+builder.Services.AddSingleton<IAsyncProcessRunner, SystemAsyncProcessRunner>();
 builder.Services.AddSingleton<SessionManager>();
 builder.Services.AddSingleton<SpecExecutionService>();
 builder.Services.AddSingleton<InProcessSpecRunner>();

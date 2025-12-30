@@ -24,6 +24,7 @@ public class SpecToolsTests : IDisposable
             NullLogger<TempFileManager>.Instance);
         _executionService = new SpecExecutionService(
             _tempFileManager,
+            new SystemAsyncProcessRunner(),
             NullLogger<SpecExecutionService>.Instance);
         _inProcessRunner = new InProcessSpecRunner(
             NullLogger<InProcessSpecRunner>.Instance);

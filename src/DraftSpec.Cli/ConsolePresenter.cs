@@ -34,6 +34,40 @@ public class ConsolePresenter
         _console.ResetColor();
     }
 
+    /// <summary>
+    /// Shows pre-run statistics about discovered specs.
+    /// </summary>
+    public void ShowPreRunStats(SpecStats stats)
+    {
+        _console.ForegroundColor = ConsoleColor.DarkGray;
+        _console.WriteLine($"Discovered {stats.Total} spec(s) in {stats.FileCount} file(s)");
+
+        // Build breakdown parts (only include non-zero counts)
+        var parts = new List<string>();
+        if (stats.Regular > 0) parts.Add($"{stats.Regular} regular");
+        if (stats.Focused > 0) parts.Add($"{stats.Focused} focused");
+        if (stats.Skipped > 0) parts.Add($"{stats.Skipped} skipped");
+        if (stats.Pending > 0) parts.Add($"{stats.Pending} pending");
+
+        if (parts.Count > 0)
+        {
+            _console.WriteLine($"  {string.Join(", ", parts)}");
+        }
+
+        _console.ResetColor();
+
+        // Show focus mode warning
+        if (stats.HasFocusMode)
+        {
+            _console.WriteLine();
+            _console.ForegroundColor = ConsoleColor.Yellow;
+            _console.WriteLine("Warning: Focus mode active - only focused specs (fit/fdescribe) will run");
+            _console.ResetColor();
+        }
+
+        _console.WriteLine();
+    }
+
     public void ShowBuilding(string project)
     {
         var name = Path.GetFileNameWithoutExtension(project);

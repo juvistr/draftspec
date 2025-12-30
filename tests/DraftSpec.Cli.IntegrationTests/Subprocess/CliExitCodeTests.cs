@@ -214,6 +214,66 @@ public class CliExitCodeTests : IntegrationTestBase
 
     #endregion
 
+    #region Stats Options
+
+    [Test]
+    public async Task Run_StatsOnly_ShowsStatsAndExits()
+    {
+        var specDir = CreateFixture().WithPassingSpec().Build();
+
+        var result = await RunCliInDirectoryAsync(specDir, "run", ".", "--stats-only");
+
+        await Assert.That(result.ExitCode).IsEqualTo(0)
+            .Because("--stats-only should return 0 when no focus mode");
+        await Assert.That(result.Output).Contains("Discovered")
+            .Because("Should show discovered specs message");
+        await Assert.That(result.Output).Contains("spec(s)")
+            .Because("Should show spec count");
+    }
+
+    [Test]
+    public async Task Run_StatsOnly_WithFocusedSpecs_ReturnsTwo()
+    {
+        var specDir = CreateFixture().WithFocusedSpec().Build();
+
+        var result = await RunCliInDirectoryAsync(specDir, "run", ".", "--stats-only");
+
+        await Assert.That(result.ExitCode).IsEqualTo(2)
+            .Because("--stats-only with focus mode should return exit code 2");
+        await Assert.That(result.Output).Contains("focused")
+            .Because("Should mention focused specs");
+        await Assert.That(result.Output).Contains("Focus mode active")
+            .Because("Should show focus mode warning");
+    }
+
+    [Test]
+    public async Task Run_NoStats_DoesNotShowStats()
+    {
+        var specDir = CreateFixture().WithPassingSpec().Build();
+
+        var result = await RunCliInDirectoryAsync(specDir, "run", ".", "--no-stats");
+
+        await Assert.That(result.ExitCode).IsEqualTo(0)
+            .Because("Run should succeed");
+        await Assert.That(result.Output).DoesNotContain("Discovered")
+            .Because("--no-stats should suppress stats display");
+    }
+
+    [Test]
+    public async Task Run_Default_ShowsStats()
+    {
+        var specDir = CreateFixture().WithPassingSpec().Build();
+
+        var result = await RunCliInDirectoryAsync(specDir, "run", ".");
+
+        await Assert.That(result.ExitCode).IsEqualTo(0)
+            .Because("Run should succeed");
+        await Assert.That(result.Output).Contains("Discovered")
+            .Because("Default run should show stats");
+    }
+
+    #endregion
+
     #region Error Handling
 
     [Test]

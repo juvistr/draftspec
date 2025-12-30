@@ -238,6 +238,17 @@ public static class CliOptionsParser
                     .ToList();
                 options.ExplicitlySet.Add(nameof(CliOptions.Files));
             }
+            // Run command statistics options
+            else if (arg == "--no-stats")
+            {
+                options.NoStats = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.NoStats));
+            }
+            else if (arg == "--stats-only")
+            {
+                options.StatsOnly = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.StatsOnly));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

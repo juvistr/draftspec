@@ -166,6 +166,20 @@ public class CliOptions
     /// </summary>
     public List<LineFilter>? LineFilters { get; set; }
 
+    // Run command statistics options
+
+    /// <summary>
+    /// Disable pre-run statistics display.
+    /// By default, stats are shown before running specs.
+    /// </summary>
+    public bool NoStats { get; set; }
+
+    /// <summary>
+    /// Show spec statistics only, without running specs.
+    /// Displays discovered spec counts and exits.
+    /// </summary>
+    public bool StatsOnly { get; set; }
+
     /// <summary>
     /// Apply default values from a project configuration file.
     /// Only applies values that weren't explicitly set via CLI.

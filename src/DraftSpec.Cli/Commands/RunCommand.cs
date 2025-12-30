@@ -17,6 +17,7 @@ public class RunCommand : ICommand
     private readonly IConfigLoader _configLoader;
     private readonly IFileSystem _fileSystem;
     private readonly IEnvironment _environment;
+    private readonly ISpecStatsCollector _statsCollector;
 
     public RunCommand(
         ISpecFinder specFinder,
@@ -25,7 +26,8 @@ public class RunCommand : ICommand
         ICliFormatterRegistry formatterRegistry,
         IConfigLoader configLoader,
         IFileSystem fileSystem,
-        IEnvironment environment)
+        IEnvironment environment,
+        ISpecStatsCollector statsCollector)
     {
         _specFinder = specFinder;
         _runnerFactory = runnerFactory;
@@ -34,6 +36,7 @@ public class RunCommand : ICommand
         _configLoader = configLoader;
         _fileSystem = fileSystem;
         _environment = environment;
+        _statsCollector = statsCollector;
     }
 
     public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
@@ -79,8 +82,29 @@ public class RunCommand : ICommand
             return 0;
         }
 
-        // Set up build event handlers for console output
+        // Set up presenter for console output
         var presenter = new ConsolePresenter(_console, watchMode: false);
+
+        // Get project path for stats collection
+        var projectPath = Path.GetFullPath(options.Path);
+        if (_fileSystem.FileExists(projectPath))
+            projectPath = Path.GetDirectoryName(projectPath)!;
+
+        // Show pre-run stats (unless disabled)
+        if (!options.NoStats || options.StatsOnly)
+        {
+            var stats = await _statsCollector.CollectAsync(specFiles, projectPath, ct);
+            presenter.ShowPreRunStats(stats);
+
+            // If --stats-only, just show stats and exit
+            if (options.StatsOnly)
+            {
+                // Exit code 2 if focus mode is active (to signal unexpected state in CI)
+                return stats.HasFocusMode ? 2 : 0;
+            }
+        }
+
+        // Set up build event handlers
         runner.OnBuildStarted += presenter.ShowBuilding;
         runner.OnBuildCompleted += presenter.ShowBuildResult;
 

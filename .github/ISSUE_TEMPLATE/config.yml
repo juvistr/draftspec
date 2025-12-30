@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions
+    url: https://github.com/juvistr/draftspec/discussions
+    about: Ask questions and discuss DraftSpec
+  - name: Documentation
+    url: https://github.com/juvistr/draftspec/tree/main/docs
+    about: Read the documentation

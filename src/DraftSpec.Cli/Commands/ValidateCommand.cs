@@ -142,7 +142,7 @@ public class ValidateCommand : ICommand<ValidateOptions>
 
         if (_fileSystem.DirectoryExists(projectPath))
         {
-            return Directory.EnumerateFiles(projectPath, "*.spec.csx", SearchOption.AllDirectories).ToList();
+            return _fileSystem.EnumerateFiles(projectPath, "*.spec.csx", SearchOption.AllDirectories).ToList();
         }
 
         return [];

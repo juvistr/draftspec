@@ -14,6 +14,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
 {
     private readonly string _projectDirectory;
     private readonly IScriptHost _scriptHost;
+    private readonly ISpecFileProvider _fileProvider;
     private readonly StaticSpecParser _staticParser;
 
     /// <summary>
@@ -21,10 +22,15 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
     /// </summary>
     /// <param name="projectDirectory">The project root directory for finding CSX files and computing relative paths.</param>
     /// <param name="scriptHost">Optional script host for testing. Defaults to CsxScriptHost.</param>
-    public SpecDiscoverer(string projectDirectory, IScriptHost? scriptHost = null)
+    /// <param name="fileProvider">Optional file provider for testing. Defaults to FileSystemSpecFileProvider.</param>
+    public SpecDiscoverer(
+        string projectDirectory,
+        IScriptHost? scriptHost = null,
+        ISpecFileProvider? fileProvider = null)
     {
         _projectDirectory = Path.GetFullPath(projectDirectory);
         _scriptHost = scriptHost ?? new CsxScriptHost(_projectDirectory);
+        _fileProvider = fileProvider ?? new FileSystemSpecFileProvider();
         _staticParser = new StaticSpecParser(_projectDirectory);
     }
 
@@ -109,7 +115,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
         string csxFilePath,
         CancellationToken cancellationToken = default)
     {
-        var absolutePath = Path.GetFullPath(csxFilePath, _projectDirectory);
+        var absolutePath = _fileProvider.GetAbsolutePath(_projectDirectory, csxFilePath);
 
         // Reset state before execution
         _scriptHost.Reset();
@@ -137,7 +143,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
     /// </summary>
     private IEnumerable<string> FindSpecFiles()
     {
-        return Directory.EnumerateFiles(_projectDirectory, "*.spec.csx", SearchOption.AllDirectories);
+        return _fileProvider.GetSpecFiles(_projectDirectory);
     }
 
     /// <summary>
@@ -145,7 +151,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
     /// </summary>
     private string GetRelativePath(string absolutePath)
     {
-        return Path.GetRelativePath(_projectDirectory, absolutePath);
+        return _fileProvider.GetRelativePath(_projectDirectory, absolutePath);
     }
 
     /// <summary>

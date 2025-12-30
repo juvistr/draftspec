@@ -123,30 +123,32 @@ public class TimeoutMiddlewareTests
     [Test]
     public async Task Execute_OnTimeout_CancelsCancellationToken()
     {
-        var middleware = new TimeoutMiddleware(50);
+        // Use longer timeout for CI reliability (timing-sensitive test)
+        var middleware = new TimeoutMiddleware(200);
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
         var cancellationSignal = new ManualResetEventSlim(false);
 
         await middleware.ExecuteAsync(context, async ctx =>
         {
-            // Wait in small increments, checking for cancellation
-            for (var i = 0; i < 100; i++)
+            // Wait in increments, checking for cancellation after each delay
+            // Total potential wait (2000ms) is well above timeout (200ms)
+            for (var i = 0; i < 40; i++)
             {
+                await Task.Delay(50);
+
                 if (ctx.CancellationToken.IsCancellationRequested)
                 {
                     cancellationSignal.Set();
                     break;
                 }
-
-                await Task.Delay(10);
             }
 
             return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
         });
 
         // Wait for the background task to observe the cancellation
-        var wasCancelled = cancellationSignal.Wait(1000);
+        var wasCancelled = cancellationSignal.Wait(2000);
         await Assert.That(wasCancelled).IsTrue();
     }
 

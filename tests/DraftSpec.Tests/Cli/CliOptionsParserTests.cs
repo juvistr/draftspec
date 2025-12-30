@@ -1048,4 +1048,74 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Validate Command Options
+
+    [Test]
+    public async Task Parse_StaticFlag_SetsStatic()
+    {
+        var options = CliOptionsParser.Parse(["validate", ".", "--static"]);
+
+        await Assert.That(options.Static).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.Static));
+    }
+
+    [Test]
+    public async Task Parse_StrictFlag_SetsStrict()
+    {
+        var options = CliOptionsParser.Parse(["validate", ".", "--strict"]);
+
+        await Assert.That(options.Strict).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.Strict));
+    }
+
+    [Test]
+    public async Task Parse_QuietFlag_SetsQuiet()
+    {
+        var options = CliOptionsParser.Parse(["validate", ".", "--quiet"]);
+
+        await Assert.That(options.Quiet).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.Quiet));
+    }
+
+    [Test]
+    public async Task Parse_ShortQuietFlag_SetsQuiet()
+    {
+        var options = CliOptionsParser.Parse(["validate", ".", "-q"]);
+
+        await Assert.That(options.Quiet).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_FilesFlag_SetsFiles()
+    {
+        var options = CliOptionsParser.Parse(["validate", ".", "--files", "a.spec.csx,b.spec.csx"]);
+
+        await Assert.That(options.Files).IsNotNull();
+        await Assert.That(options.Files!.Count).IsEqualTo(2);
+        await Assert.That(options.Files).Contains("a.spec.csx");
+        await Assert.That(options.Files).Contains("b.spec.csx");
+    }
+
+    [Test]
+    public async Task Parse_FilesFlagWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["validate", ".", "--files"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--files requires a value");
+    }
+
+    [Test]
+    public async Task Parse_ValidateWithAllOptions_Works()
+    {
+        var options = CliOptionsParser.Parse(["validate", ".", "--static", "--strict", "--quiet"]);
+
+        await Assert.That(options.Command).IsEqualTo("validate");
+        await Assert.That(options.Static).IsTrue();
+        await Assert.That(options.Strict).IsTrue();
+        await Assert.That(options.Quiet).IsTrue();
+    }
+
+    #endregion
 }

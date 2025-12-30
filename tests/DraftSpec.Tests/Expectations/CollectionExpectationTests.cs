@@ -172,6 +172,23 @@ public class CollectionExpectationTests
         await Assert.That(ex.Message).Contains("7");
     }
 
+    [Test]
+    public async Task not_toContainAll_WhenMissingSome_Passes()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+        expectation.not.toContainAll(1, 5, 7); // Missing 5 and 7, so negation passes
+    }
+
+    [Test]
+    public async Task not_toContainAll_WhenContainsAll_Throws()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3, 4, 5], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toContainAll(1, 3, 5));
+
+        await Assert.That(ex.Message).Contains("to not contain all");
+    }
+
     #endregion
 
     #region toHaveCount

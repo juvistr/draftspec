@@ -1,105 +1,67 @@
 using DraftSpec.Cli.Commands;
-using DraftSpec.Cli.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using DraftSpec.Cli.Options;
+using DraftSpec.Cli.Pipeline;
 
 namespace DraftSpec.Cli;
 
 /// <summary>
-/// Factory for creating command executors from the DI container.
-/// Handles conversion from CliOptions to command-specific options.
+/// Factory for creating command executors.
+/// Uses explicit factory functions for testability (no IServiceProvider coupling).
 /// </summary>
 public class CommandFactory : ICommandFactory
 {
-    private readonly IServiceProvider _services;
+    private readonly IConfigApplier _configApplier;
+    private readonly Func<RunCommand> _runFactory;
+    private readonly Func<WatchCommand> _watchFactory;
+    private readonly Func<ListCommand> _listFactory;
+    private readonly Func<ValidateCommand> _validateFactory;
+    private readonly Func<InitCommand> _initFactory;
+    private readonly Func<NewCommand> _newFactory;
+    private readonly Func<SchemaCommand> _schemaFactory;
 
-    public CommandFactory(IServiceProvider services)
+    public CommandFactory(
+        IConfigApplier configApplier,
+        Func<RunCommand> runFactory,
+        Func<WatchCommand> watchFactory,
+        Func<ListCommand> listFactory,
+        Func<ValidateCommand> validateFactory,
+        Func<InitCommand> initFactory,
+        Func<NewCommand> newFactory,
+        Func<SchemaCommand> schemaFactory)
     {
-        _services = services;
+        _configApplier = configApplier;
+        _runFactory = runFactory;
+        _watchFactory = watchFactory;
+        _listFactory = listFactory;
+        _validateFactory = validateFactory;
+        _initFactory = initFactory;
+        _newFactory = newFactory;
+        _schemaFactory = schemaFactory;
     }
 
     public Func<CliOptions, CancellationToken, Task<int>>? Create(string commandName)
     {
-        return commandName.ToLowerInvariant() switch
+        var executor = CreateExecutor(commandName);
+        return executor == null ? null : executor.ExecuteAsync;
+    }
+
+    private ICommandExecutor? CreateExecutor(string commandName) =>
+        commandName.ToLowerInvariant() switch
         {
-            "run" => CreateRunExecutor(),
-            "watch" => CreateWatchExecutor(),
-            "list" => CreateListExecutor(),
-            "validate" => CreateValidateExecutor(),
-            "init" => CreateLegacyExecutor<InitCommand>(),
-            "new" => CreateLegacyExecutor<NewCommand>(),
-            "schema" => CreateLegacyExecutor<SchemaCommand>(),
+            "run" => new CommandExecutor<RunCommand, RunOptions>(
+                _runFactory(), o => o.ToRunOptions(), _configApplier),
+            "watch" => new CommandExecutor<WatchCommand, WatchOptions>(
+                _watchFactory(), o => o.ToWatchOptions(), _configApplier),
+            "list" => new CommandExecutor<ListCommand, ListOptions>(
+                _listFactory(), o => o.ToListOptions(), _configApplier),
+            "validate" => new CommandExecutor<ValidateCommand, ValidateOptions>(
+                _validateFactory(), o => o.ToValidateOptions(), _configApplier),
+            "init" => new CommandExecutor<InitCommand, InitOptions>(
+                _initFactory(), o => o.ToInitOptions(), _configApplier),
+            "new" => new CommandExecutor<NewCommand, NewOptions>(
+                _newFactory(), o => o.ToNewOptions(), _configApplier),
+            "schema" => new CommandExecutor<SchemaCommand, SchemaOptions>(
+                _schemaFactory(), o => o.ToSchemaOptions(), _configApplier),
             _ => null
         };
-    }
-
-    private Func<CliOptions, CancellationToken, Task<int>> CreateRunExecutor()
-    {
-        return async (cliOptions, ct) =>
-        {
-            // Load and apply config before conversion
-            var configLoader = _services.GetRequiredService<IConfigLoader>();
-            var configResult = configLoader.Load(cliOptions.Path);
-            if (configResult.Error != null)
-                throw new InvalidOperationException(configResult.Error);
-
-            if (configResult.Config != null)
-                cliOptions.ApplyDefaults(configResult.Config);
-
-            var command = _services.GetRequiredService<RunCommand>();
-            var options = cliOptions.ToRunOptions();
-            return await command.ExecuteAsync(options, ct);
-        };
-    }
-
-    private Func<CliOptions, CancellationToken, Task<int>> CreateWatchExecutor()
-    {
-        return async (cliOptions, ct) =>
-        {
-            // Load and apply config before conversion
-            var configLoader = _services.GetRequiredService<IConfigLoader>();
-            var configResult = configLoader.Load(cliOptions.Path);
-            if (configResult.Error != null)
-                throw new InvalidOperationException(configResult.Error);
-
-            if (configResult.Config != null)
-                cliOptions.ApplyDefaults(configResult.Config);
-
-            var command = _services.GetRequiredService<WatchCommand>();
-            var options = cliOptions.ToWatchOptions();
-            return await command.ExecuteAsync(options, ct);
-        };
-    }
-
-    private Func<CliOptions, CancellationToken, Task<int>> CreateListExecutor()
-    {
-        return async (cliOptions, ct) =>
-        {
-            var command = _services.GetRequiredService<ListCommand>();
-            var options = cliOptions.ToListOptions();
-            return await command.ExecuteAsync(options, ct);
-        };
-    }
-
-    private Func<CliOptions, CancellationToken, Task<int>> CreateValidateExecutor()
-    {
-        return async (cliOptions, ct) =>
-        {
-            var command = _services.GetRequiredService<ValidateCommand>();
-            var options = cliOptions.ToValidateOptions();
-            return await command.ExecuteAsync(options, ct);
-        };
-    }
-
-    /// <summary>
-    /// Creates an executor for commands that still use the legacy ICommand interface.
-    /// </summary>
-    private Func<CliOptions, CancellationToken, Task<int>> CreateLegacyExecutor<TCommand>()
-        where TCommand : ICommand<CliOptions>
-    {
-        return async (cliOptions, ct) =>
-        {
-            var command = _services.GetRequiredService<TCommand>();
-            return await command.ExecuteAsync(cliOptions, ct);
-        };
-    }
 }

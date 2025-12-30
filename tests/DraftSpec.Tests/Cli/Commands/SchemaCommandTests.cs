@@ -1,5 +1,5 @@
-using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.Options;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
@@ -27,7 +27,7 @@ public class SchemaCommandTests
     public async Task ExecuteAsync_NoOutputFile_WritesToConsole()
     {
         var command = CreateCommand();
-        var options = new CliOptions();
+        var options = new SchemaOptions();
 
         var result = await command.ExecuteAsync(options);
 
@@ -40,7 +40,7 @@ public class SchemaCommandTests
     public async Task ExecuteAsync_NoOutputFile_OutputsValidJson()
     {
         var command = CreateCommand();
-        var options = new CliOptions();
+        var options = new SchemaOptions();
 
         await command.ExecuteAsync(options);
 
@@ -58,7 +58,7 @@ public class SchemaCommandTests
     public async Task ExecuteAsync_WithOutputFile_WritesToFile()
     {
         var command = CreateCommand();
-        var options = new CliOptions { OutputFile = "/tmp/schema.json" };
+        var options = new SchemaOptions { OutputFile = "/tmp/schema.json" };
 
         var result = await command.ExecuteAsync(options);
 
@@ -70,7 +70,7 @@ public class SchemaCommandTests
     public async Task ExecuteAsync_WithOutputFile_FileContainsSchema()
     {
         var command = CreateCommand();
-        var options = new CliOptions { OutputFile = "/tmp/schema.json" };
+        var options = new SchemaOptions { OutputFile = "/tmp/schema.json" };
 
         await command.ExecuteAsync(options);
 
@@ -84,7 +84,7 @@ public class SchemaCommandTests
     public async Task ExecuteAsync_WithOutputFile_ShowsSuccessMessage()
     {
         var command = CreateCommand();
-        var options = new CliOptions { OutputFile = "/tmp/schema.json" };
+        var options = new SchemaOptions { OutputFile = "/tmp/schema.json" };
 
         await command.ExecuteAsync(options);
 
@@ -99,7 +99,7 @@ public class SchemaCommandTests
     public async Task ExecuteAsync_SchemaIncludesSpecsProperty()
     {
         var command = CreateCommand();
-        var options = new CliOptions();
+        var options = new SchemaOptions();
 
         await command.ExecuteAsync(options);
 
@@ -111,7 +111,7 @@ public class SchemaCommandTests
     public async Task ExecuteAsync_SchemaIncludesSummaryProperty()
     {
         var command = CreateCommand();
-        var options = new CliOptions();
+        var options = new SchemaOptions();
 
         await command.ExecuteAsync(options);
 
@@ -123,7 +123,7 @@ public class SchemaCommandTests
     public async Task ExecuteAsync_SchemaIsPrettyPrinted()
     {
         var command = CreateCommand();
-        var options = new CliOptions();
+        var options = new SchemaOptions();
 
         await command.ExecuteAsync(options);
 
@@ -135,7 +135,7 @@ public class SchemaCommandTests
     public async Task ExecuteAsync_SchemaUsesCamelCase()
     {
         var command = CreateCommand();
-        var options = new CliOptions();
+        var options = new SchemaOptions();
 
         await command.ExecuteAsync(options);
 

@@ -1,5 +1,5 @@
-using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.Options;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
@@ -43,7 +43,7 @@ public class InitCommandTests
     {
         // Don't add the directory - it won't exist
         var command = CreateCommand();
-        var options = new CliOptions { Path = "/nonexistent/directory" };
+        var options = new InitOptions { Path = "/nonexistent/directory" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -58,7 +58,7 @@ public class InitCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new InitOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 
@@ -71,7 +71,7 @@ public class InitCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new InitOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 
@@ -84,7 +84,7 @@ public class InitCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new InitOptions { Path = _tempDir };
 
         await command.ExecuteAsync(options);
 
@@ -99,7 +99,7 @@ public class InitCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new InitOptions { Path = _tempDir };
 
         await command.ExecuteAsync(options);
 
@@ -120,7 +120,7 @@ public class InitCommandTests
         _fileSystem.AddDirectory(_tempDir);
         _fileSystem.AddFile(specHelperPath, "// original content");
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new InitOptions { Path = _tempDir };
 
         await command.ExecuteAsync(options);
 
@@ -136,7 +136,7 @@ public class InitCommandTests
         _fileSystem.AddDirectory(_tempDir);
         _fileSystem.AddFile(specHelperPath, "// original content");
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, Force = true };
+        var options = new InitOptions { Path = _tempDir, Force = true };
 
         await command.ExecuteAsync(options);
 
@@ -151,7 +151,7 @@ public class InitCommandTests
         _fileSystem.AddDirectory(_tempDir);
         _fileSystem.AddFile(omnisharpPath, "{ \"original\": true }");
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new InitOptions { Path = _tempDir };
 
         await command.ExecuteAsync(options);
 
@@ -166,7 +166,7 @@ public class InitCommandTests
         _fileSystem.AddDirectory(_tempDir);
         _fileSystem.AddFile(omnisharpPath, "{ \"original\": true }");
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, Force = true };
+        var options = new InitOptions { Path = _tempDir, Force = true };
 
         await command.ExecuteAsync(options);
 
@@ -183,7 +183,7 @@ public class InitCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new InitOptions { Path = _tempDir };
 
         await command.ExecuteAsync(options);
 
@@ -197,7 +197,7 @@ public class InitCommandTests
     {
         _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new InitOptions { Path = _tempDir };
 
         await command.ExecuteAsync(options);
 

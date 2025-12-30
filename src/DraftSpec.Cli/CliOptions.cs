@@ -335,5 +335,31 @@ public class CliOptions
         Strategy = PartitionStrategy
     };
 
+    /// <summary>
+    /// Converts to InitOptions for the init command.
+    /// </summary>
+    public InitOptions ToInitOptions() => new()
+    {
+        Path = Path,
+        Force = Force
+    };
+
+    /// <summary>
+    /// Converts to NewOptions for the new command.
+    /// </summary>
+    public NewOptions ToNewOptions() => new()
+    {
+        Path = Path,
+        SpecName = SpecName
+    };
+
+    /// <summary>
+    /// Converts to SchemaOptions for the schema command.
+    /// </summary>
+    public SchemaOptions ToSchemaOptions() => new()
+    {
+        OutputFile = OutputFile
+    };
+
     #endregion
 }

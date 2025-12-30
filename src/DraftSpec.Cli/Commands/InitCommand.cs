@@ -1,8 +1,9 @@
 using System.Text;
+using DraftSpec.Cli.Options;
 
 namespace DraftSpec.Cli.Commands;
 
-public class InitCommand : ICommand<CliOptions>
+public class InitCommand : ICommand<InitOptions>
 {
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
@@ -15,7 +16,7 @@ public class InitCommand : ICommand<CliOptions>
         _projectResolver = projectResolver;
     }
 
-    public Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
+    public Task<int> ExecuteAsync(InitOptions options, CancellationToken ct = default)
     {
         var directory = Path.GetFullPath(options.Path);
 

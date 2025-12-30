@@ -7,13 +7,17 @@ coverage:
       default:
         target: 85%
         threshold: 1%
-        # Fail PR if coverage drops below target
         if_ci_failed: error
+        # Post success if no base report exists (new repo/branch)
+        if_not_found: success
     patch:
       default:
-        # New code must be at least 85% covered
         target: 85%
         threshold: 0%
+        if_not_found: success
+
+# Explicitly enable GitHub Checks (default, but being explicit)
+github_checks: true
 
 comment:
   layout: "header, diff, flags, components, footer"

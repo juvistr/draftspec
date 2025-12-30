@@ -9,16 +9,17 @@ namespace DraftSpec.TestingPlatform;
 internal sealed class MtpSpecExecutor
 {
     private readonly string _projectDirectory;
-    private readonly CsxScriptHost _scriptHost;
+    private readonly IScriptHost _scriptHost;
 
     /// <summary>
     /// Creates a new MTP spec executor.
     /// </summary>
     /// <param name="projectDirectory">The project root directory.</param>
-    public MtpSpecExecutor(string projectDirectory)
+    /// <param name="scriptHost">Optional script host for testing. Defaults to CsxScriptHost.</param>
+    public MtpSpecExecutor(string projectDirectory, IScriptHost? scriptHost = null)
     {
         _projectDirectory = Path.GetFullPath(projectDirectory);
-        _scriptHost = new CsxScriptHost(_projectDirectory);
+        _scriptHost = scriptHost ?? new CsxScriptHost(_projectDirectory);
     }
 
     /// <summary>
@@ -50,7 +51,7 @@ internal sealed class MtpSpecExecutor
         var relativePath = GetRelativePath(absolutePath);
 
         // Reset state before execution
-        Dsl.Reset();
+        _scriptHost.Reset();
 
         try
         {
@@ -110,7 +111,7 @@ internal sealed class MtpSpecExecutor
         }
         finally
         {
-            Dsl.Reset();
+            _scriptHost.Reset();
         }
     }
 

@@ -26,7 +26,7 @@ public class ScriptGlobals
 /// Spec files should NOT call run() - just define describe/it blocks.
 /// The host controls discovery and execution.
 /// </remarks>
-public sealed partial class CsxScriptHost
+public sealed partial class CsxScriptHost : IScriptHost
 {
     private readonly string _baseDirectory;
     private readonly IReadOnlyList<Assembly> _referenceAssemblies;
@@ -296,4 +296,9 @@ public sealed partial class CsxScriptHost
 
         return options;
     }
+
+    /// <summary>
+    /// Resets the DSL state for isolation between executions.
+    /// </summary>
+    public void Reset() => Dsl.Reset();
 }

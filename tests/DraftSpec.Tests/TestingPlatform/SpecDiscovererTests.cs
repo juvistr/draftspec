@@ -1,4 +1,6 @@
+using DraftSpec.Scripting;
 using DraftSpec.TestingPlatform;
+using DraftSpec.Tests.TestHelpers;
 
 namespace DraftSpec.Tests.TestingPlatform;
 
@@ -436,4 +438,189 @@ public class SpecDiscovererTests
         await Assert.That(error.Id).IsEqualTo("specs/broken.spec.csx:DISCOVERY_ERROR");
         await Assert.That(error.DisplayName).IsEqualTo("[Discovery Error] specs/broken.spec.csx");
     }
+
+    #region Unit tests with MockScriptHost
+
+    [Test]
+    public async Task DiscoverFileAsync_WithMock_CallsExecuteOnScriptHost()
+    {
+        // Arrange
+        var csxPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(csxPath, "// empty");
+
+        var mockHost = new MockScriptHost()
+            .WithNoSpecs(csxPath);
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+
+        // Act
+        await discoverer.DiscoverFileAsync(csxPath);
+
+        // Assert
+        await Assert.That(mockHost.ExecuteCalls).Count().IsEqualTo(1);
+        await Assert.That(mockHost.ExecuteCalls[0]).IsEqualTo(csxPath);
+    }
+
+    [Test]
+    public async Task DiscoverFileAsync_WithMock_CallsResetBeforeAndAfter()
+    {
+        // Arrange
+        var csxPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(csxPath, "// empty");
+
+        var mockHost = new MockScriptHost()
+            .WithNoSpecs(csxPath);
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+
+        // Act
+        await discoverer.DiscoverFileAsync(csxPath);
+
+        // Assert - Reset called before and after execution
+        await Assert.That(mockHost.ResetCallCount).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task DiscoverFileAsync_WithMock_ReturnsSpecsFromContext()
+    {
+        // Arrange
+        var csxPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(csxPath, "// not executed");
+
+        var context = new SpecContext("TestContext");
+        context.AddSpec(new SpecDefinition("test spec", () => { }));
+
+        var mockHost = new MockScriptHost()
+            .WithResult(csxPath, context);
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+
+        // Act
+        var specs = await discoverer.DiscoverFileAsync(csxPath);
+
+        // Assert
+        await Assert.That(specs.Count).IsEqualTo(1);
+        await Assert.That(specs[0].Description).IsEqualTo("test spec");
+    }
+
+    [Test]
+    public async Task DiscoverFileAsync_WithMock_WhenContextIsNull_ReturnsEmptyList()
+    {
+        // Arrange
+        var csxPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(csxPath, "// empty");
+
+        var mockHost = new MockScriptHost()
+            .WithNoSpecs(csxPath);
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+
+        // Act
+        var specs = await discoverer.DiscoverFileAsync(csxPath);
+
+        // Assert
+        await Assert.That(specs.Count).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task DiscoverAsync_WithMock_CallsResetForEachFile()
+    {
+        // Arrange
+        var file1 = Path.Combine(_tempDir, "a.spec.csx");
+        var file2 = Path.Combine(_tempDir, "b.spec.csx");
+        await File.WriteAllTextAsync(file1, "// file 1");
+        await File.WriteAllTextAsync(file2, "// file 2");
+
+        var mockHost = new MockScriptHost()
+            .WithNoSpecs(file1)
+            .WithNoSpecs(file2);
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+
+        // Act
+        await discoverer.DiscoverAsync();
+
+        // Assert - Reset called before and after each file (2 files * 2 calls = 4)
+        await Assert.That(mockHost.ResetCallCount).IsEqualTo(4);
+    }
+
+    [Test]
+    public async Task DiscoverAsync_WithMock_WhenExecutionThrows_FallsBackToStaticParsing()
+    {
+        // Arrange
+        var csxPath = Path.Combine(_tempDir, "broken.spec.csx");
+        await File.WriteAllTextAsync(csxPath, """
+            using static DraftSpec.Dsl;
+            describe("BrokenContext", () => {
+                it("broken spec", () => { });
+            });
+            """);
+
+        var mockHost = new MockScriptHost()
+            .ThrowsFor(csxPath, new InvalidOperationException("Compilation failed"));
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+
+        // Act
+        var result = await discoverer.DiscoverAsync();
+
+        // Assert - spec discovered via static parsing with compilation error
+        await Assert.That(result.Specs.Count).IsEqualTo(1);
+        await Assert.That(result.Specs[0].HasCompilationError).IsTrue();
+        await Assert.That(result.Specs[0].CompilationError).Contains("Compilation failed");
+    }
+
+    [Test]
+    public async Task DiscoverAsync_WithMock_WhenExecutionThrows_StillCallsReset()
+    {
+        // Arrange
+        var csxPath = Path.Combine(_tempDir, "broken.spec.csx");
+        await File.WriteAllTextAsync(csxPath, """
+            using static DraftSpec.Dsl;
+            describe("Test", () => { it("spec", () => { }); });
+            """);
+
+        var mockHost = new MockScriptHost()
+            .ThrowsFor(csxPath, new InvalidOperationException("Error"));
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+
+        // Act
+        await discoverer.DiscoverAsync();
+
+        // Assert - Reset still called before and after (2 times)
+        await Assert.That(mockHost.ResetCallCount).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task DiscoverAsync_WithMock_AggregatesSpecsFromMultipleFiles()
+    {
+        // Arrange
+        var file1 = Path.Combine(_tempDir, "one.spec.csx");
+        var file2 = Path.Combine(_tempDir, "two.spec.csx");
+        await File.WriteAllTextAsync(file1, "// file 1");
+        await File.WriteAllTextAsync(file2, "// file 2");
+
+        var context1 = new SpecContext("Context1");
+        context1.AddSpec(new SpecDefinition("spec 1", () => { }));
+
+        var context2 = new SpecContext("Context2");
+        context2.AddSpec(new SpecDefinition("spec 2", () => { }));
+
+        var mockHost = new MockScriptHost()
+            .WithResult(file1, context1)
+            .WithResult(file2, context2);
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+
+        // Act
+        var result = await discoverer.DiscoverAsync();
+
+        // Assert
+        await Assert.That(result.Specs.Count).IsEqualTo(2);
+        await Assert.That(result.Specs.Select(s => s.Description)).Contains("spec 1");
+        await Assert.That(result.Specs.Select(s => s.Description)).Contains("spec 2");
+    }
+
+    #endregion
 }

@@ -13,17 +13,18 @@ namespace DraftSpec.TestingPlatform;
 public sealed class SpecDiscoverer
 {
     private readonly string _projectDirectory;
-    private readonly CsxScriptHost _scriptHost;
+    private readonly IScriptHost _scriptHost;
     private readonly StaticSpecParser _staticParser;
 
     /// <summary>
     /// Creates a new spec discoverer.
     /// </summary>
     /// <param name="projectDirectory">The project root directory for finding CSX files and computing relative paths.</param>
-    public SpecDiscoverer(string projectDirectory)
+    /// <param name="scriptHost">Optional script host for testing. Defaults to CsxScriptHost.</param>
+    public SpecDiscoverer(string projectDirectory, IScriptHost? scriptHost = null)
     {
         _projectDirectory = Path.GetFullPath(projectDirectory);
-        _scriptHost = new CsxScriptHost(_projectDirectory);
+        _scriptHost = scriptHost ?? new CsxScriptHost(_projectDirectory);
         _staticParser = new StaticSpecParser(_projectDirectory);
     }
 
@@ -43,7 +44,7 @@ public sealed class SpecDiscoverer
             cancellationToken.ThrowIfCancellationRequested();
 
             // Reset state before each file to ensure isolation
-            Dsl.Reset();
+            _scriptHost.Reset();
 
             try
             {
@@ -87,7 +88,7 @@ public sealed class SpecDiscoverer
             finally
             {
                 // Always reset after processing
-                Dsl.Reset();
+                _scriptHost.Reset();
             }
         }
 
@@ -111,7 +112,7 @@ public sealed class SpecDiscoverer
         var absolutePath = Path.GetFullPath(csxFilePath, _projectDirectory);
 
         // Reset state before execution
-        Dsl.Reset();
+        _scriptHost.Reset();
 
         try
         {
@@ -127,7 +128,7 @@ public sealed class SpecDiscoverer
         }
         finally
         {
-            Dsl.Reset();
+            _scriptHost.Reset();
         }
     }
 

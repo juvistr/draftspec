@@ -15,6 +15,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
     private readonly string _projectDirectory;
     private readonly IScriptHost _scriptHost;
     private readonly ISpecFileProvider _fileProvider;
+    private readonly ISpecStateManager _stateManager;
     private readonly StaticSpecParser _staticParser;
 
     /// <summary>
@@ -23,14 +24,17 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
     /// <param name="projectDirectory">The project root directory for finding CSX files and computing relative paths.</param>
     /// <param name="scriptHost">Optional script host for testing. Defaults to CsxScriptHost.</param>
     /// <param name="fileProvider">Optional file provider for testing. Defaults to FileSystemSpecFileProvider.</param>
+    /// <param name="stateManager">Optional state manager for testing. Defaults to DefaultSpecStateManager.</param>
     public SpecDiscoverer(
         string projectDirectory,
         IScriptHost? scriptHost = null,
-        ISpecFileProvider? fileProvider = null)
+        ISpecFileProvider? fileProvider = null,
+        ISpecStateManager? stateManager = null)
     {
         _projectDirectory = Path.GetFullPath(projectDirectory);
         _scriptHost = scriptHost ?? new CsxScriptHost(_projectDirectory);
         _fileProvider = fileProvider ?? new FileSystemSpecFileProvider();
+        _stateManager = stateManager ?? new DefaultSpecStateManager();
         _staticParser = new StaticSpecParser(_projectDirectory);
     }
 
@@ -50,7 +54,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
             cancellationToken.ThrowIfCancellationRequested();
 
             // Reset state before each file to ensure isolation
-            _scriptHost.Reset();
+            _stateManager.ResetState();
 
             try
             {
@@ -94,7 +98,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
             finally
             {
                 // Always reset after processing
-                _scriptHost.Reset();
+                _stateManager.ResetState();
             }
         }
 
@@ -118,7 +122,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
         var absolutePath = _fileProvider.GetAbsolutePath(_projectDirectory, csxFilePath);
 
         // Reset state before execution
-        _scriptHost.Reset();
+        _stateManager.ResetState();
 
         try
         {
@@ -134,7 +138,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
         }
         finally
         {
-            _scriptHost.Reset();
+            _stateManager.ResetState();
         }
     }
 

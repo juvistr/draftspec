@@ -10,16 +10,22 @@ internal sealed class MtpSpecExecutor : IMtpSpecExecutor
 {
     private readonly string _projectDirectory;
     private readonly IScriptHost _scriptHost;
+    private readonly ISpecStateManager _stateManager;
 
     /// <summary>
     /// Creates a new MTP spec executor.
     /// </summary>
     /// <param name="projectDirectory">The project root directory.</param>
     /// <param name="scriptHost">Optional script host for testing. Defaults to CsxScriptHost.</param>
-    public MtpSpecExecutor(string projectDirectory, IScriptHost? scriptHost = null)
+    /// <param name="stateManager">Optional state manager for testing. Defaults to DefaultSpecStateManager.</param>
+    public MtpSpecExecutor(
+        string projectDirectory,
+        IScriptHost? scriptHost = null,
+        ISpecStateManager? stateManager = null)
     {
         _projectDirectory = Path.GetFullPath(projectDirectory);
         _scriptHost = scriptHost ?? new CsxScriptHost(_projectDirectory);
+        _stateManager = stateManager ?? new DefaultSpecStateManager();
     }
 
     /// <summary>
@@ -51,7 +57,7 @@ internal sealed class MtpSpecExecutor : IMtpSpecExecutor
         var relativePath = GetRelativePath(absolutePath);
 
         // Reset state before execution
-        _scriptHost.Reset();
+        _stateManager.ResetState();
 
         try
         {
@@ -111,7 +117,7 @@ internal sealed class MtpSpecExecutor : IMtpSpecExecutor
         }
         finally
         {
-            _scriptHost.Reset();
+            _stateManager.ResetState();
         }
     }
 

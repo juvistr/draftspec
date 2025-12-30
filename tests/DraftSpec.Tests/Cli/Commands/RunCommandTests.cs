@@ -2,6 +2,7 @@ using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
+using DraftSpec.Cli.Services;
 using DraftSpec.Formatters;
 using DraftSpec.Tests.TestHelpers;
 
@@ -404,7 +405,8 @@ public class RunCommandTests
             new MockFormatterRegistry(),
             configLoader ?? new MockConfigLoader(),
             fileSystem ?? new MockFileSystem(),
-            environment ?? new MockEnvironment());
+            environment ?? new MockEnvironment(),
+            new MockStatsCollector());
     }
 
     #endregion
@@ -576,6 +578,24 @@ public class RunCommandTests
         public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
         public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
         public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
+    }
+
+    private class MockStatsCollector : ISpecStatsCollector
+    {
+        public Task<SpecStats> CollectAsync(
+            IReadOnlyList<string> specFiles,
+            string projectPath,
+            CancellationToken ct = default)
+        {
+            return Task.FromResult(new SpecStats(
+                Total: 0,
+                Regular: 0,
+                Focused: 0,
+                Skipped: 0,
+                Pending: 0,
+                HasFocusMode: false,
+                FileCount: specFiles.Count));
+        }
     }
 
     #endregion

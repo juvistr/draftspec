@@ -67,6 +67,24 @@ public class SpecFixtureBuilder
     }
 
     /// <summary>
+    /// Adds a focused spec (fit) to the fixture.
+    /// </summary>
+    public SpecFixtureBuilder WithFocusedSpec(string name = "focused")
+    {
+        return WithSpec(name, """
+            using static DraftSpec.Dsl;
+
+            describe("FocusedTests", () =>
+            {
+                fit("is focused", () =>
+                {
+                    expect(true).toBeTrue();
+                });
+            });
+            """);
+    }
+
+    /// <summary>
     /// Adds a spec with multiple examples.
     /// </summary>
     public SpecFixtureBuilder WithMultipleSpecs(string name = "multiple", int passCount = 2, int failCount = 1)

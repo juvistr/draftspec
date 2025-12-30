@@ -2,6 +2,7 @@ using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
+using DraftSpec.Cli.Services;
 using DraftSpec.Formatters;
 
 namespace DraftSpec.Tests.Cli;
@@ -259,7 +260,8 @@ public class CommandFactoryTests
             new NullFormatterRegistry(),
             new NullConfigLoader(),
             new NullFileSystem(),
-            new NullEnvironment())
+            new NullEnvironment(),
+            new NullStatsCollector())
         {
         }
     }
@@ -393,6 +395,17 @@ public class CommandFactoryTests
     {
         public string CurrentDirectory => Directory.GetCurrentDirectory();
         public string NewLine => System.Environment.NewLine;
+    }
+
+    private class NullStatsCollector : ISpecStatsCollector
+    {
+        public Task<SpecStats> CollectAsync(
+            IReadOnlyList<string> specFiles,
+            string projectPath,
+            CancellationToken ct = default)
+        {
+            return Task.FromResult(new SpecStats(0, 0, 0, 0, 0, false, 0));
+        }
     }
 
     private class NullFileWatcherFactory : IFileWatcherFactory

@@ -1,5 +1,6 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
+using DraftSpec.Cli.Services;
 using DraftSpec.Formatters;
 using DraftSpec.Formatters.Html;
 using DraftSpec.Formatters.JUnit;
@@ -40,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPluginScanner, SystemPluginScanner>();
         services.AddSingleton<IAssemblyLoader, IsolatedAssemblyLoader>();
         services.AddSingleton<IPluginLoader, PluginLoader>();
+        services.AddSingleton<ISpecStatsCollector, SpecStatsCollector>();
 
         // Commands
         services.AddTransient<RunCommand>();

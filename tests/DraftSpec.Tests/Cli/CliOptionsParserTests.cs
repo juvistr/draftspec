@@ -842,4 +842,35 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Stats Options
+
+    [Test]
+    public async Task Parse_NoStatsOption_SetsNoStats()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--no-stats"]);
+
+        await Assert.That(options.NoStats).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.NoStats));
+    }
+
+    [Test]
+    public async Task Parse_StatsOnlyOption_SetsStatsOnly()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--stats-only"]);
+
+        await Assert.That(options.StatsOnly).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.StatsOnly));
+    }
+
+    [Test]
+    public async Task Parse_DefaultNoStatsIsFalse()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.NoStats).IsFalse();
+        await Assert.That(options.StatsOnly).IsFalse();
+    }
+
+    #endregion
 }

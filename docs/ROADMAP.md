@@ -60,6 +60,21 @@ This roadmap tracks development priorities from the initial v0.4.0 release throu
 
 ---
 
+## v0.6.2: Repository Quality
+
+**Theme**: OSS best practices, automation, and contributor experience.
+
+| Issue | Feature | Priority |
+|-------|---------|----------|
+| [#276](https://github.com/juvistr/draftspec/issues/276) | CODEOWNERS, Dependabot, EditorConfig, global.json | HIGH |
+| [#277](https://github.com/juvistr/draftspec/issues/277) | Roslyn analyzers (StyleCop + Roslynator) | HIGH |
+| [#278](https://github.com/juvistr/draftspec/issues/278) | Pre-commit hooks via Husky.Net | MEDIUM |
+| [#279](https://github.com/juvistr/draftspec/issues/279) | GitHub automation (stale bot, release drafter, all-contributors) | MEDIUM |
+| [#280](https://github.com/juvistr/draftspec/issues/280) | Discussion templates | LOW |
+| [#281](https://github.com/juvistr/draftspec/issues/281) | OpenSSF Scorecard badge + VS Code settings | LOW |
+
+---
+
 ## v0.7.0: Test Intelligence
 
 **Theme**: Smart test selection and historical analysis.

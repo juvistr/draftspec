@@ -387,12 +387,233 @@ public class RunCommandTests
 
     #endregion
 
+    #region Line Filter Tests
+
+    private string _tempDir = null!;
+
+    [Before(Test)]
+    public void SetupTempDir()
+    {
+        _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_run_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
+    }
+
+    [After(Test)]
+    public void CleanupTempDir()
+    {
+        if (Directory.Exists(_tempDir))
+        {
+            Directory.Delete(_tempDir, recursive: true);
+        }
+    }
+
+    [Test]
+    public async Task ExecuteAsync_LineFilter_FindsExactLineMatch()
+    {
+        // Create a spec file
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Calculator", () =>
+            {
+                it("adds numbers", () => { });
+                it("subtracts numbers", () => { });
+            });
+            """);
+
+        var console = new MockConsole();
+        var runnerFactory = new TrackingRunnerFactory();
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem());
+
+        // Line 4 should match "adds numbers"
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            LineFilters = [new LineFilter("test.spec.csx", [4])]
+        };
+
+        await command.ExecuteAsync(options);
+
+        // The filter should contain the spec description (escaped for regex)
+        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
+        // Regex.Escape converts spaces to "\ "
+        await Assert.That(runnerFactory.LastFilterName!).Contains(@"adds\ numbers");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_LineFilter_FindsNearbySpec()
+    {
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Calculator", () =>
+            {
+                it("adds numbers", () => { });
+            });
+            """);
+
+        var console = new MockConsole();
+        var runnerFactory = new TrackingRunnerFactory();
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem());
+
+        // Line 5 is within 1 line of "adds numbers" (line 4)
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            LineFilters = [new LineFilter("test.spec.csx", [5])]
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
+        await Assert.That(runnerFactory.LastFilterName!).Contains(@"adds\ numbers");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_LineFilter_FileNotFound_ShowsWarning()
+    {
+        var console = new MockConsole();
+        var command = CreateCommand(
+            console: console,
+            specFiles: [],
+            fileSystem: new RealFileSystem());
+
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            LineFilters = [new LineFilter("nonexistent.spec.csx", [1])]
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(console.Output).Contains("File not found");
+        await Assert.That(console.Output).Contains("nonexistent.spec.csx");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_LineFilter_MultipleLines_CombinesPattern()
+    {
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Calculator", () =>
+            {
+                it("adds numbers", () => { });
+                it("subtracts numbers", () => { });
+            });
+            """);
+
+        var console = new MockConsole();
+        var runnerFactory = new TrackingRunnerFactory();
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem());
+
+        // Lines 4 and 5 should match both specs
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            LineFilters = [new LineFilter("test.spec.csx", [4, 5])]
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
+        await Assert.That(runnerFactory.LastFilterName!).Contains(@"adds\ numbers");
+        await Assert.That(runnerFactory.LastFilterName!).Contains(@"subtracts\ numbers");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_LineFilter_MergesWithExistingFilterName()
+    {
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Calculator", () =>
+            {
+                it("adds numbers", () => { });
+            });
+            """);
+
+        var console = new MockConsole();
+        var runnerFactory = new TrackingRunnerFactory();
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem());
+
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            FilterName = "existing",
+            LineFilters = [new LineFilter("test.spec.csx", [4])]
+        };
+
+        await command.ExecuteAsync(options);
+
+        // Should combine both filters with OR
+        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
+        await Assert.That(runnerFactory.LastFilterName!).Contains("existing");
+        await Assert.That(runnerFactory.LastFilterName!).Contains(@"adds\ numbers");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_LineFilter_IncludesContextPath()
+    {
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Calculator", () =>
+            {
+                describe("addition", () =>
+                {
+                    it("handles positive numbers", () => { });
+                });
+            });
+            """);
+
+        var console = new MockConsole();
+        var runnerFactory = new TrackingRunnerFactory();
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem());
+
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            LineFilters = [new LineFilter("test.spec.csx", [6])]
+        };
+
+        await command.ExecuteAsync(options);
+
+        // Should include full display name with context path (escaped for regex)
+        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
+        await Assert.That(runnerFactory.LastFilterName!).Contains("Calculator");
+        await Assert.That(runnerFactory.LastFilterName!).Contains("addition");
+        await Assert.That(runnerFactory.LastFilterName!).Contains(@"handles\ positive\ numbers");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static RunCommand CreateCommand(
         MockConsole? console = null,
         MockConfigLoader? configLoader = null,
-        MockRunnerFactory? runnerFactory = null,
+        IInProcessSpecRunnerFactory? runnerFactory = null,
         IReadOnlyList<string>? specFiles = null,
         IFileSystem? fileSystem = null,
         IEnvironment? environment = null)
@@ -432,6 +653,21 @@ public class RunCommandTests
         public IInProcessSpecRunner Create(string? filterTags = null, string? excludeTags = null, string? filterName = null, string? excludeName = null, IReadOnlyList<string>? filterContext = null, IReadOnlyList<string>? excludeContext = null)
         {
             return _runner ?? new MockRunner();
+        }
+    }
+
+    private class TrackingRunnerFactory : IInProcessSpecRunnerFactory
+    {
+        public string? LastFilterName { get; private set; }
+        public string? LastFilterTags { get; private set; }
+        public IReadOnlyList<string>? LastFilterContext { get; private set; }
+
+        public IInProcessSpecRunner Create(string? filterTags = null, string? excludeTags = null, string? filterName = null, string? excludeName = null, IReadOnlyList<string>? filterContext = null, IReadOnlyList<string>? excludeContext = null)
+        {
+            LastFilterTags = filterTags;
+            LastFilterName = filterName;
+            LastFilterContext = filterContext;
+            return new MockRunner();
         }
     }
 
@@ -518,6 +754,25 @@ public class RunCommandTests
     private class MockStatsCollector : TestMocks.NullStatsCollector { }
     private class MockPartitioner : TestMocks.NullPartitioner { }
     private class MockEnvironment : TestMocks.NullEnvironment { }
+
+    private class RealFileSystem : IFileSystem
+    {
+        public bool FileExists(string path) => File.Exists(path);
+        public string ReadAllText(string path) => File.ReadAllText(path);
+        public void WriteAllText(string path, string content) => File.WriteAllText(path, content);
+        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default)
+            => File.WriteAllTextAsync(path, content, ct);
+        public bool DirectoryExists(string path) => Directory.Exists(path);
+        public void CreateDirectory(string path) => Directory.CreateDirectory(path);
+        public string[] GetFiles(string path, string searchPattern) => Directory.GetFiles(path, searchPattern);
+        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
+            => Directory.GetFiles(path, searchPattern, searchOption);
+        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption)
+            => Directory.EnumerateFiles(path, searchPattern, searchOption);
+        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern)
+            => Directory.EnumerateDirectories(path, searchPattern);
+        public DateTime GetLastWriteTimeUtc(string path) => File.GetLastWriteTimeUtc(path);
+    }
 
     #endregion
 }

@@ -1,0 +1,12 @@
+# Default owner for everything
+* @juvistr
+
+# Core libraries
+/src/DraftSpec/                  @juvistr
+/src/DraftSpec.Cli/              @juvistr
+/src/DraftSpec.Mcp/              @juvistr
+/src/DraftSpec.TestingPlatform/  @juvistr
+
+# Documentation
+/docs/                           @juvistr
+/*.md                            @juvistr

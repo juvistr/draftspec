@@ -1,0 +1,28 @@
+# Codecov Configuration
+# https://docs.codecov.com/docs/codecovyml-reference
+
+coverage:
+  status:
+    project:
+      default:
+        target: 85%
+        threshold: 1%
+        # Fail PR if coverage drops below target
+        if_ci_failed: error
+    patch:
+      default:
+        # New code must be at least 85% covered
+        target: 85%
+        threshold: 0%
+
+comment:
+  layout: "header, diff, flags, components, footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# Ignore generated/third-party code
+ignore:
+  - "**/*.g.cs"
+  - "**/obj/**"

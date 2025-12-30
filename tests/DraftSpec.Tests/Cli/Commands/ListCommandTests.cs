@@ -1,6 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Formatters;
+using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
 using DraftSpec.TestingPlatform;
 
@@ -143,7 +144,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -160,7 +161,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -177,7 +178,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -199,7 +200,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, FocusedOnly = true, ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, FocusedOnly = true, ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -219,7 +220,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, PendingOnly = true, ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, PendingOnly = true, ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -239,7 +240,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, SkippedOnly = true, ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, SkippedOnly = true, ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -259,7 +260,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, FilterName = "add", ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, FilterName = "add", ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -280,7 +281,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, FilterName = "add \\d", ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, FilterName = "add \\d", ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -302,7 +303,7 @@ public class ListCommandTests
             """);
         var command = CreateCommand();
         // Invalid regex pattern (unmatched opening paren) should fall back to substring match
-        var options = new CliOptions { Path = _tempDir, FilterName = "(unclosed", ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, FilterName = "(unclosed", ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -326,7 +327,7 @@ public class ListCommandTests
             """);
         var command = CreateCommand();
         // FocusedOnly AND PendingOnly should show both focused and pending (OR logic)
-        var options = new CliOptions { Path = _tempDir, FocusedOnly = true, PendingOnly = true, ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, FocusedOnly = true, PendingOnly = true, ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -357,7 +358,7 @@ public class ListCommandTests
             FocusedOnly = true,
             PendingOnly = true,
             SkippedOnly = true,
-            ListFormat = "flat"
+            ListFormat = ListFormat.Flat
         };
 
         var result = await command.ExecuteAsync(options);
@@ -388,7 +389,7 @@ public class ListCommandTests
             Path = _tempDir,
             FocusedOnly = true,
             FilterName = "apple",
-            ListFormat = "flat"
+            ListFormat = ListFormat.Flat
         };
 
         var result = await command.ExecuteAsync(options);
@@ -413,7 +414,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, FilterTags = "sometag", ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, FilterTags = "sometag", ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -436,7 +437,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = "tree" };
+        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Tree };
 
         var result = await command.ExecuteAsync(options);
 
@@ -456,7 +457,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -476,7 +477,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = "json" };
+        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Json };
 
         var result = await command.ExecuteAsync(options);
 
@@ -498,28 +499,13 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = "json" };
+        var options = new CliOptions { Path = _tempDir, ListFormat = ListFormat.Json };
 
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
         var output = _console.Output;
         await Assert.That(output).Contains("\"totalSpecs\": 2");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_InvalidFormat_ThrowsError()
-    {
-        CreateSpecFile("test.spec.csx", """
-            describe("Test", () => {
-                it("spec", () => { });
-            });
-            """);
-        var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ListFormat = "invalid" };
-
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
     }
 
     #endregion
@@ -535,7 +521,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ShowLineNumbers = true, ListFormat = "tree" };
+        var options = new CliOptions { Path = _tempDir, ShowLineNumbers = true, ListFormat = ListFormat.Tree };
 
         var result = await command.ExecuteAsync(options);
 
@@ -553,7 +539,7 @@ public class ListCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, ShowLineNumbers = false, ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, ShowLineNumbers = false, ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -592,7 +578,7 @@ public class ListCommandTests
             Path = _tempDir,
             Partition = 2,
             PartitionIndex = 0,
-            PartitionStrategy = "file"
+            PartitionStrategy = PartitionStrategy.File
         };
 
         var result = await command.ExecuteAsync(options);
@@ -623,7 +609,7 @@ public class ListCommandTests
             Path = _tempDir,
             Partition = 4,
             PartitionIndex = 2,
-            PartitionStrategy = "spec-count"
+            PartitionStrategy = PartitionStrategy.SpecCount
         };
 
         var result = await command.ExecuteAsync(options);
@@ -653,7 +639,7 @@ public class ListCommandTests
             Path = _tempDir,
             Partition = 3,
             PartitionIndex = 2,
-            PartitionStrategy = "file"
+            PartitionStrategy = PartitionStrategy.File
         };
 
         var result = await command.ExecuteAsync(options);
@@ -691,8 +677,8 @@ public class ListCommandTests
             Path = _tempDir,
             Partition = 3,
             PartitionIndex = 1,
-            PartitionStrategy = "file",
-            ListFormat = "flat"
+            PartitionStrategy = PartitionStrategy.File,
+            ListFormat = ListFormat.Flat
         };
 
         var result = await command.ExecuteAsync(options);
@@ -718,7 +704,7 @@ public class ListCommandTests
             """);
         var outputFile = Path.Combine(_tempDir, "output.txt");
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, OutputFile = outputFile, ListFormat = "flat" };
+        var options = new CliOptions { Path = _tempDir, OutputFile = outputFile, ListFormat = ListFormat.Flat };
 
         var result = await command.ExecuteAsync(options);
 
@@ -781,7 +767,7 @@ public class ListCommandTests
             IReadOnlyList<string> specFiles,
             int totalPartitions,
             int partitionIndex,
-            string strategy,
+            PartitionStrategy strategy,
             string projectPath,
             CancellationToken ct = default)
         {

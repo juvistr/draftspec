@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using DraftSpec.Cli.Formatters;
+using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
 using DraftSpec.TestingPlatform;
 
@@ -220,12 +221,12 @@ public class ListCommand : ICommand
 
     private static IListFormatter CreateFormatter(CliOptions options)
     {
-        return options.ListFormat.ToLowerInvariant() switch
+        return options.ListFormat switch
         {
-            "tree" => new TreeListFormatter(options.ShowLineNumbers),
-            "flat" => new FlatListFormatter(options.ShowLineNumbers),
-            "json" => new JsonListFormatter(),
-            _ => throw new ArgumentException($"Unknown list format: {options.ListFormat}. Valid options: tree, flat, json")
+            ListFormat.Tree => new TreeListFormatter(options.ShowLineNumbers),
+            ListFormat.Flat => new FlatListFormatter(options.ShowLineNumbers),
+            ListFormat.Json => new JsonListFormatter(),
+            _ => throw new ArgumentOutOfRangeException(nameof(options.ListFormat), options.ListFormat, "Unknown list format")
         };
     }
 }

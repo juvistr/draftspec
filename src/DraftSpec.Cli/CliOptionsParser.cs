@@ -1,3 +1,5 @@
+using DraftSpec.Cli.Options.Enums;
+
 namespace DraftSpec.Cli;
 
 /// <summary>
@@ -23,11 +25,17 @@ public static class CliOptionsParser
             {
                 if (i + 1 >= args.Length)
                 {
-                    options.Error = "--format requires a value (console, json, markdown, html)";
+                    options.Error = "--format requires a value (console, json, markdown, html, junit)";
                     return options;
                 }
 
-                options.Format = args[++i].ToLowerInvariant();
+                var formatValue = args[++i];
+                if (!formatValue.TryParseOutputFormat(out var format))
+                {
+                    options.Error = $"Unknown format: '{formatValue}'. Valid options: console, json, markdown, html, junit";
+                    return options;
+                }
+                options.Format = format;
                 options.ExplicitlySet.Add(nameof(CliOptions.Format));
             }
             else if (arg is "--output" or "-o")
@@ -162,7 +170,13 @@ public static class CliOptionsParser
                     return options;
                 }
 
-                options.CoverageFormat = args[++i].ToLowerInvariant();
+                var coverageFormatValue = args[++i];
+                if (!coverageFormatValue.TryParseCoverageFormat(out var coverageFormat))
+                {
+                    options.Error = $"Unknown coverage format: '{coverageFormatValue}'. Valid options: cobertura, xml, coverage";
+                    return options;
+                }
+                options.CoverageFormat = coverageFormat;
                 options.ExplicitlySet.Add(nameof(CliOptions.CoverageFormat));
             }
             else if (arg == "--coverage-report-formats")
@@ -185,7 +199,13 @@ public static class CliOptionsParser
                     return options;
                 }
 
-                options.ListFormat = args[++i].ToLowerInvariant();
+                var listFormatValue = args[++i];
+                if (!listFormatValue.TryParseListFormat(out var listFormat))
+                {
+                    options.Error = $"Unknown list format: '{listFormatValue}'. Valid options: tree, flat, json";
+                    return options;
+                }
+                options.ListFormat = listFormat;
                 options.ExplicitlySet.Add(nameof(CliOptions.ListFormat));
             }
             else if (arg == "--show-line-numbers")
@@ -297,10 +317,10 @@ public static class CliOptionsParser
                     return options;
                 }
 
-                var strategy = args[++i].ToLowerInvariant();
-                if (strategy is not ("file" or "spec-count"))
+                var strategyValue = args[++i];
+                if (!strategyValue.TryParsePartitionStrategy(out var strategy))
                 {
-                    options.Error = "--partition-strategy must be 'file' or 'spec-count'";
+                    options.Error = $"Unknown partition strategy: '{strategyValue}'. Valid options: file, spec-count";
                     return options;
                 }
 

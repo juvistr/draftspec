@@ -1,3 +1,5 @@
+using DraftSpec.Cli.Options.Enums;
+
 namespace DraftSpec.Cli.Services;
 
 /// <summary>
@@ -12,7 +14,7 @@ public interface ISpecPartitioner
     /// <param name="specFiles">All discovered spec files.</param>
     /// <param name="totalPartitions">Total number of partitions.</param>
     /// <param name="partitionIndex">Zero-based index of the partition to return.</param>
-    /// <param name="strategy">Partitioning strategy: "file" or "spec-count".</param>
+    /// <param name="strategy">Partitioning strategy.</param>
     /// <param name="projectPath">Base project path for spec parsing (needed for spec-count strategy).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The partition result containing assigned files.</returns>
@@ -20,7 +22,7 @@ public interface ISpecPartitioner
         IReadOnlyList<string> specFiles,
         int totalPartitions,
         int partitionIndex,
-        string strategy,
+        PartitionStrategy strategy,
         string projectPath,
         CancellationToken ct = default);
 }

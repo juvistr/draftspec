@@ -1,6 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
+using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using DraftSpec.Formatters;
@@ -207,7 +208,7 @@ public static class TestMocks
             IReadOnlyList<string> specFiles,
             int totalPartitions,
             int partitionIndex,
-            string strategy,
+            PartitionStrategy strategy,
             string projectPath,
             CancellationToken ct = default)
         {

@@ -1,3 +1,4 @@
+using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
 
 namespace DraftSpec.Tests.Cli;
@@ -15,10 +16,10 @@ public class SpecPartitionerTests
         var partitioner = new SpecPartitioner();
         var files = new List<string> { "a.spec.csx", "b.spec.csx", "c.spec.csx", "d.spec.csx" };
 
-        var result0 = await partitioner.PartitionAsync(files, 4, 0, "file", "/project");
-        var result1 = await partitioner.PartitionAsync(files, 4, 1, "file", "/project");
-        var result2 = await partitioner.PartitionAsync(files, 4, 2, "file", "/project");
-        var result3 = await partitioner.PartitionAsync(files, 4, 3, "file", "/project");
+        var result0 = await partitioner.PartitionAsync(files, 4, 0, PartitionStrategy.File, "/project");
+        var result1 = await partitioner.PartitionAsync(files, 4, 1, PartitionStrategy.File, "/project");
+        var result2 = await partitioner.PartitionAsync(files, 4, 2, PartitionStrategy.File, "/project");
+        var result3 = await partitioner.PartitionAsync(files, 4, 3, PartitionStrategy.File, "/project");
 
         // Round-robin assignment after sorting: a.spec.csx(0), b.spec.csx(1), c.spec.csx(2), d.spec.csx(3)
         await Assert.That(result0.Files).HasSingleItem().And.Contains("a.spec.csx");
@@ -33,8 +34,8 @@ public class SpecPartitionerTests
         var partitioner = new SpecPartitioner();
         var files = new List<string> { "a.spec.csx", "b.spec.csx", "c.spec.csx", "d.spec.csx", "e.spec.csx" };
 
-        var result0 = await partitioner.PartitionAsync(files, 2, 0, "file", "/project");
-        var result1 = await partitioner.PartitionAsync(files, 2, 1, "file", "/project");
+        var result0 = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.File, "/project");
+        var result1 = await partitioner.PartitionAsync(files, 2, 1, PartitionStrategy.File, "/project");
 
         // Round-robin: 0->a, 1->b, 0->c, 1->d, 0->e
         await Assert.That(result0.Files.Count).IsEqualTo(3);
@@ -52,10 +53,10 @@ public class SpecPartitionerTests
         var partitioner = new SpecPartitioner();
         var files = new List<string> { "a.spec.csx", "b.spec.csx" };
 
-        var result0 = await partitioner.PartitionAsync(files, 4, 0, "file", "/project");
-        var result1 = await partitioner.PartitionAsync(files, 4, 1, "file", "/project");
-        var result2 = await partitioner.PartitionAsync(files, 4, 2, "file", "/project");
-        var result3 = await partitioner.PartitionAsync(files, 4, 3, "file", "/project");
+        var result0 = await partitioner.PartitionAsync(files, 4, 0, PartitionStrategy.File, "/project");
+        var result1 = await partitioner.PartitionAsync(files, 4, 1, PartitionStrategy.File, "/project");
+        var result2 = await partitioner.PartitionAsync(files, 4, 2, PartitionStrategy.File, "/project");
+        var result3 = await partitioner.PartitionAsync(files, 4, 3, PartitionStrategy.File, "/project");
 
         await Assert.That(result0.Files.Count).IsEqualTo(1);
         await Assert.That(result1.Files.Count).IsEqualTo(1);
@@ -69,8 +70,8 @@ public class SpecPartitionerTests
         var partitioner = new SpecPartitioner();
         var files = new List<string> { "c.spec.csx", "a.spec.csx", "b.spec.csx" };
 
-        var result1 = await partitioner.PartitionAsync(files, 3, 0, "file", "/project");
-        var result2 = await partitioner.PartitionAsync(files, 3, 0, "file", "/project");
+        var result1 = await partitioner.PartitionAsync(files, 3, 0, PartitionStrategy.File, "/project");
+        var result2 = await partitioner.PartitionAsync(files, 3, 0, PartitionStrategy.File, "/project");
 
         await Assert.That(result1.Files.SequenceEqual(result2.Files)).IsTrue();
     }
@@ -82,7 +83,7 @@ public class SpecPartitionerTests
         // Files in non-alphabetical order
         var files = new List<string> { "c.spec.csx", "a.spec.csx", "b.spec.csx" };
 
-        var result0 = await partitioner.PartitionAsync(files, 3, 0, "file", "/project");
+        var result0 = await partitioner.PartitionAsync(files, 3, 0, PartitionStrategy.File, "/project");
 
         // After sorting: a, b, c - so partition 0 gets "a.spec.csx"
         await Assert.That(result0.Files).HasSingleItem().And.Contains("a.spec.csx");
@@ -97,7 +98,7 @@ public class SpecPartitionerTests
         var allPartitionedFiles = new List<string>();
         for (int i = 0; i < 3; i++)
         {
-            var result = await partitioner.PartitionAsync(files, 3, i, "file", "/project");
+            var result = await partitioner.PartitionAsync(files, 3, i, PartitionStrategy.File, "/project");
             allPartitionedFiles.AddRange(result.Files);
         }
 
@@ -111,8 +112,8 @@ public class SpecPartitionerTests
         var partitioner = new SpecPartitioner();
         var files = new List<string> { "a.spec.csx", "b.spec.csx", "c.spec.csx", "d.spec.csx" };
 
-        var result0 = await partitioner.PartitionAsync(files, 2, 0, "file", "/project");
-        var result1 = await partitioner.PartitionAsync(files, 2, 1, "file", "/project");
+        var result0 = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.File, "/project");
+        var result1 = await partitioner.PartitionAsync(files, 2, 1, PartitionStrategy.File, "/project");
 
         // No overlap between partitions
         await Assert.That(result0.Files.Intersect(result1.Files)).IsEmpty();
@@ -128,7 +129,7 @@ public class SpecPartitionerTests
         var partitioner = new SpecPartitioner();
         var files = new List<string>();
 
-        var result = await partitioner.PartitionAsync(files, 4, 0, "file", "/project");
+        var result = await partitioner.PartitionAsync(files, 4, 0, PartitionStrategy.File, "/project");
 
         await Assert.That(result.Files).IsEmpty();
         await Assert.That(result.TotalFiles).IsEqualTo(0);
@@ -144,7 +145,7 @@ public class SpecPartitionerTests
         var partitioner = new SpecPartitioner();
         var files = new List<string> { "a.spec.csx", "b.spec.csx", "c.spec.csx" };
 
-        var result = await partitioner.PartitionAsync(files, 2, 0, "file", "/project");
+        var result = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.File, "/project");
 
         await Assert.That(result.TotalFiles).IsEqualTo(3);
     }
@@ -159,8 +160,8 @@ public class SpecPartitionerTests
         var partitioner = new SpecPartitioner();
         var files = new List<string> { "only.spec.csx" };
 
-        var result0 = await partitioner.PartitionAsync(files, 4, 0, "file", "/project");
-        var result1 = await partitioner.PartitionAsync(files, 4, 1, "file", "/project");
+        var result0 = await partitioner.PartitionAsync(files, 4, 0, PartitionStrategy.File, "/project");
+        var result1 = await partitioner.PartitionAsync(files, 4, 1, PartitionStrategy.File, "/project");
 
         await Assert.That(result0.Files).HasSingleItem();
         await Assert.That(result1.Files).IsEmpty();
@@ -176,7 +177,7 @@ public class SpecPartitionerTests
         var partitioner = new SpecPartitioner();
         var files = new List<string> { "a.spec.csx", "b.spec.csx", "c.spec.csx" };
 
-        var result = await partitioner.PartitionAsync(files, 1, 0, "file", "/project");
+        var result = await partitioner.PartitionAsync(files, 1, 0, PartitionStrategy.File, "/project");
 
         await Assert.That(result.Files.Count).IsEqualTo(3);
         await Assert.That(result.TotalFiles).IsEqualTo(3);
@@ -193,7 +194,7 @@ public class SpecPartitionerTests
         var files = new List<string> { "a.spec.csx", "b.spec.csx" };
 
         // Passing "file" explicitly should work the same as default
-        var result = await partitioner.PartitionAsync(files, 2, 0, "file", "/project");
+        var result = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.File, "/project");
 
         await Assert.That(result.Files).HasSingleItem();
     }
@@ -206,7 +207,7 @@ public class SpecPartitionerTests
 
         // With non-existent files (0 specs each), greedy assigns all to partition 0
         // since all partitions have equal totals, first partition (0) is always chosen
-        var result = await partitioner.PartitionAsync(files, 2, 0, "spec-count", "/project");
+        var result = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.SpecCount, "/project");
 
         // Both files go to partition 0 (greedy with equal weights)
         await Assert.That(result.Files.Count).IsEqualTo(2);

@@ -1,5 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.Options.Enums;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -333,7 +334,7 @@ public class CliIntegrationTests
     {
         var options = new CliOptions();
 
-        await Assert.That(options.Format).IsEqualTo("console");
+        await Assert.That(options.Format).IsEqualTo(OutputFormat.Console);
     }
 
     [Test]

@@ -1,4 +1,5 @@
 using DraftSpec.Cli;
+using DraftSpec.Cli.Options.Enums;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -99,7 +100,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "--format", "json"]);
 
-        await Assert.That(options.Format).IsEqualTo("json");
+        await Assert.That(options.Format).IsEqualTo(OutputFormat.Json);
     }
 
     [Test]
@@ -107,7 +108,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "-f", "markdown"]);
 
-        await Assert.That(options.Format).IsEqualTo("markdown");
+        await Assert.That(options.Format).IsEqualTo(OutputFormat.Markdown);
     }
 
     [Test]
@@ -115,7 +116,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "-f", "JSON"]);
 
-        await Assert.That(options.Format).IsEqualTo("json");
+        await Assert.That(options.Format).IsEqualTo(OutputFormat.Json);
     }
 
     [Test]
@@ -422,7 +423,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "--coverage", "--coverage-format", "xml"]);
 
-        await Assert.That(options.CoverageFormat).IsEqualTo("xml");
+        await Assert.That(options.CoverageFormat).IsEqualTo(CoverageFormat.Xml);
     }
 
     [Test]
@@ -439,7 +440,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "--coverage"]);
 
-        await Assert.That(options.CoverageFormat).IsEqualTo("cobertura");
+        await Assert.That(options.CoverageFormat).IsEqualTo(CoverageFormat.Cobertura);
     }
 
     [Test]
@@ -447,7 +448,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "--coverage-format", "COBERTURA"]);
 
-        await Assert.That(options.CoverageFormat).IsEqualTo("cobertura");
+        await Assert.That(options.CoverageFormat).IsEqualTo(CoverageFormat.Cobertura);
     }
 
     [Test]
@@ -462,7 +463,7 @@ public class CliOptionsParserTests
 
         await Assert.That(options.Coverage).IsTrue();
         await Assert.That(options.CoverageOutput).IsEqualTo("./coverage-reports");
-        await Assert.That(options.CoverageFormat).IsEqualTo("xml");
+        await Assert.That(options.CoverageFormat).IsEqualTo(CoverageFormat.Xml);
     }
 
     #endregion
@@ -482,7 +483,7 @@ public class CliOptionsParserTests
 
         await Assert.That(options.Command).IsEqualTo("run");
         await Assert.That(options.Path).IsEqualTo("./specs");
-        await Assert.That(options.Format).IsEqualTo("html");
+        await Assert.That(options.Format).IsEqualTo(OutputFormat.Html);
         await Assert.That(options.OutputFile).IsEqualTo("report.html");
         await Assert.That(options.CssUrl).IsEqualTo("https://example.com/style.css");
         await Assert.That(options.Parallel).IsTrue();
@@ -709,7 +710,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["list", ".", "--list-format", "json"]);
 
-        await Assert.That(options.ListFormat).IsEqualTo("json");
+        await Assert.That(options.ListFormat).IsEqualTo(ListFormat.Json);
     }
 
     [Test]
@@ -717,7 +718,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["list", "."]);
 
-        await Assert.That(options.ListFormat).IsEqualTo("tree");
+        await Assert.That(options.ListFormat).IsEqualTo(ListFormat.Tree);
     }
 
     [Test]
@@ -725,7 +726,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["list", ".", "--list-format", "JSON"]);
 
-        await Assert.That(options.ListFormat).IsEqualTo("json");
+        await Assert.That(options.ListFormat).IsEqualTo(ListFormat.Json);
     }
 
     [Test]
@@ -834,7 +835,7 @@ public class CliOptionsParserTests
 
         await Assert.That(options.Command).IsEqualTo("list");
         await Assert.That(options.Path).IsEqualTo("./specs");
-        await Assert.That(options.ListFormat).IsEqualTo("flat");
+        await Assert.That(options.ListFormat).IsEqualTo(ListFormat.Flat);
         await Assert.That(options.ShowLineNumbers).IsFalse();
         await Assert.That(options.FocusedOnly).IsTrue();
         await Assert.That(options.OutputFile).IsEqualTo("output.txt");
@@ -883,7 +884,7 @@ public class CliOptionsParserTests
 
         await Assert.That(options.Partition).IsEqualTo(4);
         await Assert.That(options.PartitionIndex).IsEqualTo(2);
-        await Assert.That(options.PartitionStrategy).IsEqualTo("file");
+        await Assert.That(options.PartitionStrategy).IsEqualTo(PartitionStrategy.File);
         await Assert.That(options.Error).IsNull();
     }
 
@@ -894,7 +895,7 @@ public class CliOptionsParserTests
 
         await Assert.That(options.Partition).IsEqualTo(4);
         await Assert.That(options.PartitionIndex).IsEqualTo(0);
-        await Assert.That(options.PartitionStrategy).IsEqualTo("spec-count");
+        await Assert.That(options.PartitionStrategy).IsEqualTo(PartitionStrategy.SpecCount);
         await Assert.That(options.Error).IsNull();
     }
 
@@ -967,7 +968,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "--partition-strategy", "invalid"]);
 
-        await Assert.That(options.Error).IsEqualTo("--partition-strategy must be 'file' or 'spec-count'");
+        await Assert.That(options.Error).IsEqualTo("Unknown partition strategy: 'invalid'. Valid options: file, spec-count");
     }
 
     [Test]
@@ -975,7 +976,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "--partition", "2", "--partition-index", "0", "--partition-strategy", "file"]);
 
-        await Assert.That(options.PartitionStrategy).IsEqualTo("file");
+        await Assert.That(options.PartitionStrategy).IsEqualTo(PartitionStrategy.File);
         await Assert.That(options.Error).IsNull();
     }
 
@@ -984,7 +985,7 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "--partition", "2", "--partition-index", "0", "--partition-strategy", "SPEC-COUNT"]);
 
-        await Assert.That(options.PartitionStrategy).IsEqualTo("spec-count");
+        await Assert.That(options.PartitionStrategy).IsEqualTo(PartitionStrategy.SpecCount);
         await Assert.That(options.Error).IsNull();
     }
 
@@ -1005,7 +1006,7 @@ public class CliOptionsParserTests
 
         await Assert.That(options.Partition).IsNull();
         await Assert.That(options.PartitionIndex).IsNull();
-        await Assert.That(options.PartitionStrategy).IsEqualTo("file");
+        await Assert.That(options.PartitionStrategy).IsEqualTo(PartitionStrategy.File);
     }
 
     #endregion

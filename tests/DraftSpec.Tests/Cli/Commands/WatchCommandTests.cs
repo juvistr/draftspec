@@ -435,7 +435,8 @@ public class WatchCommandTests
             runnerFactory ?? new MockRunnerFactory(),
             watcherFactory ?? new MockFileWatcherFactory(),
             console ?? new MockConsole(),
-            configLoader ?? new MockConfigLoader());
+            configLoader ?? new MockConfigLoader(),
+            new TestMocks.NullSpecChangeTracker());
     }
 
     #endregion

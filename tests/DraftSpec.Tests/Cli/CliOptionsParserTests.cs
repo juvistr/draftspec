@@ -1009,4 +1009,43 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Incremental Options
+
+    [Test]
+    public async Task Parse_IncrementalLongFlag_SetsTrue()
+    {
+        var options = CliOptionsParser.Parse(["watch", ".", "--incremental"]);
+
+        await Assert.That(options.Incremental).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.Incremental));
+    }
+
+    [Test]
+    public async Task Parse_IncrementalShortFlag_SetsTrue()
+    {
+        var options = CliOptionsParser.Parse(["watch", ".", "-i"]);
+
+        await Assert.That(options.Incremental).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.Incremental));
+    }
+
+    [Test]
+    public async Task Parse_DefaultIncremental_IsFalse()
+    {
+        var options = CliOptionsParser.Parse(["watch", "."]);
+
+        await Assert.That(options.Incremental).IsFalse();
+    }
+
+    [Test]
+    public async Task Parse_IncrementalWithOtherOptions_Works()
+    {
+        var options = CliOptionsParser.Parse(["watch", ".", "--incremental", "--parallel"]);
+
+        await Assert.That(options.Incremental).IsTrue();
+        await Assert.That(options.Parallel).IsTrue();
+    }
+
+    #endregion
 }

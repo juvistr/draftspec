@@ -2,7 +2,9 @@ using DraftSpec.Cli;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Cli.Services;
+using DraftSpec.Cli.Watch;
 using DraftSpec.Formatters;
+using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -236,5 +238,23 @@ public static class TestMocks
     {
         public string? FindProject(string directory) => null;
         public ProjectInfo? GetProjectInfo(string csprojPath) => null;
+    }
+
+    /// <summary>
+    /// A no-op spec change tracker.
+    /// </summary>
+    public class NullSpecChangeTracker : ISpecChangeTracker
+    {
+        public void RecordState(string filePath, StaticParseResult parseResult) { }
+
+        public SpecChangeSet GetChanges(string filePath, StaticParseResult newResult, bool dependencyChanged)
+        {
+            return new SpecChangeSet(filePath, [], HasDynamicSpecs: false, DependencyChanged: false);
+        }
+
+        public bool HasState(string filePath) => false;
+        public void Clear() { }
+        public void RecordDependency(string dependencyPath, DateTime lastModified) { }
+        public bool HasDependencyChanged(string dependencyPath, DateTime currentModified) => false;
     }
 }

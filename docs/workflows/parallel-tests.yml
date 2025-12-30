@@ -1,0 +1,132 @@
+# DraftSpec Parallel Test Distribution
+#
+# Dynamically partitions specs across multiple runners for faster CI builds.
+# Uses a matrix strategy to run specs in parallel based on spec count.
+#
+# Usage: Copy to .github/workflows/parallel-tests.yml
+#
+# Features:
+# - Dynamic partition count based on spec volume
+# - Fail-fast disabled for full results
+# - Artifact upload for test results
+# - Badge-ready workflow name
+
+name: Parallel Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DRAFTSPEC_CLI: DraftSpec.Cli
+
+jobs:
+  # First job: Discover specs and calculate optimal partition count
+  discover:
+    name: Discover Specs
+    runs-on: ubuntu-latest
+    outputs:
+      partitions: ${{ steps.count.outputs.partitions }}
+      total_specs: ${{ steps.count.outputs.total_specs }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install DraftSpec CLI
+        run: dotnet tool install -g ${{ env.DRAFTSPEC_CLI }} --prerelease
+
+      - name: Count specs and determine partitions
+        id: count
+        run: |
+          # Get spec count from list command
+          SPEC_COUNT=$(draftspec list --format json | jq '.stats.totalSpecs // 0')
+          echo "total_specs=$SPEC_COUNT" >> $GITHUB_OUTPUT
+
+          # Calculate partitions: 1 per 50 specs, min 1, max 4
+          if [ "$SPEC_COUNT" -eq 0 ]; then
+            PARTITIONS=1
+          else
+            PARTITIONS=$(( (SPEC_COUNT + 49) / 50 ))
+            PARTITIONS=$(( PARTITIONS > 4 ? 4 : PARTITIONS ))
+            PARTITIONS=$(( PARTITIONS < 1 ? 1 : PARTITIONS ))
+          fi
+
+          echo "partitions=$PARTITIONS" >> $GITHUB_OUTPUT
+          echo "Discovered $SPEC_COUNT specs, using $PARTITIONS partition(s)"
+
+  # Second job: Run tests in parallel partitions
+  test:
+    name: Test (Partition ${{ matrix.partition }})
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        partition: [0, 1, 2, 3]
+      fail-fast: false  # Run all partitions even if one fails
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install DraftSpec CLI
+        run: dotnet tool install -g ${{ env.DRAFTSPEC_CLI }} --prerelease
+
+      - name: Run partition ${{ matrix.partition }}
+        if: matrix.partition < needs.discover.outputs.partitions
+        run: |
+          draftspec run . \
+            --partition ${{ needs.discover.outputs.partitions }} \
+            --partition-index ${{ matrix.partition }} \
+            --format json \
+            -o results-${{ matrix.partition }}.json
+
+      - name: Upload results
+        if: always() && matrix.partition < needs.discover.outputs.partitions
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-partition-${{ matrix.partition }}
+          path: results-${{ matrix.partition }}.json
+          if-no-files-found: ignore
+
+  # Third job: Aggregate results (optional)
+  aggregate:
+    name: Aggregate Results
+    needs: [discover, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: results-partition-*
+          merge-multiple: true
+
+      - name: Summarize results
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Total specs discovered: ${{ needs.discover.outputs.total_specs }}" >> $GITHUB_STEP_SUMMARY
+          echo "Partitions used: ${{ needs.discover.outputs.partitions }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Aggregate results from JSON files
+          if ls results-*.json 1> /dev/null 2>&1; then
+            PASSED=$(cat results-*.json | jq -s '[.[].summary.passed] | add // 0')
+            FAILED=$(cat results-*.json | jq -s '[.[].summary.failed] | add // 0')
+            echo "| Status | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
+            echo "| Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -95,7 +95,7 @@ static int ShowUsage(string? error = null)
     Console.WriteLine();
     Console.WriteLine("Usage:");
     Console.WriteLine("  draftspec run <path> [options]   Run specs once and exit");
-    Console.WriteLine("  draftspec watch <path>           Watch for changes and re-run");
+    Console.WriteLine("  draftspec watch <path> [options] Watch for changes and re-run");
     Console.WriteLine("  draftspec list <path> [options]  List specs without running them");
     Console.WriteLine("  draftspec init [path]            Initialize spec infrastructure");
     Console.WriteLine("  draftspec new <name> [path]      Create a new spec file");
@@ -122,6 +122,9 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("  --pending-only          Show only pending specs");
     Console.WriteLine("  --skipped-only          Show only skipped specs (xit)");
     Console.WriteLine();
+    Console.WriteLine("Watch Options:");
+    Console.WriteLine("  --incremental, -i       Only re-run changed specs (not entire files)");
+    Console.WriteLine();
     Console.WriteLine("Path can be:");
     Console.WriteLine("  - A directory (runs all *.spec.csx files recursively)");
     Console.WriteLine("  - A single .spec.csx file");
@@ -134,6 +137,7 @@ static int ShowUsage(string? error = null)
     Console.WriteLine("  draftspec run ./specs --format markdown -o report.md");
     Console.WriteLine("  draftspec run ./specs --coverage");
     Console.WriteLine("  draftspec watch .");
+    Console.WriteLine("  draftspec watch . --incremental");
     Console.WriteLine("  draftspec list . --list-format json -o specs.json");
     Console.WriteLine("  draftspec list . --focused-only");
 

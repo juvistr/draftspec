@@ -1,6 +1,7 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.Services;
+using DraftSpec.Cli.Watch;
 using DraftSpec.Formatters;
 using DraftSpec.Formatters.Html;
 using DraftSpec.Formatters.JUnit;
@@ -43,6 +44,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPluginLoader, PluginLoader>();
         services.AddSingleton<ISpecStatsCollector, SpecStatsCollector>();
         services.AddSingleton<ISpecPartitioner, SpecPartitioner>();
+        services.AddSingleton<ISpecChangeTracker, SpecChangeTracker>();
 
         // Commands
         services.AddTransient<RunCommand>();

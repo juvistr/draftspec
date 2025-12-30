@@ -200,6 +200,14 @@ public class CliOptions
     /// </summary>
     public string PartitionStrategy { get; set; } = "file";
 
+    // Watch command options
+
+    /// <summary>
+    /// Enable incremental watch mode (only re-run changed specs).
+    /// When disabled, entire files are re-run on any change.
+    /// </summary>
+    public bool Incremental { get; set; }
+
     /// <summary>
     /// Apply default values from a project configuration file.
     /// Only applies values that weren't explicitly set via CLI.

@@ -302,6 +302,12 @@ public static class CliOptionsParser
                 options.PartitionStrategy = strategy;
                 options.ExplicitlySet.Add(nameof(CliOptions.PartitionStrategy));
             }
+            // Watch command options
+            else if (arg is "--incremental" or "-i")
+            {
+                options.Incremental = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.Incremental));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

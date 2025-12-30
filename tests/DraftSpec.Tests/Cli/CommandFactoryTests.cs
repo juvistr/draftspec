@@ -270,7 +270,8 @@ public class CommandFactoryTests
             new TestMocks.NullRunnerFactory(),
             new TestMocks.NullFileWatcherFactory(),
             new TestMocks.NullConsole(),
-            new TestMocks.NullConfigLoader())
+            new TestMocks.NullConfigLoader(),
+            new TestMocks.NullSpecChangeTracker())
         {
         }
     }

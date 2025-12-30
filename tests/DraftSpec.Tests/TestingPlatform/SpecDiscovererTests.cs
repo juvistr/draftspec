@@ -470,14 +470,15 @@ public class SpecDiscovererTests
 
         var mockHost = new MockScriptHost()
             .WithNoSpecs(csxPath);
+        var mockStateManager = new MockSpecStateManager();
 
-        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost, stateManager: mockStateManager);
 
         // Act
         await discoverer.DiscoverFileAsync(csxPath);
 
-        // Assert - Reset called before and after execution
-        await Assert.That(mockHost.ResetCallCount).IsEqualTo(2);
+        // Assert - ResetState called before and after execution
+        await Assert.That(mockStateManager.ResetCallCount).IsEqualTo(2);
     }
 
     [Test]
@@ -534,14 +535,15 @@ public class SpecDiscovererTests
         var mockHost = new MockScriptHost()
             .WithNoSpecs(file1)
             .WithNoSpecs(file2);
+        var mockStateManager = new MockSpecStateManager();
 
-        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost, stateManager: mockStateManager);
 
         // Act
         await discoverer.DiscoverAsync();
 
-        // Assert - Reset called before and after each file (2 files * 2 calls = 4)
-        await Assert.That(mockHost.ResetCallCount).IsEqualTo(4);
+        // Assert - ResetState called before and after each file (2 files * 2 calls = 4)
+        await Assert.That(mockStateManager.ResetCallCount).IsEqualTo(4);
     }
 
     [Test]
@@ -582,14 +584,15 @@ public class SpecDiscovererTests
 
         var mockHost = new MockScriptHost()
             .ThrowsFor(csxPath, new InvalidOperationException("Error"));
+        var mockStateManager = new MockSpecStateManager();
 
-        var discoverer = new SpecDiscoverer(_tempDir, mockHost);
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost, stateManager: mockStateManager);
 
         // Act
         await discoverer.DiscoverAsync();
 
-        // Assert - Reset still called before and after (2 times)
-        await Assert.That(mockHost.ResetCallCount).IsEqualTo(2);
+        // Assert - ResetState still called before and after (2 times)
+        await Assert.That(mockStateManager.ResetCallCount).IsEqualTo(2);
     }
 
     [Test]
@@ -620,6 +623,66 @@ public class SpecDiscovererTests
         await Assert.That(result.Specs.Count).IsEqualTo(2);
         await Assert.That(result.Specs.Select(s => s.Description)).Contains("spec 1");
         await Assert.That(result.Specs.Select(s => s.Description)).Contains("spec 2");
+    }
+
+    #endregion
+
+    #region Unit tests with MockSpecStateManager
+
+    [Test]
+    public async Task DiscoverAsync_WithMockStateManager_ResetsStateBeforeEachFile()
+    {
+        // Arrange
+        var file1 = Path.Combine(_tempDir, "first.spec.csx");
+        var file2 = Path.Combine(_tempDir, "second.spec.csx");
+        await File.WriteAllTextAsync(file1, "// file 1");
+        await File.WriteAllTextAsync(file2, "// file 2");
+
+        var context1 = new SpecContext("First");
+        context1.AddSpec(new SpecDefinition("spec 1", () => { }));
+
+        var context2 = new SpecContext("Second");
+        context2.AddSpec(new SpecDefinition("spec 2", () => { }));
+
+        var mockHost = new MockScriptHost()
+            .WithResult(file1, context1)
+            .WithResult(file2, context2);
+        var mockStateManager = new MockSpecStateManager();
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost, stateManager: mockStateManager);
+
+        // Act
+        await discoverer.DiscoverAsync();
+
+        // Assert - ResetState called 4 times (before + after each of 2 files)
+        await Assert.That(mockStateManager.ResetCallCount).IsEqualTo(4);
+    }
+
+    [Test]
+    public async Task DiscoverFileAsync_WithMockStateManager_ResetsStateOnException()
+    {
+        // Arrange
+        var csxPath = Path.Combine(_tempDir, "error.spec.csx");
+        await File.WriteAllTextAsync(csxPath, "// will throw");
+
+        var mockHost = new MockScriptHost()
+            .ThrowsFor(csxPath, new InvalidOperationException("Script error"));
+        var mockStateManager = new MockSpecStateManager();
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost, stateManager: mockStateManager);
+
+        // Act & Assert - should throw but still reset state
+        try
+        {
+            await discoverer.DiscoverFileAsync(csxPath);
+        }
+        catch
+        {
+            // Expected
+        }
+
+        // ResetState should still be called (before + after in finally block)
+        await Assert.That(mockStateManager.ResetCallCount).IsEqualTo(2);
     }
 
     #endregion

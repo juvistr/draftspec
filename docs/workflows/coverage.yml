@@ -1,0 +1,134 @@
+# DraftSpec Coverage Reporting
+#
+# Runs specs with code coverage collection and uploads to coverage services.
+# Supports Codecov, Coveralls, and local HTML reports.
+#
+# Usage: Copy to .github/workflows/coverage.yml
+#
+# Prerequisites:
+# - dotnet-coverage tool (installed automatically)
+# - Codecov token (if using Codecov)
+#
+# Features:
+# - Cobertura format for service integration
+# - HTML report generation
+# - Coverage trend tracking
+# - PR comments with diff (Codecov)
+
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DRAFTSPEC_CLI: DraftSpec.Cli
+  COVERAGE_DIR: ./coverage
+
+jobs:
+  coverage:
+    name: Collect Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install tools
+        run: |
+          dotnet tool install -g ${{ env.DRAFTSPEC_CLI }} --prerelease
+          dotnet tool install -g dotnet-coverage
+
+      - name: Run specs with coverage
+        run: |
+          draftspec run . \
+            --coverage \
+            --coverage-format cobertura \
+            --coverage-output ${{ env.COVERAGE_DIR }} \
+            --coverage-report-formats html
+
+      - name: Generate coverage summary
+        if: always()
+        run: |
+          echo "## Code Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "${{ env.COVERAGE_DIR }}/coverage.cobertura.xml" ]; then
+            # Extract coverage percentage from Cobertura XML
+            LINE_RATE=$(grep -o 'line-rate="[^"]*"' "${{ env.COVERAGE_DIR }}/coverage.cobertura.xml" | head -1 | sed 's/line-rate="//;s/"//')
+            if [ -n "$LINE_RATE" ]; then
+              PERCENT=$(echo "$LINE_RATE * 100" | bc)
+              echo "Line coverage: **${PERCENT}%**" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "Coverage report not generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload coverage to Codecov
+        if: success() || failure()
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ${{ env.COVERAGE_DIR }}/coverage.cobertura.xml
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ${{ env.COVERAGE_DIR }}
+          if-no-files-found: ignore
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: ${{ env.COVERAGE_DIR }}/html
+          if-no-files-found: ignore
+
+  # Optional: Coverage gate - fail if below threshold
+  coverage-gate:
+    name: Coverage Gate
+    needs: coverage
+    runs-on: ubuntu-latest
+    # Only run on PRs - main branch tracks trends
+    if: github.event_name == 'pull_request'
+    env:
+      MIN_COVERAGE: 80  # Minimum coverage percentage
+    steps:
+      - name: Download coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Check coverage threshold
+        run: |
+          if [ -f "coverage/coverage.cobertura.xml" ]; then
+            LINE_RATE=$(grep -o 'line-rate="[^"]*"' coverage/coverage.cobertura.xml | head -1 | sed 's/line-rate="//;s/"//')
+            if [ -n "$LINE_RATE" ]; then
+              PERCENT=$(echo "$LINE_RATE * 100" | bc)
+              echo "Current coverage: ${PERCENT}%"
+              echo "Minimum required: ${{ env.MIN_COVERAGE }}%"
+
+              # Compare (bc returns 1 for true, 0 for false)
+              if [ $(echo "$PERCENT < ${{ env.MIN_COVERAGE }}" | bc) -eq 1 ]; then
+                echo "::error::Coverage ${PERCENT}% is below minimum ${{ env.MIN_COVERAGE }}%"
+                exit 1
+              fi
+
+              echo "Coverage check passed"
+            fi
+          else
+            echo "::warning::Coverage report not found, skipping gate"
+          fi

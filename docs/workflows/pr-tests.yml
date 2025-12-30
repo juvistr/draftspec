@@ -1,0 +1,162 @@
+# DraftSpec PR Tests - Incremental Testing
+#
+# Runs only specs in files that changed in the PR for faster feedback.
+# Falls back to full suite if too many files changed or if non-spec files
+# might affect tests.
+#
+# Usage: Copy to .github/workflows/pr-tests.yml
+#
+# Features:
+# - Validates changed specs first (fast fail)
+# - Runs only affected spec files
+# - Falls back to full suite when needed
+# - Clear status reporting
+
+name: PR Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DRAFTSPEC_CLI: DraftSpec.Cli
+  # Max changed spec files before falling back to full suite
+  MAX_CHANGED_FILES: 10
+
+jobs:
+  # Analyze what changed in the PR
+  analyze:
+    name: Analyze Changes
+    runs-on: ubuntu-latest
+    outputs:
+      changed_specs: ${{ steps.changes.outputs.specs }}
+      spec_count: ${{ steps.changes.outputs.count }}
+      run_full_suite: ${{ steps.changes.outputs.run_full }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for diff
+
+      - name: Get changed files
+        id: changes
+        run: |
+          # Get changed spec files
+          CHANGED_SPECS=$(git diff origin/${{ github.base_ref }}...HEAD --name-only --diff-filter=ACMR | grep '\.spec\.csx$' || true)
+          SPEC_COUNT=$(echo "$CHANGED_SPECS" | grep -c '.' || echo 0)
+
+          echo "Changed spec files: $SPEC_COUNT"
+          echo "$CHANGED_SPECS"
+
+          # Check if non-spec files changed that might affect tests
+          CHANGED_OTHER=$(git diff origin/${{ github.base_ref }}...HEAD --name-only --diff-filter=ACMR | grep -v '\.spec\.csx$' | grep -E '\.(cs|csx)$' || true)
+          OTHER_COUNT=$(echo "$CHANGED_OTHER" | grep -c '.' || echo 0)
+
+          # Decide whether to run full suite
+          RUN_FULL="false"
+          if [ "$SPEC_COUNT" -gt "${{ env.MAX_CHANGED_FILES }}" ]; then
+            echo "Too many spec files changed ($SPEC_COUNT), running full suite"
+            RUN_FULL="true"
+          elif [ "$OTHER_COUNT" -gt 0 ]; then
+            echo "Non-spec C# files changed, running full suite for safety"
+            RUN_FULL="true"
+          elif [ "$SPEC_COUNT" -eq 0 ]; then
+            echo "No spec files changed"
+          fi
+
+          # Convert to comma-separated for --files flag
+          SPECS_CSV=$(echo "$CHANGED_SPECS" | tr '\n' ',' | sed 's/,$//')
+
+          echo "specs=$SPECS_CSV" >> $GITHUB_OUTPUT
+          echo "count=$SPEC_COUNT" >> $GITHUB_OUTPUT
+          echo "run_full=$RUN_FULL" >> $GITHUB_OUTPUT
+
+  # Validate changed specs first (fast feedback)
+  validate:
+    name: Validate Changes
+    needs: analyze
+    if: needs.analyze.outputs.spec_count > 0
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install DraftSpec CLI
+        run: dotnet tool install -g ${{ env.DRAFTSPEC_CLI }} --prerelease
+
+      - name: Validate changed specs
+        if: needs.analyze.outputs.run_full_suite != 'true'
+        run: |
+          draftspec validate --static --strict --quiet \
+            --files "${{ needs.analyze.outputs.changed_specs }}"
+
+      - name: Validate all specs (full suite mode)
+        if: needs.analyze.outputs.run_full_suite == 'true'
+        run: draftspec validate --static --strict --quiet
+
+  # Run affected tests
+  test:
+    name: Run Tests
+    needs: [analyze, validate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install DraftSpec CLI
+        run: dotnet tool install -g ${{ env.DRAFTSPEC_CLI }} --prerelease
+
+      - name: Run changed specs only
+        if: needs.analyze.outputs.run_full_suite != 'true' && needs.analyze.outputs.spec_count > 0
+        run: |
+          echo "Running ${{ needs.analyze.outputs.spec_count }} changed spec file(s)"
+          # Run each changed spec file
+          IFS=',' read -ra FILES <<< "${{ needs.analyze.outputs.changed_specs }}"
+          for file in "${FILES[@]}"; do
+            if [ -n "$file" ]; then
+              echo "Running: $file"
+              draftspec run "$file" --format console
+            fi
+          done
+
+      - name: Run full suite
+        if: needs.analyze.outputs.run_full_suite == 'true'
+        run: |
+          echo "Running full test suite"
+          draftspec run . --format json -o results.json
+
+      - name: Skip - no specs changed
+        if: needs.analyze.outputs.spec_count == 0
+        run: echo "No spec files changed, skipping tests"
+
+      - name: Upload results
+        if: always() && needs.analyze.outputs.run_full_suite == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-test-results
+          path: results.json
+          if-no-files-found: ignore
+
+      - name: PR Summary
+        if: always()
+        run: |
+          echo "## PR Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.analyze.outputs.run_full_suite }}" == "true" ]; then
+            echo "Ran **full test suite** (non-spec changes detected)" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.analyze.outputs.spec_count }}" -gt 0 ]; then
+            echo "Ran **${{ needs.analyze.outputs.spec_count }}** changed spec file(s)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No spec files changed - tests skipped" >> $GITHUB_STEP_SUMMARY
+          fi

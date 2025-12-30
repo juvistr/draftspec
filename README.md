@@ -239,12 +239,45 @@ dotnet run --project src/DraftSpec.Mcp
 
 See [MCP documentation](docs/mcp.md) for detailed usage.
 
+## CI/CD Integration
+
+DraftSpec includes ready-to-use workflow templates for GitHub Actions, GitLab CI, and Azure Pipelines.
+
+**Quick start (GitHub Actions):**
+
+```yaml
+# .github/workflows/tests.yml
+name: Tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet tool install -g DraftSpec.Cli --prerelease
+      - run: draftspec validate --static --strict  # Fast structural check
+      - run: draftspec run .                        # Run all specs
+```
+
+**Add a badge to your README:**
+
+```markdown
+[![Tests](https://github.com/USER/REPO/actions/workflows/tests.yml/badge.svg)](https://github.com/USER/REPO/actions/workflows/tests.yml)
+```
+
+See [CI/CD Integration Guide](docs/ci-cd-integration.md) for workflow templates including parallel testing, incremental PR tests, and coverage reporting.
+
 ## Documentation
 
 - **[Getting Started](docs/getting-started.md)** - Installation and first spec
 - **[DSL Reference](docs/dsl-reference.md)** - Complete API for describe/it/hooks
 - **[Assertions](docs/assertions.md)** - Full expect() API reference
 - **[CLI Reference](docs/cli.md)** - Command-line options
+- **[CI/CD Integration](docs/ci-cd-integration.md)** - Workflow templates and best practices
 - **[MTP Integration](docs/mtp-integration.md)** - dotnet test and IDE integration
 - **[Configuration](docs/configuration.md)** - Settings and customization
 

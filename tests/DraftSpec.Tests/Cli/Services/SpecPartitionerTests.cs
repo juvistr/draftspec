@@ -1,3 +1,4 @@
+using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
 
 namespace DraftSpec.Tests.Cli.Services;
@@ -33,7 +34,7 @@ public class SpecPartitionerTests
         var partitioner = new SpecPartitioner();
         var files = Array.Empty<string>();
 
-        var result = await partitioner.PartitionAsync(files, 3, 0, "file", _tempDir);
+        var result = await partitioner.PartitionAsync(files, 3, 0, PartitionStrategy.File, _tempDir);
 
         await Assert.That(result.Files).IsEmpty();
         await Assert.That(result.TotalFiles).IsEqualTo(0);
@@ -62,9 +63,9 @@ public class SpecPartitionerTests
             await File.WriteAllTextAsync(file, "");
 
         // 6 files, 3 partitions: each should get 2 files
-        var partition0 = await partitioner.PartitionAsync(files, 3, 0, "file", _tempDir);
-        var partition1 = await partitioner.PartitionAsync(files, 3, 1, "file", _tempDir);
-        var partition2 = await partitioner.PartitionAsync(files, 3, 2, "file", _tempDir);
+        var partition0 = await partitioner.PartitionAsync(files, 3, 0, PartitionStrategy.File, _tempDir);
+        var partition1 = await partitioner.PartitionAsync(files, 3, 1, PartitionStrategy.File, _tempDir);
+        var partition2 = await partitioner.PartitionAsync(files, 3, 2, PartitionStrategy.File, _tempDir);
 
         await Assert.That(partition0.Files.Count).IsEqualTo(2);
         await Assert.That(partition1.Files.Count).IsEqualTo(2);
@@ -89,8 +90,8 @@ public class SpecPartitionerTests
             await File.WriteAllTextAsync(file, "");
 
         // Run multiple times - should always get same result
-        var result1 = await partitioner.PartitionAsync(files, 2, 0, "file", _tempDir);
-        var result2 = await partitioner.PartitionAsync(files, 2, 0, "file", _tempDir);
+        var result1 = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.File, _tempDir);
+        var result2 = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.File, _tempDir);
 
         await Assert.That(result1.Files).IsEquivalentTo(result2.Files);
     }
@@ -129,8 +130,8 @@ public class SpecPartitionerTests
         var files = new[] { file1, file2 };
 
         // With 2 partitions, each file goes to separate partition
-        var partition0 = await partitioner.PartitionAsync(files, 2, 0, "spec-count", _tempDir);
-        var partition1 = await partitioner.PartitionAsync(files, 2, 1, "spec-count", _tempDir);
+        var partition0 = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.SpecCount, _tempDir);
+        var partition1 = await partitioner.PartitionAsync(files, 2, 1, PartitionStrategy.SpecCount, _tempDir);
 
         // Total specs should be 4 (TotalSpecs is the sum across all files, same in both partitions)
         await Assert.That(partition0.TotalSpecs ?? 0).IsEqualTo(4);
@@ -189,8 +190,8 @@ public class SpecPartitionerTests
         // - Small1 (2) assigned to partition with lowest total (1)
         // - Small2 (2) assigned to partition with lowest total (1)
         // Result: Partition 0 has 10 specs, Partition 1 has 4 specs
-        var partition0 = await partitioner.PartitionAsync(files, 2, 0, "spec-count", _tempDir);
-        var partition1 = await partitioner.PartitionAsync(files, 2, 1, "spec-count", _tempDir);
+        var partition0 = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.SpecCount, _tempDir);
+        var partition1 = await partitioner.PartitionAsync(files, 2, 1, PartitionStrategy.SpecCount, _tempDir);
 
         // Large file should be alone in one partition
         await Assert.That(partition0.PartitionSpecs ?? 0).IsEqualTo(10);
@@ -218,8 +219,8 @@ public class SpecPartitionerTests
 
         var files = new[] { file8, file6, file4, file2 };
 
-        var partition0 = await partitioner.PartitionAsync(files, 2, 0, "spec-count", _tempDir);
-        var partition1 = await partitioner.PartitionAsync(files, 2, 1, "spec-count", _tempDir);
+        var partition0 = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.SpecCount, _tempDir);
+        var partition1 = await partitioner.PartitionAsync(files, 2, 1, PartitionStrategy.SpecCount, _tempDir);
 
         // Greedy assignment should give balanced result
         var maxSpecs = Math.Max(partition0.PartitionSpecs ?? 0, partition1.PartitionSpecs ?? 0);
@@ -242,7 +243,7 @@ public class SpecPartitionerTests
 
         var files = new[] { file1, file2, file3 };
 
-        var result = await partitioner.PartitionAsync(files, 3, 0, "spec-count", _tempDir);
+        var result = await partitioner.PartitionAsync(files, 3, 0, PartitionStrategy.SpecCount, _tempDir);
 
         await Assert.That(result.TotalFiles).IsEqualTo(3);
         await Assert.That(result.TotalSpecs ?? 0).IsEqualTo(15);
@@ -265,8 +266,8 @@ public class SpecPartitionerTests
 
         var files = new[] { emptyFile, normalFile };
 
-        var partition0 = await partitioner.PartitionAsync(files, 2, 0, "spec-count", _tempDir);
-        var partition1 = await partitioner.PartitionAsync(files, 2, 1, "spec-count", _tempDir);
+        var partition0 = await partitioner.PartitionAsync(files, 2, 0, PartitionStrategy.SpecCount, _tempDir);
+        var partition1 = await partitioner.PartitionAsync(files, 2, 1, PartitionStrategy.SpecCount, _tempDir);
 
         // Both files should be distributed
         await Assert.That(partition0.Files.Count + partition1.Files.Count).IsEqualTo(2);
@@ -285,9 +286,9 @@ public class SpecPartitionerTests
         var file = Path.Combine(_tempDir, "only.spec.csx");
         await WriteSpecFile(file, 5);
 
-        var partition0 = await partitioner.PartitionAsync([file], 3, 0, "spec-count", _tempDir);
-        var partition1 = await partitioner.PartitionAsync([file], 3, 1, "spec-count", _tempDir);
-        var partition2 = await partitioner.PartitionAsync([file], 3, 2, "spec-count", _tempDir);
+        var partition0 = await partitioner.PartitionAsync([file], 3, 0, PartitionStrategy.SpecCount, _tempDir);
+        var partition1 = await partitioner.PartitionAsync([file], 3, 1, PartitionStrategy.SpecCount, _tempDir);
+        var partition2 = await partitioner.PartitionAsync([file], 3, 2, PartitionStrategy.SpecCount, _tempDir);
 
         await Assert.That(partition0.Files.Count).IsEqualTo(1);
         await Assert.That(partition1.Files).IsEmpty();
@@ -309,7 +310,7 @@ public class SpecPartitionerTests
         var results = new List<PartitionResult>();
         for (var i = 0; i < 5; i++)
         {
-            results.Add(await partitioner.PartitionAsync(files, 5, i, "spec-count", _tempDir));
+            results.Add(await partitioner.PartitionAsync(files, 5, i, PartitionStrategy.SpecCount, _tempDir));
         }
 
         var totalFilesAcrossPartitions = results.Sum(r => r.Files.Count);

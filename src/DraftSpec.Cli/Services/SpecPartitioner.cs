@@ -1,3 +1,4 @@
+using DraftSpec.Cli.Options.Enums;
 using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Cli.Services;
@@ -15,7 +16,7 @@ public class SpecPartitioner : ISpecPartitioner
         IReadOnlyList<string> specFiles,
         int totalPartitions,
         int partitionIndex,
-        string strategy,
+        PartitionStrategy strategy,
         string projectPath,
         CancellationToken ct = default)
     {
@@ -27,9 +28,9 @@ public class SpecPartitioner : ISpecPartitioner
         // Sort files for deterministic partitioning
         var sortedFiles = specFiles.OrderBy(f => f, StringComparer.Ordinal).ToList();
 
-        return strategy.ToLowerInvariant() switch
+        return strategy switch
         {
-            "spec-count" => await PartitionBySpecCountAsync(sortedFiles, totalPartitions, partitionIndex, projectPath, ct),
+            PartitionStrategy.SpecCount => await PartitionBySpecCountAsync(sortedFiles, totalPartitions, partitionIndex, projectPath, ct),
             _ => PartitionByFile(sortedFiles, totalPartitions, partitionIndex)
         };
     }

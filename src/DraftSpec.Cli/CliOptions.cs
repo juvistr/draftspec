@@ -1,4 +1,5 @@
 using DraftSpec.Cli.Configuration;
+using DraftSpec.Cli.Options.Enums;
 
 namespace DraftSpec.Cli;
 
@@ -19,7 +20,7 @@ public class CliOptions
 
     public string Command { get; set; } = "";
     public string Path { get; set; } = ".";
-    public string Format { get; set; } = "console";
+    public OutputFormat Format { get; set; } = OutputFormat.Console;
     public string? OutputFile { get; set; }
     public string? CssUrl { get; set; }
     public bool ShowHelp { get; set; }
@@ -100,7 +101,7 @@ public class CliOptions
     /// Coverage output format: cobertura, xml, or coverage.
     /// Default: cobertura
     /// </summary>
-    public string CoverageFormat { get; set; } = "cobertura";
+    public CoverageFormat CoverageFormat { get; set; } = CoverageFormat.Cobertura;
 
     /// <summary>
     /// Additional coverage report formats to generate (comma-separated).
@@ -115,7 +116,7 @@ public class CliOptions
     /// Output format for the list command: tree, flat, or json.
     /// Default: tree
     /// </summary>
-    public string ListFormat { get; set; } = "tree";
+    public ListFormat ListFormat { get; set; } = ListFormat.Tree;
 
     /// <summary>
     /// Show line numbers in list output.
@@ -204,7 +205,7 @@ public class CliOptions
     /// - file: Round-robin by sorted file path (fast, deterministic)
     /// - spec-count: Balance by spec count per file (requires parsing)
     /// </summary>
-    public string PartitionStrategy { get; set; } = "file";
+    public PartitionStrategy PartitionStrategy { get; set; } = PartitionStrategy.File;
 
     // Watch command options
 
@@ -231,7 +232,10 @@ public class CliOptions
             NoCache = config.NoCache.Value;
 
         if (!ExplicitlySet.Contains(nameof(Format)) && !string.IsNullOrEmpty(config.Format))
-            Format = config.Format;
+        {
+            if (config.Format.TryParseOutputFormat(out var format))
+                Format = format;
+        }
 
         if (!ExplicitlySet.Contains(nameof(OutputFile)) && !string.IsNullOrEmpty(config.OutputDirectory))
             OutputFile = config.OutputDirectory;
@@ -253,7 +257,10 @@ public class CliOptions
             CoverageOutput = config.Coverage.Output;
 
         if (!ExplicitlySet.Contains(nameof(CoverageFormat)) && !string.IsNullOrEmpty(config.Coverage?.Format))
-            CoverageFormat = config.Coverage.Format;
+        {
+            if (config.Coverage.Format.TryParseCoverageFormat(out var coverageFormat))
+                CoverageFormat = coverageFormat;
+        }
 
         if (!ExplicitlySet.Contains(nameof(CoverageReportFormats)) && config.Coverage?.ReportFormats is { Count: > 0 })
             CoverageReportFormats = string.Join(",", config.Coverage.ReportFormats);

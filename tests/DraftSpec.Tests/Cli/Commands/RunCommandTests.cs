@@ -2,6 +2,7 @@ using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
+using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
 using DraftSpec.Formatters;
 using DraftSpec.Tests.TestHelpers;
@@ -105,7 +106,7 @@ public class RunCommandTests
             runnerFactory: runnerFactory,
             specFiles: ["test.spec.csx"]);
 
-        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var options = new CliOptions { Path = ".", Format = OutputFormat.Json };
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
@@ -113,15 +114,8 @@ public class RunCommandTests
         await Assert.That(console.Output).Contains("\"passed\":");
     }
 
-    [Test]
-    public async Task ExecuteAsync_UnknownFormat_ThrowsArgumentException()
-    {
-        var command = CreateCommand(specFiles: ["test.spec.csx"]);
-        var options = new CliOptions { Path = ".", Format = "unknown-format" };
-
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
-    }
+    // Note: Unknown format validation now happens at parse time in CliOptionsParser,
+    // not at execution time. Test removed since we can't create an invalid enum value.
 
     [Test]
     public async Task ExecuteAsync_ConsoleFormat_DisplaysDirectly()
@@ -134,7 +128,7 @@ public class RunCommandTests
             runnerFactory: runnerFactory,
             specFiles: ["test.spec.csx"]);
 
-        var options = new CliOptions { Path = ".", Format = OutputFormats.Console };
+        var options = new CliOptions { Path = ".", Format = OutputFormat.Console };
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
@@ -153,7 +147,7 @@ public class RunCommandTests
             specFiles: ["test.spec.csx"],
             fileSystem: fileSystem);
 
-        var options = new CliOptions { Path = ".", Format = OutputFormats.Json, OutputFile = "report.json" };
+        var options = new CliOptions { Path = ".", Format = OutputFormat.Json, OutputFile = "report.json" };
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
@@ -173,7 +167,7 @@ public class RunCommandTests
             runnerFactory: runnerFactory,
             specFiles: ["test.spec.csx"]);
 
-        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var options = new CliOptions { Path = ".", Format = OutputFormat.Json };
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
@@ -195,7 +189,7 @@ public class RunCommandTests
             runnerFactory: runnerFactory,
             specFiles: ["single.spec.csx"]);
 
-        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var options = new CliOptions { Path = ".", Format = OutputFormat.Json };
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
@@ -215,7 +209,7 @@ public class RunCommandTests
             runnerFactory: runnerFactory,
             specFiles: ["first.spec.csx", "second.spec.csx", "third.spec.csx"]);
 
-        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var options = new CliOptions { Path = ".", Format = OutputFormat.Json };
         var result = await command.ExecuteAsync(options);
 
         // With failed tests, return code is 1
@@ -237,7 +231,7 @@ public class RunCommandTests
             runnerFactory: runnerFactory,
             specFiles: ["empty.spec.csx"]);
 
-        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var options = new CliOptions { Path = ".", Format = OutputFormat.Json };
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
@@ -255,7 +249,7 @@ public class RunCommandTests
             runnerFactory: runnerFactory,
             specFiles: ["mixed.spec.csx"]);
 
-        var options = new CliOptions { Path = ".", Format = OutputFormats.Json };
+        var options = new CliOptions { Path = ".", Format = OutputFormat.Json };
         var result = await command.ExecuteAsync(options);
 
         // Failed run returns 1

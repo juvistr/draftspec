@@ -1,5 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Configuration;
+using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Tests.TestHelpers;
 
 namespace DraftSpec.Tests.Cli;
@@ -273,7 +274,7 @@ public class ConfigLoaderTests
         await Assert.That(options.Parallel).IsTrue();
         await Assert.That(options.Bail).IsTrue();
         await Assert.That(options.NoCache).IsTrue();
-        await Assert.That(options.Format).IsEqualTo("json");
+        await Assert.That(options.Format).IsEqualTo(OutputFormat.Json);
     }
 
     [Test]
@@ -326,12 +327,12 @@ public class ConfigLoaderTests
     [Test]
     public async Task ApplyDefaults_DoesNotApplyNullValues()
     {
-        var options = new CliOptions { Format = "console" };
+        var options = new CliOptions { Format = OutputFormat.Console };
         var config = new DraftSpecProjectConfig { Format = null };
 
         options.ApplyDefaults(config);
 
-        await Assert.That(options.Format).IsEqualTo("console");
+        await Assert.That(options.Format).IsEqualTo(OutputFormat.Console);
     }
 
     [Test]
@@ -373,7 +374,7 @@ public class ConfigLoaderTests
 
         options.ApplyDefaults(config);
 
-        await Assert.That(options.CoverageFormat).IsEqualTo("xml");
+        await Assert.That(options.CoverageFormat).IsEqualTo(CoverageFormat.Xml);
     }
 
     [Test]

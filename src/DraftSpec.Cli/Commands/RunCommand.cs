@@ -2,6 +2,7 @@ using System.Security;
 using System.Text.RegularExpressions;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
+using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
 using DraftSpec.Formatters;
 using DraftSpec.TestingPlatform;
@@ -150,19 +151,19 @@ public class RunCommand : ICommand
 
         // Format output
         string output;
-        if (options.Format == OutputFormats.Console)
+        if (options.Format == OutputFormat.Console)
         {
             // Console format - show directly
             ShowConsoleOutput(summary, options.Path, presenter);
             output = ""; // Already displayed
         }
-        else if (options.Format == OutputFormats.Json)
+        else if (options.Format == OutputFormat.Json)
         {
             output = combinedReport.ToJson();
         }
         else
         {
-            var formatter = _formatterRegistry.GetFormatter(options.Format, options)
+            var formatter = _formatterRegistry.GetFormatter(options.Format.ToCliString(), options)
                             ?? throw new ArgumentException($"Unknown format: {options.Format}");
             output = formatter.Format(combinedReport);
         }

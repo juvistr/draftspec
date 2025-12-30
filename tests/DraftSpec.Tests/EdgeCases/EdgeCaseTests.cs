@@ -88,6 +88,75 @@ public class EdgeCaseTests
         await Assert.That(secondHookRan).IsFalse();
     }
 
+    [Test]
+    public async Task Spec_throws_AfterEach_still_runs()
+    {
+        var afterEachRan = false;
+        var context = new SpecContext("context");
+        context.AfterEach = () =>
+        {
+            afterEachRan = true;
+            return Task.CompletedTask;
+        };
+        context.AddSpec(new SpecDefinition("throws", () => throw new InvalidOperationException("Spec failed")));
+
+        var runner = new SpecRunner();
+        var results = await runner.RunAsync(context);
+
+        await Assert.That(results[0].Status).IsEqualTo(SpecStatus.Failed);
+        await Assert.That(afterEachRan).IsTrue();
+    }
+
+    [Test]
+    public async Task BeforeEach_throws_AfterEach_does_not_run()
+    {
+        // When BeforeEach throws, AfterEach doesn't run (the spec hasn't started)
+        var afterEachRan = false;
+        var specRan = false;
+        var context = new SpecContext("context");
+        context.BeforeEach = () => throw new InvalidOperationException("BeforeEach failed");
+        context.AfterEach = () =>
+        {
+            afterEachRan = true;
+            return Task.CompletedTask;
+        };
+        context.AddSpec(new SpecDefinition("should not run", () => specRan = true));
+
+        var runner = new SpecRunner();
+        var ex = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+
+        await Assert.That(ex!.Message).IsEqualTo("BeforeEach failed");
+        await Assert.That(specRan).IsFalse();
+        // AfterEach does NOT run when BeforeEach throws (spec never started)
+        await Assert.That(afterEachRan).IsFalse();
+    }
+
+    [Test]
+    public async Task Nested_hooks_afterEach_runs_in_child_to_parent_order()
+    {
+        var hookOrder = new List<string>();
+
+        var parent = new SpecContext("parent");
+        parent.AfterEach = () =>
+        {
+            hookOrder.Add("after-parent");
+            return Task.CompletedTask;
+        };
+
+        var child = new SpecContext("child", parent);
+        child.AfterEach = () =>
+        {
+            hookOrder.Add("after-child");
+            return Task.CompletedTask;
+        };
+        child.AddSpec(new SpecDefinition("spec", () => hookOrder.Add("spec")));
+
+        var runner = new SpecRunner();
+        await runner.RunAsync(parent);
+
+        await Assert.That(hookOrder).IsEquivalentTo(["spec", "after-child", "after-parent"]);
+    }
+
     #endregion
 
     #region Deep Nesting

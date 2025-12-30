@@ -354,7 +354,7 @@ public static class CliOptionsParser
     /// Parses a path that may include line numbers (e.g., "file.spec.csx:15,23").
     /// Returns the file path and populates LineFilters if line numbers are present.
     /// </summary>
-    private static string ParsePathWithLineNumbers(string pathArg, CliOptions options)
+    internal static string ParsePathWithLineNumbers(string pathArg, CliOptions options)
     {
         // Check for file:line syntax
         // Must handle Windows paths (C:\...) by checking if colon is followed by digits

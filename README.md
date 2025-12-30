@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/juvistr/draftspec/actions/workflows/ci.yml/badge.svg)](https://github.com/juvistr/draftspec/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/juvistr/draftspec/graph/badge.svg)](https://codecov.io/gh/juvistr/draftspec)
+[![NuGet](https://img.shields.io/nuget/v/DraftSpec.svg)](https://www.nuget.org/packages/DraftSpec)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Alpha** - API stabilizing, expect some breaking changes
 

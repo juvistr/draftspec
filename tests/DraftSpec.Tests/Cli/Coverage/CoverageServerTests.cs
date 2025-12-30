@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using DraftSpec.Cli;
 using DraftSpec.Cli.Coverage;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Coverage;
 
@@ -291,7 +292,7 @@ public class CoverageServerTests
         processRunner.AddRunResult(new ProcessResult("", "", 0));
 
         var fileSystem = new MockFileSystem();
-        fileSystem.SetFileExists("/tmp/coverage/coverage.cobertura.xml", true);
+        fileSystem.AddFile("/tmp/coverage/coverage.cobertura.xml");
 
         var server = new DotnetCoverageServer(processRunner, fileSystem, "/tmp/coverage");
         server.Start();
@@ -324,7 +325,7 @@ public class CoverageServerTests
         processRunner.AddRunResult(new ProcessResult("", "", 0));
 
         var fileSystem = new MockFileSystem();
-        fileSystem.SetFileExists("/tmp/coverage/coverage.cobertura.xml", true);
+        fileSystem.AddFile("/tmp/coverage/coverage.cobertura.xml");
 
         var server = new DotnetCoverageServer(processRunner, fileSystem, "/tmp/coverage");
         server.Start();
@@ -341,7 +342,7 @@ public class CoverageServerTests
         processRunner.AddRunResult(new ProcessResult("", "", 0));
 
         var fileSystem = new MockFileSystem();
-        fileSystem.SetFileExists("/tmp/coverage/coverage.cobertura.xml", false);
+        // File doesn't exist by default in MockFileSystem
 
         var server = new DotnetCoverageServer(processRunner, fileSystem, "/tmp/coverage");
         server.Start();
@@ -359,7 +360,7 @@ public class CoverageServerTests
         processRunner.AddRunResult(new ProcessResult("", "", 0));
 
         var fileSystem = new MockFileSystem();
-        fileSystem.SetFileExists("/tmp/coverage/coverage.cobertura.xml", true);
+        fileSystem.AddFile("/tmp/coverage/coverage.cobertura.xml");
 
         var server = new DotnetCoverageServer(processRunner, fileSystem, "/tmp/coverage");
         server.Start();
@@ -532,58 +533,6 @@ file class MockProcessHandle : IProcessHandle
     {
         DisposeCalled = true;
     }
-}
-
-/// <summary>
-/// Mock file system for testing DotnetCoverageServer.
-/// </summary>
-file class MockFileSystem : IFileSystem
-{
-    private readonly HashSet<string> _existingDirectories = new();
-    private readonly Dictionary<string, bool> _fileExistsResults = new();
-
-    public int CreateDirectoryCalls { get; private set; }
-
-    public void AddDirectory(string directory)
-    {
-        _existingDirectories.Add(directory);
-    }
-
-    public void SetFileExists(string path, bool exists)
-    {
-        _fileExistsResults[path] = exists;
-    }
-
-    public bool FileExists(string path)
-    {
-        return _fileExistsResults.TryGetValue(path, out var exists) && exists;
-    }
-
-    public void WriteAllText(string path, string content) { }
-
-    public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default)
-        => Task.CompletedTask;
-
-    public string ReadAllText(string path) => "";
-
-    public bool DirectoryExists(string path) => _existingDirectories.Contains(path);
-
-    public void CreateDirectory(string path)
-    {
-        CreateDirectoryCalls++;
-        _existingDirectories.Add(path);
-    }
-
-    public string[] GetFiles(string path, string searchPattern) => [];
-
-    public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => [];
-
-    public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption)
-        => [];
-
-    public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
-
-    public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
 }
 
 #endregion

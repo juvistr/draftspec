@@ -1,6 +1,6 @@
 using System.Security;
 using DraftSpec.Cli;
-using DraftSpec.Tests.TestHelpers;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Security;
 

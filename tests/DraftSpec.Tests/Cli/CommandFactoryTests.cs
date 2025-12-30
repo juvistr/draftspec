@@ -1,5 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Tests.Infrastructure;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -250,15 +251,15 @@ public class CommandFactoryTests
     private class MockRunCommand : RunCommand
     {
         public MockRunCommand() : base(
-            new TestMocks.NullSpecFinder(),
-            new TestMocks.NullRunnerFactory(),
-            new TestMocks.NullConsole(),
-            new TestMocks.NullFormatterRegistry(),
-            new TestMocks.NullConfigLoader(),
-            new TestMocks.NullFileSystem(),
-            new TestMocks.NullEnvironment(),
-            new TestMocks.NullStatsCollector(),
-            new TestMocks.NullPartitioner())
+            NullObjects.SpecFinder,
+            NullObjects.RunnerFactory,
+            NullObjects.Console,
+            NullObjects.FormatterRegistry,
+            NullObjects.ConfigLoader,
+            NullObjects.FileSystem,
+            NullObjects.Environment,
+            NullObjects.StatsCollector,
+            NullObjects.Partitioner)
         {
         }
     }
@@ -266,12 +267,12 @@ public class CommandFactoryTests
     private class MockWatchCommand : WatchCommand
     {
         public MockWatchCommand() : base(
-            new TestMocks.NullSpecFinder(),
-            new TestMocks.NullRunnerFactory(),
-            new TestMocks.NullFileWatcherFactory(),
-            new TestMocks.NullConsole(),
-            new TestMocks.NullConfigLoader(),
-            new TestMocks.NullSpecChangeTracker())
+            NullObjects.SpecFinder,
+            NullObjects.RunnerFactory,
+            NullObjects.FileWatcherFactory,
+            NullObjects.Console,
+            NullObjects.ConfigLoader,
+            NullObjects.SpecChangeTracker)
         {
         }
     }
@@ -279,9 +280,9 @@ public class CommandFactoryTests
     private class MockListCommand : ListCommand
     {
         public MockListCommand() : base(
-            new TestMocks.NullConsole(),
-            new TestMocks.NullFileSystem(),
-            new TestMocks.NullPartitioner())
+            NullObjects.Console,
+            NullObjects.FileSystem,
+            NullObjects.Partitioner)
         {
         }
     }
@@ -289,9 +290,9 @@ public class CommandFactoryTests
     private class MockInitCommand : InitCommand
     {
         public MockInitCommand() : base(
-            new TestMocks.NullConsole(),
-            new TestMocks.NullFileSystem(),
-            new TestMocks.NullProjectResolver())
+            NullObjects.Console,
+            NullObjects.FileSystem,
+            NullObjects.ProjectResolver)
         {
         }
     }
@@ -299,8 +300,8 @@ public class CommandFactoryTests
     private class MockNewCommand : NewCommand
     {
         public MockNewCommand() : base(
-            new TestMocks.NullConsole(),
-            new TestMocks.NullFileSystem())
+            NullObjects.Console,
+            NullObjects.FileSystem)
         {
         }
     }

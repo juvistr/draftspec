@@ -1,7 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.Options.Enums;
-using DraftSpec.Tests.TestHelpers;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli;
 

@@ -1,4 +1,4 @@
-namespace DraftSpec.Tests.TestHelpers;
+namespace DraftSpec.Tests.Infrastructure.Mocks;
 
 using DraftSpec.Cli;
 

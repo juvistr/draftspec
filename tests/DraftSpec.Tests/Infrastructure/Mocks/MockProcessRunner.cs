@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using DraftSpec.Cli;
 
-namespace DraftSpec.Tests.TestHelpers;
+namespace DraftSpec.Tests.Infrastructure.Mocks;
 
 /// <summary>
 /// Mock process runner for unit testing process execution without actually spawning processes.

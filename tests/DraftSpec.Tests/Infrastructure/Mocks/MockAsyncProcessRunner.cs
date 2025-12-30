@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using DraftSpec.Mcp.Services;
 
-namespace DraftSpec.Tests.TestHelpers;
+namespace DraftSpec.Tests.Infrastructure.Mocks;
 
 /// <summary>
 /// Mock implementation of IAsyncProcessRunner for testing.

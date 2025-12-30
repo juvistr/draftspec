@@ -1,6 +1,6 @@
 using DraftSpec.TestingPlatform;
 
-namespace DraftSpec.Tests.TestHelpers;
+namespace DraftSpec.Tests.Infrastructure.Mocks;
 
 /// <summary>
 /// Mock implementation of ISpecDiscoverer for testing.

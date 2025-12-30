@@ -1,7 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Tests.Infrastructure.Mocks;
-using MockProjectResolver = DraftSpec.Tests.TestHelpers.MockProjectResolver;
 
 namespace DraftSpec.Tests.Cli.Commands;
 

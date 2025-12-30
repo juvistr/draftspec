@@ -249,6 +249,59 @@ public static class CliOptionsParser
                 options.StatsOnly = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.StatsOnly));
             }
+            // Partitioning options for CI parallelism
+            else if (arg == "--partition")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--partition requires a value (total number of partitions)";
+                    return options;
+                }
+
+                if (!int.TryParse(args[++i], out var partition) || partition < 1)
+                {
+                    options.Error = "--partition must be a positive integer";
+                    return options;
+                }
+
+                options.Partition = partition;
+                options.ExplicitlySet.Add(nameof(CliOptions.Partition));
+            }
+            else if (arg == "--partition-index")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--partition-index requires a value (0-based index)";
+                    return options;
+                }
+
+                if (!int.TryParse(args[++i], out var index) || index < 0)
+                {
+                    options.Error = "--partition-index must be a non-negative integer";
+                    return options;
+                }
+
+                options.PartitionIndex = index;
+                options.ExplicitlySet.Add(nameof(CliOptions.PartitionIndex));
+            }
+            else if (arg == "--partition-strategy")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--partition-strategy requires a value (file, spec-count)";
+                    return options;
+                }
+
+                var strategy = args[++i].ToLowerInvariant();
+                if (strategy is not ("file" or "spec-count"))
+                {
+                    options.Error = "--partition-strategy must be 'file' or 'spec-count'";
+                    return options;
+                }
+
+                options.PartitionStrategy = strategy;
+                options.ExplicitlySet.Add(nameof(CliOptions.PartitionStrategy));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);
@@ -273,6 +326,20 @@ public static class CliOptionsParser
 
         if (positional.Count > 2 && options.Command == "new")
             options.Path = positional[2];
+
+        // Cross-validate partition options: both must be specified together
+        if (options.Partition.HasValue != options.PartitionIndex.HasValue)
+        {
+            options.Error = "--partition and --partition-index must be used together";
+            return options;
+        }
+
+        // Validate partition-index is within valid range
+        if (options.Partition.HasValue && options.PartitionIndex >= options.Partition)
+        {
+            options.Error = $"--partition-index ({options.PartitionIndex}) must be less than --partition ({options.Partition})";
+            return options;
+        }
 
         return options;
     }

@@ -180,6 +180,26 @@ public class CliOptions
     /// </summary>
     public bool StatsOnly { get; set; }
 
+    // Partitioning options for CI parallelism
+
+    /// <summary>
+    /// Total number of partitions to divide specs into.
+    /// Used with --partition-index for CI parallel execution.
+    /// </summary>
+    public int? Partition { get; set; }
+
+    /// <summary>
+    /// Zero-based index of this partition (0 to Partition-1).
+    /// </summary>
+    public int? PartitionIndex { get; set; }
+
+    /// <summary>
+    /// Strategy for partitioning: "file" (default) or "spec-count".
+    /// - file: Round-robin by sorted file path (fast, deterministic)
+    /// - spec-count: Balance by spec count per file (requires parsing)
+    /// </summary>
+    public string PartitionStrategy { get; set; } = "file";
+
     /// <summary>
     /// Apply default values from a project configuration file.
     /// Only applies values that weren't explicitly set via CLI.

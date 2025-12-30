@@ -42,6 +42,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAssemblyLoader, IsolatedAssemblyLoader>();
         services.AddSingleton<IPluginLoader, PluginLoader>();
         services.AddSingleton<ISpecStatsCollector, SpecStatsCollector>();
+        services.AddSingleton<ISpecPartitioner, SpecPartitioner>();
 
         // Commands
         services.AddTransient<RunCommand>();

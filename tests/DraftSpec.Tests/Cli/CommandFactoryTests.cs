@@ -1,9 +1,5 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
-using DraftSpec.Cli.Configuration;
-using DraftSpec.Cli.DependencyInjection;
-using DraftSpec.Cli.Services;
-using DraftSpec.Formatters;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -254,14 +250,15 @@ public class CommandFactoryTests
     private class MockRunCommand : RunCommand
     {
         public MockRunCommand() : base(
-            new NullSpecFinder(),
-            new NullRunnerFactory(),
-            new NullConsole(),
-            new NullFormatterRegistry(),
-            new NullConfigLoader(),
-            new NullFileSystem(),
-            new NullEnvironment(),
-            new NullStatsCollector())
+            new TestMocks.NullSpecFinder(),
+            new TestMocks.NullRunnerFactory(),
+            new TestMocks.NullConsole(),
+            new TestMocks.NullFormatterRegistry(),
+            new TestMocks.NullConfigLoader(),
+            new TestMocks.NullFileSystem(),
+            new TestMocks.NullEnvironment(),
+            new TestMocks.NullStatsCollector(),
+            new TestMocks.NullPartitioner())
         {
         }
     }
@@ -269,11 +266,11 @@ public class CommandFactoryTests
     private class MockWatchCommand : WatchCommand
     {
         public MockWatchCommand() : base(
-            new NullSpecFinder(),
-            new NullRunnerFactory(),
-            new NullFileWatcherFactory(),
-            new NullConsole(),
-            new NullConfigLoader())
+            new TestMocks.NullSpecFinder(),
+            new TestMocks.NullRunnerFactory(),
+            new TestMocks.NullFileWatcherFactory(),
+            new TestMocks.NullConsole(),
+            new TestMocks.NullConfigLoader())
         {
         }
     }
@@ -281,8 +278,9 @@ public class CommandFactoryTests
     private class MockListCommand : ListCommand
     {
         public MockListCommand() : base(
-            new NullConsole(),
-            new NullFileSystem())
+            new TestMocks.NullConsole(),
+            new TestMocks.NullFileSystem(),
+            new TestMocks.NullPartitioner())
         {
         }
     }
@@ -290,9 +288,9 @@ public class CommandFactoryTests
     private class MockInitCommand : InitCommand
     {
         public MockInitCommand() : base(
-            new NullConsole(),
-            new NullFileSystem(),
-            new NullProjectResolver())
+            new TestMocks.NullConsole(),
+            new TestMocks.NullFileSystem(),
+            new TestMocks.NullProjectResolver())
         {
         }
     }
@@ -300,128 +298,10 @@ public class CommandFactoryTests
     private class MockNewCommand : NewCommand
     {
         public MockNewCommand() : base(
-            new NullConsole(),
-            new NullFileSystem())
+            new TestMocks.NullConsole(),
+            new TestMocks.NullFileSystem())
         {
         }
-    }
-
-    #endregion
-
-    #region Null Implementations for Constructor Injection
-
-    private class NullSpecFinder : ISpecFinder
-    {
-        public IReadOnlyList<string> FindSpecs(string path, string? baseDirectory = null) => [];
-    }
-
-    private class NullRunnerFactory : IInProcessSpecRunnerFactory
-    {
-        public IInProcessSpecRunner Create(
-            string? filterTags = null,
-            string? excludeTags = null,
-            string? filterName = null,
-            string? excludeName = null,
-            IReadOnlyList<string>? filterContext = null,
-            IReadOnlyList<string>? excludeContext = null) => new NullRunner();
-    }
-
-    private class NullRunner : IInProcessSpecRunner
-    {
-#pragma warning disable CS0067
-        public event Action<string>? OnBuildStarted;
-        public event Action<BuildResult>? OnBuildCompleted;
-        public event Action<string>? OnBuildSkipped;
-#pragma warning restore CS0067
-
-        public Task<InProcessRunResult> RunFileAsync(string specFile, CancellationToken ct = default)
-            => Task.FromResult(new InProcessRunResult(
-                specFile,
-                new SpecReport(),
-                TimeSpan.Zero,
-                null));
-
-        public Task<InProcessRunSummary> RunAllAsync(
-            IReadOnlyList<string> specFiles,
-            bool parallel = false,
-            CancellationToken ct = default)
-            => Task.FromResult(new InProcessRunSummary([], TimeSpan.Zero));
-
-        public void ClearBuildCache() { }
-    }
-
-    private class NullConsole : IConsole
-    {
-        public void Write(string text) { }
-        public void WriteLine(string text) { }
-        public void WriteLine() { }
-        public ConsoleColor ForegroundColor { get; set; }
-        public void ResetColor() { }
-        public void Clear() { }
-        public void WriteWarning(string text) { }
-        public void WriteSuccess(string text) { }
-        public void WriteError(string text) { }
-    }
-
-    private class NullFormatterRegistry : ICliFormatterRegistry
-    {
-        public IFormatter? GetFormatter(string name, CliOptions? options = null) => null;
-        public void Register(string name, Func<CliOptions?, IFormatter> factory) { }
-        public IEnumerable<string> Names => [];
-    }
-
-    private class NullConfigLoader : IConfigLoader
-    {
-        public ConfigLoadResult Load(string? path = null)
-            => new(null, null, null);
-    }
-
-    private class NullFileSystem : IFileSystem
-    {
-        public bool FileExists(string path) => false;
-        public void WriteAllText(string path, string content) { }
-        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) => Task.CompletedTask;
-        public string ReadAllText(string path) => "";
-        public bool DirectoryExists(string path) => true;
-        public void CreateDirectory(string path) { }
-        public string[] GetFiles(string path, string searchPattern) => [];
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
-        public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
-    }
-
-    private class NullEnvironment : IEnvironment
-    {
-        public string CurrentDirectory => Directory.GetCurrentDirectory();
-        public string NewLine => System.Environment.NewLine;
-    }
-
-    private class NullStatsCollector : ISpecStatsCollector
-    {
-        public Task<SpecStats> CollectAsync(
-            IReadOnlyList<string> specFiles,
-            string projectPath,
-            CancellationToken ct = default)
-        {
-            return Task.FromResult(new SpecStats(0, 0, 0, 0, 0, false, 0));
-        }
-    }
-
-    private class NullFileWatcherFactory : IFileWatcherFactory
-    {
-        public IFileWatcher Create(string path, Action<FileChangeInfo> onChange, int debounceMs = 200) => new NullFileWatcher();
-    }
-
-    private class NullFileWatcher : IFileWatcher
-    {
-        public void Dispose() { }
-    }
-
-    private class NullProjectResolver : IProjectResolver
-    {
-        public string? FindProject(string directory) => null;
-        public ProjectInfo? GetProjectInfo(string csprojPath) => null;
     }
 
     #endregion

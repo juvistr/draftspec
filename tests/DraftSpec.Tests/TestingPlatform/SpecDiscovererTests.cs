@@ -1,6 +1,6 @@
 using DraftSpec.Scripting;
 using DraftSpec.TestingPlatform;
-using DraftSpec.Tests.TestHelpers;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.TestingPlatform;
 

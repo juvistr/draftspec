@@ -2,7 +2,6 @@ using System.Diagnostics;
 using DraftSpec.Cli;
 using DraftSpec.Cli.Coverage;
 using DraftSpec.Tests.Infrastructure.Mocks;
-using DraftSpec.Tests.TestHelpers;
 
 namespace DraftSpec.Tests.Cli.Coverage;
 

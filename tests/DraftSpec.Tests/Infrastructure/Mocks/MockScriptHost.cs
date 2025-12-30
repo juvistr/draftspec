@@ -1,6 +1,6 @@
 using DraftSpec.Scripting;
 
-namespace DraftSpec.Tests.TestHelpers;
+namespace DraftSpec.Tests.Infrastructure.Mocks;
 
 /// <summary>
 /// Mock implementation of IScriptHost for testing.

@@ -2,7 +2,7 @@ using System.Reflection;
 using DraftSpec.Cli;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Formatters;
-using DraftSpec.Tests.TestHelpers;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.DependencyInjection;
 

@@ -1,6 +1,6 @@
 using DraftSpec.Mcp.Models;
 using DraftSpec.Mcp.Services;
-using DraftSpec.Tests.TestHelpers;
+using DraftSpec.Tests.Infrastructure.Mocks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 

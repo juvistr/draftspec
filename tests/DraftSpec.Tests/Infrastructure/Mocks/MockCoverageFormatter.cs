@@ -1,6 +1,6 @@
 using DraftSpec.Cli.Coverage;
 
-namespace DraftSpec.Tests.TestHelpers;
+namespace DraftSpec.Tests.Infrastructure.Mocks;
 
 /// <summary>
 /// Mock coverage formatter factory for unit testing.

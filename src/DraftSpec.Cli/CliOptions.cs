@@ -216,47 +216,24 @@ public class CliOptions
     /// <param name="config">The project configuration to apply.</param>
     public void ApplyDefaults(DraftSpecProjectConfig config)
     {
-        if (!ExplicitlySet.Contains(nameof(Parallel)) && config.Parallel.HasValue)
-            Parallel = config.Parallel.Value;
+        ExplicitlySet.ApplyIfNotSet(nameof(Parallel), v => Parallel = v, config.Parallel);
+        ExplicitlySet.ApplyIfNotSet(nameof(Bail), v => Bail = v, config.Bail);
+        ExplicitlySet.ApplyIfNotSet(nameof(NoCache), v => NoCache = v, config.NoCache);
 
-        if (!ExplicitlySet.Contains(nameof(Bail)) && config.Bail.HasValue)
-            Bail = config.Bail.Value;
+        ExplicitlySet.ApplyIfValid<OutputFormat>(nameof(Format), v => Format = v, config.Format,
+            (string s, out OutputFormat r) => s.TryParseOutputFormat(out r));
 
-        if (!ExplicitlySet.Contains(nameof(NoCache)) && config.NoCache.HasValue)
-            NoCache = config.NoCache.Value;
-
-        if (!ExplicitlySet.Contains(nameof(Format)) && !string.IsNullOrEmpty(config.Format))
-        {
-            if (config.Format.TryParseOutputFormat(out var format))
-                Format = format;
-        }
-
-        if (!ExplicitlySet.Contains(nameof(OutputFile)) && !string.IsNullOrEmpty(config.OutputDirectory))
-            OutputFile = config.OutputDirectory;
-
-        if (!ExplicitlySet.Contains(nameof(FilterTags)) && config.Tags?.Include is { Count: > 0 })
-            FilterTags = string.Join(",", config.Tags.Include);
-
-        if (!ExplicitlySet.Contains(nameof(ExcludeTags)) && config.Tags?.Exclude is { Count: > 0 })
-            ExcludeTags = string.Join(",", config.Tags.Exclude);
-
-        if (!ExplicitlySet.Contains(nameof(Reporters)) && config.Reporters is { Count: > 0 })
-            Reporters = string.Join(",", config.Reporters);
+        ExplicitlySet.ApplyIfNotEmpty(nameof(OutputFile), v => OutputFile = v, config.OutputDirectory);
+        ExplicitlySet.ApplyIfNotEmpty(nameof(FilterTags), v => FilterTags = v, config.Tags?.Include);
+        ExplicitlySet.ApplyIfNotEmpty(nameof(ExcludeTags), v => ExcludeTags = v, config.Tags?.Exclude);
+        ExplicitlySet.ApplyIfNotEmpty(nameof(Reporters), v => Reporters = v, config.Reporters);
 
         // Coverage configuration
-        if (!ExplicitlySet.Contains(nameof(Coverage)) && config.Coverage?.Enabled == true)
-            Coverage = true;
-
-        if (!ExplicitlySet.Contains(nameof(CoverageOutput)) && !string.IsNullOrEmpty(config.Coverage?.Output))
-            CoverageOutput = config.Coverage.Output;
-
-        if (!ExplicitlySet.Contains(nameof(CoverageFormat)) && !string.IsNullOrEmpty(config.Coverage?.Format))
-        {
-            if (config.Coverage.Format.TryParseCoverageFormat(out var coverageFormat))
-                CoverageFormat = coverageFormat;
-        }
-
-        if (!ExplicitlySet.Contains(nameof(CoverageReportFormats)) && config.Coverage?.ReportFormats is { Count: > 0 })
-            CoverageReportFormats = string.Join(",", config.Coverage.ReportFormats);
+        ExplicitlySet.ApplyIfTrue(nameof(Coverage), v => Coverage = v, config.Coverage?.Enabled);
+        ExplicitlySet.ApplyIfNotEmpty(nameof(CoverageOutput), v => CoverageOutput = v, config.Coverage?.Output);
+        ExplicitlySet.ApplyIfValid<CoverageFormat>(nameof(CoverageFormat), v => CoverageFormat = v,
+            config.Coverage?.Format, (string s, out CoverageFormat r) => s.TryParseCoverageFormat(out r));
+        ExplicitlySet.ApplyIfNotEmpty(nameof(CoverageReportFormats), v => CoverageReportFormats = v,
+            config.Coverage?.ReportFormats);
     }
 }

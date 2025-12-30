@@ -214,6 +214,11 @@ public static class CliOptionsParser
                 options.ExplicitlySet.Add(nameof(CliOptions.SkippedOnly));
             }
             // Validate command options
+            else if (arg == "--static")
+            {
+                options.Static = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.Static));
+            }
             else if (arg == "--strict")
             {
                 options.Strict = true;

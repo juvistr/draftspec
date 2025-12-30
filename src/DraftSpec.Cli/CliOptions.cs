@@ -141,6 +141,12 @@ public class CliOptions
     // Validate command options
 
     /// <summary>
+    /// Use static parsing only (no script execution).
+    /// This is the default for validate command; flag is for documentation.
+    /// </summary>
+    public bool Static { get; set; }
+
+    /// <summary>
     /// Treat warnings as errors (exit code 2 instead of 0).
     /// Used with validate command.
     /// </summary>

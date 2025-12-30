@@ -364,6 +364,87 @@ features_showcase.spec.csx:25  DraftSpec Features > Basic Syntax > explicitly sk
 
 ---
 
+### draftspec validate
+
+Validate spec structure without execution. Uses static parsing to detect structural issues before running expensive test suites.
+
+```bash
+draftspec validate <path> [options]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<path>` | File or directory to validate. Defaults to current directory (`.`) |
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--static` | Use static parsing only (default, for documentation) |
+| `--strict` | Treat warnings as errors (exit code 2) |
+| `--quiet, -q` | Show only errors, suppress progress output |
+| `--files <files>` | Validate specific files (comma-separated, for pre-commit hooks) |
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| `0` | Validation passed (no errors, warnings OK) |
+| `1` | Validation failed (structural errors found) |
+| `2` | Warnings found with `--strict` mode |
+
+**Examples:**
+
+```bash
+# Validate all specs in current directory
+draftspec validate .
+
+# CI mode: quiet output, strict warnings
+draftspec validate --static --quiet --strict
+
+# Validate specific files (for pre-commit hooks)
+draftspec validate --files "user.spec.csx,order.spec.csx"
+
+# Validate with full output
+draftspec validate ./specs
+```
+
+**Output:**
+
+```
+Validating spec structure...
+
+✓ calculator.spec.csx - 5 specs
+✓ user_service.spec.csx - 12 specs
+⚠ legacy.spec.csx - 3 specs
+  Line 15: 'describe' has dynamic description - cannot analyze statically
+✗ broken.spec.csx
+  Line 8: missing description argument
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Files: 4 | Specs: 20 | Errors: 1 | Warnings: 1
+```
+
+**Detected Issues:**
+
+| Type | Severity | Example |
+|------|----------|---------|
+| Missing description | Error | `it()` with no arguments |
+| Empty description | Error | `it("")` |
+| Parse/syntax error | Error | Invalid C# syntax |
+| Dynamic description | Warning | `it($"test {name}")` |
+
+**Use Cases:**
+
+- **CI/CD**: Fail fast before expensive test execution
+- **Pre-commit hooks**: Validate changed specs locally
+- **Code review**: Check spec structure in PRs
+- **IDE integration**: Quick validation without running tests
+
+---
+
 ## Output Formats
 
 ### Console (default)
@@ -473,12 +554,96 @@ draftspec run . --format html --css-url ./my-theme.css -o report.html
 
 ## CI/CD Integration
 
+### Pre-flight Validation
+
+Validate spec structure before running expensive test suites:
+
+```yaml
+# GitHub Actions - Validate then test
+name: Test Suite
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install DraftSpec CLI
+        run: dotnet tool install -g DraftSpec.Cli --prerelease
+      - name: Validate spec structure
+        run: draftspec validate --static --strict --quiet
+        # Fails fast if specs have structural issues
+
+  test:
+    needs: validate  # Only run if validation passes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install DraftSpec CLI
+        run: dotnet tool install -g DraftSpec.Cli --prerelease
+      - name: Run specs
+        run: draftspec run . --format json -o results.json
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spec-results
+          path: results.json
+```
+
+### Pre-commit Hook
+
+Validate changed spec files locally before committing:
+
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+
+# Get changed spec files (staged for commit)
+CHANGED_SPECS=$(git diff --cached --name-only --diff-filter=ACM | grep '\.spec\.csx$')
+
+if [ -n "$CHANGED_SPECS" ]; then
+  echo "Validating spec files..."
+
+  # Convert newlines to commas for --files flag
+  FILES=$(echo "$CHANGED_SPECS" | tr '\n' ',' | sed 's/,$//')
+
+  draftspec validate --static --quiet --files "$FILES"
+
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Spec validation failed. Fix errors before committing."
+    exit 1
+  fi
+
+  echo "✓ Spec validation passed"
+fi
+```
+
+To install the hook:
+
+```bash
+# Copy hook to .git/hooks
+cp pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+
+# Or use a hook manager like husky or lefthook
+```
+
 ### GitHub Actions
 
 ```yaml
 - name: Run specs
   run: |
-    dotnet tool install -g DraftSpec.Cli
+    dotnet tool install -g DraftSpec.Cli --prerelease
     draftspec run . --format json -o results.json
 
 - name: Upload results
@@ -486,6 +651,46 @@ draftspec run . --format html --css-url ./my-theme.css -o report.html
   with:
     name: spec-results
     path: results.json
+```
+
+### GitLab CI
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - validate
+  - test
+
+variables:
+  DOTNET_VERSION: "10.0"
+
+.dotnet_setup:
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  before_script:
+    - dotnet tool install -g DraftSpec.Cli --prerelease
+    - export PATH="$PATH:$HOME/.dotnet/tools"
+
+validate:specs:
+  extends: .dotnet_setup
+  stage: validate
+  script:
+    - draftspec validate --static --strict --quiet
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+test:specs:
+  extends: .dotnet_setup
+  stage: test
+  needs: ["validate:specs"]
+  script:
+    - draftspec run . --format json -o results.json
+  artifacts:
+    when: always
+    paths:
+      - results.json
+    reports:
+      dotenv: results.json
 ```
 
 ### Exit Code Handling
@@ -507,6 +712,23 @@ For faster CI runs with multiple spec files:
 
 ```bash
 draftspec run . --parallel
+```
+
+### Partitioned Execution
+
+Split specs across multiple CI jobs for maximum parallelism:
+
+```yaml
+# GitHub Actions matrix strategy
+jobs:
+  test:
+    strategy:
+      matrix:
+        partition: [0, 1, 2, 3]
+    steps:
+      - name: Run partition ${{ matrix.partition }}
+        run: |
+          draftspec run . --partition 4 --partition-index ${{ matrix.partition }}
 ```
 
 ---

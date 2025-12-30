@@ -13,6 +13,7 @@ namespace DraftSpec.Mcp.Services;
 public partial class SpecExecutionService
 {
     private readonly TempFileManager _tempFileManager;
+    private readonly IAsyncProcessRunner _processRunner;
     private readonly ILogger<SpecExecutionService> _logger;
 
     /// <summary>
@@ -43,9 +44,11 @@ public partial class SpecExecutionService
 
     public SpecExecutionService(
         TempFileManager tempFileManager,
+        IAsyncProcessRunner processRunner,
         ILogger<SpecExecutionService> logger)
     {
         _tempFileManager = tempFileManager;
+        _processRunner = processRunner;
         _logger = logger;
     }
 
@@ -224,11 +227,9 @@ public partial class SpecExecutionService
             psi.EnvironmentVariables["DRAFTSPEC_PROGRESS_STREAM"] = "true";
         }
 
-        using var process = new Process { StartInfo = psi };
+        await using var process = await _processRunner.StartAsync(psi, cancellationToken);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(timeout);
-
-        process.Start();
 
         // Read stdout with progress line handling
         var stdoutTask = onProgress != null

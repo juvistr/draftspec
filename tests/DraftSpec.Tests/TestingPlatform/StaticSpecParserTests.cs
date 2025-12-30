@@ -320,4 +320,137 @@ public class StaticSpecParserTests
         await Assert.That(result.IsComplete).IsFalse();
         await Assert.That(result.Warnings.Count).IsGreaterThan(0);
     }
+
+    [Test]
+    public async Task ParseFileAsync_CircularLoadDirective_DoesNotLoop()
+    {
+        // Arrange - create two files that load each other
+        var fileAContent = """
+            #load "b.csx"
+            using static DraftSpec.Dsl;
+            describe("FileA", () =>
+            {
+                it("spec in A", () => { });
+            });
+            """;
+
+        var fileBContent = """
+            #load "a.csx"
+            using static DraftSpec.Dsl;
+            describe("FileB", () =>
+            {
+                it("spec in B", () => { });
+            });
+            """;
+
+        var fileAPath = Path.Combine(_tempDir, "a.csx");
+        var fileBPath = Path.Combine(_tempDir, "b.csx");
+        await File.WriteAllTextAsync(fileAPath, fileAContent);
+        await File.WriteAllTextAsync(fileBPath, fileBContent);
+
+        var parser = new StaticSpecParser(_tempDir);
+
+        // Act - should not infinite loop
+        var result = await parser.ParseFileAsync(fileAPath);
+
+        // Assert - should parse specs from both files, no stack overflow
+        await Assert.That(result.Specs.Count).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task ParseFileAsync_RDirective_IsRemoved()
+    {
+        // Arrange - file with #r reference directive
+        var csxContent = """
+            #r "nuget: Newtonsoft.Json, 13.0.1"
+            using static DraftSpec.Dsl;
+            describe("WithNugetRef", () =>
+            {
+                it("works without nuget resolution", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "nuget.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var parser = new StaticSpecParser(_tempDir);
+
+        // Act
+        var result = await parser.ParseFileAsync(csxPath);
+
+        // Assert - should find the spec despite #r directive
+        await Assert.That(result.Specs.Count).IsEqualTo(1);
+        await Assert.That(result.Specs[0].Description).IsEqualTo("works without nuget resolution");
+    }
+
+    [Test]
+    public async Task ParseFileAsync_MalformedLoadDirective_IsHandledGracefully()
+    {
+        // Arrange - file with malformed #load
+        var csxContent = """
+            #load "nonexistent_file.csx"
+            using static DraftSpec.Dsl;
+            describe("StillParses", () =>
+            {
+                it("even with missing load", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "missing_load.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var parser = new StaticSpecParser(_tempDir);
+
+        // Act - should not throw even though loaded file doesn't exist
+        var result = await parser.ParseFileAsync(csxPath);
+
+        // Assert - should still find the spec in the main file
+        await Assert.That(result.Specs.Count).IsEqualTo(1);
+        await Assert.That(result.Specs[0].Description).IsEqualTo("even with missing load");
+    }
+
+    [Test]
+    public async Task ParseFileAsync_EmptyFile_ReturnsEmptySpecs()
+    {
+        // Arrange
+        var csxPath = Path.Combine(_tempDir, "empty.spec.csx");
+        await File.WriteAllTextAsync(csxPath, "");
+
+        var parser = new StaticSpecParser(_tempDir);
+
+        // Act
+        var result = await parser.ParseFileAsync(csxPath);
+
+        // Assert
+        await Assert.That(result.Specs.Count).IsEqualTo(0);
+        await Assert.That(result.IsComplete).IsTrue();
+    }
+
+    [Test]
+    public async Task ParseFileAsync_MultipleRDirectives_AllRemoved()
+    {
+        // Arrange - file with multiple #r directives
+        var csxContent = """
+            #r "nuget: Newtonsoft.Json, 13.0.1"
+            #r "nuget: Moq, 4.18.0"
+            #r "path/to/some.dll"
+            using static DraftSpec.Dsl;
+            describe("MultiRef", () =>
+            {
+                it("still parses", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "multi_r.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var parser = new StaticSpecParser(_tempDir);
+
+        // Act
+        var result = await parser.ParseFileAsync(csxPath);
+
+        // Assert
+        await Assert.That(result.Specs.Count).IsEqualTo(1);
+        await Assert.That(result.IsComplete).IsTrue();
+    }
 }

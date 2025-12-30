@@ -336,4 +336,173 @@ public class StringExpectationTests
     }
 
     #endregion
+
+    #region Negation (not)
+
+    [Test]
+    public async Task not_toBe_WhenDifferent_Passes()
+    {
+        var expectation = new StringExpectation("hello", "value");
+        expectation.not.toBe("world"); // Should pass - "hello" is not "world"
+    }
+
+    [Test]
+    public async Task not_toBe_WhenEqual_Throws()
+    {
+        var expectation = new StringExpectation("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBe("hello"));
+
+        await Assert.That(ex.Message).Contains("to not be");
+    }
+
+    [Test]
+    public async Task not_toContain_WhenDoesNotContain_Passes()
+    {
+        var expectation = new StringExpectation("hello world", "value");
+        expectation.not.toContain("foo"); // Should pass - doesn't contain "foo"
+    }
+
+    [Test]
+    public async Task not_toContain_WhenContains_Throws()
+    {
+        var expectation = new StringExpectation("hello world", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toContain("world"));
+
+        await Assert.That(ex.Message).Contains("to not contain");
+    }
+
+    [Test]
+    public async Task not_toStartWith_WhenDoesNotStartWith_Passes()
+    {
+        var expectation = new StringExpectation("hello world", "value");
+        expectation.not.toStartWith("world"); // Should pass
+    }
+
+    [Test]
+    public async Task not_toStartWith_WhenStartsWith_Throws()
+    {
+        var expectation = new StringExpectation("hello world", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toStartWith("hello"));
+
+        await Assert.That(ex.Message).Contains("to not start with");
+    }
+
+    [Test]
+    public async Task not_toEndWith_WhenDoesNotEndWith_Passes()
+    {
+        var expectation = new StringExpectation("hello world", "value");
+        expectation.not.toEndWith("hello"); // Should pass
+    }
+
+    [Test]
+    public async Task not_toEndWith_WhenEndsWith_Throws()
+    {
+        var expectation = new StringExpectation("hello world", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toEndWith("world"));
+
+        await Assert.That(ex.Message).Contains("to not end with");
+    }
+
+    [Test]
+    public async Task not_toBeNullOrEmpty_WhenNotNullOrEmpty_Passes()
+    {
+        var expectation = new StringExpectation("hello", "value");
+        expectation.not.toBeNullOrEmpty(); // Should pass
+    }
+
+    [Test]
+    public async Task not_toBeNullOrEmpty_WhenNull_Throws()
+    {
+        var expectation = new StringExpectation(null, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBeNullOrEmpty());
+
+        await Assert.That(ex.Message).Contains("to not be null or empty");
+    }
+
+    [Test]
+    public async Task not_toBeNullOrEmpty_WhenEmpty_Throws()
+    {
+        var expectation = new StringExpectation("", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBeNullOrEmpty());
+
+        await Assert.That(ex.Message).Contains("to not be null or empty");
+    }
+
+    [Test]
+    public async Task not_toBeNull_WhenNotNull_Passes()
+    {
+        var expectation = new StringExpectation("hello", "value");
+        expectation.not.toBeNull(); // Should pass
+    }
+
+    [Test]
+    public async Task not_toBeNull_WhenNull_Throws()
+    {
+        var expectation = new StringExpectation(null, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBeNull());
+
+        await Assert.That(ex.Message).Contains("to not be null");
+    }
+
+    [Test]
+    public async Task not_toMatch_WhenDoesNotMatch_Passes()
+    {
+        var expectation = new StringExpectation("hello", "value");
+        expectation.not.toMatch(@"\d+"); // Should pass - no digits
+    }
+
+    [Test]
+    public async Task not_toMatch_WhenMatches_Throws()
+    {
+        var expectation = new StringExpectation("hello123", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toMatch(@"\d+"));
+
+        await Assert.That(ex.Message).Contains("to not match pattern");
+    }
+
+    [Test]
+    public async Task not_toMatch_WithRegex_WhenDoesNotMatch_Passes()
+    {
+        var expectation = new StringExpectation("hello", "value");
+        var regex = new System.Text.RegularExpressions.Regex(@"\d+");
+        expectation.not.toMatch(regex); // Should pass
+    }
+
+    [Test]
+    public async Task not_toMatch_WithRegex_WhenMatches_Throws()
+    {
+        var expectation = new StringExpectation("hello123", "value");
+        var regex = new System.Text.RegularExpressions.Regex(@"\d+");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toMatch(regex));
+
+        await Assert.That(ex.Message).Contains("to not match pattern");
+    }
+
+    [Test]
+    public async Task not_toHaveLength_WhenDifferentLength_Passes()
+    {
+        var expectation = new StringExpectation("hello", "value");
+        expectation.not.toHaveLength(3); // Should pass - length is 5, not 3
+    }
+
+    [Test]
+    public async Task not_toHaveLength_WhenSameLength_Throws()
+    {
+        var expectation = new StringExpectation("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toHaveLength(5));
+
+        await Assert.That(ex.Message).Contains("to not have length 5");
+    }
+
+    #endregion
 }

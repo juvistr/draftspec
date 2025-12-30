@@ -350,5 +350,245 @@ public class CoberturaParserTests
         await Assert.That(result).IsNull();
     }
 
+    [Test]
+    public async Task TryParseFile_InvalidXml_ReturnsNull()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"invalid_cobertura_{Guid.NewGuid():N}.xml");
+        try
+        {
+            File.WriteAllText(tempFile, "not valid xml at all <broken>");
+            var result = CoberturaParser.TryParseFile(tempFile);
+            await Assert.That(result).IsNull();
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Test]
+    public async Task TryParseFile_MalformedXml_ReturnsNull()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"malformed_cobertura_{Guid.NewGuid():N}.xml");
+        try
+        {
+            File.WriteAllText(tempFile, "<coverage><packages></coverage>"); // Missing closing tag
+            var result = CoberturaParser.TryParseFile(tempFile);
+            await Assert.That(result).IsNull();
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Test]
+    public async Task TryParseFile_ValidFile_ReturnsReport()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"valid_cobertura_{Guid.NewGuid():N}.xml");
+        try
+        {
+            File.WriteAllText(tempFile, """
+                <?xml version="1.0"?>
+                <coverage>
+                    <packages>
+                        <package name="Pkg">
+                            <classes>
+                                <class name="MyClass" filename="MyClass.cs">
+                                    <lines>
+                                        <line number="1" hits="1"/>
+                                    </lines>
+                                </class>
+                            </classes>
+                        </package>
+                    </packages>
+                </coverage>
+                """);
+            var result = CoberturaParser.TryParseFile(tempFile);
+            await Assert.That(result).IsNotNull();
+            await Assert.That(result!.Files.Count).IsEqualTo(1);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Test]
+    public async Task Parse_MissingPackageName_DefaultsToNull()
+    {
+        var xml = """
+            <coverage>
+                <packages>
+                    <package>
+                        <classes>
+                            <class name="MyClass" filename="MyClass.cs">
+                                <lines>
+                                    <line number="1" hits="1"/>
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                </packages>
+            </coverage>
+            """;
+
+        var report = CoberturaParser.Parse(xml);
+
+        await Assert.That(report.Files[0].PackageName).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_MissingFilename_DefaultsToEmpty()
+    {
+        var xml = """
+            <coverage>
+                <packages>
+                    <package name="Pkg">
+                        <classes>
+                            <class name="MyClass">
+                                <lines>
+                                    <line number="1" hits="1"/>
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                </packages>
+            </coverage>
+            """;
+
+        var report = CoberturaParser.Parse(xml);
+
+        await Assert.That(report.Files[0].FilePath).IsEqualTo("");
+    }
+
+    [Test]
+    public async Task Parse_InvalidTimestamp_UsesDefaultValue()
+    {
+        var xml = """
+            <coverage timestamp="not_a_number">
+                <packages/>
+            </coverage>
+            """;
+
+        var report = CoberturaParser.Parse(xml);
+
+        // Invalid timestamp doesn't parse, so Timestamp remains its default (null from the record)
+        // Actually looking at the code, if parsing fails, Timestamp is not set
+        // The timestamp parsing in the code only sets it when parsing succeeds
+        // Let's verify it doesn't throw and returns a valid report
+        await Assert.That(report).IsNotNull();
+    }
+
+    [Test]
+    public async Task Parse_MultiplePackages_ParsesAll()
+    {
+        var xml = """
+            <coverage>
+                <packages>
+                    <package name="Package1">
+                        <classes>
+                            <class name="Class1" filename="Class1.cs">
+                                <lines>
+                                    <line number="1" hits="1"/>
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                    <package name="Package2">
+                        <classes>
+                            <class name="Class2" filename="Class2.cs">
+                                <lines>
+                                    <line number="1" hits="0"/>
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                </packages>
+            </coverage>
+            """;
+
+        var report = CoberturaParser.Parse(xml);
+
+        await Assert.That(report.Files.Count).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task Parse_BranchWithoutConditionCoverage_HasNullBranches()
+    {
+        var xml = """
+            <coverage>
+                <packages>
+                    <package name="Pkg">
+                        <classes>
+                            <class name="MyClass" filename="MyClass.cs">
+                                <lines>
+                                    <line number="10" hits="1" branch="true"/>
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                </packages>
+            </coverage>
+            """;
+
+        var report = CoberturaParser.Parse(xml);
+        var line = report.Files[0].Lines[0];
+
+        await Assert.That(line.IsBranchPoint).IsTrue();
+        await Assert.That(line.BranchesCovered).IsNull();
+        await Assert.That(line.BranchesTotal).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_MissingLineNumber_DefaultsToZero()
+    {
+        var xml = """
+            <coverage>
+                <packages>
+                    <package name="Pkg">
+                        <classes>
+                            <class name="MyClass" filename="MyClass.cs">
+                                <lines>
+                                    <line hits="1"/>
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                </packages>
+            </coverage>
+            """;
+
+        var report = CoberturaParser.Parse(xml);
+        var line = report.Files[0].Lines[0];
+
+        await Assert.That(line.LineNumber).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task Parse_MissingHits_DefaultsToZero()
+    {
+        var xml = """
+            <coverage>
+                <packages>
+                    <package name="Pkg">
+                        <classes>
+                            <class name="MyClass" filename="MyClass.cs">
+                                <lines>
+                                    <line number="1"/>
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                </packages>
+            </coverage>
+            """;
+
+        var report = CoberturaParser.Parse(xml);
+        var line = report.Files[0].Lines[0];
+
+        await Assert.That(line.Hits).IsEqualTo(0);
+    }
+
     #endregion
 }

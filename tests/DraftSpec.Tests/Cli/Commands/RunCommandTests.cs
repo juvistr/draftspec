@@ -606,6 +606,107 @@ public class RunCommandTests
         await Assert.That(runnerFactory.LastFilterName!).Contains(@"handles\ positive\ numbers");
     }
 
+    [Test]
+    public async Task ExecuteAsync_LineFilter_NoSpecsAtLine_ShowsError()
+    {
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Calculator", () =>
+            {
+                it("adds numbers", () => { });
+            });
+            """);
+
+        var console = new MockConsole();
+        var command = CreateCommand(
+            console: console,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem());
+
+        // Line 100 is way past the end of the file - no specs there
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            LineFilters = [new LineFilter("test.spec.csx", [100])]
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(console.Output).Contains("No specs found at the specified line numbers");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_LineFilter_DuplicateSpecs_Deduplicated()
+    {
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Calculator", () =>
+            {
+                it("adds numbers", () => { });
+            });
+            """);
+
+        var console = new MockConsole();
+        var runnerFactory = new TrackingRunnerFactory();
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem());
+
+        // Lines 4 and 5 both match the same spec "adds numbers"
+        // The filter should deduplicate
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            LineFilters = [new LineFilter("test.spec.csx", [4, 5])]
+        };
+
+        await command.ExecuteAsync(options);
+
+        // The filter name should only have the spec once (not duplicated)
+        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
+        // Count occurrences of "adds numbers" - should be 1
+        var filterName = runnerFactory.LastFilterName!;
+        var count = System.Text.RegularExpressions.Regex.Matches(filterName, @"adds\\ numbers").Count;
+        await Assert.That(count).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_LineFilter_SpecWithNoContext_UsesDescriptionOnly()
+    {
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        // Top-level spec with no describe block
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            it("standalone test", () => { });
+            """);
+
+        var console = new MockConsole();
+        var runnerFactory = new TrackingRunnerFactory();
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem());
+
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            LineFilters = [new LineFilter("test.spec.csx", [2])]
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
+        await Assert.That(runnerFactory.LastFilterName!).Contains(@"standalone\ test");
+        // Should not contain context separator when there's no context
+        await Assert.That(runnerFactory.LastFilterName!).DoesNotContain(">");
+    }
+
     #endregion
 
     #region Helper Methods

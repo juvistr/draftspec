@@ -50,7 +50,7 @@ jobs:
           reportgenerator -reports:tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml -targetdir:./coverage-report -reporttypes:Html
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml
@@ -59,10 +59,11 @@ jobs:
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/test-results.xml
+          report_type: test_results
 
       - name: Upload coverage report artifact
         uses: actions/upload-artifact@v4

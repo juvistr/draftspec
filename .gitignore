@@ -34,8 +34,11 @@ bld/
 [Tt]est[Rr]esult*/
 *.trx
 /coverage/
+/coverage-report/
+/coverage-analysis/
 *.coverage
 *.coveragexml
+coverage.cobertura.xml
 
 # Benchmark results
 BenchmarkDotNet.Artifacts/

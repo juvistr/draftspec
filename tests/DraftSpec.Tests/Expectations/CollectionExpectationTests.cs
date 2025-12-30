@@ -172,6 +172,67 @@ public class CollectionExpectationTests
         await Assert.That(ex.Message).Contains("7");
     }
 
+    [Test]
+    public async Task not_toContainAll_WhenMissingSome_Passes()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+        expectation.not.toContainAll(1, 5, 7); // Missing 5 and 7, so negation passes
+    }
+
+    [Test]
+    public async Task not_toContainAll_WhenContainsAll_Throws()
+    {
+        var expectation = new CollectionExpectation<int>([1, 2, 3, 4, 5], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toContainAll(1, 3, 5));
+
+        await Assert.That(ex.Message).Contains("to not contain all");
+    }
+
+    [Test]
+    public async Task toContainAll_WithEmptyParams_Passes()
+    {
+        // Vacuously true: all zero items are contained
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+        expectation.toContainAll();
+    }
+
+    [Test]
+    public async Task not_toContainAll_WithEmptyParams_Throws()
+    {
+        // Vacuously true that all zero items are contained, so negation should throw
+        var expectation = new CollectionExpectation<int>([1, 2, 3], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toContainAll());
+
+        await Assert.That(ex.Message).Contains("to not contain all");
+    }
+
+    [Test]
+    public async Task toContainAll_WithNullElement_PassesWhenCollectionContainsNull()
+    {
+        var expectation = new CollectionExpectation<string?>(["a", null, "b"], "list");
+        expectation.toContainAll(null!, "a");
+    }
+
+    [Test]
+    public async Task toContainAll_WithNullElement_ThrowsWhenCollectionLacksNull()
+    {
+        var expectation = new CollectionExpectation<string?>(["a", "b", "c"], "list");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toContainAll(null!, "a"));
+
+        await Assert.That(ex.Message).Contains("missing");
+    }
+
+    [Test]
+    public async Task toContainAll_WithDuplicateParams_PassesWhenCollectionHasDuplicates()
+    {
+        // Each duplicate in params is checked independently
+        var expectation = new CollectionExpectation<int>([1, 1, 2, 2, 3], "list");
+        expectation.toContainAll(1, 1, 2);
+    }
+
     #endregion
 
     #region toHaveCount

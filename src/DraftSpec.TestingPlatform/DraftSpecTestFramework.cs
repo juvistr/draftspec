@@ -12,11 +12,11 @@ namespace DraftSpec.TestingPlatform;
 /// Microsoft.Testing.Platform adapter for DraftSpec.
 /// Inherits from VSTestBridgedTestFrameworkBase to support both MTP and VSTest modes.
 /// </summary>
-internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
+internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
 {
     // Lazy-initialized components (created on first use with project directory)
-    private SpecDiscoverer? _discoverer;
-    private MtpSpecExecutor? _executor;
+    private ISpecDiscoverer? _discoverer;
+    private IMtpSpecExecutor? _executor;
     private string? _projectDirectory;
 
     /// <summary>
@@ -42,11 +42,22 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
     /// <summary>
     /// Creates a new instance of the DraftSpec test framework adapter.
     /// </summary>
+    /// <param name="capabilities">Test framework capabilities.</param>
+    /// <param name="serviceProvider">Service provider for dependency resolution.</param>
+    /// <param name="discoverer">Optional discoverer for testing. Defaults to SpecDiscoverer.</param>
+    /// <param name="executor">Optional executor for testing. Defaults to MtpSpecExecutor.</param>
+    /// <param name="projectDirectory">Optional project directory for testing.</param>
     public DraftSpecTestFramework(
         ITestFrameworkCapabilities capabilities,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        ISpecDiscoverer? discoverer = null,
+        IMtpSpecExecutor? executor = null,
+        string? projectDirectory = null)
         : base(serviceProvider, capabilities)
     {
+        _discoverer = discoverer;
+        _executor = executor;
+        _projectDirectory = projectDirectory;
     }
 
     /// <summary>
@@ -62,11 +73,14 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         // Use the test assembly location as the base directory for finding CSX files.
         // CSX files are copied to the output directory by MSBuild targets.
         // Environment.CurrentDirectory is unreliable when running from IDE.
-        var assemblyLocation = typeof(DraftSpecTestFramework).Assembly.Location;
-        _projectDirectory = Path.GetDirectoryName(assemblyLocation) ?? Environment.CurrentDirectory;
+        if (_projectDirectory == null)
+        {
+            var assemblyLocation = typeof(DraftSpecTestFramework).Assembly.Location;
+            _projectDirectory = Path.GetDirectoryName(assemblyLocation) ?? Environment.CurrentDirectory;
+        }
 
-        _discoverer = new SpecDiscoverer(_projectDirectory);
-        _executor = new MtpSpecExecutor(_projectDirectory);
+        _discoverer ??= new SpecDiscoverer(_projectDirectory);
+        _executor ??= new MtpSpecExecutor(_projectDirectory);
 
         return Task.FromResult(new CreateTestSessionResult { IsSuccess = true });
     }
@@ -210,9 +224,10 @@ internal sealed class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         {
             var assemblyLocation = typeof(DraftSpecTestFramework).Assembly.Location;
             _projectDirectory = Path.GetDirectoryName(assemblyLocation) ?? Environment.CurrentDirectory;
-            _discoverer = new SpecDiscoverer(_projectDirectory);
-            _executor = new MtpSpecExecutor(_projectDirectory);
         }
+
+        _discoverer ??= new SpecDiscoverer(_projectDirectory);
+        _executor ??= new MtpSpecExecutor(_projectDirectory);
     }
 
     /// <summary>

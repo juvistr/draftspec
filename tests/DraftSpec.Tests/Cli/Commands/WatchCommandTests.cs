@@ -626,6 +626,103 @@ public class WatchCommandTests
 
     #endregion
 
+    #region BuildFilterPattern Static Method
+
+    [Test]
+    public async Task BuildFilterPattern_EmptyList_ReturnsMatchNothingPattern()
+    {
+        var result = WatchCommand.BuildFilterPattern([]);
+
+        await Assert.That(result).IsEqualTo("^$");
+    }
+
+    [Test]
+    public async Task BuildFilterPattern_SingleSpec_ReturnsAnchoredPattern()
+    {
+        var specs = new List<SpecChange>
+        {
+            new("creates-todo", ["TodoService"], SpecChangeType.Added)
+        };
+
+        var result = WatchCommand.BuildFilterPattern(specs);
+
+        await Assert.That(result).IsEqualTo("^(creates-todo)$");
+    }
+
+    [Test]
+    public async Task BuildFilterPattern_MultipleSpecs_ReturnsAlternationPattern()
+    {
+        var specs = new List<SpecChange>
+        {
+            new("creates-todo", ["TodoService"], SpecChangeType.Added),
+            new("deletes-todo", ["TodoService"], SpecChangeType.Modified)
+        };
+
+        var result = WatchCommand.BuildFilterPattern(specs);
+
+        await Assert.That(result).IsEqualTo("^(creates-todo|deletes-todo)$");
+    }
+
+    [Test]
+    public async Task BuildFilterPattern_WithSpaces_EscapesSpaces()
+    {
+        var specs = new List<SpecChange>
+        {
+            new("creates a todo", ["TodoService"], SpecChangeType.Added)
+        };
+
+        var result = WatchCommand.BuildFilterPattern(specs);
+
+        // Spaces are escaped as \
+        await Assert.That(result).Contains(@"creates\ a\ todo");
+    }
+
+    [Test]
+    public async Task BuildFilterPattern_SpecialRegexCharacters_AreEscaped()
+    {
+        var specs = new List<SpecChange>
+        {
+            new("calculates(2+2)=4", ["Calculator"], SpecChangeType.Added),
+            new("handles*wildcard", ["Parser"], SpecChangeType.Modified)
+        };
+
+        var result = WatchCommand.BuildFilterPattern(specs);
+
+        // Should escape ( ) + = * characters
+        await Assert.That(result).Contains(@"\(2\+2\)");
+        await Assert.That(result).Contains(@"\*");
+    }
+
+    [Test]
+    public async Task BuildFilterPattern_DotCharacter_IsEscaped()
+    {
+        var specs = new List<SpecChange>
+        {
+            new("parses-file.txt", ["Parser"], SpecChangeType.Added)
+        };
+
+        var result = WatchCommand.BuildFilterPattern(specs);
+
+        // Dot should be escaped as \. to match literal dot
+        await Assert.That(result).Contains(@"file\.txt");
+    }
+
+    [Test]
+    public async Task BuildFilterPattern_BracketCharacters_AreEscaped()
+    {
+        var specs = new List<SpecChange>
+        {
+            new("handles[index]access", ["Parser"], SpecChangeType.Added)
+        };
+
+        var result = WatchCommand.BuildFilterPattern(specs);
+
+        // Opening bracket should be escaped (closing bracket doesn't need escaping in .NET Regex.Escape)
+        await Assert.That(result).Contains(@"\[index]");
+    }
+
+    #endregion
+
     #region Error Handling
 
     [Test]

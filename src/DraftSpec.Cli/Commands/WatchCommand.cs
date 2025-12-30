@@ -285,7 +285,7 @@ public class WatchCommand : ICommand
     /// <summary>
     /// Builds a regex pattern that matches any of the spec descriptions.
     /// </summary>
-    private static string BuildFilterPattern(IReadOnlyList<SpecChange> specs)
+    internal static string BuildFilterPattern(IReadOnlyList<SpecChange> specs)
     {
         if (specs.Count == 0)
             return "^$"; // Match nothing

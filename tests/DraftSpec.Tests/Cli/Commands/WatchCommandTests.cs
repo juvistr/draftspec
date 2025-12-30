@@ -1,7 +1,9 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
+using DraftSpec.Cli.Watch;
 using DraftSpec.Formatters;
+using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
@@ -398,6 +400,232 @@ public class WatchCommandTests
 
     #endregion
 
+    #region Incremental Mode
+
+    [Test]
+    public async Task ExecuteAsync_IncrementalMode_NoChanges_SkipsRun()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        var watcherFactory = new MockFileWatcherFactory();
+        var changeTracker = new ConfigurableSpecChangeTracker(hasChanges: false);
+
+        var specFiles = new[] { "/specs/test.spec.csx" };
+        var command = CreateCommandWithChangeTracker(
+            console: console,
+            runnerFactory: runnerFactory,
+            watcherFactory: watcherFactory,
+            changeTracker: changeTracker,
+            specFiles: specFiles);
+
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(300);
+
+        var options = new CliOptions { Path = "/specs", Incremental = true };
+
+        var task = command.ExecuteAsync(options, cts.Token);
+
+        await Task.Delay(50);
+
+        // Trigger spec file change - since changeTracker returns no changes, should skip
+        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test.spec.csx", true));
+
+        await Task.Delay(100);
+        await cts.CancelAsync();
+
+        await task;
+
+        // Should show "No spec changes detected" message
+        await Assert.That(console.Output).Contains("No spec changes detected");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_IncrementalMode_DynamicSpecs_TriggersFullRun()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        var watcherFactory = new MockFileWatcherFactory();
+
+        // Simulate dynamic specs detected
+        var changes = new List<SpecChange> { new("dynamic spec", [], SpecChangeType.Added) };
+        var changeTracker = new ConfigurableSpecChangeTracker(
+            hasChanges: true,
+            hasDynamicSpecs: true,
+            changes: changes);
+
+        var specFiles = new[] { "/specs/test.spec.csx" };
+        var command = CreateCommandWithChangeTracker(
+            console: console,
+            runnerFactory: runnerFactory,
+            watcherFactory: watcherFactory,
+            changeTracker: changeTracker,
+            specFiles: specFiles);
+
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(300);
+
+        var options = new CliOptions { Path = "/specs", Incremental = true };
+
+        var task = command.ExecuteAsync(options, cts.Token);
+
+        await Task.Delay(50);
+
+        // Trigger spec file change
+        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test.spec.csx", true));
+
+        await Task.Delay(100);
+        await cts.CancelAsync();
+
+        await task;
+
+        // Should show message about dynamic specs requiring full run
+        await Assert.That(console.Output).Contains("Full run required");
+        await Assert.That(console.Output).Contains("dynamic specs detected");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_IncrementalMode_SpecsChanged_RunsIncrementally()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        var watcherFactory = new MockFileWatcherFactory();
+
+        // Simulate 2 specs changed
+        var changes = new List<SpecChange>
+        {
+            new("creates-todo", ["TodoService"], SpecChangeType.Added),
+            new("deletes-todo", ["TodoService"], SpecChangeType.Modified)
+        };
+        var changeTracker = new ConfigurableSpecChangeTracker(
+            hasChanges: true,
+            hasDynamicSpecs: false,
+            changes: changes);
+
+        var specFiles = new[] { "/specs/test.spec.csx" };
+        var command = CreateCommandWithChangeTracker(
+            console: console,
+            runnerFactory: runnerFactory,
+            watcherFactory: watcherFactory,
+            changeTracker: changeTracker,
+            specFiles: specFiles);
+
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(300);
+
+        var options = new CliOptions { Path = "/specs", Incremental = true };
+
+        var task = command.ExecuteAsync(options, cts.Token);
+
+        await Task.Delay(50);
+
+        // Trigger spec file change
+        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test.spec.csx", true));
+
+        await Task.Delay(100);
+        await cts.CancelAsync();
+
+        await task;
+
+        // Should show incremental run message
+        await Assert.That(console.Output).Contains("Incremental");
+        await Assert.That(console.Output).Contains("2 spec(s) changed");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_IncrementalMode_RecordsStateAfterRun()
+    {
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        var watcherFactory = new MockFileWatcherFactory();
+
+        var changes = new List<SpecChange>
+        {
+            new("test-spec", ["Context"], SpecChangeType.Added)
+        };
+        var changeTracker = new ConfigurableSpecChangeTracker(
+            hasChanges: true,
+            hasDynamicSpecs: false,
+            changes: changes);
+
+        var specFiles = new[] { "/specs/test.spec.csx" };
+        var command = CreateCommandWithChangeTracker(
+            runnerFactory: runnerFactory,
+            watcherFactory: watcherFactory,
+            changeTracker: changeTracker,
+            specFiles: specFiles);
+
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(300);
+
+        var options = new CliOptions { Path = "/specs", Incremental = true };
+
+        var task = command.ExecuteAsync(options, cts.Token);
+
+        await Task.Delay(50);
+
+        // Trigger spec file change
+        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test.spec.csx", true));
+
+        await Task.Delay(100);
+        await cts.CancelAsync();
+
+        await task;
+
+        // State should be recorded after the run
+        await Assert.That(changeTracker.RecordStateCalled).IsTrue();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_IncrementalMode_PassesFilterPatternToRunner()
+    {
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        var watcherFactory = new MockFileWatcherFactory();
+
+        // Simulate specs changed
+        var changes = new List<SpecChange>
+        {
+            new("creates-todo", ["TodoService"], SpecChangeType.Added)
+        };
+        var changeTracker = new ConfigurableSpecChangeTracker(
+            hasChanges: true,
+            hasDynamicSpecs: false,
+            changes: changes);
+
+        var specFiles = new[] { "/specs/test.spec.csx" };
+        var command = CreateCommandWithChangeTracker(
+            runnerFactory: runnerFactory,
+            watcherFactory: watcherFactory,
+            changeTracker: changeTracker,
+            specFiles: specFiles);
+
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(300);
+
+        var options = new CliOptions { Path = "/specs", Incremental = true };
+
+        var task = command.ExecuteAsync(options, cts.Token);
+
+        await Task.Delay(50);
+
+        // Trigger spec file change
+        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test.spec.csx", true));
+
+        await Task.Delay(100);
+        await cts.CancelAsync();
+
+        await task;
+
+        // FilterName should contain the escaped spec description pattern
+        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
+        await Assert.That(runnerFactory.LastFilterName!).Contains("creates-todo");
+    }
+
+    #endregion
+
     #region Error Handling
 
     [Test]
@@ -437,6 +665,24 @@ public class WatchCommandTests
             console ?? new MockConsole(),
             configLoader ?? new MockConfigLoader(),
             new TestMocks.NullSpecChangeTracker());
+    }
+
+    private static WatchCommand CreateCommandWithChangeTracker(
+        MockConsole? console = null,
+        MockConfigLoader? configLoader = null,
+        MockRunnerFactory? runnerFactory = null,
+        MockFileWatcherFactory? watcherFactory = null,
+        ISpecChangeTracker? changeTracker = null,
+        IReadOnlyList<string>? specFiles = null)
+    {
+        var specs = specFiles ?? [];
+        return new WatchCommand(
+            new MockSpecFinder(specs),
+            runnerFactory ?? new MockRunnerFactory(),
+            watcherFactory ?? new MockFileWatcherFactory(),
+            console ?? new MockConsole(),
+            configLoader ?? new MockConfigLoader(),
+            changeTracker ?? new TestMocks.NullSpecChangeTracker());
     }
 
     #endregion
@@ -619,6 +865,45 @@ public class WatchCommandTests
     private class MockFileWatcher : IFileWatcher
     {
         public void Dispose() { }
+    }
+
+    private class ConfigurableSpecChangeTracker : ISpecChangeTracker
+    {
+        private readonly bool _hasChanges;
+        private readonly bool _hasDynamicSpecs;
+        private readonly IReadOnlyList<SpecChange> _changes;
+
+        public bool RecordStateCalled { get; private set; }
+        public string? LastRecordedFilePath { get; private set; }
+
+        public ConfigurableSpecChangeTracker(
+            bool hasChanges = false,
+            bool hasDynamicSpecs = false,
+            IReadOnlyList<SpecChange>? changes = null)
+        {
+            _hasChanges = hasChanges;
+            _hasDynamicSpecs = hasDynamicSpecs;
+            _changes = changes ?? [];
+        }
+
+        public void RecordState(string filePath, StaticParseResult parseResult)
+        {
+            RecordStateCalled = true;
+            LastRecordedFilePath = filePath;
+        }
+
+        public SpecChangeSet GetChanges(string filePath, StaticParseResult newResult, bool dependencyChanged)
+        {
+            if (!_hasChanges)
+                return new SpecChangeSet(filePath, [], HasDynamicSpecs: false, DependencyChanged: false);
+
+            return new SpecChangeSet(filePath, _changes, _hasDynamicSpecs, dependencyChanged);
+        }
+
+        public bool HasState(string filePath) => true;
+        public void Clear() { }
+        public void RecordDependency(string dependencyPath, DateTime lastModified) { }
+        public bool HasDependencyChanged(string dependencyPath, DateTime currentModified) => false;
     }
 
     #endregion

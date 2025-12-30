@@ -565,6 +565,147 @@ public class ListCommandTests
 
     #endregion
 
+    #region Partitioning
+
+    [Test]
+    public async Task ExecuteAsync_WithPartition_CallsPartitioner()
+    {
+        CreateSpecFile("a.spec.csx", """
+            describe("A", () => {
+                it("spec a", () => { });
+            });
+            """);
+        CreateSpecFile("b.spec.csx", """
+            describe("B", () => {
+                it("spec b", () => { });
+            });
+            """);
+        var partitioner = new ConfigurablePartitioner();
+        partitioner.SetResult(new PartitionResult(
+            [Path.Combine(_tempDir, "a.spec.csx")],
+            TotalFiles: 2,
+            TotalSpecs: 2,
+            PartitionSpecs: 1));
+        var command = new ListCommand(_console, _fileSystem, partitioner);
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            Partition = 2,
+            PartitionIndex = 0,
+            PartitionStrategy = "file"
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(partitioner.PartitionCalled).IsTrue();
+        await Assert.That(_console.Output).Contains("Partition 1 of 2");
+        await Assert.That(_console.Output).Contains("1 file");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithPartition_PrintsPartitionInfo()
+    {
+        CreateSpecFile("test.spec.csx", """
+            describe("Test", () => {
+                it("spec", () => { });
+            });
+            """);
+        var partitioner = new ConfigurablePartitioner();
+        partitioner.SetResult(new PartitionResult(
+            [Path.Combine(_tempDir, "test.spec.csx")],
+            TotalFiles: 4,
+            TotalSpecs: 10,
+            PartitionSpecs: 3));
+        var command = new ListCommand(_console, _fileSystem, partitioner);
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            Partition = 4,
+            PartitionIndex = 2,
+            PartitionStrategy = "spec-count"
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        // Partition index is 0-based, but display is 1-based
+        await Assert.That(_console.Output).Contains("Partition 3 of 4");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithEmptyPartition_PrintsMessage()
+    {
+        CreateSpecFile("test.spec.csx", """
+            describe("Test", () => {
+                it("spec", () => { });
+            });
+            """);
+        var partitioner = new ConfigurablePartitioner();
+        partitioner.SetResult(new PartitionResult(
+            Files: [],
+            TotalFiles: 1,
+            TotalSpecs: 1,
+            PartitionSpecs: 0));
+        var command = new ListCommand(_console, _fileSystem, partitioner);
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            Partition = 3,
+            PartitionIndex = 2,
+            PartitionStrategy = "file"
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(_console.Output).Contains("No specs in this partition");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithPartition_FiltersToPartitionFiles()
+    {
+        CreateSpecFile("a.spec.csx", """
+            describe("A", () => {
+                it("spec a", () => { });
+            });
+            """);
+        CreateSpecFile("b.spec.csx", """
+            describe("B", () => {
+                it("spec b", () => { });
+            });
+            """);
+        CreateSpecFile("c.spec.csx", """
+            describe("C", () => {
+                it("spec c", () => { });
+            });
+            """);
+        var partitioner = new ConfigurablePartitioner();
+        // Simulate that partition only includes file "b"
+        partitioner.SetResult(new PartitionResult(
+            [Path.Combine(_tempDir, "b.spec.csx")],
+            TotalFiles: 3));
+        var command = new ListCommand(_console, _fileSystem, partitioner);
+        var options = new CliOptions
+        {
+            Path = _tempDir,
+            Partition = 3,
+            PartitionIndex = 1,
+            PartitionStrategy = "file",
+            ListFormat = "flat"
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        // Only specs from file "b" should be in output
+        await Assert.That(_console.Output).Contains("spec b");
+        await Assert.That(_console.Output).DoesNotContain("spec a");
+        await Assert.That(_console.Output).DoesNotContain("spec c");
+    }
+
+    #endregion
+
     #region Output File
 
     [Test]
@@ -624,6 +765,30 @@ public class ListCommandTests
     // Aliases and specific implementations
     private class MockConsole : TestMocks.MockConsole { }
     private class MockPartitioner : TestMocks.NullPartitioner { }
+
+    /// <summary>
+    /// Configurable partitioner for testing partitioning code paths.
+    /// </summary>
+    private class ConfigurablePartitioner : ISpecPartitioner
+    {
+        private PartitionResult? _result;
+
+        public bool PartitionCalled { get; private set; }
+
+        public void SetResult(PartitionResult result) => _result = result;
+
+        public Task<PartitionResult> PartitionAsync(
+            IReadOnlyList<string> specFiles,
+            int totalPartitions,
+            int partitionIndex,
+            string strategy,
+            string projectPath,
+            CancellationToken ct = default)
+        {
+            PartitionCalled = true;
+            return Task.FromResult(_result ?? new PartitionResult(specFiles, specFiles.Count));
+        }
+    }
 
     // RealFileSystem is specific to these tests - uses actual file system for integration testing
     private class RealFileSystem : IFileSystem

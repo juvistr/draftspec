@@ -1,5 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Tests.Infrastructure;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
@@ -161,7 +163,7 @@ public class ValidateCommandTests
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(ValidateCommand.ExitErrors);
-        await Assert.That(_console.ErrorOutput).Contains("missing description");
+        await Assert.That(_console.Errors).Contains("missing description");
     }
 
     #endregion
@@ -202,7 +204,7 @@ public class ValidateCommandTests
 
         await Assert.That(result).IsEqualTo(ValidateCommand.ExitErrors);
         // Errors should still be shown even in quiet mode
-        await Assert.That(_console.ErrorOutput).Contains("missing.spec.csx");
+        await Assert.That(_console.Errors).Contains("missing.spec.csx");
     }
 
     #endregion
@@ -323,52 +325,6 @@ public class ValidateCommandTests
         var filePath = Path.Combine(_tempDir, fileName);
         File.WriteAllText(filePath, content);
         return filePath;
-    }
-
-    #endregion
-
-    #region Mocks
-
-    private class MockConsole : IConsole
-    {
-        private readonly List<string> _output = [];
-        private readonly List<string> _errorOutput = [];
-
-        public string Output => string.Join("", _output);
-        public string ErrorOutput => string.Join("", _errorOutput);
-
-        public void Write(string text) => _output.Add(text);
-        public void WriteLine(string text) => _output.Add(text + "\n");
-        public void WriteLine() => _output.Add("\n");
-        public ConsoleColor ForegroundColor { get; set; }
-        public void ResetColor() { }
-        public void Clear() { }
-        public void WriteWarning(string text) => WriteLine(text);
-        public void WriteSuccess(string text) => WriteLine(text);
-        public void WriteError(string text)
-        {
-            _errorOutput.Add(text + "\n");
-            _output.Add(text + "\n");
-        }
-    }
-
-    private class RealFileSystem : IFileSystem
-    {
-        public bool FileExists(string path) => File.Exists(path);
-        public void WriteAllText(string path, string content) => File.WriteAllText(path, content);
-        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) =>
-            File.WriteAllTextAsync(path, content, ct);
-        public string ReadAllText(string path) => File.ReadAllText(path);
-        public bool DirectoryExists(string path) => Directory.Exists(path);
-        public void CreateDirectory(string path) => Directory.CreateDirectory(path);
-        public string[] GetFiles(string path, string searchPattern) => Directory.GetFiles(path, searchPattern);
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) =>
-            Directory.GetFiles(path, searchPattern, searchOption);
-        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) =>
-            Directory.EnumerateFiles(path, searchPattern, searchOption);
-        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) =>
-            Directory.EnumerateDirectories(path, searchPattern);
-        public DateTime GetLastWriteTimeUtc(string path) => File.GetLastWriteTimeUtc(path);
     }
 
     #endregion

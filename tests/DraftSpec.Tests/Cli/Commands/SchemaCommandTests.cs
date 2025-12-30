@@ -1,5 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
@@ -141,48 +142,6 @@ public class SchemaCommandTests
         // Properties should be camelCase, not PascalCase
         await Assert.That(_console.Output).Contains("\"specs\"");
         await Assert.That(_console.Output).DoesNotContain("\"Specs\"");
-    }
-
-    #endregion
-
-    #region Mocks
-
-    private class MockConsole : IConsole
-    {
-        private readonly List<string> _output = [];
-
-        public string Output => string.Join("", _output);
-
-        public void Write(string text) => _output.Add(text);
-        public void WriteLine(string text) => _output.Add(text + "\n");
-        public void WriteLine() => _output.Add("\n");
-        public ConsoleColor ForegroundColor { get; set; }
-        public void ResetColor() { }
-        public void Clear() { }
-        public void WriteWarning(string text) => WriteLine(text);
-        public void WriteSuccess(string text) => WriteLine(text);
-        public void WriteError(string text) => WriteLine(text);
-    }
-
-    private class MockFileSystem : IFileSystem
-    {
-        public Dictionary<string, string> WrittenFiles { get; } = new();
-
-        public bool FileExists(string path) => false;
-        public void WriteAllText(string path, string content) => WrittenFiles[path] = content;
-        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default)
-        {
-            WrittenFiles[path] = content;
-            return Task.CompletedTask;
-        }
-        public string ReadAllText(string path) => "";
-        public bool DirectoryExists(string path) => true;
-        public void CreateDirectory(string path) { }
-        public string[] GetFiles(string path, string searchPattern) => [];
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
-        public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
     }
 
     #endregion

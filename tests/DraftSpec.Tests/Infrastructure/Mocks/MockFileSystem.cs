@@ -1,10 +1,11 @@
 using DraftSpec.Cli;
 
-namespace DraftSpec.Tests.TestHelpers;
+namespace DraftSpec.Tests.Infrastructure.Mocks;
 
 /// <summary>
 /// In-memory mock file system for unit testing.
 /// Allows configuring which files and directories "exist" without touching the real file system.
+/// Supports fluent builder API for easy test setup.
 /// </summary>
 public class MockFileSystem : IFileSystem
 {
@@ -24,6 +25,16 @@ public class MockFileSystem : IFileSystem
         _fileContents = new(_comparer);
         _lastWriteTimes = new(_comparer);
     }
+
+    /// <summary>
+    /// Gets all files that have been written to (for assertions).
+    /// </summary>
+    public IReadOnlyDictionary<string, string> WrittenFiles => _fileContents;
+
+    /// <summary>
+    /// Gets how many times CreateDirectory() was called.
+    /// </summary>
+    public int CreateDirectoryCalls { get; private set; }
 
     /// <summary>
     /// Add a file that will be reported as existing.
@@ -139,6 +150,7 @@ public class MockFileSystem : IFileSystem
 
     public void CreateDirectory(string path)
     {
+        CreateDirectoryCalls++;
         _directories.Add(Path.GetFullPath(path));
     }
 

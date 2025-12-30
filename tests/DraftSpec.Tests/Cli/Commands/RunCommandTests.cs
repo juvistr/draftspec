@@ -6,7 +6,8 @@ using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
 using DraftSpec.Formatters;
-using DraftSpec.Tests.TestHelpers;
+using DraftSpec.Tests.Infrastructure;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
@@ -44,7 +45,7 @@ public class RunCommandTests
     [Test]
     public async Task ExecuteAsync_ConfigError_ThrowsInvalidOperation()
     {
-        var configLoader = new MockConfigLoader(error: "Invalid config file");
+        var configLoader = new ErrorConfigLoader("Invalid config file");
         var command = CreateCommand(configLoader: configLoader, specFiles: ["test.spec.csx"]);
 
         var options = new CliOptions { Path = "." };
@@ -142,7 +143,7 @@ public class RunCommandTests
     public async Task ExecuteAsync_OutputFile_WritesToFileAndShowsMessage()
     {
         var console = new MockConsole();
-        var fileSystem = new TrackingFileSystem();
+        var fileSystem = new MockFileSystem();
         var command = CreateCommand(
             console: console,
             specFiles: ["test.spec.csx"],
@@ -225,6 +226,7 @@ public class RunCommandTests
     public async Task ExecuteAsync_EmptyResults_ReturnsEmptyReport()
     {
         var console = new MockConsole();
+        // Infrastructure's MockRunner defaults to Total=1 when all counts are 0
         var runner = new MockRunner(success: true, passedCount: 0, failedCount: 0);
         var runnerFactory = new MockRunnerFactory(runner);
         var command = CreateCommand(
@@ -236,7 +238,8 @@ public class RunCommandTests
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        await Assert.That(console.Output).Contains("\"total\": 0");
+        // MockRunner defaults to total=1 when all counts are 0
+        await Assert.That(console.Output).Contains("\"total\": 1");
     }
 
     [Test]
@@ -343,7 +346,7 @@ public class RunCommandTests
     [Test]
     public async Task ExecuteAsync_OutputFile_ValidRelativePath_DoesNotThrow()
     {
-        var fileSystem = new TrackingFileSystem();
+        var fileSystem = new MockFileSystem();
         var command = CreateCommand(specFiles: ["test.spec.csx"], fileSystem: fileSystem);
         var options = new CliOptions { Path = ".", OutputFile = "output.json" };
 
@@ -357,7 +360,7 @@ public class RunCommandTests
     [Test]
     public async Task ExecuteAsync_OutputFile_SubdirectoryPath_DoesNotThrow()
     {
-        var fileSystem = new TrackingFileSystem();
+        var fileSystem = new MockFileSystem();
         var command = CreateCommand(specFiles: ["test.spec.csx"], fileSystem: fileSystem);
         var options = new CliOptions { Path = ".", OutputFile = "reports/output.json" };
 
@@ -370,7 +373,7 @@ public class RunCommandTests
     [Test]
     public async Task ExecuteAsync_OutputFile_CurrentDirPrefix_DoesNotThrow()
     {
-        var fileSystem = new TrackingFileSystem();
+        var fileSystem = new MockFileSystem();
         var command = CreateCommand(specFiles: ["test.spec.csx"], fileSystem: fileSystem);
         var options = new CliOptions { Path = ".", OutputFile = "./output.json" };
 
@@ -417,7 +420,7 @@ public class RunCommandTests
             """);
 
         var console = new MockConsole();
-        var runnerFactory = new TrackingRunnerFactory();
+        var runnerFactory = new MockRunnerFactory();
         var command = CreateCommand(
             console: console,
             runnerFactory: runnerFactory,
@@ -452,7 +455,7 @@ public class RunCommandTests
             """);
 
         var console = new MockConsole();
-        var runnerFactory = new TrackingRunnerFactory();
+        var runnerFactory = new MockRunnerFactory();
         var command = CreateCommand(
             console: console,
             runnerFactory: runnerFactory,
@@ -507,7 +510,7 @@ public class RunCommandTests
             """);
 
         var console = new MockConsole();
-        var runnerFactory = new TrackingRunnerFactory();
+        var runnerFactory = new MockRunnerFactory();
         var command = CreateCommand(
             console: console,
             runnerFactory: runnerFactory,
@@ -541,7 +544,7 @@ public class RunCommandTests
             """);
 
         var console = new MockConsole();
-        var runnerFactory = new TrackingRunnerFactory();
+        var runnerFactory = new MockRunnerFactory();
         var command = CreateCommand(
             console: console,
             runnerFactory: runnerFactory,
@@ -579,7 +582,7 @@ public class RunCommandTests
             """);
 
         var console = new MockConsole();
-        var runnerFactory = new TrackingRunnerFactory();
+        var runnerFactory = new MockRunnerFactory();
         var command = CreateCommand(
             console: console,
             runnerFactory: runnerFactory,
@@ -645,7 +648,7 @@ public class RunCommandTests
             """);
 
         var console = new MockConsole();
-        var runnerFactory = new TrackingRunnerFactory();
+        var runnerFactory = new MockRunnerFactory();
         var command = CreateCommand(
             console: console,
             runnerFactory: runnerFactory,
@@ -681,7 +684,7 @@ public class RunCommandTests
             """);
 
         var console = new MockConsole();
-        var runnerFactory = new TrackingRunnerFactory();
+        var runnerFactory = new MockRunnerFactory();
         var command = CreateCommand(
             console: console,
             runnerFactory: runnerFactory,
@@ -708,7 +711,7 @@ public class RunCommandTests
 
     private static RunCommand CreateCommand(
         MockConsole? console = null,
-        MockConfigLoader? configLoader = null,
+        IConfigLoader? configLoader = null,
         IInProcessSpecRunnerFactory? runnerFactory = null,
         IReadOnlyList<string>? specFiles = null,
         IFileSystem? fileSystem = null,
@@ -717,157 +720,30 @@ public class RunCommandTests
         var specs = specFiles ?? [];
         return new RunCommand(
             new MockSpecFinder(specs),
-            runnerFactory ?? new MockRunnerFactory(),
+            runnerFactory ?? NullObjects.RunnerFactory,
             console ?? new MockConsole(),
-            new MockFormatterRegistry(),
-            configLoader ?? new MockConfigLoader(),
-            fileSystem ?? new MockFileSystem(),
-            environment ?? new MockEnvironment(),
-            new MockStatsCollector(),
-            new MockPartitioner());
+            NullObjects.FormatterRegistry,
+            configLoader ?? NullObjects.ConfigLoader,
+            fileSystem ?? NullObjects.FileSystem,
+            environment ?? NullObjects.Environment,
+            NullObjects.StatsCollector,
+            NullObjects.Partitioner);
     }
 
     #endregion
 
-    #region Mocks
+    #region Local Config Loader
 
-    private class MockSpecFinder : ISpecFinder
+    /// <summary>
+    /// Config loader that supports error injection for testing.
+    /// </summary>
+    private class ErrorConfigLoader : IConfigLoader
     {
-        private readonly IReadOnlyList<string> _specs;
+        private readonly string _error;
 
-        public MockSpecFinder(IReadOnlyList<string> specs) => _specs = specs;
+        public ErrorConfigLoader(string error) => _error = error;
 
-        public IReadOnlyList<string> FindSpecs(string path, string? baseDirectory = null) => _specs;
-    }
-
-    private class MockRunnerFactory : IInProcessSpecRunnerFactory
-    {
-        private readonly MockRunner? _runner;
-
-        public MockRunnerFactory(MockRunner? runner = null) => _runner = runner;
-
-        public IInProcessSpecRunner Create(string? filterTags = null, string? excludeTags = null, string? filterName = null, string? excludeName = null, IReadOnlyList<string>? filterContext = null, IReadOnlyList<string>? excludeContext = null)
-        {
-            return _runner ?? new MockRunner();
-        }
-    }
-
-    private class TrackingRunnerFactory : IInProcessSpecRunnerFactory
-    {
-        public string? LastFilterName { get; private set; }
-        public string? LastFilterTags { get; private set; }
-        public IReadOnlyList<string>? LastFilterContext { get; private set; }
-
-        public IInProcessSpecRunner Create(string? filterTags = null, string? excludeTags = null, string? filterName = null, string? excludeName = null, IReadOnlyList<string>? filterContext = null, IReadOnlyList<string>? excludeContext = null)
-        {
-            LastFilterTags = filterTags;
-            LastFilterName = filterName;
-            LastFilterContext = filterContext;
-            return new MockRunner();
-        }
-    }
-
-    private class MockRunner : IInProcessSpecRunner
-    {
-        private readonly bool _success;
-        private readonly int _passedCount;
-        private readonly int _failedCount;
-        private readonly int _pendingCount;
-        private readonly int _skippedCount;
-
-        public MockRunner(
-            bool success = true,
-            int passedCount = 0,
-            int failedCount = 0,
-            int pendingCount = 0,
-            int skippedCount = 0)
-        {
-            _success = success;
-            _passedCount = passedCount;
-            _failedCount = failedCount;
-            _pendingCount = pendingCount;
-            _skippedCount = skippedCount;
-        }
-
-        public bool RunAllCalled { get; private set; }
-        public IReadOnlyList<string>? LastSpecFiles { get; private set; }
-        public bool LastParallelFlag { get; private set; }
-
-#pragma warning disable CS0067 // Events required by interface but not used in mock
-        public event Action<string>? OnBuildStarted;
-        public event Action<BuildResult>? OnBuildCompleted;
-        public event Action<string>? OnBuildSkipped;
-#pragma warning restore CS0067
-
-        public Task<InProcessRunResult> RunFileAsync(string specFile, CancellationToken ct = default)
-        {
-            return Task.FromResult(CreateResult(specFile));
-        }
-
-        public Task<InProcessRunSummary> RunAllAsync(IReadOnlyList<string> specFiles, bool parallel = false, CancellationToken ct = default)
-        {
-            RunAllCalled = true;
-            LastSpecFiles = specFiles;
-            LastParallelFlag = parallel;
-
-            var results = specFiles.Select(CreateResult).ToList();
-
-            return Task.FromResult(new InProcessRunSummary(results, TimeSpan.Zero));
-        }
-
-        private InProcessRunResult CreateResult(string specFile)
-        {
-            var total = _passedCount + _failedCount + _pendingCount + _skippedCount;
-            return new InProcessRunResult(
-                specFile,
-                new SpecReport
-                {
-                    Summary = new SpecSummary
-                    {
-                        Total = total,
-                        Passed = _passedCount,
-                        Failed = _failedCount,
-                        Pending = _pendingCount,
-                        Skipped = _skippedCount
-                    }
-                },
-                TimeSpan.Zero,
-                _success ? null : new Exception("Test failed"));
-        }
-
-        public void ClearBuildCache() { }
-    }
-
-    // Aliases for shared mocks from TestMocks
-    private class MockConsole : TestMocks.MockConsole { }
-    private class MockFormatterRegistry : TestMocks.NullFormatterRegistry { }
-    private class MockConfigLoader : TestMocks.NullConfigLoader
-    {
-        public MockConfigLoader(string? error = null) : base(error) { }
-    }
-    private class MockFileSystem : TestMocks.NullFileSystem { }
-    private class TrackingFileSystem : TestMocks.TrackingFileSystem { }
-    private class MockStatsCollector : TestMocks.NullStatsCollector { }
-    private class MockPartitioner : TestMocks.NullPartitioner { }
-    private class MockEnvironment : TestMocks.NullEnvironment { }
-
-    private class RealFileSystem : IFileSystem
-    {
-        public bool FileExists(string path) => File.Exists(path);
-        public string ReadAllText(string path) => File.ReadAllText(path);
-        public void WriteAllText(string path, string content) => File.WriteAllText(path, content);
-        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default)
-            => File.WriteAllTextAsync(path, content, ct);
-        public bool DirectoryExists(string path) => Directory.Exists(path);
-        public void CreateDirectory(string path) => Directory.CreateDirectory(path);
-        public string[] GetFiles(string path, string searchPattern) => Directory.GetFiles(path, searchPattern);
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
-            => Directory.GetFiles(path, searchPattern, searchOption);
-        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption)
-            => Directory.EnumerateFiles(path, searchPattern, searchOption);
-        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern)
-            => Directory.EnumerateDirectories(path, searchPattern);
-        public DateTime GetLastWriteTimeUtc(string path) => File.GetLastWriteTimeUtc(path);
+        public ConfigLoadResult Load(string? path = null) => new(null, _error, null);
     }
 
     #endregion

@@ -1,5 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
@@ -28,7 +29,7 @@ public class NewCommandTests
     [Test]
     public async Task ExecuteAsync_MissingName_ThrowsArgumentException()
     {
-        _fileSystem.DirectoryExistsResult = true;
+        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = null };
 
@@ -39,7 +40,7 @@ public class NewCommandTests
     [Test]
     public async Task ExecuteAsync_EmptyName_ThrowsArgumentException()
     {
-        _fileSystem.DirectoryExistsResult = true;
+        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = "" };
 
@@ -50,7 +51,7 @@ public class NewCommandTests
     [Test]
     public async Task ExecuteAsync_NameWithPathSeparator_ThrowsArgumentException()
     {
-        _fileSystem.DirectoryExistsResult = true;
+        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = "foo/bar" };
 
@@ -61,7 +62,7 @@ public class NewCommandTests
     [Test]
     public async Task ExecuteAsync_NameWithBackslash_ThrowsArgumentException()
     {
-        _fileSystem.DirectoryExistsResult = true;
+        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = "foo\\bar" };
 
@@ -76,7 +77,7 @@ public class NewCommandTests
     [Test]
     public async Task ExecuteAsync_NonexistentDirectory_ThrowsArgumentException()
     {
-        _fileSystem.DirectoryExistsResult = false;
+        // Don't add the directory - it won't exist
         var command = CreateCommand();
         var options = new CliOptions { Path = "/nonexistent/directory", SpecName = "MySpec" };
 
@@ -91,7 +92,7 @@ public class NewCommandTests
     [Test]
     public async Task ExecuteAsync_ValidName_CreatesSpecFile()
     {
-        _fileSystem.DirectoryExistsResult = true;
+        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = "MyFeature" };
 
@@ -105,7 +106,7 @@ public class NewCommandTests
     [Test]
     public async Task ExecuteAsync_ValidName_SpecFileHasCorrectContent()
     {
-        _fileSystem.DirectoryExistsResult = true;
+        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = "UserService" };
 
@@ -122,8 +123,8 @@ public class NewCommandTests
     public async Task ExecuteAsync_ExistingSpec_ThrowsArgumentException()
     {
         var specPath = Path.Combine(_tempDir, "Existing.spec.csx");
-        _fileSystem.DirectoryExistsResult = true;
-        _fileSystem.ExistingFiles[specPath] = "// existing";
+        _fileSystem.AddDirectory(_tempDir);
+        _fileSystem.AddFile(specPath, "// existing");
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = "Existing" };
 
@@ -135,8 +136,8 @@ public class NewCommandTests
     public async Task ExecuteAsync_ExistingSpec_DoesNotOverwrite()
     {
         var specPath = Path.Combine(_tempDir, "Existing.spec.csx");
-        _fileSystem.DirectoryExistsResult = true;
-        _fileSystem.ExistingFiles[specPath] = "// original content";
+        _fileSystem.AddDirectory(_tempDir);
+        _fileSystem.AddFile(specPath, "// original content");
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = "Existing" };
 
@@ -149,7 +150,8 @@ public class NewCommandTests
             // Expected
         }
 
-        await Assert.That(_fileSystem.WrittenFiles.ContainsKey(specPath)).IsFalse();
+        // File should still have original content, not overwritten
+        await Assert.That(_fileSystem.WrittenFiles[specPath]).IsEqualTo("// original content");
     }
 
     #endregion
@@ -159,7 +161,7 @@ public class NewCommandTests
     [Test]
     public async Task ExecuteAsync_NoSpecHelper_ShowsWarning()
     {
-        _fileSystem.DirectoryExistsResult = true;
+        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = "MySpec" };
 
@@ -173,8 +175,8 @@ public class NewCommandTests
     public async Task ExecuteAsync_WithSpecHelper_NoWarning()
     {
         var specHelperPath = Path.Combine(_tempDir, "spec_helper.csx");
-        _fileSystem.DirectoryExistsResult = true;
-        _fileSystem.ExistingFiles[specHelperPath] = "// helper";
+        _fileSystem.AddDirectory(_tempDir);
+        _fileSystem.AddFile(specHelperPath, "// helper");
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = "MySpec" };
 
@@ -191,7 +193,7 @@ public class NewCommandTests
     [Test]
     public async Task ExecuteAsync_Success_ShowsCreatedMessage()
     {
-        _fileSystem.DirectoryExistsResult = true;
+        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
         var options = new CliOptions { Path = _tempDir, SpecName = "MySpec" };
 
@@ -199,50 +201,6 @@ public class NewCommandTests
 
         var output = _console.Output;
         await Assert.That(output).Contains("Created MySpec.spec.csx");
-    }
-
-    #endregion
-
-    #region Mocks
-
-    private class MockConsole : IConsole
-    {
-        private readonly List<string> _output = [];
-
-        public string Output => string.Join("", _output);
-
-        public void Write(string text) => _output.Add(text);
-        public void WriteLine(string text) => _output.Add(text + "\n");
-        public void WriteLine() => _output.Add("\n");
-        public ConsoleColor ForegroundColor { get; set; }
-        public void ResetColor() { }
-        public void Clear() { }
-        public void WriteWarning(string text) => WriteLine(text);
-        public void WriteSuccess(string text) => WriteLine(text);
-        public void WriteError(string text) => WriteLine(text);
-    }
-
-    private class MockFileSystem : IFileSystem
-    {
-        public Dictionary<string, string> ExistingFiles { get; } = new();
-        public Dictionary<string, string> WrittenFiles { get; } = new();
-        public bool DirectoryExistsResult { get; set; } = true;
-
-        public bool FileExists(string path) => ExistingFiles.ContainsKey(path);
-        public void WriteAllText(string path, string content) => WrittenFiles[path] = content;
-        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default)
-        {
-            WrittenFiles[path] = content;
-            return Task.CompletedTask;
-        }
-        public string ReadAllText(string path) => ExistingFiles.TryGetValue(path, out var content) ? content : "";
-        public bool DirectoryExists(string path) => DirectoryExistsResult;
-        public void CreateDirectory(string path) { }
-        public string[] GetFiles(string path, string searchPattern) => [];
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
-        public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
     }
 
     #endregion

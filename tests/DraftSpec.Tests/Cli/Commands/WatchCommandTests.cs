@@ -4,6 +4,8 @@ using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.Watch;
 using DraftSpec.Formatters;
 using DraftSpec.TestingPlatform;
+using DraftSpec.Tests.Infrastructure;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
@@ -361,7 +363,7 @@ public class WatchCommandTests
     [Test]
     public async Task ExecuteAsync_CancellationDuringInitialRun_ReturnsBasedOnLastSummary()
     {
-        var runner = new MockRunner(success: true, delay: 500);
+        var runner = new MockRunner(success: true, delayMs: 500);
         var runnerFactory = new MockRunnerFactory(runner);
         var command = CreateCommand(runnerFactory: runnerFactory, specFiles: ["test.spec.csx"]);
 
@@ -481,8 +483,9 @@ public class WatchCommandTests
         await task;
 
         // Should show message about dynamic specs requiring full run
-        await Assert.That(console.Output).Contains("Full run required");
-        await Assert.That(console.Output).Contains("dynamic specs detected");
+        // Use AllOutput because Clear() is called after the message is written
+        await Assert.That(console.AllOutput).Contains("Full run required");
+        await Assert.That(console.AllOutput).Contains("dynamic specs detected");
     }
 
     [Test]
@@ -530,8 +533,9 @@ public class WatchCommandTests
         await task;
 
         // Should show incremental run message
-        await Assert.That(console.Output).Contains("Incremental");
-        await Assert.That(console.Output).Contains("2 spec(s) changed");
+        // Use AllOutput because Clear() is called after the message is written
+        await Assert.That(console.AllOutput).Contains("Incremental");
+        await Assert.That(console.AllOutput).Contains("2 spec(s) changed");
     }
 
     [Test]
@@ -761,7 +765,7 @@ public class WatchCommandTests
             watcherFactory ?? new MockFileWatcherFactory(),
             console ?? new MockConsole(),
             configLoader ?? new MockConfigLoader(),
-            new TestMocks.NullSpecChangeTracker());
+            NullObjects.SpecChangeTracker);
     }
 
     private static WatchCommand CreateCommandWithChangeTracker(
@@ -779,142 +783,12 @@ public class WatchCommandTests
             watcherFactory ?? new MockFileWatcherFactory(),
             console ?? new MockConsole(),
             configLoader ?? new MockConfigLoader(),
-            changeTracker ?? new TestMocks.NullSpecChangeTracker());
+            changeTracker ?? NullObjects.SpecChangeTracker);
     }
 
     #endregion
 
     #region Mocks
-
-    private class MockSpecFinder : ISpecFinder
-    {
-        private readonly IReadOnlyList<string> _specs;
-
-        public MockSpecFinder(IReadOnlyList<string> specs) => _specs = specs;
-
-        public IReadOnlyList<string> FindSpecs(string path, string? baseDirectory = null) => _specs;
-    }
-
-    private class MockRunnerFactory : IInProcessSpecRunnerFactory
-    {
-        private readonly MockRunner? _runner;
-
-        public MockRunnerFactory(MockRunner? runner = null) => _runner = runner;
-
-        public string? LastFilterTags { get; private set; }
-        public string? LastExcludeTags { get; private set; }
-        public string? LastFilterName { get; private set; }
-        public string? LastExcludeName { get; private set; }
-        public IReadOnlyList<string>? LastFilterContext { get; private set; }
-        public IReadOnlyList<string>? LastExcludeContext { get; private set; }
-
-        public IInProcessSpecRunner Create(string? filterTags = null, string? excludeTags = null, string? filterName = null, string? excludeName = null, IReadOnlyList<string>? filterContext = null, IReadOnlyList<string>? excludeContext = null)
-        {
-            LastFilterTags = filterTags;
-            LastExcludeTags = excludeTags;
-            LastFilterName = filterName;
-            LastExcludeName = excludeName;
-            LastFilterContext = filterContext;
-            LastExcludeContext = excludeContext;
-            return _runner ?? new MockRunner();
-        }
-    }
-
-    private class MockRunner : IInProcessSpecRunner
-    {
-        private readonly bool _success;
-        private readonly int _delay;
-        private readonly bool _throwArgumentException;
-
-        public MockRunner(bool success = true, int delay = 0, bool throwArgumentException = false)
-        {
-            _success = success;
-            _delay = delay;
-            _throwArgumentException = throwArgumentException;
-        }
-
-        public bool RunAllCalled { get; private set; }
-        public int RunAllCallCount { get; private set; }
-        public IReadOnlyList<string>? LastSpecFiles { get; private set; }
-
-        public bool OnBuildStartedRegistered { get; private set; }
-        public bool OnBuildCompletedRegistered { get; private set; }
-        public bool OnBuildSkippedRegistered { get; private set; }
-
-#pragma warning disable CS0067 // Backing fields stored but not invoked (mock only tracks registration)
-        private event Action<string>? _onBuildStarted;
-        private event Action<BuildResult>? _onBuildCompleted;
-        private event Action<string>? _onBuildSkipped;
-#pragma warning restore CS0067
-
-        public event Action<string>? OnBuildStarted
-        {
-            add { _onBuildStarted += value; OnBuildStartedRegistered = true; }
-            remove { _onBuildStarted -= value; }
-        }
-
-        public event Action<BuildResult>? OnBuildCompleted
-        {
-            add { _onBuildCompleted += value; OnBuildCompletedRegistered = true; }
-            remove { _onBuildCompleted -= value; }
-        }
-
-        public event Action<string>? OnBuildSkipped
-        {
-            add { _onBuildSkipped += value; OnBuildSkippedRegistered = true; }
-            remove { _onBuildSkipped -= value; }
-        }
-
-        public Task<InProcessRunResult> RunFileAsync(string specFile, CancellationToken ct = default)
-        {
-            return Task.FromResult(new InProcessRunResult(
-                specFile,
-                new SpecReport { Summary = new SpecSummary() },
-                TimeSpan.Zero,
-                _success ? null : new Exception("Test failed")));
-        }
-
-        public async Task<InProcessRunSummary> RunAllAsync(IReadOnlyList<string> specFiles, bool parallel = false, CancellationToken ct = default)
-        {
-            if (_throwArgumentException)
-                throw new ArgumentException("Test error");
-
-            RunAllCalled = true;
-            RunAllCallCount++;
-            LastSpecFiles = specFiles;
-
-            if (_delay > 0)
-                await Task.Delay(_delay, ct);
-
-            var results = specFiles.Select(f => new InProcessRunResult(
-                f,
-                new SpecReport { Summary = new SpecSummary() },
-                TimeSpan.Zero,
-                _success ? null : new Exception("Test failed"))).ToList();
-
-            return new InProcessRunSummary(results, TimeSpan.Zero);
-        }
-
-        public void ClearBuildCache() { }
-    }
-
-    private class MockConsole : IConsole
-    {
-        private readonly List<string> _output = [];
-
-        public string Output => string.Join("", _output);
-        public int ClearCallCount { get; private set; }
-
-        public void Write(string text) => _output.Add(text);
-        public void WriteLine(string text) => _output.Add(text + "\n");
-        public void WriteLine() => _output.Add("\n");
-        public ConsoleColor ForegroundColor { get; set; }
-        public void ResetColor() { }
-        public void Clear() => ClearCallCount++;
-        public void WriteWarning(string text) => WriteLine(text);
-        public void WriteSuccess(string text) => WriteLine(text);
-        public void WriteError(string text) => WriteLine(text);
-    }
 
     private class MockConfigLoader : IConfigLoader
     {

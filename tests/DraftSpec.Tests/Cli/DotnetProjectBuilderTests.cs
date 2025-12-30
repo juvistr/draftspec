@@ -1,4 +1,5 @@
 using DraftSpec.Cli;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -32,8 +33,7 @@ public class DotnetProjectBuilderTests
     public async Task BuildProjects_WithProjectFile_BuildsProject()
     {
         var fileSystem = new MockFileSystem();
-        fileSystem.AddFiles("/project", ["MyProject.csproj"]);
-        fileSystem.AddFiles("/project", ["Program.cs"]);
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj", "Program.cs");
 
         var processRunner = new MockProcessRunner();
         processRunner.AddResult(new ProcessResult("Build succeeded", "", 0));
@@ -60,10 +60,9 @@ public class DotnetProjectBuilderTests
     public async Task BuildProjects_CacheHit_SkipsBuild()
     {
         var fileSystem = new MockFileSystem();
-        fileSystem.AddFiles("/project", ["MyProject.csproj"]);
-        fileSystem.AddFiles("/project", ["Program.cs"]);
-        fileSystem.SetLastWriteTimeUtc("/project/Program.cs", DateTime.UtcNow.AddHours(-1));
-        fileSystem.SetLastWriteTimeUtc("/project/MyProject.csproj", DateTime.UtcNow.AddHours(-1));
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj", "Program.cs");
+        fileSystem.SetLastWriteTime("/project/Program.cs", DateTime.UtcNow.AddHours(-1));
+        fileSystem.SetLastWriteTime("/project/MyProject.csproj", DateTime.UtcNow.AddHours(-1));
 
         var processRunner = new MockProcessRunner();
         var buildCache = new InMemoryBuildCache();
@@ -88,10 +87,9 @@ public class DotnetProjectBuilderTests
     {
         var now = DateTime.UtcNow;
         var fileSystem = new MockFileSystem();
-        fileSystem.AddFiles("/project", ["MyProject.csproj"]);
-        fileSystem.AddFiles("/project", ["Program.cs"]);
-        fileSystem.SetLastWriteTimeUtc("/project/Program.cs", now);
-        fileSystem.SetLastWriteTimeUtc("/project/MyProject.csproj", now.AddHours(-2));
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj", "Program.cs");
+        fileSystem.SetLastWriteTime("/project/Program.cs", now);
+        fileSystem.SetLastWriteTime("/project/MyProject.csproj", now.AddHours(-2));
 
         var processRunner = new MockProcessRunner();
         processRunner.AddResult(new ProcessResult("Build succeeded", "", 0));
@@ -122,7 +120,7 @@ public class DotnetProjectBuilderTests
     public async Task FindOutputDirectory_WithNetFolder_ReturnsNetPath()
     {
         var fileSystem = new MockFileSystem();
-        fileSystem.AddFiles("/project", ["MyProject.csproj"]);
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj");
         fileSystem.AddDirectory("/project/bin/Debug");
         fileSystem.AddDirectory("/project/bin/Debug/net10.0");
 
@@ -141,7 +139,7 @@ public class DotnetProjectBuilderTests
     public async Task FindOutputDirectory_NoBinFolder_ReturnsSpecDirectory()
     {
         var fileSystem = new MockFileSystem();
-        fileSystem.AddFiles("/project", ["MyProject.csproj"]);
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj");
 
         var builder = new DotnetProjectBuilder(
             fileSystem,
@@ -162,8 +160,7 @@ public class DotnetProjectBuilderTests
     public async Task ClearBuildCache_ClearsUnderlyingCache()
     {
         var fileSystem = new MockFileSystem();
-        fileSystem.AddFiles("/project", ["MyProject.csproj"]);
-        fileSystem.AddFiles("/project", ["Program.cs"]);
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj", "Program.cs");
 
         var processRunner = new MockProcessRunner();
         processRunner.AddResult(new ProcessResult("", "", 0));
@@ -194,8 +191,7 @@ public class DotnetProjectBuilderTests
     public async Task FindProjectFiles_SearchesUpDirectoryTree()
     {
         var fileSystem = new MockFileSystem();
-        fileSystem.AddFiles("/project", ["MyProject.csproj"]);
-        fileSystem.AddFiles("/project", ["Program.cs"]);
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj", "Program.cs");
 
         var processRunner = new MockProcessRunner();
         processRunner.AddResult(new ProcessResult("", "", 0));
@@ -219,76 +215,6 @@ public class DotnetProjectBuilderTests
 }
 
 #region Mock Implementations
-
-/// <summary>
-/// Mock file system for testing.
-/// </summary>
-file class MockFileSystem : IFileSystem
-{
-    private readonly Dictionary<string, List<string>> _directories = new();
-    private readonly Dictionary<string, DateTime> _lastWriteTimes = new();
-    private readonly HashSet<string> _existingDirectories = new();
-
-    public void AddFiles(string directory, string[] files)
-    {
-        if (!_directories.ContainsKey(directory))
-            _directories[directory] = [];
-
-        _directories[directory].AddRange(files);
-        _existingDirectories.Add(directory);
-    }
-
-    public void AddDirectory(string directory)
-    {
-        _existingDirectories.Add(directory);
-        if (!_directories.ContainsKey(directory))
-            _directories[directory] = [];
-    }
-
-    public void SetLastWriteTimeUtc(string path, DateTime time)
-    {
-        _lastWriteTimes[path] = time;
-    }
-
-    public bool FileExists(string path) => false;
-    public void WriteAllText(string path, string content) { }
-    public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) => Task.CompletedTask;
-    public string ReadAllText(string path) => "";
-    public bool DirectoryExists(string path) => _existingDirectories.Contains(path);
-    public void CreateDirectory(string path) => _existingDirectories.Add(path);
-
-    public string[] GetFiles(string path, string searchPattern)
-    {
-        if (!_directories.TryGetValue(path, out var files))
-            return [];
-
-        var pattern = searchPattern.Replace("*", "");
-        return files.Where(f => f.EndsWith(pattern)).Select(f => Path.Combine(path, f)).ToArray();
-    }
-
-    public string[] GetFiles(string path, string searchPattern, SearchOption searchOption)
-    {
-        return GetFiles(path, searchPattern);
-    }
-
-    public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption)
-    {
-        return GetFiles(path, searchPattern, searchOption);
-    }
-
-    public IEnumerable<string> EnumerateDirectories(string path, string searchPattern)
-    {
-        var pattern = searchPattern.Replace("*", "");
-        return _existingDirectories
-            .Where(d => d.StartsWith(path + "/") && d != path)
-            .Where(d => Path.GetFileName(d).StartsWith(pattern));
-    }
-
-    public DateTime GetLastWriteTimeUtc(string path)
-    {
-        return _lastWriteTimes.TryGetValue(path, out var time) ? time : DateTime.MinValue;
-    }
-}
 
 /// <summary>
 /// Mock process runner for testing.

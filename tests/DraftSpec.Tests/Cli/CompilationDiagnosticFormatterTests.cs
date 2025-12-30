@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using DraftSpec.Cli;
+using DraftSpec.Tests.Infrastructure.Mocks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
@@ -176,7 +177,7 @@ public class CompilationDiagnosticFormatterTests
             """;
 
         var diagnostic = CreateDiagnosticWithPath(sourceCode, filePath);
-        var mockFileSystem = new MockFileSystem().WithFile(filePath, sourceCode);
+        var mockFileSystem = new MockFileSystem().AddFile(filePath, sourceCode);
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
         var result = formatter.FormatDiagnostic(diagnostic, useColors: false);
@@ -193,7 +194,7 @@ public class CompilationDiagnosticFormatterTests
         var sourceCode = "undefinedVariable;"; // Error on line 1
 
         var diagnostic = CreateDiagnosticWithPath(sourceCode, filePath);
-        var mockFileSystem = new MockFileSystem().WithFile(filePath, sourceCode);
+        var mockFileSystem = new MockFileSystem().AddFile(filePath, sourceCode);
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
         var result = formatter.FormatDiagnostic(diagnostic, useColors: false);
@@ -218,7 +219,7 @@ public class CompilationDiagnosticFormatterTests
             """;
 
         var diagnostic = CreateDiagnosticWithPath(sourceCode, filePath);
-        var mockFileSystem = new MockFileSystem().WithFile(filePath, sourceCode);
+        var mockFileSystem = new MockFileSystem().AddFile(filePath, sourceCode);
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
         var result = formatter.FormatDiagnostic(diagnostic, useColors: false);
@@ -236,7 +237,7 @@ public class CompilationDiagnosticFormatterTests
         var sourceCode = "int x = undefinedVariable;"; // Error starts after "int x = "
 
         var diagnostic = CreateDiagnosticWithPath(sourceCode, filePath);
-        var mockFileSystem = new MockFileSystem().WithFile(filePath, sourceCode);
+        var mockFileSystem = new MockFileSystem().AddFile(filePath, sourceCode);
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
         var result = formatter.FormatDiagnostic(diagnostic, useColors: false);
@@ -269,7 +270,7 @@ public class CompilationDiagnosticFormatterTests
             """;
 
         var diagnostic = CreateDiagnosticWithPath(sourceCode, filePath);
-        var mockFileSystem = new MockFileSystem().WithFile(filePath, sourceCode);
+        var mockFileSystem = new MockFileSystem().AddFile(filePath, sourceCode);
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
         var result = formatter.FormatDiagnostic(diagnostic, useColors: false);
@@ -287,7 +288,7 @@ public class CompilationDiagnosticFormatterTests
         var sourceCode = "undefinedVariable;";
 
         var diagnostic = CreateDiagnosticWithPath(sourceCode, filePath);
-        var mockFileSystem = new MockFileSystem().WithFile(filePath, sourceCode);
+        var mockFileSystem = new MockFileSystem().AddFile(filePath, sourceCode);
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
         var result = formatter.FormatDiagnostic(diagnostic, useColors: true);
@@ -384,38 +385,6 @@ public class CompilationDiagnosticFormatterTests
     #endregion
 
     #region Mock Implementations
-
-    private class MockFileSystem : IFileSystem
-    {
-        private readonly Dictionary<string, string> _files = new(StringComparer.OrdinalIgnoreCase);
-
-        public MockFileSystem WithFile(string path, string content)
-        {
-            _files[path] = content;
-            return this;
-        }
-
-        public bool FileExists(string path) => _files.ContainsKey(path);
-
-        public string ReadAllText(string path) =>
-            _files.TryGetValue(path, out var content) ? content : throw new FileNotFoundException(path);
-
-        public void WriteAllText(string path, string content) => _files[path] = content;
-
-        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default)
-        {
-            _files[path] = content;
-            return Task.CompletedTask;
-        }
-
-        public bool DirectoryExists(string path) => true;
-        public void CreateDirectory(string path) { }
-        public string[] GetFiles(string path, string searchPattern) => [];
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
-        public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
-    }
 
     private class ThrowingFileSystem : IFileSystem
     {

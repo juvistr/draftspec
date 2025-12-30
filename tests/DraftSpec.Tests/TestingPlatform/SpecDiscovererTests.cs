@@ -623,4 +623,142 @@ public class SpecDiscovererTests
     }
 
     #endregion
+
+    #region Unit tests with MockSpecFileProvider
+
+    [Test]
+    public async Task DiscoverAsync_WithMockFileProvider_UsesProviderToFindFiles()
+    {
+        // Arrange
+        var mockFileProvider = new MockSpecFileProvider()
+            .WithSpecFiles(_tempDir, Path.Combine(_tempDir, "test.spec.csx"));
+
+        var context = new SpecContext("TestContext");
+        context.AddSpec(new SpecDefinition("test spec", () => { }));
+
+        var mockHost = new MockScriptHost()
+            .WithResult(Path.Combine(_tempDir, "test.spec.csx"), context);
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost, mockFileProvider);
+
+        // Act
+        await discoverer.DiscoverAsync();
+
+        // Assert - file provider was called to find spec files
+        await Assert.That(mockFileProvider.GetSpecFilesCalls).Count().IsEqualTo(1);
+        await Assert.That(mockFileProvider.GetSpecFilesCalls[0]).IsEqualTo(_tempDir);
+    }
+
+    [Test]
+    public async Task DiscoverAsync_WithMockFileProvider_DiscoversSpecsFromReturnedFiles()
+    {
+        // Arrange
+        var file1 = Path.Combine(_tempDir, "first.spec.csx");
+        var file2 = Path.Combine(_tempDir, "second.spec.csx");
+
+        var mockFileProvider = new MockSpecFileProvider()
+            .WithSpecFiles(_tempDir, file1, file2);
+
+        var context1 = new SpecContext("First");
+        context1.AddSpec(new SpecDefinition("spec 1", () => { }));
+
+        var context2 = new SpecContext("Second");
+        context2.AddSpec(new SpecDefinition("spec 2", () => { }));
+
+        var mockHost = new MockScriptHost()
+            .WithResult(file1, context1)
+            .WithResult(file2, context2);
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost, mockFileProvider);
+
+        // Act
+        var result = await discoverer.DiscoverAsync();
+
+        // Assert
+        await Assert.That(result.Specs.Count).IsEqualTo(2);
+        await Assert.That(result.Specs.Select(s => s.Description)).Contains("spec 1");
+        await Assert.That(result.Specs.Select(s => s.Description)).Contains("spec 2");
+    }
+
+    [Test]
+    public async Task DiscoverAsync_WithMockFileProvider_NoSpecFiles_ReturnsEmpty()
+    {
+        // Arrange
+        var mockFileProvider = new MockSpecFileProvider()
+            .WithNoSpecFiles();
+
+        var mockHost = new MockScriptHost();
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost, mockFileProvider);
+
+        // Act
+        var result = await discoverer.DiscoverAsync();
+
+        // Assert
+        await Assert.That(result.Specs.Count).IsEqualTo(0);
+        await Assert.That(result.Errors.Count).IsEqualTo(0);
+        await Assert.That(mockHost.ExecuteCalls.Count).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task DiscoverFileAsync_WithMockFileProvider_UsesProviderForAbsolutePath()
+    {
+        // Arrange
+        var relativePath = "specs/test.spec.csx";
+        var absolutePath = Path.Combine(_tempDir, relativePath);
+
+        // Create the file so static parser can read it if needed
+        var specsDir = Path.Combine(_tempDir, "specs");
+        Directory.CreateDirectory(specsDir);
+        await File.WriteAllTextAsync(absolutePath, "// empty");
+
+        var mockFileProvider = new MockSpecFileProvider()
+            .WithExistingFile(absolutePath);
+
+        var mockHost = new MockScriptHost()
+            .WithNoSpecs(absolutePath);
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost, mockFileProvider);
+
+        // Act
+        await discoverer.DiscoverFileAsync(relativePath);
+
+        // Assert - script host received the absolute path
+        await Assert.That(mockHost.ExecuteCalls).Count().IsEqualTo(1);
+        await Assert.That(mockHost.ExecuteCalls[0]).IsEqualTo(absolutePath);
+    }
+
+    [Test]
+    public async Task DiscoverAsync_WithMockFileProvider_ProcessesAllReturnedFiles()
+    {
+        // Arrange - return 3 files from the provider
+        var files = new[]
+        {
+            Path.Combine(_tempDir, "a.spec.csx"),
+            Path.Combine(_tempDir, "b.spec.csx"),
+            Path.Combine(_tempDir, "c.spec.csx")
+        };
+
+        var mockFileProvider = new MockSpecFileProvider()
+            .WithSpecFiles(_tempDir, files);
+
+        var mockHost = new MockScriptHost();
+        foreach (var file in files)
+        {
+            var context = new SpecContext(Path.GetFileNameWithoutExtension(file));
+            context.AddSpec(new SpecDefinition($"spec in {Path.GetFileName(file)}", () => { }));
+            mockHost.WithResult(file, context);
+        }
+
+        var discoverer = new SpecDiscoverer(_tempDir, mockHost, mockFileProvider);
+
+        // Act
+        var result = await discoverer.DiscoverAsync();
+
+        // Assert
+        await Assert.That(result.Specs.Count).IsEqualTo(3);
+        await Assert.That(mockHost.ExecuteCalls.Count).IsEqualTo(3);
+    }
+
+    #endregion
 }

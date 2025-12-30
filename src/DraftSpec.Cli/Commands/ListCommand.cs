@@ -104,16 +104,16 @@ public class ListCommand : ICommand<ListOptions>
         return 0;
     }
 
-    private static List<string> GetSpecFiles(string path)
+    private List<string> GetSpecFiles(string path)
     {
-        if (File.Exists(path) && path.EndsWith(".spec.csx", StringComparison.OrdinalIgnoreCase))
+        if (_fileSystem.FileExists(path) && path.EndsWith(".spec.csx", StringComparison.OrdinalIgnoreCase))
         {
             return [path];
         }
 
-        if (Directory.Exists(path))
+        if (_fileSystem.DirectoryExists(path))
         {
-            return Directory.EnumerateFiles(path, "*.spec.csx", SearchOption.AllDirectories).ToList();
+            return _fileSystem.EnumerateFiles(path, "*.spec.csx", SearchOption.AllDirectories).ToList();
         }
 
         return [];

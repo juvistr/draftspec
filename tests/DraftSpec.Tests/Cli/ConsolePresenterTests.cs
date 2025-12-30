@@ -1,4 +1,5 @@
 using DraftSpec.Cli;
+using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -88,6 +89,93 @@ public class ConsolePresenterTests
         // Should contain timestamp format [HH:mm:ss]
         await Assert.That(output).Contains("[");
         await Assert.That(output).Contains("]");
+    }
+
+    #endregion
+
+    #region ShowPreRunStats
+
+    [Test]
+    public async Task ShowPreRunStats_ShowsTotalAndFileCount()
+    {
+        var presenter = new ConsolePresenter();
+        var stats = new SpecStats(Total: 10, Regular: 8, Focused: 0, Skipped: 2, Pending: 0, HasFocusMode: false, FileCount: 3);
+
+        presenter.ShowPreRunStats(stats);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("Discovered 10 spec(s) in 3 file(s)");
+    }
+
+    [Test]
+    public async Task ShowPreRunStats_ShowsBreakdown()
+    {
+        var presenter = new ConsolePresenter();
+        var stats = new SpecStats(Total: 10, Regular: 5, Focused: 2, Skipped: 2, Pending: 1, HasFocusMode: true, FileCount: 3);
+
+        presenter.ShowPreRunStats(stats);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("5 regular");
+        await Assert.That(output).Contains("2 focused");
+        await Assert.That(output).Contains("2 skipped");
+        await Assert.That(output).Contains("1 pending");
+    }
+
+    [Test]
+    public async Task ShowPreRunStats_OmitsZeroCounts()
+    {
+        var presenter = new ConsolePresenter();
+        var stats = new SpecStats(Total: 5, Regular: 5, Focused: 0, Skipped: 0, Pending: 0, HasFocusMode: false, FileCount: 1);
+
+        presenter.ShowPreRunStats(stats);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("5 regular");
+        await Assert.That(output).DoesNotContain("focused");
+        await Assert.That(output).DoesNotContain("skipped");
+        await Assert.That(output).DoesNotContain("pending");
+    }
+
+    [Test]
+    public async Task ShowPreRunStats_FocusMode_ShowsWarning()
+    {
+        var presenter = new ConsolePresenter();
+        var stats = new SpecStats(Total: 10, Regular: 8, Focused: 2, Skipped: 0, Pending: 0, HasFocusMode: true, FileCount: 1);
+
+        presenter.ShowPreRunStats(stats);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("Warning: Focus mode active");
+        await Assert.That(output).Contains("only focused specs");
+    }
+
+    [Test]
+    public async Task ShowPreRunStats_NoFocusMode_NoWarning()
+    {
+        var presenter = new ConsolePresenter();
+        var stats = new SpecStats(Total: 10, Regular: 10, Focused: 0, Skipped: 0, Pending: 0, HasFocusMode: false, FileCount: 1);
+
+        presenter.ShowPreRunStats(stats);
+
+        var output = _output.ToString();
+        await Assert.That(output).DoesNotContain("Warning");
+        await Assert.That(output).DoesNotContain("Focus mode");
+    }
+
+    #endregion
+
+    #region ShowSpecsStarting
+
+    [Test]
+    public async Task ShowSpecsStarting_WritesNewLine()
+    {
+        var presenter = new ConsolePresenter();
+
+        presenter.ShowSpecsStarting();
+
+        var output = _output.ToString();
+        await Assert.That(output).IsEqualTo(Environment.NewLine);
     }
 
     #endregion
@@ -223,6 +311,218 @@ public class ConsolePresenterTests
 
         var output = _output.ToString();
         await Assert.That(output).EndsWith("\n");
+    }
+
+    [Test]
+    public async Task ShowResult_OutputWithNewline_PreservesNewline()
+    {
+        var presenter = new ConsolePresenter();
+        var result = new SpecRunResult(
+            SpecFile: "/path/test.spec.csx",
+            Output: "has newline\n",
+            Error: "",
+            ExitCode: 0,
+            Duration: TimeSpan.FromMilliseconds(100));
+
+        presenter.ShowResult(result, "/path");
+
+        var output = _output.ToString();
+        await Assert.That(output).IsEqualTo("has newline\n");
+    }
+
+    [Test]
+    public async Task ShowResult_ErrorNoNewline_AddsNewline()
+    {
+        var presenter = new ConsolePresenter();
+        var result = new SpecRunResult(
+            SpecFile: "/path/test.spec.csx",
+            Output: "",
+            Error: "error no newline",
+            ExitCode: 1,
+            Duration: TimeSpan.FromMilliseconds(100));
+
+        presenter.ShowResult(result, "/path");
+
+        var output = _output.ToString();
+        await Assert.That(output).EndsWith("\n");
+    }
+
+    [Test]
+    public async Task ShowResult_ErrorWithNewline_PreservesNewline()
+    {
+        var presenter = new ConsolePresenter();
+        var result = new SpecRunResult(
+            SpecFile: "/path/test.spec.csx",
+            Output: "",
+            Error: "error with newline\n",
+            ExitCode: 1,
+            Duration: TimeSpan.FromMilliseconds(100));
+
+        presenter.ShowResult(result, "/path");
+
+        var output = _output.ToString();
+        await Assert.That(output).IsEqualTo("error with newline\n");
+    }
+
+    [Test]
+    public async Task ShowResult_EmptyOutputAndError_NoOutput()
+    {
+        var presenter = new ConsolePresenter();
+        var result = new SpecRunResult(
+            SpecFile: "/path/test.spec.csx",
+            Output: "",
+            Error: "",
+            ExitCode: 0,
+            Duration: TimeSpan.FromMilliseconds(100));
+
+        presenter.ShowResult(result, "/path");
+
+        var output = _output.ToString();
+        await Assert.That(output).IsEqualTo("");
+    }
+
+    #endregion
+
+    #region ShowCompilationError
+
+    [Test]
+    public async Task ShowCompilationError_ShowsFileNameWithError()
+    {
+        var presenter = new ConsolePresenter();
+        var exception = new CompilationDiagnosticException(
+            "Compilation failed",
+            "Error CS1234: Something wrong",
+            "/path/to/broken.spec.csx",
+            []);
+
+        presenter.ShowCompilationError(exception);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("broken.spec.csx");
+        await Assert.That(output).Contains("Compilation failed");
+    }
+
+    [Test]
+    public async Task ShowCompilationError_ShowsFormattedMessage()
+    {
+        var presenter = new ConsolePresenter();
+        var exception = new CompilationDiagnosticException(
+            "Compilation failed",
+            "Error CS1234: Syntax error at line 5",
+            "/path/to/test.spec.csx",
+            []);
+
+        presenter.ShowCompilationError(exception);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("Error CS1234: Syntax error at line 5");
+    }
+
+    [Test]
+    public async Task ShowCompilationError_WithDiscoveredSpecs_ShowsSpecList()
+    {
+        var presenter = new ConsolePresenter();
+        var specs = new List<StaticSpec>
+        {
+            new()
+            {
+                Description = "adds numbers",
+                ContextPath = ["Calculator"],
+                LineNumber = 10,
+                Type = StaticSpecType.Regular
+            },
+            new()
+            {
+                Description = "subtracts numbers",
+                ContextPath = ["Calculator"],
+                LineNumber = 15,
+                Type = StaticSpecType.Regular
+            }
+        };
+        var exception = new CompilationDiagnosticException(
+            "Compilation failed",
+            "Error CS1234",
+            "/path/to/test.spec.csx",
+            specs);
+
+        presenter.ShowCompilationError(exception);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("Found 2 spec(s)");
+        await Assert.That(output).Contains("Calculator > adds numbers");
+        await Assert.That(output).Contains("(line 10)");
+        await Assert.That(output).Contains("Calculator > subtracts numbers");
+    }
+
+    [Test]
+    public async Task ShowCompilationError_NoDiscoveredSpecs_DoesNotShowSpecList()
+    {
+        var presenter = new ConsolePresenter();
+        var exception = new CompilationDiagnosticException(
+            "Compilation failed",
+            "Error CS1234",
+            "/path/to/test.spec.csx",
+            []);
+
+        presenter.ShowCompilationError(exception);
+
+        var output = _output.ToString();
+        await Assert.That(output).DoesNotContain("Found");
+        await Assert.That(output).DoesNotContain("spec(s)");
+    }
+
+    [Test]
+    public async Task ShowCompilationError_SpecWithEmptyContextPath_ShowsDescriptionOnly()
+    {
+        var presenter = new ConsolePresenter();
+        var specs = new List<StaticSpec>
+        {
+            new()
+            {
+                Description = "top level spec",
+                ContextPath = [],
+                LineNumber = 5,
+                Type = StaticSpecType.Regular
+            }
+        };
+        var exception = new CompilationDiagnosticException(
+            "Compilation failed",
+            "Error",
+            "/path/to/test.spec.csx",
+            specs);
+
+        presenter.ShowCompilationError(exception);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("top level spec");
+        await Assert.That(output).DoesNotContain(" > top level spec"); // No context path prefix
+    }
+
+    [Test]
+    public async Task ShowCompilationError_SpecWithNoLineNumber_OmitsLineInfo()
+    {
+        var presenter = new ConsolePresenter();
+        var specs = new List<StaticSpec>
+        {
+            new()
+            {
+                Description = "spec without line",
+                ContextPath = ["Context"],
+                LineNumber = 0,
+                Type = StaticSpecType.Regular
+            }
+        };
+        var exception = new CompilationDiagnosticException(
+            "Compilation failed",
+            "Error",
+            "/path/to/test.spec.csx",
+            specs);
+
+        presenter.ShowCompilationError(exception);
+
+        var output = _output.ToString();
+        await Assert.That(output).Contains("spec without line");
+        await Assert.That(output).DoesNotContain("(line 0)");
     }
 
     #endregion

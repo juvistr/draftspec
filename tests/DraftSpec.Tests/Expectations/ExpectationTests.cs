@@ -268,5 +268,312 @@ public class ExpectationTests
         expectation.toBeCloseTo(11, 2);
     }
 
+    [Test]
+    public async Task toBeCloseTo_WithNonNumericType_Throws()
+    {
+        var expectation = new Expectation<string>("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeCloseTo("world", "x"));
+
+        await Assert.That(ex.Message).Contains("toBeCloseTo requires numeric types");
+    }
+
+    #endregion
+
+    #region Negation (not)
+
+    [Test]
+    public async Task not_toBe_WhenDifferent_Passes()
+    {
+        var expectation = new Expectation<int>(42, "value");
+        expectation.not.toBe(99); // Should pass - 42 is not 99
+    }
+
+    [Test]
+    public async Task not_toBe_WhenEqual_Throws()
+    {
+        var expectation = new Expectation<int>(42, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBe(42));
+
+        await Assert.That(ex.Message).Contains("to not be 42");
+    }
+
+    [Test]
+    public async Task not_toBeNull_WhenNotNull_Passes()
+    {
+        var expectation = new Expectation<string?>("hello", "value");
+        expectation.not.toBeNull(); // Should pass - "hello" is not null
+    }
+
+    [Test]
+    public async Task not_toBeNull_WhenNull_Throws()
+    {
+        var expectation = new Expectation<string?>(null, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBeNull());
+
+        await Assert.That(ex.Message).Contains("to not be null");
+    }
+
+    [Test]
+    public async Task not_toBeGreaterThan_WhenNotGreater_Passes()
+    {
+        var expectation = new Expectation<int>(5, "value");
+        expectation.not.toBeGreaterThan(10); // Should pass - 5 is not greater than 10
+    }
+
+    [Test]
+    public async Task not_toBeGreaterThan_WhenGreater_Throws()
+    {
+        var expectation = new Expectation<int>(15, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBeGreaterThan(10));
+
+        await Assert.That(ex.Message).Contains("to not be greater than 10");
+    }
+
+    [Test]
+    public async Task not_toBeLessThan_WhenNotLess_Passes()
+    {
+        var expectation = new Expectation<int>(15, "value");
+        expectation.not.toBeLessThan(10); // Should pass - 15 is not less than 10
+    }
+
+    [Test]
+    public async Task not_toBeLessThan_WhenLess_Throws()
+    {
+        var expectation = new Expectation<int>(5, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBeLessThan(10));
+
+        await Assert.That(ex.Message).Contains("to not be less than 10");
+    }
+
+    [Test]
+    public async Task not_toBeInRange_WhenOutsideRange_Passes()
+    {
+        var expectation = new Expectation<int>(15, "value");
+        expectation.not.toBeInRange(1, 10); // Should pass - 15 is not in [1, 10]
+    }
+
+    [Test]
+    public async Task not_toBeInRange_WhenInRange_Throws()
+    {
+        var expectation = new Expectation<int>(5, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBeInRange(1, 10));
+
+        await Assert.That(ex.Message).Contains("to not be in range");
+    }
+
+    #endregion
+
+    #region toBeInstanceOf
+
+    [Test]
+    public async Task toBeInstanceOf_WithCorrectType_Passes()
+    {
+        var expectation = new Expectation<object>("hello", "value");
+        var result = expectation.toBeInstanceOf<string>();
+
+        await Assert.That(result).IsEqualTo("hello");
+    }
+
+    [Test]
+    public async Task toBeInstanceOf_WithWrongType_Throws()
+    {
+        var expectation = new Expectation<object>("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeInstanceOf<int>());
+
+        await Assert.That(ex.Message).Contains("to be instance of Int32");
+        await Assert.That(ex.Message).Contains("but was String");
+    }
+
+    [Test]
+    public async Task toBeInstanceOf_WithNullValue_Throws()
+    {
+        var expectation = new Expectation<object?>(null, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeInstanceOf<string>());
+
+        await Assert.That(ex.Message).Contains("to be instance of String");
+        await Assert.That(ex.Message).Contains("but was null");
+    }
+
+    [Test]
+    public async Task not_toBeInstanceOf_WithWrongType_Passes()
+    {
+        var expectation = new Expectation<object>("hello", "value");
+        expectation.not.toBeInstanceOf<int>(); // Should pass - string is not int
+    }
+
+    [Test]
+    public async Task not_toBeInstanceOf_WithCorrectType_Throws()
+    {
+        var expectation = new Expectation<object>("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBeInstanceOf<string>());
+
+        await Assert.That(ex.Message).Contains("to not be instance of String");
+    }
+
+    #endregion
+
+    #region toBeEquivalentTo
+
+    [Test]
+    public async Task toBeEquivalentTo_WithEquivalentObjects_Passes()
+    {
+        var obj1 = new { Name = "Test", Value = 42 };
+        var obj2 = new { Name = "Test", Value = 42 };
+        var expectation = new Expectation<object>(obj1, "value");
+
+        expectation.toBeEquivalentTo(obj2); // Should pass - same structure
+    }
+
+    [Test]
+    public async Task toBeEquivalentTo_WithDifferentObjects_Throws()
+    {
+        var obj1 = new { Name = "Test", Value = 42 };
+        var obj2 = new { Name = "Different", Value = 99 };
+        var expectation = new Expectation<object>(obj1, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeEquivalentTo(obj2));
+
+        await Assert.That(ex.Message).Contains("to be equivalent to");
+    }
+
+    [Test]
+    public async Task toBeEquivalentTo_BothNull_Passes()
+    {
+        var expectation = new Expectation<object?>(null, "value");
+        expectation.toBeEquivalentTo(null); // Should pass
+    }
+
+    [Test]
+    public async Task toBeEquivalentTo_ActualNull_Throws()
+    {
+        var expectation = new Expectation<object?>(null, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeEquivalentTo(new { Name = "Test" }));
+
+        await Assert.That(ex.Message).Contains("but was null");
+    }
+
+    [Test]
+    public async Task toBeEquivalentTo_ExpectedNull_Throws()
+    {
+        var expectation = new Expectation<object?>(new { Name = "Test" }, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeEquivalentTo(null));
+
+        await Assert.That(ex.Message).Contains("to be equivalent to null");
+    }
+
+    [Test]
+    public async Task not_toBeEquivalentTo_WithDifferentObjects_Passes()
+    {
+        var obj1 = new { Name = "Test", Value = 42 };
+        var obj2 = new { Name = "Different", Value = 99 };
+        var expectation = new Expectation<object>(obj1, "value");
+
+        expectation.not.toBeEquivalentTo(obj2); // Should pass - objects are different
+    }
+
+    [Test]
+    public async Task not_toBeEquivalentTo_WithEquivalentObjects_Throws()
+    {
+        var obj1 = new { Name = "Test", Value = 42 };
+        var obj2 = new { Name = "Test", Value = 42 };
+        var expectation = new Expectation<object>(obj1, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBeEquivalentTo(obj2));
+
+        await Assert.That(ex.Message).Contains("to not be equivalent to");
+    }
+
+    [Test]
+    public async Task not_toBeEquivalentTo_BothNull_Throws()
+    {
+        var expectation = new Expectation<object?>(null, "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.not.toBeEquivalentTo(null));
+
+        await Assert.That(ex.Message).Contains("to not be equivalent to null");
+    }
+
+    [Test]
+    public async Task not_toBeEquivalentTo_OneNull_Passes()
+    {
+        var expectation = new Expectation<object?>(new { Name = "Test" }, "value");
+        expectation.not.toBeEquivalentTo(null); // Should pass - object is not equivalent to null
+    }
+
+    #endregion
+
+    #region Null Edge Cases for Comparison
+
+    [Test]
+    public async Task toBeGreaterThan_NullExpected_Throws()
+    {
+        var expectation = new Expectation<string?>("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeGreaterThan(null));
+
+        await Assert.That(ex.Message).Contains("Expected value cannot be null");
+    }
+
+    [Test]
+    public async Task toBeLessThan_NullExpected_Throws()
+    {
+        var expectation = new Expectation<string?>("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeLessThan(null));
+
+        await Assert.That(ex.Message).Contains("Expected value cannot be null");
+    }
+
+    [Test]
+    public async Task toBeAtLeast_NullExpected_Throws()
+    {
+        var expectation = new Expectation<string?>("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeAtLeast(null));
+
+        await Assert.That(ex.Message).Contains("Expected value cannot be null");
+    }
+
+    [Test]
+    public async Task toBeAtMost_NullExpected_Throws()
+    {
+        var expectation = new Expectation<string?>("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeAtMost(null));
+
+        await Assert.That(ex.Message).Contains("Expected value cannot be null");
+    }
+
+    [Test]
+    public async Task toBeInRange_NullMin_Throws()
+    {
+        var expectation = new Expectation<string?>("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeInRange(null, "z"));
+
+        await Assert.That(ex.Message).Contains("Range bounds cannot be null");
+    }
+
+    [Test]
+    public async Task toBeInRange_NullMax_Throws()
+    {
+        var expectation = new Expectation<string?>("hello", "value");
+
+        var ex = Assert.Throws<AssertionException>(() => expectation.toBeInRange("a", null));
+
+        await Assert.That(ex.Message).Contains("Range bounds cannot be null");
+    }
+
     #endregion
 }

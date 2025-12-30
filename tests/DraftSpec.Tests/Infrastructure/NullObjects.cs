@@ -3,6 +3,7 @@ using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
+using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using DraftSpec.Formatters;
@@ -51,6 +52,11 @@ public static class NullObjects
     /// A config loader that returns empty config.
     /// </summary>
     public static IConfigLoader ConfigLoader { get; } = new NullConfigLoader();
+
+    /// <summary>
+    /// A no-op config applier.
+    /// </summary>
+    public static IConfigApplier ConfigApplier { get; } = new NullConfigApplier();
 
     /// <summary>
     /// A no-op environment.
@@ -154,14 +160,19 @@ public static class NullObjects
 
     private class NullFormatterRegistry : ICliFormatterRegistry
     {
-        public IFormatter? GetFormatter(string name, CliOptions? options = null) => null;
-        public void Register(string name, Func<CliOptions?, IFormatter> factory) { }
+        public IFormatter? GetFormatter(string name, string? cssUrl = null) => null;
+        public void Register(string name, Func<string?, IFormatter> factory) { }
         public IEnumerable<string> Names => [];
     }
 
     private class NullConfigLoader : IConfigLoader
     {
         public ConfigLoadResult Load(string? path = null) => new(null, null, null);
+    }
+
+    private class NullConfigApplier : IConfigApplier
+    {
+        public void ApplyConfig(CliOptions options) { }
     }
 
     private class NullEnvironment : IEnvironment

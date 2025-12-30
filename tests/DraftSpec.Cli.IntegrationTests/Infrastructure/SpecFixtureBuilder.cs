@@ -190,6 +190,21 @@ public class SpecFixtureBuilder
     }
 
     /// <summary>
+    /// Adds a draftspec.json config file.
+    /// </summary>
+    public SpecFixtureBuilder WithConfigFile(object config)
+    {
+        _configContent = System.Text.Json.JsonSerializer.Serialize(config, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        });
+        return this;
+    }
+
+    private string? _configContent;
+
+    /// <summary>
     /// Builds the fixture by creating the directory and writing all spec files.
     /// Returns the path to the spec directory.
     /// </summary>
@@ -202,6 +217,13 @@ public class SpecFixtureBuilder
             File.WriteAllText(
                 Path.Combine(_directory, "spec_helper.csx"),
                 _specHelperContent);
+        }
+
+        if (_configContent != null)
+        {
+            File.WriteAllText(
+                Path.Combine(_directory, "draftspec.json"),
+                _configContent);
         }
 
         foreach (var (name, content) in _specs)

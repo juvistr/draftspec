@@ -1,6 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
-using DraftSpec.Tests.Infrastructure;
+using DraftSpec.Cli.Options;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
@@ -40,7 +40,7 @@ public class ValidateCommandTests
     public async Task ExecuteAsync_NonexistentPath_ThrowsArgumentException()
     {
         var command = CreateCommand();
-        var options = new CliOptions { Path = "/nonexistent/path" };
+        var options = new ValidateOptions { Path = "/nonexistent/path" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -50,7 +50,7 @@ public class ValidateCommandTests
     public async Task ExecuteAsync_EmptyDirectory_ReturnsSuccess()
     {
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new ValidateOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 
@@ -72,7 +72,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new ValidateOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 
@@ -95,7 +95,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new ValidateOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 
@@ -119,7 +119,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new ValidateOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 
@@ -137,7 +137,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, Strict = true };
+        var options = new ValidateOptions { Path = _tempDir, Strict = true };
 
         var result = await command.ExecuteAsync(options);
 
@@ -158,7 +158,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new ValidateOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 
@@ -179,7 +179,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, Quiet = true };
+        var options = new ValidateOptions { Path = _tempDir, Quiet = true };
 
         var result = await command.ExecuteAsync(options);
 
@@ -198,7 +198,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir, Quiet = true };
+        var options = new ValidateOptions { Path = _tempDir, Quiet = true };
 
         var result = await command.ExecuteAsync(options);
 
@@ -225,7 +225,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions
+        var options = new ValidateOptions
         {
             Path = _tempDir,
             Files = ["good.spec.csx"]
@@ -258,7 +258,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions
+        var options = new ValidateOptions
         {
             Path = _tempDir,
             Files = ["a.spec.csx", "b.spec.csx"]
@@ -281,7 +281,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions
+        var options = new ValidateOptions
         {
             Path = _tempDir,
             Files = ["exists.spec.csx", "nonexistent.spec.csx"]
@@ -307,7 +307,7 @@ public class ValidateCommandTests
             });
             """);
         var command = CreateCommand();
-        var options = new CliOptions { Path = _tempDir };
+        var options = new ValidateOptions { Path = _tempDir };
 
         var result = await command.ExecuteAsync(options);
 

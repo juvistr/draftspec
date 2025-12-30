@@ -1,6 +1,8 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -39,7 +41,7 @@ public class CliIntegrationTests
     public async Task InitCommand_CreatesSpecHelper()
     {
         var command = CreateInitCommand();
-        var options = new CliOptions { Path = _testDirectory };
+        var options = new InitOptions { Path = _testDirectory };
 
         var result = await command.ExecuteAsync(options);
 
@@ -51,7 +53,7 @@ public class CliIntegrationTests
     public async Task InitCommand_CreatesOmnisharp()
     {
         var command = CreateInitCommand();
-        var options = new CliOptions { Path = _testDirectory };
+        var options = new InitOptions { Path = _testDirectory };
 
         var result = await command.ExecuteAsync(options);
 
@@ -63,7 +65,7 @@ public class CliIntegrationTests
     public async Task InitCommand_SpecHelperContainsDraftSpecReference()
     {
         var command = CreateInitCommand();
-        var options = new CliOptions { Path = _testDirectory };
+        var options = new InitOptions { Path = _testDirectory };
 
         await command.ExecuteAsync(options);
 
@@ -76,7 +78,7 @@ public class CliIntegrationTests
     public async Task InitCommand_OmnisharpContainsScriptConfig()
     {
         var command = CreateInitCommand();
-        var options = new CliOptions { Path = _testDirectory };
+        var options = new InitOptions { Path = _testDirectory };
 
         await command.ExecuteAsync(options);
 
@@ -91,7 +93,7 @@ public class CliIntegrationTests
         await File.WriteAllTextAsync(specHelperPath, "// existing");
 
         var command = CreateInitCommand();
-        var options = new CliOptions { Path = _testDirectory, Force = false };
+        var options = new InitOptions { Path = _testDirectory, Force = false };
         await command.ExecuteAsync(options);
 
         var content = await File.ReadAllTextAsync(specHelperPath);
@@ -105,7 +107,7 @@ public class CliIntegrationTests
         await File.WriteAllTextAsync(specHelperPath, "// existing");
 
         var command = CreateInitCommand();
-        var options = new CliOptions { Path = _testDirectory, Force = true };
+        var options = new InitOptions { Path = _testDirectory, Force = true };
         await command.ExecuteAsync(options);
 
         var content = await File.ReadAllTextAsync(specHelperPath);
@@ -116,7 +118,7 @@ public class CliIntegrationTests
     public async Task InitCommand_InvalidDirectory_ThrowsArgumentException()
     {
         var command = CreateInitCommand();
-        var options = new CliOptions { Path = "/nonexistent/path" };
+        var options = new InitOptions { Path = "/nonexistent/path" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -130,7 +132,7 @@ public class CliIntegrationTests
     public async Task NewCommand_CreatesSpecFile()
     {
         var command = CreateNewCommand();
-        var options = new CliOptions { Path = _testDirectory, SpecName = "MyFeature" };
+        var options = new NewOptions { Path = _testDirectory, SpecName = "MyFeature" };
 
         var result = await command.ExecuteAsync(options);
 
@@ -142,7 +144,7 @@ public class CliIntegrationTests
     public async Task NewCommand_SpecFileContainsDescribe()
     {
         var command = CreateNewCommand();
-        var options = new CliOptions { Path = _testDirectory, SpecName = "Calculator" };
+        var options = new NewOptions { Path = _testDirectory, SpecName = "Calculator" };
 
         await command.ExecuteAsync(options);
 
@@ -155,7 +157,7 @@ public class CliIntegrationTests
     public async Task NewCommand_NoName_ThrowsArgumentException()
     {
         var command = CreateNewCommand();
-        var options = new CliOptions { Path = _testDirectory, SpecName = null };
+        var options = new NewOptions { Path = _testDirectory, SpecName = null };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -165,7 +167,7 @@ public class CliIntegrationTests
     public async Task NewCommand_EmptyName_ThrowsArgumentException()
     {
         var command = CreateNewCommand();
-        var options = new CliOptions { Path = _testDirectory, SpecName = "" };
+        var options = new NewOptions { Path = _testDirectory, SpecName = "" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -177,7 +179,7 @@ public class CliIntegrationTests
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "Existing.spec.csx"), "// existing");
 
         var command = CreateNewCommand();
-        var options = new CliOptions { Path = _testDirectory, SpecName = "Existing" };
+        var options = new NewOptions { Path = _testDirectory, SpecName = "Existing" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -187,7 +189,7 @@ public class CliIntegrationTests
     public async Task NewCommand_InvalidDirectory_ThrowsArgumentException()
     {
         var command = CreateNewCommand();
-        var options = new CliOptions { Path = "/nonexistent/path", SpecName = "Test" };
+        var options = new NewOptions { Path = "/nonexistent/path", SpecName = "Test" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -201,7 +203,7 @@ public class CliIntegrationTests
     public async Task NewCommand_NameWithPathSeparator_ThrowsArgumentException()
     {
         var command = CreateNewCommand();
-        var options = new CliOptions { Path = _testDirectory, SpecName = "../../../etc/malicious" };
+        var options = new NewOptions { Path = _testDirectory, SpecName = "../../../etc/malicious" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -211,7 +213,7 @@ public class CliIntegrationTests
     public async Task NewCommand_NameWithBackslash_ThrowsArgumentException()
     {
         var command = CreateNewCommand();
-        var options = new CliOptions { Path = _testDirectory, SpecName = "..\\..\\malicious" };
+        var options = new NewOptions { Path = _testDirectory, SpecName = "..\\..\\malicious" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -221,7 +223,7 @@ public class CliIntegrationTests
     public async Task NewCommand_NameWithDoubleDot_ThrowsArgumentException()
     {
         var command = CreateNewCommand();
-        var options = new CliOptions { Path = _testDirectory, SpecName = ".." };
+        var options = new NewOptions { Path = _testDirectory, SpecName = ".." };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -231,7 +233,7 @@ public class CliIntegrationTests
     public async Task NewCommand_NameStartingWithDoubleDot_ThrowsArgumentException()
     {
         var command = CreateNewCommand();
-        var options = new CliOptions { Path = _testDirectory, SpecName = "..foo" };
+        var options = new NewOptions { Path = _testDirectory, SpecName = "..foo" };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));
@@ -364,27 +366,6 @@ public class CliIntegrationTests
         await Assert.That(OutputFormats.Json).IsEqualTo("json");
         await Assert.That(OutputFormats.Markdown).IsEqualTo("markdown");
         await Assert.That(OutputFormats.Html).IsEqualTo("html");
-    }
-
-    #endregion
-
-    #region Mocks
-
-    private class MockConsole : IConsole
-    {
-        private readonly List<string> _output = [];
-
-        public string Output => string.Join("", _output);
-
-        public void Write(string text) => _output.Add(text);
-        public void WriteLine(string text) => _output.Add(text + "\n");
-        public void WriteLine() => _output.Add("\n");
-        public ConsoleColor ForegroundColor { get; set; }
-        public void ResetColor() { }
-        public void Clear() { }
-        public void WriteWarning(string text) => WriteLine(text);
-        public void WriteSuccess(string text) => WriteLine(text);
-        public void WriteError(string text) => WriteLine(text);
     }
 
     #endregion

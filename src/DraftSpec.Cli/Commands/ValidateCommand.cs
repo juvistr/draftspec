@@ -1,3 +1,4 @@
+using DraftSpec.Cli.Options;
 using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Cli.Commands;
@@ -6,7 +7,7 @@ namespace DraftSpec.Cli.Commands;
 /// Validates spec structure without execution.
 /// Uses static parsing to detect issues in spec files.
 /// </summary>
-public class ValidateCommand : ICommand
+public class ValidateCommand : ICommand<ValidateOptions>
 {
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
@@ -32,7 +33,7 @@ public class ValidateCommand : ICommand
         _fileSystem = fileSystem;
     }
 
-    public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
+    public async Task<int> ExecuteAsync(ValidateOptions options, CancellationToken ct = default)
     {
         // 1. Resolve path
         var projectPath = Path.GetFullPath(options.Path);

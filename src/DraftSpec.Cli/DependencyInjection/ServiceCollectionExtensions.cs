@@ -1,5 +1,6 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
+using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,8 +52,19 @@ public static class ServiceCollectionExtensions
         services.AddTransient<NewCommand>();
         services.AddTransient<SchemaCommand>();
 
-        // Factory
-        services.AddSingleton<ICommandFactory, CommandFactory>();
+        // Pipeline
+        services.AddSingleton<IConfigApplier, ConfigApplier>();
+
+        // Factory with explicit command factories for testability
+        services.AddSingleton<ICommandFactory>(sp => new CommandFactory(
+            sp.GetRequiredService<IConfigApplier>(),
+            () => sp.GetRequiredService<RunCommand>(),
+            () => sp.GetRequiredService<WatchCommand>(),
+            () => sp.GetRequiredService<ListCommand>(),
+            () => sp.GetRequiredService<ValidateCommand>(),
+            () => sp.GetRequiredService<InitCommand>(),
+            () => sp.GetRequiredService<NewCommand>(),
+            () => sp.GetRequiredService<SchemaCommand>()));
 
         return services;
     }

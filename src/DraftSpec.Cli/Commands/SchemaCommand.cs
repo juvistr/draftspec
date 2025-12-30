@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization.Metadata;
 using DraftSpec.Cli.Formatters;
+using DraftSpec.Cli.Options;
 
 namespace DraftSpec.Cli.Commands;
 
@@ -9,7 +10,7 @@ namespace DraftSpec.Cli.Commands;
 /// Outputs the JSON schema for the `draftspec list --format json` output.
 /// Uses .NET's JsonSchemaExporter to generate the schema from DTOs.
 /// </summary>
-public class SchemaCommand : ICommand
+public class SchemaCommand : ICommand<SchemaOptions>
 {
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
@@ -20,7 +21,7 @@ public class SchemaCommand : ICommand
         _fileSystem = fileSystem;
     }
 
-    public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
+    public async Task<int> ExecuteAsync(SchemaOptions options, CancellationToken ct = default)
     {
         // Use the same JSON options as JsonListFormatter for consistency
         var serializerOptions = new JsonSerializerOptions

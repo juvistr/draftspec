@@ -1,6 +1,8 @@
+using DraftSpec.Cli.Options;
+
 namespace DraftSpec.Cli.Commands;
 
-public class NewCommand : ICommand
+public class NewCommand : ICommand<NewOptions>
 {
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
@@ -11,7 +13,7 @@ public class NewCommand : ICommand
         _fileSystem = fileSystem;
     }
 
-    public Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
+    public Task<int> ExecuteAsync(NewOptions options, CancellationToken ct = default)
     {
         var name = options.SpecName;
         if (string.IsNullOrEmpty(name))

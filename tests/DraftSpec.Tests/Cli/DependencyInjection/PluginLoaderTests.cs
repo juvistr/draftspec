@@ -374,16 +374,16 @@ public class PluginLoaderTests
 
     private class MockFormatterRegistry : ICliFormatterRegistry
     {
-        public Dictionary<string, Func<CliOptions?, IFormatter>> RegisteredFormatters { get; } = [];
+        public Dictionary<string, Func<string?, IFormatter>> RegisteredFormatters { get; } = [];
 
-        public void Register(string name, Func<CliOptions?, IFormatter> factory)
+        public void Register(string name, Func<string?, IFormatter> factory)
         {
             RegisteredFormatters[name] = factory;
         }
 
-        public IFormatter? GetFormatter(string name, CliOptions? options = null)
+        public IFormatter? GetFormatter(string name, string? cssUrl = null)
         {
-            return RegisteredFormatters.TryGetValue(name, out var factory) ? factory(options) : null;
+            return RegisteredFormatters.TryGetValue(name, out var factory) ? factory(cssUrl) : null;
         }
 
         public IEnumerable<string> Names => RegisteredFormatters.Keys;

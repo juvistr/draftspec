@@ -1,96 +1,96 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.Pipeline;
 using DraftSpec.Tests.Infrastructure;
 
 namespace DraftSpec.Tests.Cli;
 
 /// <summary>
 /// Tests for CommandFactory class.
+/// The factory returns executor functions that wrap command invocation.
 /// </summary>
 public class CommandFactoryTests
 {
     #region Create Command Tests
 
     [Test]
-    public async Task Create_Run_ReturnsRunCommand()
+    public async Task Create_Run_ReturnsExecutor()
     {
-        var runCommand = new MockRunCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<RunCommand>(runCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create("run");
 
-        var command = factory.Create("run");
-
-        await Assert.That(command).IsSameReferenceAs(runCommand);
+        await Assert.That(executor).IsNotNull();
     }
 
     [Test]
-    public async Task Create_Watch_ReturnsWatchCommand()
+    public async Task Create_Watch_ReturnsExecutor()
     {
-        var watchCommand = new MockWatchCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<WatchCommand>(watchCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create("watch");
 
-        var command = factory.Create("watch");
-
-        await Assert.That(command).IsSameReferenceAs(watchCommand);
+        await Assert.That(executor).IsNotNull();
     }
 
     [Test]
-    public async Task Create_List_ReturnsListCommand()
+    public async Task Create_List_ReturnsExecutor()
     {
-        var listCommand = new MockListCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<ListCommand>(listCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create("list");
 
-        var command = factory.Create("list");
-
-        await Assert.That(command).IsSameReferenceAs(listCommand);
+        await Assert.That(executor).IsNotNull();
     }
 
     [Test]
-    public async Task Create_Init_ReturnsInitCommand()
+    public async Task Create_Validate_ReturnsExecutor()
     {
-        var initCommand = new MockInitCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<InitCommand>(initCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create("validate");
 
-        var command = factory.Create("init");
-
-        await Assert.That(command).IsSameReferenceAs(initCommand);
+        await Assert.That(executor).IsNotNull();
     }
 
     [Test]
-    public async Task Create_New_ReturnsNewCommand()
+    public async Task Create_Init_ReturnsExecutor()
     {
-        var newCommand = new MockNewCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<NewCommand>(newCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create("init");
 
-        var command = factory.Create("new");
+        await Assert.That(executor).IsNotNull();
+    }
 
-        await Assert.That(command).IsSameReferenceAs(newCommand);
+    [Test]
+    public async Task Create_New_ReturnsExecutor()
+    {
+        var factory = CreateFactory();
+
+        var executor = factory.Create("new");
+
+        await Assert.That(executor).IsNotNull();
+    }
+
+    [Test]
+    public async Task Create_Schema_ReturnsExecutor()
+    {
+        var factory = CreateFactory();
+
+        var executor = factory.Create("schema");
+
+        await Assert.That(executor).IsNotNull();
     }
 
     [Test]
     public async Task Create_Unknown_ReturnsNull()
     {
-        var serviceProvider = new MockServiceProvider();
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create("unknown-command");
 
-        var command = factory.Create("unknown-command");
-
-        await Assert.That(command).IsNull();
+        await Assert.That(executor).IsNull();
     }
 
     #endregion
@@ -102,17 +102,13 @@ public class CommandFactoryTests
     [Arguments("Run")]
     [Arguments("run")]
     [Arguments("rUn")]
-    public async Task Create_CaseInsensitive_Works(string commandName)
+    public async Task Create_Run_CaseInsensitive(string commandName)
     {
-        var runCommand = new MockRunCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<RunCommand>(runCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create(commandName);
 
-        var command = factory.Create(commandName);
-
-        await Assert.That(command).IsSameReferenceAs(runCommand);
+        await Assert.That(executor).IsNotNull();
     }
 
     [Test]
@@ -121,15 +117,11 @@ public class CommandFactoryTests
     [Arguments("wAtCh")]
     public async Task Create_Watch_CaseInsensitive(string commandName)
     {
-        var watchCommand = new MockWatchCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<WatchCommand>(watchCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create(commandName);
 
-        var command = factory.Create(commandName);
-
-        await Assert.That(command).IsSameReferenceAs(watchCommand);
+        await Assert.That(executor).IsNotNull();
     }
 
     [Test]
@@ -138,15 +130,24 @@ public class CommandFactoryTests
     [Arguments("LiSt")]
     public async Task Create_List_CaseInsensitive(string commandName)
     {
-        var listCommand = new MockListCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<ListCommand>(listCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create(commandName);
 
-        var command = factory.Create(commandName);
+        await Assert.That(executor).IsNotNull();
+    }
 
-        await Assert.That(command).IsSameReferenceAs(listCommand);
+    [Test]
+    [Arguments("VALIDATE")]
+    [Arguments("Validate")]
+    [Arguments("vAlIdAtE")]
+    public async Task Create_Validate_CaseInsensitive(string commandName)
+    {
+        var factory = CreateFactory();
+
+        var executor = factory.Create(commandName);
+
+        await Assert.That(executor).IsNotNull();
     }
 
     [Test]
@@ -155,15 +156,11 @@ public class CommandFactoryTests
     [Arguments("iNiT")]
     public async Task Create_Init_CaseInsensitive(string commandName)
     {
-        var initCommand = new MockInitCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<InitCommand>(initCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create(commandName);
 
-        var command = factory.Create(commandName);
-
-        await Assert.That(command).IsSameReferenceAs(initCommand);
+        await Assert.That(executor).IsNotNull();
     }
 
     [Test]
@@ -172,15 +169,11 @@ public class CommandFactoryTests
     [Arguments("nEw")]
     public async Task Create_New_CaseInsensitive(string commandName)
     {
-        var newCommand = new MockNewCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<NewCommand>(newCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create(commandName);
 
-        var command = factory.Create(commandName);
-
-        await Assert.That(command).IsSameReferenceAs(newCommand);
+        await Assert.That(executor).IsNotNull();
     }
 
     #endregion
@@ -190,23 +183,21 @@ public class CommandFactoryTests
     [Test]
     public async Task Create_EmptyString_ReturnsNull()
     {
-        var serviceProvider = new MockServiceProvider();
-        var factory = new CommandFactory(serviceProvider);
+        var factory = CreateFactory();
 
-        var command = factory.Create("");
+        var executor = factory.Create("");
 
-        await Assert.That(command).IsNull();
+        await Assert.That(executor).IsNull();
     }
 
     [Test]
     public async Task Create_Whitespace_ReturnsNull()
     {
-        var serviceProvider = new MockServiceProvider();
-        var factory = new CommandFactory(serviceProvider);
+        var factory = CreateFactory();
 
-        var command = factory.Create("   ");
+        var executor = factory.Create("   ");
 
-        await Assert.That(command).IsNull();
+        await Assert.That(executor).IsNull();
     }
 
     [Test]
@@ -214,97 +205,67 @@ public class CommandFactoryTests
     {
         // The factory uses ToLowerInvariant() which doesn't trim
         // so "run " becomes "run " which doesn't match "run"
-        var runCommand = new MockRunCommand();
-        var serviceProvider = new MockServiceProvider()
-            .Register<RunCommand>(runCommand);
+        var factory = CreateFactory();
 
-        var factory = new CommandFactory(serviceProvider);
+        var executor = factory.Create("run ");
 
-        var command = factory.Create("run ");
-
-        await Assert.That(command).IsNull();
+        await Assert.That(executor).IsNull();
     }
 
     #endregion
 
-    #region Mock Implementations
+    #region Helpers
 
-    /// <summary>
-    /// Simple mock IServiceProvider that returns pre-configured service instances.
-    /// </summary>
-    private class MockServiceProvider : IServiceProvider
+    private static CommandFactory CreateFactory()
     {
-        private readonly Dictionary<Type, object> _services = [];
-
-        public MockServiceProvider Register<T>(T service) where T : class
-        {
-            _services[typeof(T)] = service;
-            return this;
-        }
-
-        public object? GetService(Type serviceType)
-        {
-            return _services.TryGetValue(serviceType, out var service) ? service : null;
-        }
+        return new CommandFactory(
+            NullObjects.ConfigApplier,
+            CreateRunCommand,
+            CreateWatchCommand,
+            CreateListCommand,
+            CreateValidateCommand,
+            CreateInitCommand,
+            CreateNewCommand,
+            CreateSchemaCommand);
     }
 
-    private class MockRunCommand : RunCommand
-    {
-        public MockRunCommand() : base(
-            NullObjects.SpecFinder,
-            NullObjects.RunnerFactory,
-            NullObjects.Console,
-            NullObjects.FormatterRegistry,
-            NullObjects.ConfigLoader,
-            NullObjects.FileSystem,
-            NullObjects.Environment,
-            NullObjects.StatsCollector,
-            NullObjects.Partitioner)
-        {
-        }
-    }
+    private static RunCommand CreateRunCommand() => new(
+        NullObjects.SpecFinder,
+        NullObjects.RunnerFactory,
+        NullObjects.Console,
+        NullObjects.FormatterRegistry,
+        NullObjects.FileSystem,
+        NullObjects.Environment,
+        NullObjects.StatsCollector,
+        NullObjects.Partitioner);
 
-    private class MockWatchCommand : WatchCommand
-    {
-        public MockWatchCommand() : base(
-            NullObjects.SpecFinder,
-            NullObjects.RunnerFactory,
-            NullObjects.FileWatcherFactory,
-            NullObjects.Console,
-            NullObjects.ConfigLoader,
-            NullObjects.SpecChangeTracker)
-        {
-        }
-    }
+    private static WatchCommand CreateWatchCommand() => new(
+        NullObjects.SpecFinder,
+        NullObjects.RunnerFactory,
+        NullObjects.FileWatcherFactory,
+        NullObjects.Console,
+        NullObjects.SpecChangeTracker);
 
-    private class MockListCommand : ListCommand
-    {
-        public MockListCommand() : base(
-            NullObjects.Console,
-            NullObjects.FileSystem,
-            NullObjects.Partitioner)
-        {
-        }
-    }
+    private static ListCommand CreateListCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem);
 
-    private class MockInitCommand : InitCommand
-    {
-        public MockInitCommand() : base(
-            NullObjects.Console,
-            NullObjects.FileSystem,
-            NullObjects.ProjectResolver)
-        {
-        }
-    }
+    private static ValidateCommand CreateValidateCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem);
 
-    private class MockNewCommand : NewCommand
-    {
-        public MockNewCommand() : base(
-            NullObjects.Console,
-            NullObjects.FileSystem)
-        {
-        }
-    }
+    private static InitCommand CreateInitCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem,
+        NullObjects.ProjectResolver);
+
+    private static NewCommand CreateNewCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem);
+
+    private static SchemaCommand CreateSchemaCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem);
 
     #endregion
 }

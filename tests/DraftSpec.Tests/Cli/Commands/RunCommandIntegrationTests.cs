@@ -60,10 +60,13 @@ public class RunCommandIntegrationTests
             fileSystem: new RealFileSystem());
 
         // Line 4 should match "adds numbers"
-        var options = new CliOptions
+        var options = new RunOptions
         {
             Path = _tempDir,
-            LineFilters = [new LineFilter("test.spec.csx", [4])]
+            Filter = new FilterOptions
+            {
+                LineFilters = [new LineFilter("test.spec.csx", [4])]
+            }
         };
 
         await command.ExecuteAsync(options);
@@ -95,10 +98,13 @@ public class RunCommandIntegrationTests
             fileSystem: new RealFileSystem());
 
         // Line 5 is within 1 line of "adds numbers" (line 4)
-        var options = new CliOptions
+        var options = new RunOptions
         {
             Path = _tempDir,
-            LineFilters = [new LineFilter("test.spec.csx", [5])]
+            Filter = new FilterOptions
+            {
+                LineFilters = [new LineFilter("test.spec.csx", [5])]
+            }
         };
 
         await command.ExecuteAsync(options);
@@ -116,10 +122,13 @@ public class RunCommandIntegrationTests
             specFiles: [],
             fileSystem: new RealFileSystem());
 
-        var options = new CliOptions
+        var options = new RunOptions
         {
             Path = _tempDir,
-            LineFilters = [new LineFilter("nonexistent.spec.csx", [1])]
+            Filter = new FilterOptions
+            {
+                LineFilters = [new LineFilter("nonexistent.spec.csx", [1])]
+            }
         };
 
         await command.ExecuteAsync(options);
@@ -150,10 +159,13 @@ public class RunCommandIntegrationTests
             fileSystem: new RealFileSystem());
 
         // Lines 4 and 5 should match both specs
-        var options = new CliOptions
+        var options = new RunOptions
         {
             Path = _tempDir,
-            LineFilters = [new LineFilter("test.spec.csx", [4, 5])]
+            Filter = new FilterOptions
+            {
+                LineFilters = [new LineFilter("test.spec.csx", [4, 5])]
+            }
         };
 
         await command.ExecuteAsync(options);
@@ -183,11 +195,14 @@ public class RunCommandIntegrationTests
             specFiles: [specPath],
             fileSystem: new RealFileSystem());
 
-        var options = new CliOptions
+        var options = new RunOptions
         {
             Path = _tempDir,
-            FilterName = "existing",
-            LineFilters = [new LineFilter("test.spec.csx", [4])]
+            Filter = new FilterOptions
+            {
+                FilterName = "existing",
+                LineFilters = [new LineFilter("test.spec.csx", [4])]
+            }
         };
 
         await command.ExecuteAsync(options);
@@ -221,10 +236,13 @@ public class RunCommandIntegrationTests
             specFiles: [specPath],
             fileSystem: new RealFileSystem());
 
-        var options = new CliOptions
+        var options = new RunOptions
         {
             Path = _tempDir,
-            LineFilters = [new LineFilter("test.spec.csx", [6])]
+            Filter = new FilterOptions
+            {
+                LineFilters = [new LineFilter("test.spec.csx", [6])]
+            }
         };
 
         await command.ExecuteAsync(options);
@@ -255,10 +273,13 @@ public class RunCommandIntegrationTests
             fileSystem: new RealFileSystem());
 
         // Line 100 is way past the end of the file - no specs there
-        var options = new CliOptions
+        var options = new RunOptions
         {
             Path = _tempDir,
-            LineFilters = [new LineFilter("test.spec.csx", [100])]
+            Filter = new FilterOptions
+            {
+                LineFilters = [new LineFilter("test.spec.csx", [100])]
+            }
         };
 
         var result = await command.ExecuteAsync(options);
@@ -289,10 +310,13 @@ public class RunCommandIntegrationTests
 
         // Lines 4 and 5 both match the same spec "adds numbers"
         // The filter should deduplicate
-        var options = new CliOptions
+        var options = new RunOptions
         {
             Path = _tempDir,
-            LineFilters = [new LineFilter("test.spec.csx", [4, 5])]
+            Filter = new FilterOptions
+            {
+                LineFilters = [new LineFilter("test.spec.csx", [4, 5])]
+            }
         };
 
         await command.ExecuteAsync(options);
@@ -323,10 +347,13 @@ public class RunCommandIntegrationTests
             specFiles: [specPath],
             fileSystem: new RealFileSystem());
 
-        var options = new CliOptions
+        var options = new RunOptions
         {
             Path = _tempDir,
-            LineFilters = [new LineFilter("test.spec.csx", [2])]
+            Filter = new FilterOptions
+            {
+                LineFilters = [new LineFilter("test.spec.csx", [2])]
+            }
         };
 
         await command.ExecuteAsync(options);
@@ -343,7 +370,6 @@ public class RunCommandIntegrationTests
 
     private static RunCommand CreateCommand(
         MockConsole? console = null,
-        IConfigLoader? configLoader = null,
         IInProcessSpecRunnerFactory? runnerFactory = null,
         IReadOnlyList<string>? specFiles = null,
         IFileSystem? fileSystem = null,
@@ -355,7 +381,6 @@ public class RunCommandIntegrationTests
             runnerFactory ?? NullObjects.RunnerFactory,
             console ?? new MockConsole(),
             NullObjects.FormatterRegistry,
-            configLoader ?? NullObjects.ConfigLoader,
             fileSystem ?? NullObjects.FileSystem,
             environment ?? NullObjects.Environment,
             NullObjects.StatsCollector,

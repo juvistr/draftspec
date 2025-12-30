@@ -174,9 +174,8 @@ public class CliFormatterRegistryTests
     public async Task Html_UsesDefaultCssUrl_WhenNotProvided()
     {
         var registry = new CliFormatterRegistry();
-        var options = new CliOptions(); // No CssUrl set
 
-        var formatter = registry.GetFormatter(OutputFormats.Html, options) as HtmlFormatter;
+        var formatter = registry.GetFormatter(OutputFormats.Html) as HtmlFormatter;
 
         await Assert.That(formatter).IsNotNull();
 
@@ -192,9 +191,8 @@ public class CliFormatterRegistryTests
     {
         var registry = new CliFormatterRegistry();
         var customCssUrl = "https://example.com/custom.css";
-        var options = new CliOptions { CssUrl = customCssUrl };
 
-        var formatter = registry.GetFormatter(OutputFormats.Html, options) as HtmlFormatter;
+        var formatter = registry.GetFormatter(OutputFormats.Html, customCssUrl) as HtmlFormatter;
 
         await Assert.That(formatter).IsNotNull();
 
@@ -207,7 +205,7 @@ public class CliFormatterRegistryTests
     }
 
     [Test]
-    public async Task Html_NullOptions_UsesDefaultCssUrl()
+    public async Task Html_NullCssUrl_UsesDefaultCssUrl()
     {
         var registry = new CliFormatterRegistry();
 
@@ -238,38 +236,38 @@ public class CliFormatterRegistryTests
     }
 
     [Test]
-    public async Task Register_FactoryReceivesOptions()
+    public async Task Register_FactoryReceivesCssUrl()
     {
         var registry = new CliFormatterRegistry();
-        CliOptions? receivedOptions = null;
+        string? receivedCssUrl = null;
 
-        registry.Register("test", opts =>
+        registry.Register("test", cssUrl =>
         {
-            receivedOptions = opts;
+            receivedCssUrl = cssUrl;
             return new TestFormatter();
         });
 
-        var options = new CliOptions { Path = "/test/path" };
-        registry.GetFormatter("test", options);
+        var customCssUrl = "https://example.com/custom.css";
+        registry.GetFormatter("test", customCssUrl);
 
-        await Assert.That(receivedOptions).IsSameReferenceAs(options);
+        await Assert.That(receivedCssUrl).IsEqualTo(customCssUrl);
     }
 
     [Test]
-    public async Task Register_FactoryReceivesNull_WhenNoOptions()
+    public async Task Register_FactoryReceivesNull_WhenNoCssUrl()
     {
         var registry = new CliFormatterRegistry();
-        CliOptions? receivedOptions = new CliOptions(); // Non-null initial value
+        string? receivedCssUrl = "initial"; // Non-null initial value
 
-        registry.Register("test", opts =>
+        registry.Register("test", cssUrl =>
         {
-            receivedOptions = opts;
+            receivedCssUrl = cssUrl;
             return new TestFormatter();
         });
 
-        registry.GetFormatter("test"); // No options provided
+        registry.GetFormatter("test"); // No cssUrl provided
 
-        await Assert.That(receivedOptions).IsNull();
+        await Assert.That(receivedCssUrl).IsNull();
     }
 
     #endregion

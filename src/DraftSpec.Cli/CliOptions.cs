@@ -236,4 +236,130 @@ public class CliOptions
         ExplicitlySet.ApplyIfNotEmpty(nameof(CoverageReportFormats), v => CoverageReportFormats = v,
             config.Coverage?.ReportFormats);
     }
+
+    #region Conversion Methods
+
+    /// <summary>
+    /// Converts to RunOptions for the run command.
+    /// </summary>
+    public RunOptions ToRunOptions() => new()
+    {
+        Path = Path,
+        Format = Format,
+        OutputFile = OutputFile,
+        CssUrl = CssUrl,
+        Parallel = Parallel,
+        NoCache = NoCache,
+        Bail = Bail,
+        NoStats = NoStats,
+        StatsOnly = StatsOnly,
+        Reporters = Reporters,
+        Filter = ToFilterOptions(),
+        Coverage = ToCoverageOptions(),
+        Partition = ToPartitionOptions()
+    };
+
+    /// <summary>
+    /// Converts to ListOptions for the list command.
+    /// </summary>
+    public ListOptions ToListOptions() => new()
+    {
+        Path = Path,
+        Format = ListFormat,
+        ShowLineNumbers = ShowLineNumbers,
+        FocusedOnly = FocusedOnly,
+        PendingOnly = PendingOnly,
+        SkippedOnly = SkippedOnly,
+        Filter = ToFilterOptions()
+    };
+
+    /// <summary>
+    /// Converts to ValidateOptions for the validate command.
+    /// </summary>
+    public ValidateOptions ToValidateOptions() => new()
+    {
+        Path = Path,
+        Static = Static,
+        Strict = Strict,
+        Quiet = Quiet,
+        Files = Files
+    };
+
+    /// <summary>
+    /// Converts to WatchOptions for the watch command.
+    /// </summary>
+    public WatchOptions ToWatchOptions() => new()
+    {
+        Path = Path,
+        Format = Format,
+        Incremental = Incremental,
+        Parallel = Parallel,
+        NoCache = NoCache,
+        Bail = Bail,
+        Filter = ToFilterOptions()
+    };
+
+    /// <summary>
+    /// Creates FilterOptions from filter-related properties.
+    /// </summary>
+    private FilterOptions ToFilterOptions() => new()
+    {
+        SpecName = SpecName,
+        FilterTags = FilterTags,
+        ExcludeTags = ExcludeTags,
+        FilterName = FilterName,
+        ExcludeName = ExcludeName,
+        FilterContext = FilterContext,
+        ExcludeContext = ExcludeContext,
+        LineFilters = LineFilters
+    };
+
+    /// <summary>
+    /// Creates CoverageOptions from coverage-related properties.
+    /// </summary>
+    private CoverageOptions ToCoverageOptions() => new()
+    {
+        Enabled = Coverage,
+        Output = CoverageOutput,
+        Format = CoverageFormat,
+        ReportFormats = CoverageReportFormats
+    };
+
+    /// <summary>
+    /// Creates PartitionOptions from partitioning-related properties.
+    /// </summary>
+    private PartitionOptions ToPartitionOptions() => new()
+    {
+        Total = Partition,
+        Index = PartitionIndex,
+        Strategy = PartitionStrategy
+    };
+
+    /// <summary>
+    /// Converts to InitOptions for the init command.
+    /// </summary>
+    public InitOptions ToInitOptions() => new()
+    {
+        Path = Path,
+        Force = Force
+    };
+
+    /// <summary>
+    /// Converts to NewOptions for the new command.
+    /// </summary>
+    public NewOptions ToNewOptions() => new()
+    {
+        Path = Path,
+        SpecName = SpecName
+    };
+
+    /// <summary>
+    /// Converts to SchemaOptions for the schema command.
+    /// </summary>
+    public SchemaOptions ToSchemaOptions() => new()
+    {
+        OutputFile = OutputFile
+    };
+
+    #endregion
 }

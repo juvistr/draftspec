@@ -873,4 +873,140 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Partition Options
+
+    [Test]
+    public async Task Parse_PartitionOptions_SetsValues()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "4", "--partition-index", "2"]);
+
+        await Assert.That(options.Partition).IsEqualTo(4);
+        await Assert.That(options.PartitionIndex).IsEqualTo(2);
+        await Assert.That(options.PartitionStrategy).IsEqualTo("file");
+        await Assert.That(options.Error).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_PartitionWithStrategy_SetsValues()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "4", "--partition-index", "0", "--partition-strategy", "spec-count"]);
+
+        await Assert.That(options.Partition).IsEqualTo(4);
+        await Assert.That(options.PartitionIndex).IsEqualTo(0);
+        await Assert.That(options.PartitionStrategy).IsEqualTo("spec-count");
+        await Assert.That(options.Error).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_PartitionWithoutIndex_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "4"]);
+
+        await Assert.That(options.Error).IsEqualTo("--partition and --partition-index must be used together");
+    }
+
+    [Test]
+    public async Task Parse_PartitionIndexWithoutPartition_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition-index", "0"]);
+
+        await Assert.That(options.Error).IsEqualTo("--partition and --partition-index must be used together");
+    }
+
+    [Test]
+    public async Task Parse_PartitionIndexTooLarge_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "4", "--partition-index", "4"]);
+
+        await Assert.That(options.Error).IsEqualTo("--partition-index (4) must be less than --partition (4)");
+    }
+
+    [Test]
+    public async Task Parse_PartitionIndexEqualToPartition_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "4", "--partition-index", "5"]);
+
+        await Assert.That(options.Error).IsEqualTo("--partition-index (5) must be less than --partition (4)");
+    }
+
+    [Test]
+    public async Task Parse_PartitionInvalid_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "abc"]);
+
+        await Assert.That(options.Error).IsEqualTo("--partition must be a positive integer");
+    }
+
+    [Test]
+    public async Task Parse_PartitionZero_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "0"]);
+
+        await Assert.That(options.Error).IsEqualTo("--partition must be a positive integer");
+    }
+
+    [Test]
+    public async Task Parse_PartitionNegative_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "-1"]);
+
+        await Assert.That(options.Error).IsEqualTo("--partition must be a positive integer");
+    }
+
+    [Test]
+    public async Task Parse_PartitionIndexNegative_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition-index", "-1"]);
+
+        await Assert.That(options.Error).IsEqualTo("--partition-index must be a non-negative integer");
+    }
+
+    [Test]
+    public async Task Parse_PartitionStrategyInvalid_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition-strategy", "invalid"]);
+
+        await Assert.That(options.Error).IsEqualTo("--partition-strategy must be 'file' or 'spec-count'");
+    }
+
+    [Test]
+    public async Task Parse_PartitionStrategyFileValid()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "2", "--partition-index", "0", "--partition-strategy", "file"]);
+
+        await Assert.That(options.PartitionStrategy).IsEqualTo("file");
+        await Assert.That(options.Error).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_PartitionStrategyIsCaseInsensitive()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "2", "--partition-index", "0", "--partition-strategy", "SPEC-COUNT"]);
+
+        await Assert.That(options.PartitionStrategy).IsEqualTo("spec-count");
+        await Assert.That(options.Error).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_PartitionOptionsMarkedAsExplicitlySet()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--partition", "4", "--partition-index", "2", "--partition-strategy", "spec-count"]);
+
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.Partition));
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.PartitionIndex));
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.PartitionStrategy));
+    }
+
+    [Test]
+    public async Task Parse_DefaultPartitionValues()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.Partition).IsNull();
+        await Assert.That(options.PartitionIndex).IsNull();
+        await Assert.That(options.PartitionStrategy).IsEqualTo("file");
+    }
+
+    #endregion
 }

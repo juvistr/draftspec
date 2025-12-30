@@ -18,6 +18,7 @@ public class RunCommand : ICommand
     private readonly IFileSystem _fileSystem;
     private readonly IEnvironment _environment;
     private readonly ISpecStatsCollector _statsCollector;
+    private readonly ISpecPartitioner _partitioner;
 
     public RunCommand(
         ISpecFinder specFinder,
@@ -27,7 +28,8 @@ public class RunCommand : ICommand
         IConfigLoader configLoader,
         IFileSystem fileSystem,
         IEnvironment environment,
-        ISpecStatsCollector statsCollector)
+        ISpecStatsCollector statsCollector,
+        ISpecPartitioner partitioner)
     {
         _specFinder = specFinder;
         _runnerFactory = runnerFactory;
@@ -37,6 +39,7 @@ public class RunCommand : ICommand
         _fileSystem = fileSystem;
         _environment = environment;
         _statsCollector = statsCollector;
+        _partitioner = partitioner;
     }
 
     public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
@@ -85,10 +88,41 @@ public class RunCommand : ICommand
         // Set up presenter for console output
         var presenter = new ConsolePresenter(_console, watchMode: false);
 
-        // Get project path for stats collection
+        // Get project path for stats collection and partitioning
         var projectPath = Path.GetFullPath(options.Path);
         if (_fileSystem.FileExists(projectPath))
             projectPath = Path.GetDirectoryName(projectPath)!;
+
+        // Apply partitioning if specified
+        if (options.Partition.HasValue && options.PartitionIndex.HasValue)
+        {
+            var partitionResult = await _partitioner.PartitionAsync(
+                specFiles,
+                options.Partition.Value,
+                options.PartitionIndex.Value,
+                options.PartitionStrategy,
+                projectPath,
+                ct);
+
+            // Show partition info
+            _console.ForegroundColor = ConsoleColor.DarkGray;
+            _console.WriteLine($"Partition {options.PartitionIndex + 1} of {options.Partition}: {partitionResult.Files.Count} file(s) of {partitionResult.TotalFiles} total");
+            if (partitionResult.PartitionSpecs.HasValue)
+            {
+                _console.WriteLine($"  {partitionResult.PartitionSpecs} spec(s) of {partitionResult.TotalSpecs} total");
+            }
+            _console.ResetColor();
+            _console.WriteLine();
+
+            specFiles = partitionResult.Files;
+
+            // Empty partition is success
+            if (specFiles.Count == 0)
+            {
+                _console.WriteLine("No specs in this partition.");
+                return 0;
+            }
+        }
 
         // Show pre-run stats (unless disabled)
         if (!options.NoStats || options.StatsOnly)

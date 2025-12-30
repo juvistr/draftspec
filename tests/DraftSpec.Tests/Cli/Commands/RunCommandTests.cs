@@ -406,7 +406,8 @@ public class RunCommandTests
             configLoader ?? new MockConfigLoader(),
             fileSystem ?? new MockFileSystem(),
             environment ?? new MockEnvironment(),
-            new MockStatsCollector());
+            new MockStatsCollector(),
+            new MockPartitioner());
     }
 
     #endregion
@@ -505,98 +506,18 @@ public class RunCommandTests
         public void ClearBuildCache() { }
     }
 
-    private class MockConsole : IConsole
+    // Aliases for shared mocks from TestMocks
+    private class MockConsole : TestMocks.MockConsole { }
+    private class MockFormatterRegistry : TestMocks.NullFormatterRegistry { }
+    private class MockConfigLoader : TestMocks.NullConfigLoader
     {
-        private readonly List<string> _output = [];
-
-        public string Output => string.Join("", _output);
-
-        public void Write(string text) => _output.Add(text);
-        public void WriteLine(string text) => _output.Add(text + "\n");
-        public void WriteLine() => _output.Add("\n");
-        public ConsoleColor ForegroundColor { get; set; }
-        public void ResetColor() { }
-        public void Clear() { }
-        public void WriteWarning(string text) => WriteLine(text);
-        public void WriteSuccess(string text) => WriteLine(text);
-        public void WriteError(string text) => WriteLine(text);
+        public MockConfigLoader(string? error = null) : base(error) { }
     }
-
-    private class MockFormatterRegistry : ICliFormatterRegistry
-    {
-        public IFormatter? GetFormatter(string name, CliOptions? options = null) => null;
-        public void Register(string name, Func<CliOptions?, IFormatter> factory) { }
-        public IEnumerable<string> Names => [];
-    }
-
-    private class MockConfigLoader : IConfigLoader
-    {
-        private readonly string? _error;
-
-        public MockConfigLoader(string? error = null) => _error = error;
-
-        public ConfigLoadResult Load(string? path = null)
-        {
-            if (_error != null)
-                return new ConfigLoadResult(null, _error, null);
-
-            return new ConfigLoadResult(null, null, null);
-        }
-    }
-
-    private class MockFileSystem : IFileSystem
-    {
-        public bool FileExists(string path) => false;
-        public void WriteAllText(string path, string content) { }
-        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) => Task.CompletedTask;
-        public string ReadAllText(string path) => "";
-        public bool DirectoryExists(string path) => true;
-        public void CreateDirectory(string path) { }
-        public string[] GetFiles(string path, string searchPattern) => [];
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
-        public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
-    }
-
-    private class TrackingFileSystem : IFileSystem
-    {
-        public List<(string Path, string Content)> WrittenFiles { get; } = [];
-
-        public bool FileExists(string path) => false;
-        public void WriteAllText(string path, string content) => WrittenFiles.Add((path, content));
-        public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default)
-        {
-            WrittenFiles.Add((path, content));
-            return Task.CompletedTask;
-        }
-        public string ReadAllText(string path) => "";
-        public bool DirectoryExists(string path) => true;
-        public void CreateDirectory(string path) { }
-        public string[] GetFiles(string path, string searchPattern) => [];
-        public string[] GetFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
-        public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
-        public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
-    }
-
-    private class MockStatsCollector : ISpecStatsCollector
-    {
-        public Task<SpecStats> CollectAsync(
-            IReadOnlyList<string> specFiles,
-            string projectPath,
-            CancellationToken ct = default)
-        {
-            return Task.FromResult(new SpecStats(
-                Total: 0,
-                Regular: 0,
-                Focused: 0,
-                Skipped: 0,
-                Pending: 0,
-                HasFocusMode: false,
-                FileCount: specFiles.Count));
-        }
-    }
+    private class MockFileSystem : TestMocks.NullFileSystem { }
+    private class TrackingFileSystem : TestMocks.TrackingFileSystem { }
+    private class MockStatsCollector : TestMocks.NullStatsCollector { }
+    private class MockPartitioner : TestMocks.NullPartitioner { }
+    private class MockEnvironment : TestMocks.NullEnvironment { }
 
     #endregion
 }

@@ -1,6 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Formatters;
+using DraftSpec.Cli.Services;
 using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Tests.Cli.Commands;
@@ -15,6 +16,7 @@ public class ListCommandTests
     private string _tempDir = null!;
     private MockConsole _console = null!;
     private RealFileSystem _fileSystem = null!;
+    private MockPartitioner _partitioner = null!;
 
     [Before(Test)]
     public void SetUp()
@@ -23,6 +25,7 @@ public class ListCommandTests
         Directory.CreateDirectory(_tempDir);
         _console = new MockConsole();
         _fileSystem = new RealFileSystem();
+        _partitioner = new MockPartitioner();
     }
 
     [After(Test)]
@@ -32,7 +35,7 @@ public class ListCommandTests
             Directory.Delete(_tempDir, recursive: true);
     }
 
-    private ListCommand CreateCommand() => new(_console, _fileSystem);
+    private ListCommand CreateCommand() => new(_console, _fileSystem, _partitioner);
 
     #region Path Validation
 
@@ -618,23 +621,11 @@ public class ListCommandTests
 
     #region Mocks
 
-    private class MockConsole : IConsole
-    {
-        private readonly List<string> _output = [];
+    // Aliases and specific implementations
+    private class MockConsole : TestMocks.MockConsole { }
+    private class MockPartitioner : TestMocks.NullPartitioner { }
 
-        public string Output => string.Join("", _output);
-
-        public void Write(string text) => _output.Add(text);
-        public void WriteLine(string text) => _output.Add(text + "\n");
-        public void WriteLine() => _output.Add("\n");
-        public ConsoleColor ForegroundColor { get; set; }
-        public void ResetColor() { }
-        public void Clear() { }
-        public void WriteWarning(string text) => WriteLine(text);
-        public void WriteSuccess(string text) => WriteLine(text);
-        public void WriteError(string text) => WriteLine(text);
-    }
-
+    // RealFileSystem is specific to these tests - uses actual file system for integration testing
     private class RealFileSystem : IFileSystem
     {
         public bool FileExists(string path) => File.Exists(path);

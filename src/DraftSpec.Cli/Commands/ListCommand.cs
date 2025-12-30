@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using DraftSpec.Cli.Formatters;
+using DraftSpec.Cli.Services;
 using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Cli.Commands;
@@ -12,11 +13,13 @@ public class ListCommand : ICommand
 {
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
+    private readonly ISpecPartitioner _partitioner;
 
-    public ListCommand(IConsole console, IFileSystem fileSystem)
+    public ListCommand(IConsole console, IFileSystem fileSystem, ISpecPartitioner partitioner)
     {
         _console = console;
         _fileSystem = fileSystem;
+        _partitioner = partitioner;
     }
 
     public async Task<int> ExecuteAsync(CliOptions options, CancellationToken ct = default)
@@ -36,7 +39,31 @@ public class ListCommand : ICommand
             return 0;
         }
 
-        // 3. Use static parser to discover specs (no execution)
+        // 3. Apply partitioning if specified
+        if (options.Partition.HasValue && options.PartitionIndex.HasValue)
+        {
+            var partitionResult = await _partitioner.PartitionAsync(
+                specFiles,
+                options.Partition.Value,
+                options.PartitionIndex.Value,
+                options.PartitionStrategy,
+                projectPath,
+                ct);
+
+            _console.ForegroundColor = ConsoleColor.DarkGray;
+            _console.WriteLine($"Partition {options.PartitionIndex + 1} of {options.Partition}: {partitionResult.Files.Count} file(s)");
+            _console.ResetColor();
+
+            specFiles = partitionResult.Files.ToList();
+
+            if (specFiles.Count == 0)
+            {
+                _console.WriteLine("No specs in this partition.");
+                return 0;
+            }
+        }
+
+        // 4. Use static parser to discover specs (no execution)
         var parser = new StaticSpecParser(projectPath);
         var allSpecs = new List<DiscoveredSpec>();
         var allErrors = new List<DiscoveryError>();
@@ -83,14 +110,14 @@ public class ListCommand : ICommand
             }
         }
 
-        // 4. Apply filters
+        // 5. Apply filters
         var filteredSpecs = ApplyFilters(allSpecs, options);
 
-        // 5. Format output based on ListFormat
+        // 6. Format output based on ListFormat
         var formatter = CreateFormatter(options);
         var output = formatter.Format(filteredSpecs, allErrors);
 
-        // 6. Write to file or stdout
+        // 7. Write to file or stdout
         if (!string.IsNullOrEmpty(options.OutputFile))
         {
             await _fileSystem.WriteAllTextAsync(options.OutputFile, output, ct);

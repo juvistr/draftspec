@@ -11,6 +11,11 @@ namespace DraftSpec.Cli.Commands;
 /// </summary>
 public class ListCommand : ICommand
 {
+    /// <summary>
+    /// Timeout for regex operations to prevent ReDoS attacks.
+    /// </summary>
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
+
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
     private readonly ISpecPartitioner _partitioner;
@@ -181,12 +186,19 @@ public class ListCommand : ICommand
         {
             try
             {
-                var regex = new Regex(options.FilterName, RegexOptions.IgnoreCase);
+                var regex = new Regex(options.FilterName, RegexOptions.IgnoreCase, RegexTimeout);
                 filtered = filtered.Where(s => regex.IsMatch(s.DisplayName));
             }
             catch (RegexParseException)
             {
                 // Fall back to simple substring match
+                var pattern = options.FilterName;
+                filtered = filtered.Where(s =>
+                    s.DisplayName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                // Pattern caused timeout - fall back to substring match
                 var pattern = options.FilterName;
                 filtered = filtered.Where(s =>
                     s.DisplayName.Contains(pattern, StringComparison.OrdinalIgnoreCase));

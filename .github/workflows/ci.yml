@@ -54,7 +54,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           verbose: true
 
       - name: Upload test results to Codecov

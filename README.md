@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/gh/juvistr/draftspec/graph/badge.svg)](https://codecov.io/gh/juvistr/draftspec)
 [![NuGet](https://img.shields.io/nuget/v/DraftSpec.svg)](https://www.nuget.org/packages/DraftSpec)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/juvistr/draftspec/badge)](https://securityscorecards.dev/viewer/?uri=github.com/juvistr/draftspec)
 
 > **Alpha** - API stabilizing, expect some breaking changes
 
@@ -309,8 +310,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
-<!-- markdownlint-enable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/juvistr"><img src="https://avatars.githubusercontent.com/u/250112888?v=4?s=100" width="100px;" alt="Julia"/><br /><sub><b>Julia</b></sub></a><br /><a href="https://github.com/juvistr/draftspec/commits?author=juvistr" title="Code">💻</a> <a href="#ideas-juvistr" title="Ideas, Planning, & Feedback">🤔</a> <a href="#maintenance-juvistr" title="Maintenance">🚧</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
+
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 ## License

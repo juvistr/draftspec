@@ -44,8 +44,9 @@ public class FileWatcher : IFileWatcher
 
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
-        // Skip temporary files
-        if (e.Name?.StartsWith('.') == true || e.Name?.EndsWith('~') == true)
+        // Skip temporary files (editor backups, hidden files)
+        var fileName = e.Name;
+        if (fileName is null || fileName.StartsWith('.') || fileName.EndsWith('~'))
             return;
 
         // Normalize path for consistent comparison across multiple events

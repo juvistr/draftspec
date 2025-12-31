@@ -24,7 +24,7 @@ public class FilterMiddleware : ISpecMiddleware
     /// Execute the middleware, skipping the spec if it doesn't match the filter predicate.
     /// </summary>
     public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
-        Func<SpecExecutionContext, Task<SpecResult>> next)
+        Func<SpecExecutionContext, Task<SpecResult>> pipeline)
     {
         if (!_predicate(context))
             return new SpecResult(
@@ -32,6 +32,6 @@ public class FilterMiddleware : ISpecMiddleware
                 SpecStatus.Skipped,
                 context.ContextPath);
 
-        return await next(context);
+        return await pipeline(context);
     }
 }

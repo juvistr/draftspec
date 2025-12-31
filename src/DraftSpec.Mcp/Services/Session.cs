@@ -144,5 +144,6 @@ public class Session : IDisposable
         {
             // Ignore cleanup errors
         }
+        GC.SuppressFinalize(this);
     }
 }

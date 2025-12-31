@@ -233,7 +233,7 @@ Implement `IFormatter` and register with `FormatterRegistry`:
 
 ```csharp
 FormatterRegistry.Register("xml", new XmlFormatter());
-var output = FormatterRegistry.Get("xml").Format(report);
+var output = FormatterRegistry.GetByName("xml").Format(report);
 ```
 
 ### 3. Custom Reporters

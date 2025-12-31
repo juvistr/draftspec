@@ -322,10 +322,10 @@ public class PluginIntegrationTests
             _log = log;
         }
 
-        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
+        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> pipeline)
         {
             _log.Add($"{_name}-before");
-            var result = await next(context);
+            var result = await pipeline(context);
             _log.Add($"{_name}-after");
             return result;
         }
@@ -333,9 +333,9 @@ public class PluginIntegrationTests
 
     private class ResultModifyingMiddleware : ISpecMiddleware
     {
-        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> next)
+        public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context, Func<SpecExecutionContext, Task<SpecResult>> pipeline)
         {
-            var result = await next(context);
+            var result = await pipeline(context);
 
             // Convert failures to passes (for testing purposes)
             if (result.Status == SpecStatus.Failed)

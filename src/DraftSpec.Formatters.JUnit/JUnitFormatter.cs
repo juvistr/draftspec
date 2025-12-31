@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Xml;
+using DraftSpec.Formatters.Abstractions;
 
 namespace DraftSpec.Formatters.JUnit;
 

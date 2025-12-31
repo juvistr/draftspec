@@ -28,21 +28,3 @@ public interface IPluginContext
     /// <param name="message">Log message</param>
     void Log(LogLevel level, string message);
 }
-
-/// <summary>
-/// Log levels for plugin logging.
-/// </summary>
-public enum LogLevel
-{
-    /// <summary>Debug-level information</summary>
-    Debug,
-
-    /// <summary>General information</summary>
-    Info,
-
-    /// <summary>Warning conditions</summary>
-    Warning,
-
-    /// <summary>Error conditions</summary>
-    Error
-}

@@ -8,18 +8,6 @@ using Microsoft.CodeAnalysis.Scripting;
 namespace DraftSpec.Scripting;
 
 /// <summary>
-/// Globals object passed to Roslyn scripts for state sharing.
-/// </summary>
-public class ScriptGlobals
-{
-    /// <summary>
-    /// Action to capture the root context after spec definitions.
-    /// Called at the end of the script to transfer state back to the host.
-    /// </summary>
-    public Action<SpecContext?>? CaptureRootContext { get; set; }
-}
-
-/// <summary>
 /// Roslyn-based script host for compiling and executing CSX spec files in-process.
 /// </summary>
 /// <remarks>

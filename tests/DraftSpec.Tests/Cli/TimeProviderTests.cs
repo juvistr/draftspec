@@ -47,7 +47,7 @@ public class TimeProviderTests
         var stopwatch = provider.StartNew();
 
         await Task.Delay(20);
-        stopwatch.Stop();
+        stopwatch.StopTiming();
         var elapsedAfterStop = stopwatch.Elapsed;
 
         await Task.Delay(50);

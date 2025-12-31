@@ -19,7 +19,7 @@ internal class ReporterRegistry : IReporterRegistry
 
     public IEnumerable<IReporter> All => _reporters;
 
-    public IReporter? Get(string name)
+    public IReporter? GetByName(string name)
     {
         return _byName.TryGetValue(name, out var reporter) ? reporter : null;
     }

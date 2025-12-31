@@ -1,5 +1,11 @@
+using System.Collections.Immutable;
 using DraftSpec.Cli;
 using DraftSpec.Formatters;
+using DraftSpec.Tests.Infrastructure.Mocks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -90,6 +96,72 @@ public class InProcessSpecRunnerTests
         await Assert.That(result.Success).IsFalse();
         await Assert.That(result.Error).IsEqualTo(exception);
         await Assert.That(result.Report.Summary.Failed).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task RunFileAsync_CompilationErrorException_ReturnsCompilationDiagnosticException()
+    {
+        // Arrange
+        var dslManager = new MockDslManager();
+        var projectBuilder = new MockProjectBuilder();
+        var scriptExecutor = new MockSpecScriptExecutor();
+        var timeProvider = new MockClock();
+        var diagnosticFormatter = new MockCompilationDiagnosticFormatter();
+        var fileSystem = new MockFileSystem();
+
+        // Create a real CompilationErrorException
+        var compilationException = CreateCompilationError("var x = ");
+        scriptExecutor.SetException(compilationException);
+
+        var runner = new InProcessSpecRunner(
+            timeProvider: timeProvider,
+            projectBuilder: projectBuilder,
+            scriptExecutor: scriptExecutor,
+            dslManager: dslManager,
+            diagnosticFormatter: diagnosticFormatter,
+            fileSystem: fileSystem);
+
+        // Act
+        var result = await runner.RunFileAsync("/project/test.spec.csx");
+
+        // Assert
+        await Assert.That(result.Success).IsFalse();
+        await Assert.That(result.Error).IsAssignableTo<CompilationDiagnosticException>();
+        await Assert.That(result.Report.Summary.Failed).IsEqualTo(1);
+
+        var diagnosticException = (CompilationDiagnosticException)result.Error!;
+        await Assert.That(diagnosticException.FormattedMessage).IsEqualTo("Formatted compilation error");
+        await Assert.That(diagnosticException.CompilationError).IsSameReferenceAs(compilationException);
+    }
+
+    /// <summary>
+    /// Creates a real CompilationErrorException from invalid code.
+    /// </summary>
+    private static CompilationErrorException CreateCompilationError(string code)
+    {
+        try
+        {
+            var script = CSharpScript.Create(code);
+            var compilation = script.GetCompilation();
+            var diagnostics = compilation.GetDiagnostics()
+                .Where(d => d.Severity == DiagnosticSeverity.Error)
+                .ToList();
+
+            if (diagnostics.Count > 0)
+            {
+                return new CompilationErrorException(
+                    "Compilation failed",
+                    diagnostics.ToImmutableArray());
+            }
+
+            // Force evaluate to get runtime compilation errors
+            script.RunAsync().GetAwaiter().GetResult();
+            throw new InvalidOperationException("Expected compilation error");
+        }
+        catch (CompilationErrorException ex)
+        {
+            return ex;
+        }
     }
 
     [Test]
@@ -598,122 +670,3 @@ public class InProcessSpecRunnerTests
 
     #endregion
 }
-
-#region Mock Implementations
-
-/// <summary>
-/// Mock DSL manager that tracks Reset() calls.
-/// </summary>
-file class MockDslManager : IDslManager
-{
-    public int ResetCalls { get; private set; }
-
-    public void Reset()
-    {
-        ResetCalls++;
-    }
-}
-
-/// <summary>
-/// Mock project builder for testing.
-/// </summary>
-file class MockProjectBuilder : IProjectBuilder
-{
-    public event Action<string>? OnBuildStarted;
-    public event Action<BuildResult>? OnBuildCompleted;
-    public event Action<string>? OnBuildSkipped;
-
-    public List<string> BuildProjectsCalls { get; } = [];
-    public int ClearBuildCacheCalls { get; private set; }
-
-    public void BuildProjects(string directory)
-    {
-        BuildProjectsCalls.Add(directory);
-    }
-
-    public string FindOutputDirectory(string specDirectory)
-    {
-        return Path.Combine(specDirectory, "bin", "Debug", "net10.0");
-    }
-
-    public void ClearBuildCache()
-    {
-        ClearBuildCacheCalls++;
-    }
-
-    public void TriggerBuildStarted(string project)
-    {
-        OnBuildStarted?.Invoke(project);
-    }
-
-    public void TriggerBuildCompleted(BuildResult result)
-    {
-        OnBuildCompleted?.Invoke(result);
-    }
-
-    public void TriggerBuildSkipped(string project)
-    {
-        OnBuildSkipped?.Invoke(project);
-    }
-}
-
-/// <summary>
-/// Mock spec script executor for testing.
-/// </summary>
-file class MockSpecScriptExecutor : ISpecScriptExecutor
-{
-    private SpecContext? _result;
-    private Exception? _exception;
-
-    public void SetResult(SpecContext? context)
-    {
-        _result = context;
-        _exception = null;
-    }
-
-    public void SetException(Exception exception)
-    {
-        _exception = exception;
-        _result = null;
-    }
-
-    public Task<SpecContext?> ExecuteAsync(string specFile, string outputDirectory, CancellationToken ct = default)
-    {
-        if (_exception != null)
-            throw _exception;
-
-        return Task.FromResult(_result);
-    }
-}
-
-/// <summary>
-/// Mock time provider for testing.
-/// </summary>
-file class MockClock : DraftSpec.IClock
-{
-    public DateTime UtcNow => DateTime.UtcNow;
-    public int ElapsedMilliseconds { get; set; } = 100;
-
-    public DraftSpec.IStopwatch StartNew()
-    {
-        return new MockStopwatch(ElapsedMilliseconds);
-    }
-}
-
-/// <summary>
-/// Mock stopwatch for testing.
-/// </summary>
-file class MockStopwatch : DraftSpec.IStopwatch
-{
-    private readonly int _milliseconds;
-
-    public MockStopwatch(int milliseconds = 100)
-    {
-        _milliseconds = milliseconds;
-    }
-
-    public TimeSpan Elapsed => TimeSpan.FromMilliseconds(_milliseconds);
-    public void Stop() { }
-}
-
-#endregion

@@ -1,36 +1,10 @@
 using DraftSpec.Configuration;
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 using DraftSpec.TestingPlatform;
 using Microsoft.CodeAnalysis.Scripting;
 
 namespace DraftSpec.Cli;
-
-/// <summary>
-/// Result of running specs from a single file.
-/// </summary>
-public record InProcessRunResult(
-    string SpecFile,
-    SpecReport Report,
-    TimeSpan Duration,
-    Exception? Error = null)
-{
-    public bool Success => Error == null && Report.Summary.Failed == 0;
-}
-
-/// <summary>
-/// Summary of running multiple spec files.
-/// </summary>
-public record InProcessRunSummary(
-    IReadOnlyList<InProcessRunResult> Results,
-    TimeSpan TotalDuration)
-{
-    public bool Success => Results.All(r => r.Success);
-    public int TotalSpecs => Results.Sum(r => r.Report.Summary.Total);
-    public int Passed => Results.Sum(r => r.Report.Summary.Passed);
-    public int Failed => Results.Sum(r => r.Report.Summary.Failed);
-    public int Pending => Results.Sum(r => r.Report.Summary.Pending);
-    public int Skipped => Results.Sum(r => r.Report.Summary.Skipped);
-}
 
 /// <summary>
 /// Runs spec files in-process using CsxScriptHost.
@@ -116,7 +90,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             if (rootContext == null)
             {
                 // No specs defined - return empty report
-                stopwatch.Stop();
+                stopwatch.StopTiming();
                 return new InProcessRunResult(
                     specFile,
                     new SpecReport
@@ -139,12 +113,12 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             var report = SpecReportBuilder.Build(rootContext, results);
             report.Source = fullPath;
 
-            stopwatch.Stop();
+            stopwatch.StopTiming();
             return new InProcessRunResult(specFile, report, stopwatch.Elapsed);
         }
         catch (CompilationErrorException compilationEx)
         {
-            stopwatch.Stop();
+            stopwatch.StopTiming();
 
             // Format the compilation error with source context
             var formattedError = _diagnosticFormatter.Format(compilationEx);
@@ -174,7 +148,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         }
         catch (Exception ex)
         {
-            stopwatch.Stop();
+            stopwatch.StopTiming();
             return new InProcessRunResult(
                 specFile,
                 new SpecReport
@@ -231,7 +205,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             }
         }
 
-        stopwatch.Stop();
+        stopwatch.StopTiming();
         return new InProcessRunSummary(results, stopwatch.Elapsed);
     }
 

@@ -17,7 +17,7 @@ public class ConfigurationTests
 
         registry.Register("json", formatter);
 
-        await Assert.That(registry.Get("json")).IsSameReferenceAs(formatter);
+        await Assert.That(registry.GetByName("json")).IsSameReferenceAs(formatter);
     }
 
     [Test]
@@ -28,8 +28,8 @@ public class ConfigurationTests
 
         registry.Register("JSON", formatter);
 
-        await Assert.That(registry.Get("json")).IsSameReferenceAs(formatter);
-        await Assert.That(registry.Get("Json")).IsSameReferenceAs(formatter);
+        await Assert.That(registry.GetByName("json")).IsSameReferenceAs(formatter);
+        await Assert.That(registry.GetByName("Json")).IsSameReferenceAs(formatter);
     }
 
     [Test]
@@ -37,7 +37,7 @@ public class ConfigurationTests
     {
         var registry = new FormatterRegistry();
 
-        await Assert.That(registry.Get("unknown")).IsNull();
+        await Assert.That(registry.GetByName("unknown")).IsNull();
     }
 
     [Test]
@@ -73,7 +73,7 @@ public class ConfigurationTests
 
         config.AddFormatter("custom", formatter);
 
-        await Assert.That(config.Formatters.Get("custom")).IsSameReferenceAs(formatter);
+        await Assert.That(config.Formatters.GetByName("custom")).IsSameReferenceAs(formatter);
     }
 
     [Test]
@@ -84,7 +84,7 @@ public class ConfigurationTests
 
         config.AddReporter(reporter);
 
-        await Assert.That(config.Reporters.Get("test")).IsSameReferenceAs(reporter);
+        await Assert.That(config.Reporters.GetByName("test")).IsSameReferenceAs(reporter);
     }
 
     [Test]
@@ -187,7 +187,7 @@ public class ConfigurationTests
         config.Initialize();
 
         await Assert.That(plugin.RegisterReportersCalled).IsTrue();
-        await Assert.That(config.Reporters.Get("test-reporter")).IsNotNull();
+        await Assert.That(config.Reporters.GetByName("test-reporter")).IsNotNull();
     }
 
     [Test]

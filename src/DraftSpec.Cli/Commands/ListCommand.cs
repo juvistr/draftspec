@@ -193,7 +193,7 @@ public class ListCommand : ICommand<ListOptions>
             ListFormat.Tree => new TreeListFormatter(options.ShowLineNumbers),
             ListFormat.Flat => new FlatListFormatter(options.ShowLineNumbers),
             ListFormat.Json => new JsonListFormatter(),
-            _ => throw new ArgumentOutOfRangeException(nameof(options.Format), options.Format, "Unknown list format")
+            _ => throw new ArgumentOutOfRangeException(nameof(options), options.Format, "Unknown list format")
         };
     }
 }

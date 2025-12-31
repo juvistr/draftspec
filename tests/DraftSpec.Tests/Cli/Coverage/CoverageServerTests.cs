@@ -277,7 +277,7 @@ public class CoverageServerTests
         var result = server.Start();
 
         await Assert.That(result).IsFalse();
-        await Assert.That(processRunner.StartProcessCalls).IsEqualTo(1);
+        await Assert.That(processRunner.StartProcessCallCount).IsEqualTo(1);
     }
 
     #endregion
@@ -459,80 +459,3 @@ public class CoverageServerTests
 
     #endregion
 }
-
-#region Mock Implementations
-
-/// <summary>
-/// Mock process runner for testing DotnetCoverageServer.
-/// </summary>
-file class MockProcessRunner : IProcessRunner
-{
-    private readonly Queue<ProcessResult> _runResults = new();
-
-    public ProcessStartInfo? LastStartInfo { get; private set; }
-    public IProcessHandle? ProcessHandleToReturn { get; set; }
-    public bool ThrowOnStartProcess { get; set; }
-    public int StartProcessCalls { get; private set; }
-    public List<(string FileName, IEnumerable<string> Args)> RunCalls { get; } = [];
-
-    public void AddRunResult(ProcessResult result) => _runResults.Enqueue(result);
-
-    public ProcessResult Run(
-        string fileName,
-        IEnumerable<string> arguments,
-        string? workingDirectory = null,
-        Dictionary<string, string>? environmentVariables = null)
-    {
-        RunCalls.Add((fileName, arguments.ToList()));
-        return _runResults.Count > 0 ? _runResults.Dequeue() : new ProcessResult("", "", 0);
-    }
-
-    public ProcessResult RunDotnet(
-        IEnumerable<string> arguments,
-        string? workingDirectory = null,
-        Dictionary<string, string>? environmentVariables = null)
-    {
-        return _runResults.Count > 0 ? _runResults.Dequeue() : new ProcessResult("", "", 0);
-    }
-
-    public IProcessHandle StartProcess(ProcessStartInfo startInfo)
-    {
-        StartProcessCalls++;
-        LastStartInfo = startInfo;
-
-        if (ThrowOnStartProcess)
-            throw new InvalidOperationException("Process start failed");
-
-        return ProcessHandleToReturn ?? new MockProcessHandle();
-    }
-}
-
-/// <summary>
-/// Mock process handle for testing.
-/// </summary>
-file class MockProcessHandle : IProcessHandle
-{
-    public bool HasExited { get; set; }
-    public bool WaitForExitCalled { get; private set; }
-    public bool KillCalled { get; private set; }
-    public bool DisposeCalled { get; private set; }
-
-    public bool WaitForExit(int milliseconds)
-    {
-        WaitForExitCalled = true;
-        return true;
-    }
-
-    public void Kill()
-    {
-        KillCalled = true;
-        HasExited = true;
-    }
-
-    public void Dispose()
-    {
-        DisposeCalled = true;
-    }
-}
-
-#endregion

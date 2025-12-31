@@ -25,6 +25,47 @@ csharp_style_var_for_built_in_types = true:suggestion
 csharp_style_var_when_type_is_apparent = true:suggestion
 csharp_prefer_braces = when_multiline:suggestion
 
+# =============================================================================
+# Analyzer Configuration
+# =============================================================================
+
+# --- Suppressions (rules disabled for this project) ---
+dotnet_diagnostic.CA1305.severity = none   # IFormatProvider - too noisy for internal formatters
+dotnet_diagnostic.CA1707.severity = none   # Underscores in identifiers - conflicts with test naming
+dotnet_diagnostic.RCS1194.severity = none  # Exception constructors - not needed for internal exceptions
+
+# --- Demoted to suggestion (valid but not enforced) ---
+dotnet_diagnostic.CA1822.severity = suggestion  # Mark members as static
+dotnet_diagnostic.CA1848.severity = suggestion  # Use LoggerMessage delegates
+dotnet_diagnostic.CA1859.severity = suggestion  # Use concrete types
+dotnet_diagnostic.CA1863.severity = suggestion  # Use CompositeFormat
+dotnet_diagnostic.CA1866.severity = suggestion  # Use char overload
+dotnet_diagnostic.CA1869.severity = suggestion  # Cache JsonSerializerOptions
+dotnet_diagnostic.RCS1075.severity = suggestion # Empty catch clause - valid for cleanup patterns
+
+# --- Enforced rules ---
+dotnet_diagnostic.RCS1060.severity = warning    # One type per file
+
+# =============================================================================
+# Test Project Relaxations
+# =============================================================================
+[{tests,examples,benchmarks}/**/*.cs]
+
+# --- Suppressions (not applicable to tests) ---
+dotnet_diagnostic.CA1051.severity = none  # Visible instance fields - ok in test helpers
+dotnet_diagnostic.CA1304.severity = none  # Specify culture
+dotnet_diagnostic.CA1310.severity = none  # Specify StringComparison
+dotnet_diagnostic.CA1311.severity = none  # Specify culture
+dotnet_diagnostic.CA1711.severity = none  # Incorrect suffix - test naming freedom
+dotnet_diagnostic.CA1852.severity = none  # Types can be sealed
+dotnet_diagnostic.CA2201.severity = none  # Generic exceptions - ok for test setup
+
+# --- Demoted to suggestion ---
+dotnet_diagnostic.CA1001.severity = suggestion  # Disposable fields
+dotnet_diagnostic.CA1806.severity = suggestion  # Ignore method results
+dotnet_diagnostic.CA1816.severity = suggestion  # GC.SuppressFinalize
+dotnet_diagnostic.CA1861.severity = suggestion  # Constant arrays - ok in test data
+
 [*.{json,yml,yaml}]
 indent_size = 2
 

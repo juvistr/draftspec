@@ -13,5 +13,5 @@ public class SystemStopwatch : IStopwatch
     public TimeSpan Elapsed => _stopwatch.Elapsed;
 
     /// <inheritdoc />
-    public void Stop() => _stopwatch.Stop();
+    public void StopTiming() => _stopwatch.Stop();
 }

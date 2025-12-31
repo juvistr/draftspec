@@ -22,7 +22,7 @@ internal static class TestNodeMapper
         if (spec.HasCompilationError)
         {
             propertyList.Add(new FailedTestNodeStateProperty(
-                new Exception(spec.CompilationError!),
+                new CompilationException(spec.CompilationError!),
                 $"Compilation error: {spec.CompilationError}"));
         }
         else
@@ -124,7 +124,7 @@ internal static class TestNodeMapper
     public static TestNode CreateCompilationErrorResultNode(DiscoveredSpec spec)
     {
         var stateProperty = new FailedTestNodeStateProperty(
-            new Exception(spec.CompilationError!),
+            new CompilationException(spec.CompilationError!),
             $"Cannot execute: {spec.CompilationError}");
 
         var propertyList = new List<IProperty> { stateProperty };
@@ -154,7 +154,7 @@ internal static class TestNodeMapper
         // Use FailedTestNodeStateProperty (not ErrorTestNodeStateProperty) so IDEs
         // display discovery errors as failed tests in the test explorer
         var stateProperty = new FailedTestNodeStateProperty(
-            error.Exception ?? new Exception(error.Message),
+            error.Exception ?? new SpecExecutionException(error.Message),
             error.Message);
 
         var propertyList = new List<IProperty> { stateProperty };
@@ -183,7 +183,7 @@ internal static class TestNodeMapper
                 : new FailedTestNodeStateProperty("Test failed"),
             SpecStatus.Pending => new SkippedTestNodeStateProperty("Pending - no implementation"),
             SpecStatus.Skipped => new SkippedTestNodeStateProperty("Skipped"),
-            _ => throw new ArgumentOutOfRangeException(nameof(result.Status))
+            _ => throw new ArgumentOutOfRangeException(nameof(result), result.Status, "Unknown spec status")
         };
     }
 

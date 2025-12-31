@@ -1,28 +1,6 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace DraftSpec.Mcp.Models;
-
-/// <summary>
-/// Type of change detected between baseline and current spec results.
-/// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum ChangeType
-{
-    /// <summary>Was passing, now failing (regression).</summary>
-    Regression,
-
-    /// <summary>Was failing, now passing (fix).</summary>
-    Fix,
-
-    /// <summary>New spec that didn't exist in baseline.</summary>
-    New,
-
-    /// <summary>Spec existed in baseline but not in current.</summary>
-    Removed,
-
-    /// <summary>Status changed but not a regression or fix (e.g., pending to skipped).</summary>
-    StatusChange
-}
 
 /// <summary>
 /// Result of comparing two spec runs.
@@ -77,35 +55,4 @@ public class SpecDiff
         : NewPassing > 0
             ? $"✅ {NewPassing} fix(es), no regressions"
             : "✅ No changes in test results";
-}
-
-/// <summary>
-/// A single change between baseline and current spec results.
-/// </summary>
-public class SpecChange
-{
-    /// <summary>
-    /// Full context path of the spec (e.g., "Calculator > add > returns sum").
-    /// </summary>
-    public required string SpecPath { get; init; }
-
-    /// <summary>
-    /// Type of change.
-    /// </summary>
-    public ChangeType Type { get; init; }
-
-    /// <summary>
-    /// Status in the baseline run.
-    /// </summary>
-    public string? OldStatus { get; init; }
-
-    /// <summary>
-    /// Status in the current run.
-    /// </summary>
-    public string? NewStatus { get; init; }
-
-    /// <summary>
-    /// Error message if the spec failed.
-    /// </summary>
-    public string? ErrorMessage { get; init; }
 }

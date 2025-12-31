@@ -33,12 +33,3 @@ public class MockFileWatcherFactory : IFileWatcherFactory
         _onChange?.Invoke(change);
     }
 }
-
-/// <summary>
-/// Mock file watcher that does nothing.
-/// Used by MockFileWatcherFactory.
-/// </summary>
-public class MockFileWatcher : IFileWatcher
-{
-    public void Dispose() { }
-}

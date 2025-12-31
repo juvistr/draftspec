@@ -16,10 +16,10 @@ namespace DraftSpec.Middleware;
 /// <code>
 /// public class LoggingMiddleware : ISpecMiddleware
 /// {
-///     public async Task&lt;SpecResult&gt; ExecuteAsync(SpecExecutionContext ctx, Func&lt;SpecExecutionContext, Task&lt;SpecResult&gt;&gt; next)
+///     public async Task&lt;SpecResult&gt; ExecuteAsync(SpecExecutionContext ctx, Func&lt;SpecExecutionContext, Task&lt;SpecResult&gt;&gt; pipeline)
 ///     {
 ///         Console.WriteLine($"Starting: {ctx.Spec.Description}");
-///         var result = await next(ctx);
+///         var result = await pipeline(ctx);
 ///         Console.WriteLine($"Finished: {result.Status}");
 ///         return result;
 ///     }
@@ -29,12 +29,12 @@ namespace DraftSpec.Middleware;
 public interface ISpecMiddleware
 {
     /// <summary>
-    /// Execute the middleware asynchronously, optionally calling next to continue the pipeline.
+    /// Execute the middleware asynchronously, optionally calling the pipeline to continue execution.
     /// </summary>
     /// <param name="context">Execution context with spec info and mutable state</param>
-    /// <param name="next">Delegate to call the next middleware (or core execution)</param>
+    /// <param name="pipeline">Delegate to call the next middleware (or core execution)</param>
     /// <returns>The spec execution result</returns>
     Task<SpecResult> ExecuteAsync(
         SpecExecutionContext context,
-        Func<SpecExecutionContext, Task<SpecResult>> next);
+        Func<SpecExecutionContext, Task<SpecResult>> pipeline);
 }

@@ -36,18 +36,18 @@ public class CoverageMiddleware : ISpecMiddleware
     /// <inheritdoc />
     public async Task<SpecResult> ExecuteAsync(
         SpecExecutionContext context,
-        Func<SpecExecutionContext, Task<SpecResult>> next)
+        Func<SpecExecutionContext, Task<SpecResult>> pipeline)
     {
         if (!_tracker.IsActive)
         {
-            return await next(context);
+            return await pipeline(context);
         }
 
         // Take snapshot before spec execution
         var snapshot = _tracker.TakeSnapshot();
 
         // Execute the spec (and any downstream middleware)
-        var result = await next(context);
+        var result = await pipeline(context);
 
         // Calculate coverage delta
         var specId = string.Join(" ", context.ContextPath.Append(context.Spec.Description));

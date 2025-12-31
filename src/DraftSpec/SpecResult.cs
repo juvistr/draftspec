@@ -4,32 +4,6 @@ using DraftSpec.Middleware;
 namespace DraftSpec;
 
 /// <summary>
-/// Represents the execution status of a spec.
-/// </summary>
-public enum SpecStatus
-{
-    /// <summary>
-    /// The spec executed successfully without throwing an exception.
-    /// </summary>
-    Passed,
-
-    /// <summary>
-    /// The spec threw an exception during execution.
-    /// </summary>
-    Failed,
-
-    /// <summary>
-    /// The spec has no body defined (placeholder for future implementation).
-    /// </summary>
-    Pending,
-
-    /// <summary>
-    /// The spec was skipped due to filtering, focus mode, or explicit skip.
-    /// </summary>
-    Skipped
-}
-
-/// <summary>
 /// The result of executing a single spec, including status, timing, and error information.
 /// </summary>
 /// <param name="Spec">The spec definition that was executed.</param>

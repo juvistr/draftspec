@@ -1,5 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 
 namespace DraftSpec.Tests.Cli;
 

@@ -11,7 +11,7 @@ public interface IStopwatch
     TimeSpan Elapsed { get; }
 
     /// <summary>
-    /// Stops the stopwatch.
+    /// Stops timing.
     /// </summary>
-    void Stop();
+    void StopTiming();
 }

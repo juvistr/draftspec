@@ -1,4 +1,5 @@
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 
 namespace DraftSpec.Formatters.Console;
 

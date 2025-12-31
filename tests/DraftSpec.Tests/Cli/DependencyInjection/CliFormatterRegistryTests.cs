@@ -1,6 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 using DraftSpec.Formatters.Html;
 using DraftSpec.Formatters.JUnit;
 using DraftSpec.Formatters.Markdown;

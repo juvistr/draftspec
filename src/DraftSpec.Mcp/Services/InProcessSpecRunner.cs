@@ -216,7 +216,7 @@ public class InProcessSpecRunner
         foreach (var line in lines)
         {
             var trimmed = line.Trim();
-            if (trimmed.StartsWith("{") && trimmed.Contains("\"summary\""))
+            if (trimmed.StartsWith('{') && trimmed.Contains("\"summary\"", StringComparison.Ordinal))
             {
                 try
                 {

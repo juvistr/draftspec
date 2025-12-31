@@ -177,7 +177,7 @@ public class PipelineTests
         context.AddSpec(new SpecDefinition("test", () => { }));
 
         var runner = new SpecRunnerBuilder()
-            .Use(new ThrowingMiddleware(new InvalidOperationException("middleware failed"), throwBeforeNext: true))
+            .Use(new ThrowingMiddleware(new InvalidOperationException("middleware failed"), throwBeforePipeline: true))
             .Build();
 
         var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
@@ -192,7 +192,7 @@ public class PipelineTests
         context.AddSpec(new SpecDefinition("test", () => specExecuted = true));
 
         var runner = new SpecRunnerBuilder()
-            .Use(new ThrowingMiddleware(new InvalidOperationException("cleanup failed"), throwBeforeNext: false))
+            .Use(new ThrowingMiddleware(new InvalidOperationException("cleanup failed"), throwBeforePipeline: false))
             .Build();
 
         var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
@@ -211,7 +211,7 @@ public class PipelineTests
             .Use(new WrapperMiddlewareWithCleanup(
                 () => { },
                 () => outerCleanupRan = true))
-            .Use(new ThrowingMiddleware(new InvalidOperationException("inner failed"), throwBeforeNext: true))
+            .Use(new ThrowingMiddleware(new InvalidOperationException("inner failed"), throwBeforePipeline: true))
             .Build();
 
         Assert.Throws<InvalidOperationException>(() => runner.Run(context));
@@ -245,7 +245,7 @@ public class PipelineTests
         var secondMiddlewareRan = false;
 
         var runner = new SpecRunnerBuilder()
-            .Use(new ThrowingMiddleware(new InvalidOperationException("first failed"), throwBeforeNext: true))
+            .Use(new ThrowingMiddleware(new InvalidOperationException("first failed"), throwBeforePipeline: true))
             .Use(new TestMiddleware(() => secondMiddlewareRan = true))
             .Build();
 
@@ -267,7 +267,7 @@ public class PipelineTests
             .Use(new WrapperMiddlewareWithCleanup(
                 () => { },
                 () => cleanupOrder.Add("middle")))
-            .Use(new ThrowingMiddleware(new InvalidOperationException("inner failed"), throwBeforeNext: true))
+            .Use(new ThrowingMiddleware(new InvalidOperationException("inner failed"), throwBeforePipeline: true))
             .Build();
 
         Assert.Throws<InvalidOperationException>(() => runner.Run(context));
@@ -306,10 +306,10 @@ public class PipelineTests
         }
 
         public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
-            Func<SpecExecutionContext, Task<SpecResult>> next)
+            Func<SpecExecutionContext, Task<SpecResult>> pipeline)
         {
             _onExecute();
-            return await next(context);
+            return await pipeline(context);
         }
     }
 
@@ -325,10 +325,10 @@ public class PipelineTests
         }
 
         public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
-            Func<SpecExecutionContext, Task<SpecResult>> next)
+            Func<SpecExecutionContext, Task<SpecResult>> pipeline)
         {
             context.Items[_key] = _value;
-            return await next(context);
+            return await pipeline(context);
         }
     }
 
@@ -344,11 +344,11 @@ public class PipelineTests
         }
 
         public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
-            Func<SpecExecutionContext, Task<SpecResult>> next)
+            Func<SpecExecutionContext, Task<SpecResult>> pipeline)
         {
             if (context.Items.TryGetValue(_key, out var value))
                 _capture(value as string);
-            return await next(context);
+            return await pipeline(context);
         }
     }
 
@@ -364,10 +364,10 @@ public class PipelineTests
         }
 
         public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
-            Func<SpecExecutionContext, Task<SpecResult>> next)
+            Func<SpecExecutionContext, Task<SpecResult>> pipeline)
         {
             _before();
-            var result = await next(context);
+            var result = await pipeline(context);
             _after();
             return result;
         }
@@ -376,21 +376,21 @@ public class PipelineTests
     private class ThrowingMiddleware : ISpecMiddleware
     {
         private readonly Exception _exception;
-        private readonly bool _throwBeforeNext;
+        private readonly bool _throwBeforePipeline;
 
-        public ThrowingMiddleware(Exception exception, bool throwBeforeNext)
+        public ThrowingMiddleware(Exception exception, bool throwBeforePipeline)
         {
             _exception = exception;
-            _throwBeforeNext = throwBeforeNext;
+            _throwBeforePipeline = throwBeforePipeline;
         }
 
         public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
-            Func<SpecExecutionContext, Task<SpecResult>> next)
+            Func<SpecExecutionContext, Task<SpecResult>> pipeline)
         {
-            if (_throwBeforeNext)
+            if (_throwBeforePipeline)
                 throw _exception;
 
-            var result = await next(context);
+            var result = await pipeline(context);
             throw _exception;
         }
     }
@@ -407,12 +407,12 @@ public class PipelineTests
         }
 
         public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
-            Func<SpecExecutionContext, Task<SpecResult>> next)
+            Func<SpecExecutionContext, Task<SpecResult>> pipeline)
         {
             _before();
             try
             {
-                return await next(context);
+                return await pipeline(context);
             }
             finally
             {
@@ -424,7 +424,7 @@ public class PipelineTests
     private class AsyncThrowingMiddleware : ISpecMiddleware
     {
         public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
-            Func<SpecExecutionContext, Task<SpecResult>> next)
+            Func<SpecExecutionContext, Task<SpecResult>> pipeline)
         {
             await Task.Yield(); // Force async continuation
             throw new InvalidOperationException("async middleware failed");

@@ -148,5 +148,6 @@ public class DotnetCoverageServer : ICoverageServer
                 // Best-effort cleanup
             }
         }
+        GC.SuppressFinalize(this);
     }
 }

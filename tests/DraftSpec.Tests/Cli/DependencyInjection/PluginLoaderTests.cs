@@ -200,6 +200,25 @@ public class PluginLoaderTests
     }
 
     [Test]
+    public async Task DiscoverPlugins_PluginInfo_ContainsAssembly()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+
+        var console = new MockConsole();
+        var loader = new PluginLoader(scanner, assemblyLoader, console);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        await Assert.That(plugins.Count).IsEqualTo(1);
+        await Assert.That(plugins[0].Assembly).IsEqualTo(typeof(TestFormatterWithAttribute).Assembly);
+    }
+
+    [Test]
     public async Task DiscoverPlugins_NonFormatterType_Skipped()
     {
         var scanner = new MockPluginScanner();

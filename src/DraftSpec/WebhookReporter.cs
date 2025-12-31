@@ -11,6 +11,18 @@ namespace DraftSpec.Plugins.Reporters;
 /// </summary>
 public class WebhookReporter : IReporter, IDisposable
 {
+    /// <summary>
+    /// Shared HttpClient instance to avoid socket exhaustion.
+    /// Uses SocketsHttpHandler for proper connection pooling.
+    /// </summary>
+    private static readonly HttpClient SharedHttpClient = new(new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+    })
+    {
+        Timeout = Timeout.InfiniteTimeSpan // Timeout is set per-request via CancellationToken
+    };
+
     private readonly WebhookReporterOptions _options;
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
@@ -28,7 +40,7 @@ public class WebhookReporter : IReporter, IDisposable
     /// Create a WebhookReporter with custom HttpClient (for testing).
     /// </summary>
     /// <param name="options">Webhook configuration options</param>
-    /// <param name="httpClient">Custom HttpClient instance</param>
+    /// <param name="httpClient">Custom HttpClient instance (null to use shared client)</param>
     public WebhookReporter(WebhookReporterOptions options, HttpClient? httpClient)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -43,11 +55,8 @@ public class WebhookReporter : IReporter, IDisposable
         }
         else
         {
-            _httpClient = new HttpClient
-            {
-                Timeout = TimeSpan.FromMilliseconds(options.TimeoutMs)
-            };
-            _ownsHttpClient = true;
+            _httpClient = SharedHttpClient;
+            _ownsHttpClient = false; // Never dispose the shared client
         }
     }
 
@@ -93,11 +102,13 @@ public class WebhookReporter : IReporter, IDisposable
                         request.Headers.TryAddWithoutValidation(key, value);
                 }
 
-                var response = await _httpClient.SendAsync(request);
+                // Use per-request timeout via CancellationToken
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(_options.TimeoutMs));
+                var response = await _httpClient.SendAsync(request, cts.Token);
                 response.EnsureSuccessStatusCode();
                 return; // Success
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
             {
                 lastException = ex;
 

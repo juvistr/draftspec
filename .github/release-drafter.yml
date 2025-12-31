@@ -1,6 +1,10 @@
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 
+# Include prerelease tags when resolving version
+prerelease: true
+prerelease-identifier: alpha
+
 categories:
   - title: '🚀 Features'
     labels:

@@ -10,12 +10,22 @@ namespace DraftSpec.Mcp.DependencyInjection;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds DraftSpec MCP services to the service collection.
+    /// Adds DraftSpec MCP services to the service collection with default options.
     /// </summary>
     public static IServiceCollection AddDraftSpecMcp(this IServiceCollection services)
     {
+        return services.AddDraftSpecMcp(new McpOptions());
+    }
+
+    /// <summary>
+    /// Adds DraftSpec MCP services to the service collection with custom options.
+    /// </summary>
+    public static IServiceCollection AddDraftSpecMcp(this IServiceCollection services, McpOptions options)
+    {
         services.AddLogging();
 
+        services.AddSingleton(options);
+        services.AddSingleton<ExecutionRateLimiter>();
         services.AddSingleton<TempFileManager>();
         services.AddSingleton<IAsyncProcessRunner, SystemAsyncProcessRunner>();
         services.AddSingleton<SessionManager>();

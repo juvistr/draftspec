@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IEnvironment, SystemEnvironment>();
         services.AddSingleton<DraftSpec.IClock, DraftSpec.SystemClock>();
         services.AddSingleton<IProcessRunner, SystemProcessRunner>();
+        services.AddSingleton<IUsageWriter, UsageWriter>();
 
         // Infrastructure - Build
         services.AddSingleton<IBuildCache, InMemoryBuildCache>();

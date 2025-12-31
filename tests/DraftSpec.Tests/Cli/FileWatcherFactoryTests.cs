@@ -1,0 +1,68 @@
+using DraftSpec.Cli;
+
+namespace DraftSpec.Tests.Cli;
+
+/// <summary>
+/// Tests for FileWatcherFactory.
+/// </summary>
+public class FileWatcherFactoryTests
+{
+    [Test]
+    public async Task Create_ReturnsFileWatcher()
+    {
+        var factory = new FileWatcherFactory();
+        var tempDir = Path.GetTempPath();
+
+        using var watcher = factory.Create(tempDir, _ => { });
+
+        await Assert.That(watcher).IsNotNull();
+        await Assert.That(watcher).IsAssignableTo<IFileWatcher>();
+    }
+
+    [Test]
+    public async Task Create_WithDebounceMs_ReturnsFileWatcher()
+    {
+        var factory = new FileWatcherFactory();
+        var tempDir = Path.GetTempPath();
+
+        using var watcher = factory.Create(tempDir, _ => { }, debounceMs: 500);
+
+        await Assert.That(watcher).IsNotNull();
+    }
+
+    [Test]
+    public async Task Create_ReturnsNewInstanceEachTime()
+    {
+        var factory = new FileWatcherFactory();
+        var tempDir = Path.GetTempPath();
+
+        using var watcher1 = factory.Create(tempDir, _ => { });
+        using var watcher2 = factory.Create(tempDir, _ => { });
+
+        await Assert.That(watcher1).IsNotSameReferenceAs(watcher2);
+    }
+
+    [Test]
+    public async Task Create_WithDifferentPaths_ReturnsDistinctWatchers()
+    {
+        var factory = new FileWatcherFactory();
+        var tempDir1 = Path.Combine(Path.GetTempPath(), "watcher_test_1");
+        var tempDir2 = Path.Combine(Path.GetTempPath(), "watcher_test_2");
+
+        Directory.CreateDirectory(tempDir1);
+        Directory.CreateDirectory(tempDir2);
+
+        try
+        {
+            using var watcher1 = factory.Create(tempDir1, _ => { });
+            using var watcher2 = factory.Create(tempDir2, _ => { });
+
+            await Assert.That(watcher1).IsNotSameReferenceAs(watcher2);
+        }
+        finally
+        {
+            Directory.Delete(tempDir1, true);
+            Directory.Delete(tempDir2, true);
+        }
+    }
+}

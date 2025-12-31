@@ -46,8 +46,8 @@ public class FileWatcherFactoryTests
     public async Task Create_WithDifferentPaths_ReturnsDistinctWatchers()
     {
         var factory = new FileWatcherFactory();
-        var tempDir1 = Path.Combine(Path.GetTempPath(), "watcher_test_1");
-        var tempDir2 = Path.Combine(Path.GetTempPath(), "watcher_test_2");
+        var tempDir1 = Path.Combine(Path.GetTempPath(), $"watcher_test_{Guid.NewGuid():N}");
+        var tempDir2 = Path.Combine(Path.GetTempPath(), $"watcher_test_{Guid.NewGuid():N}");
 
         Directory.CreateDirectory(tempDir1);
         Directory.CreateDirectory(tempDir2);
@@ -61,8 +61,10 @@ public class FileWatcherFactoryTests
         }
         finally
         {
-            Directory.Delete(tempDir1, true);
-            Directory.Delete(tempDir2, true);
+            if (Directory.Exists(tempDir1))
+                Directory.Delete(tempDir1, true);
+            if (Directory.Exists(tempDir2))
+                Directory.Delete(tempDir2, true);
         }
     }
 }

@@ -20,11 +20,9 @@ public static class SpecTools
     [Description("Execute a DraftSpec test specification and return structured results. " +
                  "Provide just the describe/it blocks - boilerplate is added automatically. " +
                  "Emits progress notifications during execution for real-time feedback. " +
-                 "Use session_id to accumulate specs across multiple calls for iterative development. " +
-                 "Use inProcess=true for faster execution via Roslyn scripting (no subprocess).")]
+                 "Use session_id to accumulate specs across multiple calls for iterative development.")]
     public static async Task<string> RunSpec(
         SpecExecutionService executionService,
-        InProcessSpecRunner inProcessRunner,
         SessionManager sessionManager,
         McpServer server,
         [Description("The spec content using describe/it/expect syntax. " +
@@ -35,61 +33,22 @@ public static class SpecTools
         string? sessionId = null,
         [Description("Timeout in seconds (default: 10, max: 60)")]
         int timeoutSeconds = 10,
-        [Description("Execute in-process using Roslyn scripting for faster execution (default: false). " +
-                     "Skips subprocess overhead but shares process state.")]
-        bool inProcess = false,
         CancellationToken cancellationToken = default)
     {
-        timeoutSeconds = Math.Clamp(timeoutSeconds, 1, 60);
+        var orchestrator = new SpecRunOrchestrator(sessionManager);
 
-        // Get session if sessionId provided
-        Session? session = null;
-        string effectiveContent = specContent;
-
-        if (!string.IsNullOrEmpty(sessionId))
+        // Set up progress callback (null server check for testing)
+        Func<SpecProgressNotification, Task>? onProgress = null;
+        if (server != null)
         {
-            session = sessionManager.GetSession(sessionId);
-            if (session == null)
-            {
-                var error = new
-                {
-                    success = false,
-                    error = $"Session '{sessionId}' not found or has expired. Create a new session with create_session."
-                };
-                return JsonSerializer.Serialize(error, JsonOptionsProvider.Default);
-            }
-
-            // Combine accumulated content with new content
-            effectiveContent = session.GetFullContent(specContent);
-        }
-
-        RunSpecResult result;
-
-        if (inProcess)
-        {
-            // Execute using Roslyn scripting (faster, less isolation)
-            result = await inProcessRunner.ExecuteAsync(
-                effectiveContent,
-                TimeSpan.FromSeconds(timeoutSeconds),
-                cancellationToken);
-        }
-        else
-        {
-            // Progress callback to emit MCP notifications
-            async Task OnProgress(SpecProgressNotification notification)
+            onProgress = async notification =>
             {
                 var progressData = new
                 {
                     progressToken = "spec_execution",
                     progress = notification.ProgressPercent,
                     total = 100.0,
-                    message = notification.Type switch
-                    {
-                        "start" => $"Starting {notification.Total} specs...",
-                        "progress" => $"[{notification.Completed}/{notification.Total}] {notification.Status}: {notification.Spec}",
-                        "complete" => $"Completed: {notification.Passed} passed, {notification.Failed} failed",
-                        _ => notification.Type
-                    }
+                    message = FormatProgressMessage(notification)
                 };
 
                 await server.SendNotificationAsync(
@@ -97,40 +56,19 @@ public static class SpecTools
                     progressData,
                     JsonOptionsProvider.Default,
                     cancellationToken);
-            }
-
-            // Execute using subprocess (more isolation)
-            result = await executionService.ExecuteSpecAsync(
-                effectiveContent,
-                TimeSpan.FromSeconds(timeoutSeconds),
-                OnProgress,
-                cancellationToken);
-        }
-
-        // If session is active and run succeeded, accumulate the new content
-        if (session != null && result.Success)
-        {
-            session.AppendContent(specContent);
-        }
-
-        // Add session info to result if using sessions
-        if (session != null)
-        {
-            var sessionResult = new
-            {
-                result.Success,
-                result.Report,
-                result.ConsoleOutput,
-                result.ErrorOutput,
-                result.ExitCode,
-                result.DurationMs,
-                sessionId = session.Id,
-                accumulatedContentLength = session.AccumulatedContent.Length
             };
-            return JsonSerializer.Serialize(sessionResult, JsonOptionsProvider.Default);
         }
 
-        return JsonSerializer.Serialize(result, JsonOptionsProvider.Default);
+        var executor = new SubprocessSpecExecutor(executionService, onProgress, cancellationToken);
+
+        var result = await orchestrator.RunAsync(
+            executor,
+            specContent,
+            sessionId,
+            timeoutSeconds,
+            cancellationToken);
+
+        return JsonSerializer.Serialize(result.ToResponse(), JsonOptionsProvider.Default);
     }
 
     /// <summary>
@@ -142,7 +80,6 @@ public static class SpecTools
                  "Returns aggregated summary and individual results.")]
     public static async Task<string> RunSpecsBatch(
         SpecExecutionService executionService,
-        InProcessSpecRunner inProcessRunner,
         McpServer server,
         [Description("Array of specs to execute, each with a name and content")]
         List<BatchSpecInput> specs,
@@ -150,9 +87,6 @@ public static class SpecTools
         bool parallel = true,
         [Description("Timeout per spec in seconds (default: 10, max: 60)")]
         int timeoutSeconds = 10,
-        [Description("Execute in-process using Roslyn scripting for faster execution (default: false). " +
-                     "Skips subprocess overhead but shares process state.")]
-        bool inProcess = false,
         CancellationToken cancellationToken = default)
     {
         if (specs == null || specs.Count == 0)
@@ -173,10 +107,9 @@ public static class SpecTools
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         // Progress tracking for batch
-        var totalSpecs = specs.Sum(s => 1); // Could estimate inner spec count if needed
         var completedSpecs = 0;
 
-        async Task ReportBatchProgress(string specName, int index)
+        async Task ReportBatchProgress(string specName)
         {
             completedSpecs++;
 
@@ -190,7 +123,7 @@ public static class SpecTools
                 progressToken = "batch_execution",
                 progress = (double)completedSpecs / specs.Count * 100,
                 total = 100.0,
-                message = $"[{completedSpecs}/{specs.Count}] Completed: {specName}"
+                message = FormatBatchProgressMessage(completedSpecs, specs.Count, specName)
             };
 
             await server.SendNotificationAsync(
@@ -202,24 +135,14 @@ public static class SpecTools
 
         List<NamedSpecResult> results;
 
-        // Helper to execute a single spec
-        async Task<RunSpecResult> ExecuteOneAsync(string content)
-        {
-            if (inProcess)
-            {
-                return await inProcessRunner.ExecuteAsync(content, timeout, cancellationToken);
-            }
-            return await executionService.ExecuteSpecAsync(content, timeout, cancellationToken);
-        }
-
         if (parallel)
         {
             // Execute all specs in parallel
-            var tasks = specs.Select(async (spec, index) =>
+            var tasks = specs.Select(async spec =>
             {
-                var result = await ExecuteOneAsync(spec.Content);
+                var result = await executionService.ExecuteSpecAsync(spec.Content, timeout, cancellationToken);
 
-                await ReportBatchProgress(spec.Name, index);
+                await ReportBatchProgress(spec.Name);
 
                 return new NamedSpecResult
                 {
@@ -238,12 +161,11 @@ public static class SpecTools
         {
             // Execute specs sequentially
             results = [];
-            for (var i = 0; i < specs.Count; i++)
+            foreach (var spec in specs)
             {
-                var spec = specs[i];
-                var result = await ExecuteOneAsync(spec.Content);
+                var result = await executionService.ExecuteSpecAsync(spec.Content, timeout, cancellationToken);
 
-                await ReportBatchProgress(spec.Name, i);
+                await ReportBatchProgress(spec.Name);
 
                 results.Add(new NamedSpecResult
                 {
@@ -286,5 +208,29 @@ public static class SpecTools
         ScaffoldNode structure)
     {
         return Scaffolder.Generate(structure);
+    }
+
+    /// <summary>
+    /// Formats a progress notification into a human-readable message.
+    /// Internal for testing.
+    /// </summary>
+    internal static string FormatProgressMessage(SpecProgressNotification notification)
+    {
+        return notification.Type switch
+        {
+            "start" => $"Starting {notification.Total} specs...",
+            "progress" => $"[{notification.Completed}/{notification.Total}] {notification.Status}: {notification.Spec}",
+            "complete" => $"Completed: {notification.Passed} passed, {notification.Failed} failed",
+            _ => notification.Type
+        };
+    }
+
+    /// <summary>
+    /// Formats a batch progress message.
+    /// Internal for testing.
+    /// </summary>
+    internal static string FormatBatchProgressMessage(int completed, int total, string specName)
+    {
+        return $"[{completed}/{total}] Completed: {specName}";
     }
 }

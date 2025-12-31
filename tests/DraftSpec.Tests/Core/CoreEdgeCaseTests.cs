@@ -44,6 +44,43 @@ public class CoreEdgeCaseTests
         await Assert.That(caught!.Message).IsEqualTo("test message");
     }
 
+    [Test]
+    public async Task AssertionException_WithInnerException_SetsBoth()
+    {
+        var inner = new InvalidOperationException("Something went wrong");
+        var exception = new AssertionException("Assertion failed during operation", inner);
+
+        await Assert.That(exception.Message).IsEqualTo("Assertion failed during operation");
+        await Assert.That(exception.InnerException).IsSameReferenceAs(inner);
+    }
+
+    [Test]
+    public async Task AssertionException_InnerException_PreservesStackTrace()
+    {
+        Exception? caught = null;
+
+        try
+        {
+            try
+            {
+                throw new InvalidOperationException("Original error");
+            }
+            catch (Exception ex)
+            {
+                throw new AssertionException("Wrapped assertion failure", ex);
+            }
+        }
+        catch (Exception ex)
+        {
+            caught = ex;
+        }
+
+        await Assert.That(caught).IsNotNull();
+        await Assert.That(caught!.InnerException).IsNotNull();
+        await Assert.That(caught.InnerException!.Message).IsEqualTo("Original error");
+        await Assert.That(caught.InnerException.StackTrace).IsNotNull();
+    }
+
     #endregion
 
     #region SpecReportBuilder Tests

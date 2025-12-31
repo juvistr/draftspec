@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using DraftSpec.Cli;
 
 namespace DraftSpec.Tests.Infrastructure.Mocks;

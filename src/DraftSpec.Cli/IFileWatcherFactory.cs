@@ -1,4 +1,4 @@
-﻿namespace DraftSpec.Cli;
+namespace DraftSpec.Cli;
 
 /// <summary>
 /// Factory for creating file watchers.

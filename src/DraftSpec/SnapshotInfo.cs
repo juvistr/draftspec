@@ -1,4 +1,4 @@
-﻿namespace DraftSpec.Snapshots;
+namespace DraftSpec.Snapshots;
 
 /// <summary>
 /// Information needed to identify and store a snapshot.

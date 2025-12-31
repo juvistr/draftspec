@@ -1,4 +1,4 @@
-﻿namespace DraftSpec.Cli.DependencyInjection;
+namespace DraftSpec.Cli.DependencyInjection;
 
 /// <summary>
 /// Default implementation that scans the actual file system.

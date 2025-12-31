@@ -1,4 +1,4 @@
-﻿using DraftSpec.Cli.Options.Enums;
+using DraftSpec.Cli.Options.Enums;
 
 namespace DraftSpec.Cli.Services;
 

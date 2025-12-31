@@ -55,10 +55,10 @@ public class WebhookReporterTests
     public async Task Constructor_NegativeTimeout_ThrowsArgumentException()
     {
         await Assert.That(() => new WebhookReporter(new WebhookReporterOptions
-            {
-                Url = "https://example.com",
-                TimeoutMs = -1
-            }))
+        {
+            Url = "https://example.com",
+            TimeoutMs = -1
+        }))
             .Throws<ArgumentException>();
     }
 
@@ -66,10 +66,10 @@ public class WebhookReporterTests
     public async Task Constructor_NegativeRetries_ThrowsArgumentException()
     {
         await Assert.That(() => new WebhookReporter(new WebhookReporterOptions
-            {
-                Url = "https://example.com",
-                MaxRetries = -1
-            }))
+        {
+            Url = "https://example.com",
+            MaxRetries = -1
+        }))
             .Throws<ArgumentException>();
     }
 

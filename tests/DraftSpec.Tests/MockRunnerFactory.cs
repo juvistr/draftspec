@@ -1,4 +1,4 @@
-﻿using DraftSpec.Cli;
+using DraftSpec.Cli;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Formatters;
 using DraftSpec.Formatters.Abstractions;

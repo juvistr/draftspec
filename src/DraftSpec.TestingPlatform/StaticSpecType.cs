@@ -1,4 +1,4 @@
-﻿namespace DraftSpec.TestingPlatform;
+namespace DraftSpec.TestingPlatform;
 
 /// <summary>
 /// Type of spec (normal, focused, or skipped).

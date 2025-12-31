@@ -1,4 +1,4 @@
-﻿namespace DraftSpec.Plugins;
+namespace DraftSpec.Plugins;
 
 /// <summary>
 /// Log levels for plugin logging.

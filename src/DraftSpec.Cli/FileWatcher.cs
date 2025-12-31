@@ -44,19 +44,22 @@ public class FileWatcher : IFileWatcher
 
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
-        // Skip temporary files
-        if (e.Name?.StartsWith('.') == true || e.Name?.EndsWith('~') == true)
+        // Skip temporary files (editor backups, hidden files)
+        var fileName = e.Name;
+        if (fileName is null || fileName.StartsWith('.') || fileName.EndsWith('~'))
             return;
 
-        var isSpecFile = e.FullPath.EndsWith(".spec.csx", StringComparison.OrdinalIgnoreCase);
+        // Normalize path for consistent comparison across multiple events
+        var normalizedPath = Path.GetFullPath(e.FullPath);
+        var isSpecFile = normalizedPath.EndsWith(".spec.csx", StringComparison.OrdinalIgnoreCase);
 
         lock (_lock)
         {
             // Track which file changed (for selective re-running)
             // If multiple files change during debounce, escalate to full run
             if (_pendingChange == null)
-                _pendingChange = new FileChangeInfo(e.FullPath, isSpecFile);
-            else if (_pendingChange.IsSpecFile && isSpecFile && _pendingChange.FilePath != e.FullPath)
+                _pendingChange = new FileChangeInfo(normalizedPath, isSpecFile);
+            else if (_pendingChange.IsSpecFile && isSpecFile && !PathsAreEqual(_pendingChange.FilePath!, normalizedPath))
                 // Multiple different spec files changed - run all
                 _pendingChange = new FileChangeInfo(null, false);
             else if (!isSpecFile)
@@ -87,6 +90,19 @@ public class FileWatcher : IFileWatcher
         }
 
         _onChange(change);
+    }
+
+    /// <summary>
+    /// Compares two paths for equality, using case-insensitive comparison on Windows.
+    /// </summary>
+    private static bool PathsAreEqual(string path1, string path2)
+    {
+        // Use platform-appropriate comparison (case-insensitive on Windows)
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        return string.Equals(path1, path2, comparison);
     }
 
     public void Dispose()

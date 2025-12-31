@@ -18,7 +18,15 @@ public sealed partial class CsxScriptHost : IScriptHost
 {
     private readonly string _baseDirectory;
     private readonly IReadOnlyList<Assembly> _referenceAssemblies;
-    private readonly ConcurrentDictionary<string, Script<object>> _scriptCache = new();
+    /// <summary>
+    /// Cache entry containing the compiled script, source file paths, and max modification time.
+    /// </summary>
+    private readonly record struct CacheEntry(
+        Script<object> Script,
+        IReadOnlyList<string> SourceFiles,
+        DateTime MaxModifiedTimeUtc);
+
+    private readonly ConcurrentDictionary<string, CacheEntry> _scriptCache = new();
 
     /// <summary>
     /// Regex to match #r directives (assembly references).
@@ -92,33 +100,60 @@ public sealed partial class CsxScriptHost : IScriptHost
 
     /// <summary>
     /// Gets a cached script or creates and caches a new one.
+    /// Validates cache by checking file modification times.
     /// </summary>
     private async Task<Script<object>> GetOrCreateScriptAsync(string absolutePath, CancellationToken cancellationToken)
     {
-        // Check cache first
+        // Check cache and validate modification time
         if (_scriptCache.TryGetValue(absolutePath, out var cached))
         {
-            return cached;
+            // Check if any source file has been modified since caching
+            var currentMaxModified = GetMaxModificationTime(cached.SourceFiles);
+            if (currentMaxModified == cached.MaxModifiedTimeUtc)
+            {
+                return cached.Script;
+            }
+
+            // Files changed - remove stale entry and recompile
+            _scriptCache.TryRemove(absolutePath, out _);
         }
 
         // Parse and preprocess the script
-        var (code, additionalReferences) = await PreprocessScriptAsync(absolutePath, cancellationToken);
+        var (code, additionalReferences, sourceFiles, maxModifiedTimeUtc) =
+            await PreprocessScriptAsync(absolutePath, cancellationToken);
 
         // Build script options
         var options = CreateScriptOptions(Path.GetDirectoryName(absolutePath)!, additionalReferences);
 
         // Create and cache the script - use ScriptGlobals as the globals type
         var script = CSharpScript.Create(code, options, typeof(ScriptGlobals));
-        _scriptCache.TryAdd(absolutePath, script);
+        var entry = new CacheEntry(script, sourceFiles, maxModifiedTimeUtc);
+        _scriptCache.TryAdd(absolutePath, entry);
 
         return script;
     }
 
     /// <summary>
+    /// Computes the maximum modification time from a list of source files.
+    /// </summary>
+    private static DateTime GetMaxModificationTime(IReadOnlyList<string> sourceFiles)
+    {
+        var maxTime = DateTime.MinValue;
+        foreach (var file in sourceFiles)
+        {
+            var modTime = File.GetLastWriteTimeUtc(file);
+            if (modTime > maxTime)
+                maxTime = modTime;
+        }
+        return maxTime;
+    }
+
+    /// <summary>
     /// Preprocesses the script to handle #load directives and extract #r references.
     /// Appends code to capture the RootContext at the end.
+    /// Returns the combined code, additional references, source file paths, and max modification time.
     /// </summary>
-    private async Task<(string code, List<string> additionalReferences)> PreprocessScriptAsync(
+    private async Task<(string code, List<string> additionalReferences, IReadOnlyList<string> sourceFiles, DateTime maxModifiedTimeUtc)> PreprocessScriptAsync(
         string absolutePath,
         CancellationToken cancellationToken)
     {
@@ -128,6 +163,12 @@ public sealed partial class CsxScriptHost : IScriptHost
         var codeBuilder = new StringBuilder();
 
         await ProcessFileAsync(absolutePath, processedFiles, additionalReferences, usings, codeBuilder, cancellationToken);
+
+        // Convert to list and compute max modification time from all processed files
+        var sourceFiles = processedFiles.ToList();
+        var maxModifiedTimeUtc = sourceFiles
+            .Select(f => File.GetLastWriteTimeUtc(f))
+            .Max();
 
         // Build final code: usings first, then all other code
         var finalBuilder = new StringBuilder();
@@ -151,7 +192,7 @@ public sealed partial class CsxScriptHost : IScriptHost
         finalBuilder.AppendLine("// --- Capture context for runner ---");
         finalBuilder.AppendLine("CaptureRootContext?.Invoke(DraftSpec.Dsl.RootContext);");
 
-        return (finalBuilder.ToString(), additionalReferences);
+        return (finalBuilder.ToString(), additionalReferences, sourceFiles, maxModifiedTimeUtc);
     }
 
     /// <summary>

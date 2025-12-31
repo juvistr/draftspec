@@ -22,7 +22,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.release.target_commitish == 'main'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Determine version
         id: version

@@ -273,6 +273,555 @@ public class CsxScriptHostTests
             async () => await host.ExecuteAsync(csxPath));
     }
 
+    #region Compilation Errors
+
+    [Test]
+    public async Task Execute_MissingReference_ThrowsCompilationException()
+    {
+        // Arrange - reference a namespace that doesn't exist
+        var csxContent = """
+            using static DraftSpec.Dsl;
+            using NonExistentNamespace;
+
+            describe("MissingRef", () =>
+            {
+                it("spec", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "missing_ref.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<CompilationErrorException>(
+            async () => await host.ExecuteAsync(csxPath));
+    }
+
+    [Test]
+    public async Task Execute_RuntimeError_ThrowsException()
+    {
+        // Arrange - code that throws at runtime
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            throw new InvalidOperationException("Runtime error");
+
+            describe("NeverReached", () =>
+            {
+                it("spec", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "runtime_error.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await host.ExecuteAsync(csxPath));
+    }
+
+    [Test]
+    public async Task Execute_EmptyFile_ReturnsNull()
+    {
+        // Arrange - empty file
+        var csxPath = Path.Combine(_tempDir, "empty.spec.csx");
+        await File.WriteAllTextAsync(csxPath, "");
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert - no describe blocks means null
+        await Assert.That(rootContext).IsNull();
+    }
+
+    [Test]
+    public async Task Execute_OnlyComments_ReturnsNull()
+    {
+        // Arrange - file with only comments
+        var csxContent = """
+            // This is a comment
+            /* Multi-line
+               comment */
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "comments.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert
+        await Assert.That(rootContext).IsNull();
+    }
+
+    #endregion
+
+    #region Cyclic Dependencies
+
+    [Test]
+    public async Task Execute_SelfLoad_HandledGracefully()
+    {
+        // Arrange - file that loads itself
+        var csxContent = """
+            #load "self.spec.csx"
+            using static DraftSpec.Dsl;
+
+            describe("Self", () =>
+            {
+                it("spec", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "self.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act - should not stack overflow, circular load is prevented
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Description).IsEqualTo("Self");
+    }
+
+    [Test]
+    public async Task Execute_MutualCyclicLoad_HandledGracefully()
+    {
+        // Arrange - two files that load each other
+        var fileAContent = """
+            #load "b.csx"
+            using static DraftSpec.Dsl;
+
+            describe("FileA", () =>
+            {
+                it("spec from A", () => { });
+            });
+            """;
+
+        var fileBContent = """
+            #load "a.csx"
+            using static DraftSpec.Dsl;
+
+            describe("FileB", () =>
+            {
+                it("spec from B", () => { });
+            });
+            """;
+
+        var fileAPath = Path.Combine(_tempDir, "a.csx");
+        var fileBPath = Path.Combine(_tempDir, "b.csx");
+
+        await File.WriteAllTextAsync(fileAPath, fileAContent);
+        await File.WriteAllTextAsync(fileBPath, fileBContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act - should not stack overflow
+        var rootContext = await host.ExecuteAsync(fileAPath);
+
+        // Assert - FileB is loaded first (before FileA's describe), so FileB's describe becomes root
+        await Assert.That(rootContext).IsNotNull();
+    }
+
+    #endregion
+
+    #region Script Globals
+
+    [Test]
+    public async Task Execute_GlobalsAvailable_InScript()
+    {
+        // Arrange - script that uses CaptureRootContext (injected global)
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            // CaptureRootContext is available as a global from ScriptGlobals
+            describe("Globals", () =>
+            {
+                it("spec", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "globals.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert - CaptureRootContext was invoked and captured the context
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Description).IsEqualTo("Globals");
+    }
+
+    [Test]
+    public async Task Execute_MultipleDescribes_ReturnsFirst()
+    {
+        // Arrange - multiple top-level describes
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            describe("First", () =>
+            {
+                it("spec 1", () => { });
+            });
+
+            describe("Second", () =>
+            {
+                it("spec 2", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "multi_describe.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert - returns the first describe
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Description).IsEqualTo("First");
+    }
+
+    #endregion
+
+    #region Edge Cases
+
+    [Test]
+    public async Task Execute_UnicodeInDescription_Works()
+    {
+        // Arrange - unicode characters in descriptions
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            describe("日本語テスト", () =>
+            {
+                it("中文测试", () => { });
+                it("한국어 테스트", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "unicode.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Description).IsEqualTo("日本語テスト");
+        await Assert.That(rootContext.Specs[0].Description).IsEqualTo("中文测试");
+    }
+
+    [Test]
+    public async Task Execute_LargeScript_CompletesSuccessfully()
+    {
+        // Arrange - generate a large script with many specs
+        var builder = new System.Text.StringBuilder();
+        builder.AppendLine("using static DraftSpec.Dsl;");
+        builder.AppendLine("describe(\"Large\", () => {");
+        for (var i = 0; i < 100; i++)
+        {
+            builder.AppendLine($"    it(\"spec {i}\", () => {{ }});");
+        }
+        builder.AppendLine("});");
+
+        var csxPath = Path.Combine(_tempDir, "large.spec.csx");
+        await File.WriteAllTextAsync(csxPath, builder.ToString());
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Specs.Count).IsEqualTo(100);
+    }
+
+    [Test]
+    public async Task Execute_ManyLoadDirectives_Works()
+    {
+        // Arrange - main file with many #load directives
+        for (var i = 0; i < 10; i++)
+        {
+            var helperContent = $$"""
+                using static DraftSpec.Dsl;
+
+                describe("Helper{{i}}", () =>
+                {
+                    it("spec from helper {{i}}", () => { });
+                });
+                """;
+            await File.WriteAllTextAsync(Path.Combine(_tempDir, $"helper{i}.csx"), helperContent);
+        }
+
+        var mainBuilder = new System.Text.StringBuilder();
+        for (var i = 0; i < 10; i++)
+        {
+            mainBuilder.AppendLine($"#load \"helper{i}.csx\"");
+        }
+
+        var mainPath = Path.Combine(_tempDir, "main_many_loads.spec.csx");
+        await File.WriteAllTextAsync(mainPath, mainBuilder.ToString());
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(mainPath);
+
+        // Assert - first loaded helper becomes the root
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Description).IsEqualTo("Helper0");
+    }
+
+    [Test]
+    public async Task Execute_NestedLoads_Works()
+    {
+        // Arrange - chain of nested #load directives
+        var level3Content = """
+            using static DraftSpec.Dsl;
+
+            describe("Level3", () =>
+            {
+                it("deepest spec", () => { });
+            });
+            """;
+
+        var level2Content = """
+            #load "level3.csx"
+            """;
+
+        var level1Content = """
+            #load "level2.csx"
+            """;
+
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, "level3.csx"), level3Content);
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, "level2.csx"), level2Content);
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, "level1.csx"), level1Content);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(Path.Combine(_tempDir, "level1.csx"));
+
+        // Assert
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Description).IsEqualTo("Level3");
+    }
+
+    [Test]
+    public async Task Execute_LoadMissingFile_ThrowsException()
+    {
+        // Arrange - load a file that doesn't exist
+        var csxContent = """
+            #load "nonexistent.csx"
+            using static DraftSpec.Dsl;
+
+            describe("Main", () =>
+            {
+                it("spec", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "load_missing.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<FileNotFoundException>(
+            async () => await host.ExecuteAsync(csxPath));
+    }
+
+    [Test]
+    public async Task Execute_WithAsyncCode_Works()
+    {
+        // Arrange - script with async operations
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            describe("Async", () =>
+            {
+                it("async spec", async () =>
+                {
+                    await Task.Delay(1);
+                });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "async.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Specs[0].Description).IsEqualTo("async spec");
+    }
+
+    [Test]
+    public async Task Execute_WithHooks_PreservesHooks()
+    {
+        // Arrange - script with lifecycle hooks
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            describe("WithHooks", () =>
+            {
+                before(() => { });
+                after(() => { });
+                beforeAll(() => { });
+                afterAll(() => { });
+
+                it("spec with hooks", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "hooks.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.BeforeEach is not null).IsTrue();
+        await Assert.That(rootContext.AfterEach is not null).IsTrue();
+        await Assert.That(rootContext.BeforeAll is not null).IsTrue();
+        await Assert.That(rootContext.AfterAll is not null).IsTrue();
+    }
+
+    [Test]
+    public async Task Execute_WithFocusedSpec_PreservesFocus()
+    {
+        // Arrange - script with focused spec
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            describe("Focus", () =>
+            {
+                it("normal spec", () => { });
+                fit("focused spec", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "focus.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Specs[0].IsFocused).IsFalse();
+        await Assert.That(rootContext.Specs[1].IsFocused).IsTrue();
+    }
+
+    [Test]
+    public async Task Execute_WithSkippedSpec_PreservesSkip()
+    {
+        // Arrange - script with skipped spec
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            describe("Skip", () =>
+            {
+                it("normal spec", () => { });
+                xit("skipped spec", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "skip.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Specs[0].IsSkipped).IsFalse();
+        await Assert.That(rootContext.Specs[1].IsSkipped).IsTrue();
+    }
+
+    [Test]
+    public async Task Execute_WithPendingSpec_PreservesPending()
+    {
+        // Arrange - script with pending spec (no body)
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            describe("Pending", () =>
+            {
+                it("normal spec", () => { });
+                it("pending spec");
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "pending.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act
+        var rootContext = await host.ExecuteAsync(csxPath);
+
+        // Assert
+        await Assert.That(rootContext).IsNotNull();
+        await Assert.That(rootContext!.Specs[0].IsPending).IsFalse();
+        await Assert.That(rootContext.Specs[1].IsPending).IsTrue();
+    }
+
+    [Test]
+    public async Task Reset_ClearsGlobalState()
+    {
+        // Arrange - create a context
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            describe("BeforeReset", () =>
+            {
+                it("spec", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "reset.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+        await host.ExecuteAsync(csxPath);
+
+        // Act
+        host.Reset();
+
+        // Assert - Dsl.RootContext should be null after reset
+        await Assert.That(global::DraftSpec.Dsl.RootContext).IsNull();
+    }
+
+    #endregion
+
     #region Cache Invalidation
 
     [Test]

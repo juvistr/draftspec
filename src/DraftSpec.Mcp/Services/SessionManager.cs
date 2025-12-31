@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 
 namespace DraftSpec.Mcp.Services;
@@ -161,9 +162,11 @@ public class SessionManager : IDisposable
 
     private static string GenerateSessionId()
     {
-        // Generate a cryptographically random session ID using full GUID (122 bits of randomness)
-        // No predictable timestamp prefix - purely random for security
-        return $"session-{Guid.NewGuid():N}";
+        // Generate a cryptographically secure session ID using RandomNumberGenerator
+        // 16 bytes = 128 bits of entropy, more than GUID's 122 bits
+        Span<byte> bytes = stackalloc byte[16];
+        RandomNumberGenerator.Fill(bytes);
+        return $"session-{Convert.ToHexString(bytes)}";
     }
 
     /// <summary>

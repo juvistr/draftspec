@@ -1,0 +1,44 @@
+title: "[Q&A] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your question! Please fill out the sections below to help us understand your issue.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to know?
+      placeholder: Describe your question clearly...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to accomplish?
+      placeholder: |
+        I'm trying to...
+        My use case is...
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Share any approaches you've already attempted
+      placeholder: |
+        I've tried...
+        I looked at...
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (optional)
+      description: If relevant, share your environment details
+      placeholder: |
+        - DraftSpec version:
+        - .NET version:
+        - OS:

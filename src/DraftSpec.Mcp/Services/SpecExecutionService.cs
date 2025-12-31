@@ -14,6 +14,7 @@ public partial class SpecExecutionService : ISpecExecutionService
 {
     private readonly TempFileManager _tempFileManager;
     private readonly IAsyncProcessRunner _processRunner;
+    private readonly ExecutionRateLimiter _rateLimiter;
     private readonly ILogger<SpecExecutionService> _logger;
 
     /// <summary>
@@ -45,10 +46,12 @@ public partial class SpecExecutionService : ISpecExecutionService
     public SpecExecutionService(
         TempFileManager tempFileManager,
         IAsyncProcessRunner processRunner,
+        ExecutionRateLimiter rateLimiter,
         ILogger<SpecExecutionService> logger)
     {
         _tempFileManager = tempFileManager;
         _processRunner = processRunner;
+        _rateLimiter = rateLimiter;
         _logger = logger;
     }
 
@@ -77,6 +80,43 @@ public partial class SpecExecutionService : ISpecExecutionService
         CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
+
+        // Check cancellation before rate limiting
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return new RunSpecResult
+            {
+                Success = false,
+                ExitCode = -1,
+                Error = new SpecError
+                {
+                    Category = ErrorCategory.Runtime,
+                    Message = "Execution was cancelled"
+                },
+                ErrorOutput = "Execution was cancelled",
+                DurationMs = stopwatch.Elapsed.TotalMilliseconds
+            };
+        }
+
+        // Check rate limiting before execution
+        var rateLimitAcquired = await _rateLimiter.TryAcquireAsync(cancellationToken);
+        if (!rateLimitAcquired)
+        {
+            _logger.LogWarning("Spec execution rejected due to rate limiting");
+            return new RunSpecResult
+            {
+                Success = false,
+                ExitCode = -1,
+                Error = new SpecError
+                {
+                    Category = ErrorCategory.RateLimited,
+                    Message = "Too many concurrent requests. Please try again later."
+                },
+                ErrorOutput = "Rate limit exceeded",
+                DurationMs = stopwatch.Elapsed.TotalMilliseconds
+            };
+        }
+
         string? specFilePath = null;
         string? jsonOutputPath = null;
 
@@ -172,6 +212,8 @@ public partial class SpecExecutionService : ISpecExecutionService
         }
         finally
         {
+            if (rateLimitAcquired)
+                _rateLimiter.Release();
             _tempFileManager.Cleanup(specFilePath, jsonOutputPath);
         }
     }

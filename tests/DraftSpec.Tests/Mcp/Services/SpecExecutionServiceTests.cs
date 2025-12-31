@@ -1,3 +1,4 @@
+using DraftSpec.Mcp;
 using DraftSpec.Mcp.Models;
 using DraftSpec.Mcp.Services;
 using DraftSpec.Tests.Infrastructure.Mocks;
@@ -13,6 +14,7 @@ public class SpecExecutionServiceTests
 {
     private TempFileManager _tempFileManager = null!;
     private MockAsyncProcessRunner _mockProcessRunner = null!;
+    private ExecutionRateLimiter _rateLimiter = null!;
     private SpecExecutionService _service = null!;
 
     [Before(Test)]
@@ -23,8 +25,21 @@ public class SpecExecutionServiceTests
 
         _mockProcessRunner = new MockAsyncProcessRunner();
 
+        // Default rate limiter with permissive limits for most tests
+        _rateLimiter = new ExecutionRateLimiter(new McpOptions
+        {
+            MaxConcurrentExecutions = 100,
+            MaxExecutionsPerMinute = 1000
+        });
+
         var serviceLogger = NullLogger<SpecExecutionService>.Instance;
-        _service = new SpecExecutionService(_tempFileManager, _mockProcessRunner, serviceLogger);
+        _service = new SpecExecutionService(_tempFileManager, _mockProcessRunner, _rateLimiter, serviceLogger);
+    }
+
+    [After(Test)]
+    public void TearDown()
+    {
+        _rateLimiter?.Dispose();
     }
 
     #region WrapSpecContent
@@ -475,6 +490,86 @@ public class SpecExecutionServiceTests
 
         // Assert - duration should be recorded
         await Assert.That(result.DurationMs).IsGreaterThanOrEqualTo(0);
+    }
+
+    #endregion
+
+    #region Rate Limiting
+
+    [Test]
+    public async Task ExecuteSpecAsync_WhenConcurrencyLimitExceeded_ReturnsRateLimitError()
+    {
+        // Arrange - create service with very low concurrency limit
+        var rateLimiter = new ExecutionRateLimiter(new McpOptions
+        {
+            MaxConcurrentExecutions = 0, // No concurrent executions allowed
+            MaxExecutionsPerMinute = 1000
+        });
+        var serviceLogger = NullLogger<SpecExecutionService>.Instance;
+        var service = new SpecExecutionService(_tempFileManager, _mockProcessRunner, rateLimiter, serviceLogger);
+
+        // Act
+        var result = await service.ExecuteSpecAsync(
+            "describe('test', () => {});",
+            TimeSpan.FromSeconds(30),
+            CancellationToken.None);
+
+        // Assert
+        await Assert.That(result.Success).IsFalse();
+        await Assert.That(result.Error).IsNotNull();
+        await Assert.That(result.Error!.Category).IsEqualTo(ErrorCategory.RateLimited);
+        await Assert.That(result.Error!.Message).Contains("Too many concurrent requests");
+    }
+
+    [Test]
+    public async Task ExecuteSpecAsync_WhenPerMinuteLimitExceeded_ReturnsRateLimitError()
+    {
+        // Arrange - create service with very low per-minute limit
+        var rateLimiter = new ExecutionRateLimiter(new McpOptions
+        {
+            MaxConcurrentExecutions = 100,
+            MaxExecutionsPerMinute = 1 // Only 1 per minute
+        });
+        var mockHandle = new MockAsyncProcessHandle().WithExitCode(0);
+        _mockProcessRunner.ReturnsHandle(mockHandle);
+
+        var serviceLogger = NullLogger<SpecExecutionService>.Instance;
+        var service = new SpecExecutionService(_tempFileManager, _mockProcessRunner, rateLimiter, serviceLogger);
+
+        // First execution should succeed
+        var result1 = await service.ExecuteSpecAsync(
+            "describe('test', () => {});",
+            TimeSpan.FromSeconds(30),
+            CancellationToken.None);
+
+        // Second execution should be rate limited
+        var result2 = await service.ExecuteSpecAsync(
+            "describe('test', () => {});",
+            TimeSpan.FromSeconds(30),
+            CancellationToken.None);
+
+        // Assert
+        await Assert.That(result2.Success).IsFalse();
+        await Assert.That(result2.Error).IsNotNull();
+        await Assert.That(result2.Error!.Category).IsEqualTo(ErrorCategory.RateLimited);
+    }
+
+    [Test]
+    public async Task ExecuteSpecAsync_WithinLimits_ExecutesNormally()
+    {
+        // Arrange - use default permissive limits
+        var mockHandle = new MockAsyncProcessHandle().WithExitCode(0);
+        _mockProcessRunner.ReturnsHandle(mockHandle);
+
+        // Act
+        var result = await _service.ExecuteSpecAsync(
+            "describe('test', () => {});",
+            TimeSpan.FromSeconds(30),
+            CancellationToken.None);
+
+        // Assert - should execute without rate limiting
+        await Assert.That(result.Error?.Category).IsNotEqualTo(ErrorCategory.RateLimited);
+        await Assert.That(_mockProcessRunner.StartCalls).Count().IsEqualTo(1);
     }
 
     #endregion

@@ -127,29 +127,32 @@ public class TimeoutMiddlewareTests
         var middleware = new TimeoutMiddleware(200);
         var spec = new SpecDefinition("test", () => { });
         var context = CreateContext(spec);
-        var cancellationSignal = new ManualResetEventSlim(false);
+        var taskStarted = new TaskCompletionSource();
+        CancellationToken capturedToken = default;
 
         await middleware.ExecuteAsync(context, async ctx =>
         {
-            // Wait in increments, checking for cancellation after each delay
-            // Total potential wait (2000ms) is well above timeout (200ms)
-            for (var i = 0; i < 40; i++)
-            {
-                await Task.Delay(50);
+            capturedToken = ctx.CancellationToken;
+            taskStarted.SetResult();
 
-                if (ctx.CancellationToken.IsCancellationRequested)
-                {
-                    cancellationSignal.Set();
-                    break;
-                }
+            // Wait longer than timeout, checking for cancellation
+            try
+            {
+                await Task.Delay(5000, ctx.CancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected - token was cancelled
             }
 
             return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
         });
 
-        // Wait for the background task to observe the cancellation
-        var wasCancelled = cancellationSignal.Wait(2000);
-        await Assert.That(wasCancelled).IsTrue();
+        // Ensure the task started before middleware returned
+        await taskStarted.Task;
+
+        // The token should be cancelled after timeout
+        await Assert.That(capturedToken.IsCancellationRequested).IsTrue();
     }
 
     #endregion

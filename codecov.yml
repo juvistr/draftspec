@@ -5,7 +5,7 @@ coverage:
   status:
     project:
       default:
-        target: 85%
+        target: 90%
         threshold: 1%
         if_ci_failed: error
         # Post success if no base report exists (new repo/branch)

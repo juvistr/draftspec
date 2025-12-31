@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/gh/juvistr/draftspec/graph/badge.svg)](https://codecov.io/gh/juvistr/draftspec)
 [![NuGet](https://img.shields.io/nuget/v/DraftSpec.svg)](https://www.nuget.org/packages/DraftSpec)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/juvistr/draftspec/badge)](https://securityscorecards.dev/viewer/?uri=github.com/juvistr/draftspec)
 
 > **Alpha** - API stabilizing, expect some breaking changes
 

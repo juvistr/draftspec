@@ -30,5 +30,8 @@ public enum ErrorCategory
     Teardown,
 
     /// <summary>Invalid spec structure or configuration.</summary>
-    Configuration
+    Configuration,
+
+    /// <summary>Request rejected due to rate limiting.</summary>
+    RateLimited
 }

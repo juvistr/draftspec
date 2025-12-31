@@ -22,6 +22,7 @@ public class RunCommand : ICommand<RunOptions>
     private readonly IEnvironment _environment;
     private readonly ISpecStatsCollector _statsCollector;
     private readonly ISpecPartitioner _partitioner;
+    private readonly IGitService _gitService;
 
     public RunCommand(
         ISpecFinder specFinder,
@@ -31,7 +32,8 @@ public class RunCommand : ICommand<RunOptions>
         IFileSystem fileSystem,
         IEnvironment environment,
         ISpecStatsCollector statsCollector,
-        ISpecPartitioner partitioner)
+        ISpecPartitioner partitioner,
+        IGitService gitService)
     {
         _specFinder = specFinder;
         _runnerFactory = runnerFactory;
@@ -41,6 +43,7 @@ public class RunCommand : ICommand<RunOptions>
         _environment = environment;
         _statsCollector = statsCollector;
         _partitioner = partitioner;
+        _gitService = gitService;
     }
 
     public async Task<int> ExecuteAsync(RunOptions options, CancellationToken ct = default)
@@ -366,7 +369,7 @@ public class RunCommand : ICommand<RunOptions>
         IReadOnlyList<string> changedFiles;
         try
         {
-            changedFiles = await GitHelper.GetChangedFilesAsync(options.AffectedBy!, projectPath, ct);
+            changedFiles = await _gitService.GetChangedFilesAsync(options.AffectedBy!, projectPath, ct);
         }
         catch (InvalidOperationException ex)
         {

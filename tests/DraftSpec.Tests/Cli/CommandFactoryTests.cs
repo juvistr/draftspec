@@ -237,7 +237,8 @@ public class CommandFactoryTests
         NullObjects.FileSystem,
         NullObjects.Environment,
         NullObjects.StatsCollector,
-        NullObjects.Partitioner);
+        NullObjects.Partitioner,
+        NullObjects.GitService);
 
     private static WatchCommand CreateWatchCommand() => new(
         NullObjects.SpecFinder,

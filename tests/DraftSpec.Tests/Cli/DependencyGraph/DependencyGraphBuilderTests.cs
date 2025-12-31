@@ -297,6 +297,142 @@ public class DependencyGraphBuilderTests : IDisposable
 
     #endregion
 
+    #region FindSourceDirectory (Automatic Source Detection)
+
+    [Test]
+    public async Task BuildAsync_FindsSiblingSrcDirectory()
+    {
+        // Structure: specs/ next to src/
+        var specsDir = Path.Combine(_tempDir, "specs");
+        var srcDir = Path.Combine(_tempDir, "src");
+        Directory.CreateDirectory(specsDir);
+        Directory.CreateDirectory(srcDir);
+
+        await CreateFileAsync("specs/test.spec.csx", """
+            using MyApp.Services;
+            describe("Test", () => { });
+            """);
+        await CreateFileAsync("src/TodoService.cs", """
+            namespace MyApp.Services;
+            public class TodoService { }
+            """);
+
+        var builder = new DependencyGraphBuilder();
+        var graph = await builder.BuildAsync(specsDir); // No explicit sourceDirectory
+
+        var specPath = Path.Combine(specsDir, "test.spec.csx");
+        var sourcePath = Path.Combine(srcDir, "TodoService.cs");
+
+        // Should automatically find src/ and map the namespace
+        var affected = graph.GetAffectedSpecs([sourcePath]);
+        await Assert.That(affected).Contains(specPath);
+    }
+
+    [Test]
+    public async Task BuildAsync_FindsAdjacentProjectDirectory_WhenSpecsHasSuffix()
+    {
+        // Structure: TodoApi.Specs/ next to TodoApi/
+        var projectDir = Path.Combine(_tempDir, "TodoApi");
+        var specsDir = Path.Combine(_tempDir, "TodoApi.Specs");
+        Directory.CreateDirectory(projectDir);
+        Directory.CreateDirectory(specsDir);
+
+        await CreateFileAsync("TodoApi.Specs/test.spec.csx", """
+            using TodoApi.Services;
+            describe("Test", () => { });
+            """);
+        await CreateFileAsync("TodoApi/TodoService.cs", """
+            namespace TodoApi.Services;
+            public class TodoService { }
+            """);
+
+        var builder = new DependencyGraphBuilder();
+        var graph = await builder.BuildAsync(specsDir); // No explicit sourceDirectory
+
+        var specPath = Path.Combine(specsDir, "test.spec.csx");
+        var sourcePath = Path.Combine(projectDir, "TodoService.cs");
+
+        // Should automatically find TodoApi/ and map the namespace
+        var affected = graph.GetAffectedSpecs([sourcePath]);
+        await Assert.That(affected).Contains(specPath);
+    }
+
+    [Test]
+    public async Task BuildAsync_FindsParentDirectory_WhenHasCsFiles()
+    {
+        // Structure: specs/ inside a project with .cs files in parent
+        var specsDir = Path.Combine(_tempDir, "specs");
+        Directory.CreateDirectory(specsDir);
+
+        await CreateFileAsync("specs/test.spec.csx", """
+            using MyApp.Services;
+            describe("Test", () => { });
+            """);
+        await CreateFileAsync("TodoService.cs", """
+            namespace MyApp.Services;
+            public class TodoService { }
+            """);
+
+        var builder = new DependencyGraphBuilder();
+        var graph = await builder.BuildAsync(specsDir); // No explicit sourceDirectory
+
+        var specPath = Path.Combine(specsDir, "test.spec.csx");
+        var sourcePath = Path.Combine(_tempDir, "TodoService.cs");
+
+        // Should find parent directory and map the namespace
+        var affected = graph.GetAffectedSpecs([sourcePath]);
+        await Assert.That(affected).Contains(specPath);
+    }
+
+    [Test]
+    public async Task BuildAsync_WithExplicitSourceDirectory_UsesProvided()
+    {
+        var specsDir = Path.Combine(_tempDir, "specs");
+        var customSrcDir = Path.Combine(_tempDir, "custom-src");
+        Directory.CreateDirectory(specsDir);
+        Directory.CreateDirectory(customSrcDir);
+
+        await CreateFileAsync("specs/test.spec.csx", """
+            using MyApp.Services;
+            describe("Test", () => { });
+            """);
+        await CreateFileAsync("custom-src/TodoService.cs", """
+            namespace MyApp.Services;
+            public class TodoService { }
+            """);
+
+        var builder = new DependencyGraphBuilder();
+        var graph = await builder.BuildAsync(specsDir, customSrcDir); // Explicit sourceDirectory
+
+        var specPath = Path.Combine(specsDir, "test.spec.csx");
+        var sourcePath = Path.Combine(customSrcDir, "TodoService.cs");
+
+        var affected = graph.GetAffectedSpecs([sourcePath]);
+        await Assert.That(affected).Contains(specPath);
+    }
+
+    [Test]
+    public async Task BuildAsync_WithNoSourceDirectory_BuildsWithoutNamespaces()
+    {
+        // Structure: isolated specs directory with no adjacent source
+        var specsDir = Path.Combine(_tempDir, "isolated", "specs");
+        Directory.CreateDirectory(specsDir);
+
+        await CreateFileAsync("isolated/specs/test.spec.csx", """
+            using MyApp.Services;
+            describe("Test", () => { });
+            """);
+
+        var builder = new DependencyGraphBuilder();
+        var graph = await builder.BuildAsync(specsDir); // No explicit sourceDirectory
+
+        // Should still work, just without namespace mappings
+        await Assert.That(graph.SpecFiles).Count().IsEqualTo(1);
+        await Assert.That(graph.SourceFiles).IsEmpty();
+    }
+
+    #endregion
+
     private async Task CreateFileAsync(string relativePath, string content)
     {
         var fullPath = Path.Combine(_tempDir, relativePath);

@@ -864,6 +864,125 @@ public class RunCommandTests
 
     #endregion
 
+    #region Impact Analysis (--affected-by)
+
+    [Test]
+    public async Task ExecuteAsync_WithAffectedBy_WhenNoChangedFiles_ExitsWithZero()
+    {
+        var console = new MockConsole();
+        var gitService = new MockGitService().WithChangedFiles(); // Empty list
+        var command = CreateCommand(
+            console: console,
+            specFiles: ["test1.spec.csx", "test2.spec.csx"],
+            gitService: gitService);
+
+        var options = new RunOptions
+        {
+            Path = ".",
+            AffectedBy = "HEAD~1"
+        };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("No changed files detected");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithAffectedBy_WhenNoAffectedSpecs_ExitsWithZero()
+    {
+        var console = new MockConsole();
+        var gitService = new MockGitService().WithChangedFiles("/unrelated/file.cs");
+        var command = CreateCommand(
+            console: console,
+            specFiles: ["test.spec.csx"],
+            gitService: gitService);
+
+        var options = new RunOptions
+        {
+            Path = ".",
+            AffectedBy = "HEAD~1"
+        };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("No affected specs to run");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithAffectedBy_WhenGitFails_ExitsWithError()
+    {
+        var console = new MockConsole();
+        var gitService = new MockGitService()
+            .ThrowsOnGetChangedFiles(new InvalidOperationException("Git error"));
+        var command = CreateCommand(
+            console: console,
+            specFiles: ["test.spec.csx"],
+            gitService: gitService);
+
+        var options = new RunOptions
+        {
+            Path = ".",
+            AffectedBy = "HEAD~1"
+        };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(console.Errors).Contains("Failed to get changed files");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithAffectedByAndDryRun_ShowsSpecsWithoutRunning()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        var gitService = new MockGitService()
+            .WithChangedFiles("/some/changed/file.cs");
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["test.spec.csx"],
+            gitService: gitService);
+
+        var options = new RunOptions
+        {
+            Path = ".",
+            AffectedBy = "HEAD~1",
+            DryRun = true
+        };
+        var result = await command.ExecuteAsync(options);
+
+        // Should exit with 0 for dry run
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("dry run");
+        // Runner should NOT have been called
+        await Assert.That(runner.RunAllCallCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithAffectedBy_CallsGitServiceWithCorrectReference()
+    {
+        var console = new MockConsole();
+        var gitService = new MockGitService().WithChangedFiles();
+        var command = CreateCommand(
+            console: console,
+            specFiles: ["test.spec.csx"],
+            gitService: gitService);
+
+        var options = new RunOptions
+        {
+            Path = "/my/project",
+            AffectedBy = "main"
+        };
+        await command.ExecuteAsync(options);
+
+        // Verify correct reference was passed
+        await Assert.That(gitService.GetChangedFilesCalls.Count).IsEqualTo(1);
+        await Assert.That(gitService.GetChangedFilesCalls[0].Reference).IsEqualTo("main");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static RunCommand CreateCommand(
@@ -872,7 +991,8 @@ public class RunCommandTests
         IReadOnlyList<string>? specFiles = null,
         IFileSystem? fileSystem = null,
         IEnvironment? environment = null,
-        ISpecPartitioner? partitioner = null)
+        ISpecPartitioner? partitioner = null,
+        IGitService? gitService = null)
     {
         var specs = specFiles ?? [];
         return new RunCommand(
@@ -883,7 +1003,8 @@ public class RunCommandTests
             fileSystem ?? NullObjects.FileSystem,
             environment ?? NullObjects.Environment,
             NullObjects.StatsCollector,
-            partitioner ?? NullObjects.Partitioner);
+            partitioner ?? NullObjects.Partitioner,
+            gitService ?? NullObjects.GitService);
     }
 
     #endregion

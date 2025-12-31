@@ -1,35 +1,32 @@
 using System.Diagnostics;
 
-namespace DraftSpec.Cli;
+namespace DraftSpec.Cli.Services;
 
 /// <summary>
-/// Helper for getting changed files from git.
+/// Implementation of git operations using the git CLI.
 /// </summary>
-public static class GitHelper
+public class GitService : IGitService
 {
-    /// <summary>
-    /// Gets a list of files changed according to the specified reference.
-    /// </summary>
-    /// <param name="reference">
-    /// Can be:
-    /// - "staged" - only staged changes (git diff --cached)
-    /// - A commit ref like "HEAD~1" or "main" - changes since that commit
-    /// - A file path - reads the file as a list of file paths
-    /// </param>
-    /// <param name="workingDirectory">The working directory for git commands.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of absolute file paths that changed.</returns>
-    public static async Task<IReadOnlyList<string>> GetChangedFilesAsync(
+    private readonly IFileSystem _fileSystem;
+
+    public GitService(IFileSystem fileSystem)
+    {
+        _fileSystem = fileSystem;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> GetChangedFilesAsync(
         string reference,
         string workingDirectory,
         CancellationToken cancellationToken = default)
     {
         // Check if reference is a file path
         var fullReference = Path.GetFullPath(reference, workingDirectory);
-        if (File.Exists(fullReference))
+        if (_fileSystem.FileExists(fullReference))
         {
-            var lines = await File.ReadAllLinesAsync(fullReference, cancellationToken);
-            return lines
+            var content = await _fileSystem.ReadAllTextAsync(fullReference, cancellationToken);
+            return content
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries)
                 .Where(line => !string.IsNullOrWhiteSpace(line))
                 .Select(line => Path.GetFullPath(line.Trim(), workingDirectory))
                 .ToList();
@@ -48,10 +45,8 @@ public static class GitHelper
             .ToList();
     }
 
-    /// <summary>
-    /// Checks if the current directory is inside a git repository.
-    /// </summary>
-    public static async Task<bool> IsGitRepositoryAsync(
+    /// <inheritdoc />
+    public async Task<bool> IsGitRepositoryAsync(
         string directory,
         CancellationToken cancellationToken = default)
     {

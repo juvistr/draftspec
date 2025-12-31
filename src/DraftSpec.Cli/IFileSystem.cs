@@ -26,6 +26,11 @@ public interface IFileSystem
     string ReadAllText(string path);
 
     /// <summary>
+    /// Read all text from a file asynchronously.
+    /// </summary>
+    Task<string> ReadAllTextAsync(string path, CancellationToken ct = default);
+
+    /// <summary>
     /// Check if a directory exists.
     /// </summary>
     bool DirectoryExists(string path);

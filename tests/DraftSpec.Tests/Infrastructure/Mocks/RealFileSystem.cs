@@ -12,6 +12,9 @@ public class RealFileSystem : IFileSystem
 
     public string ReadAllText(string path) => File.ReadAllText(path);
 
+    public Task<string> ReadAllTextAsync(string path, CancellationToken ct = default)
+        => File.ReadAllTextAsync(path, ct);
+
     public void WriteAllText(string path, string content) => File.WriteAllText(path, content);
 
     public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default)

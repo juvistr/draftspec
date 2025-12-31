@@ -135,6 +135,11 @@ public class MockFileSystem : IFileSystem
         return _fileContents.TryGetValue(fullPath, out var content) ? content : "";
     }
 
+    public Task<string> ReadAllTextAsync(string path, CancellationToken ct = default)
+    {
+        return Task.FromResult(ReadAllText(path));
+    }
+
     public void WriteAllText(string path, string content)
     {
         var fullPath = Path.GetFullPath(path);

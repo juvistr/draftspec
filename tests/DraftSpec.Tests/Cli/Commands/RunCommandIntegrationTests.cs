@@ -384,7 +384,8 @@ public class RunCommandIntegrationTests
             fileSystem ?? NullObjects.FileSystem,
             environment ?? NullObjects.Environment,
             NullObjects.StatsCollector,
-            NullObjects.Partitioner);
+            NullObjects.Partitioner,
+            NullObjects.GitService);
     }
 
     #endregion

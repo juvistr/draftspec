@@ -88,6 +88,11 @@ public static class NullObjects
     /// </summary>
     public static ISpecChangeTracker SpecChangeTracker { get; } = new NullSpecChangeTracker();
 
+    /// <summary>
+    /// A no-op git service.
+    /// </summary>
+    public static IGitService GitService { get; } = new NullGitService();
+
     #region Null Object Implementations
 
     private class NullConsole : IConsole
@@ -109,6 +114,7 @@ public static class NullObjects
         public void WriteAllText(string path, string content) { }
         public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) => Task.CompletedTask;
         public string ReadAllText(string path) => "";
+        public Task<string> ReadAllTextAsync(string path, CancellationToken ct = default) => Task.FromResult("");
         public bool DirectoryExists(string path) => true;
         public void CreateDirectory(string path) { }
         public string[] GetFiles(string path, string searchPattern) => [];
@@ -242,6 +248,20 @@ public static class NullObjects
         public void Clear() { }
         public void RecordDependency(string dependencyPath, DateTime lastModified) { }
         public bool HasDependencyChanged(string dependencyPath, DateTime currentModified) => false;
+    }
+
+    private class NullGitService : IGitService
+    {
+        public Task<IReadOnlyList<string>> GetChangedFilesAsync(
+            string reference,
+            string workingDirectory,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<string>>([]);
+
+        public Task<bool> IsGitRepositoryAsync(
+            string directory,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
     }
 
     #endregion

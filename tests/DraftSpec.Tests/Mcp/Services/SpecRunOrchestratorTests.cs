@@ -1,3 +1,6 @@
+using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
+using DraftSpec.Mcp.Models;
 using DraftSpec.Mcp.Services;
 using DraftSpec.Tests.Infrastructure.Mocks;
 using Microsoft.Extensions.Logging;
@@ -187,4 +190,108 @@ public class SpecRunOrchestratorTests
         await Assert.That(result.Result!.Success).IsFalse(); // But execution failed
         await Assert.That(result.Result!.Error!.Message).IsEqualTo("execution error");
     }
+
+    #region ToResponse Tests
+
+    [Test]
+    public async Task ToResponse_WhenNotSuccess_ReturnsErrorObject()
+    {
+        var result = SpecRunOrchestratorResult.SessionNotFound("test-session");
+
+        var response = result.ToResponse();
+
+        // Cast to dynamic to check properties
+        var responseType = response.GetType();
+        var successProp = responseType.GetProperty("success");
+        var errorProp = responseType.GetProperty("error");
+
+        await Assert.That(successProp).IsNotNull();
+        await Assert.That(errorProp).IsNotNull();
+        await Assert.That((bool)successProp!.GetValue(response)!).IsFalse();
+        await Assert.That((string)errorProp!.GetValue(response)!).Contains("test-session");
+    }
+
+    [Test]
+    public async Task ToResponse_WithSession_ReturnsSessionInfo()
+    {
+        using var sessionManager = new SessionManager(_logger, _baseTempDir);
+        var session = sessionManager.CreateSession();
+        session.AppendContent("// test content");
+
+        var runResult = new RunSpecResult
+        {
+            Success = true,
+            Report = new SpecReport { Summary = new SpecSummary { Total = 1, Passed = 1 } },
+            ConsoleOutput = "output",
+            ErrorOutput = "",
+            ExitCode = 0,
+            DurationMs = 100
+        };
+
+        var result = SpecRunOrchestratorResult.FromResult(runResult, session);
+        var response = result.ToResponse();
+
+        var responseType = response.GetType();
+        var sessionIdProp = responseType.GetProperty("sessionId");
+        var accumulatedLengthProp = responseType.GetProperty("accumulatedContentLength");
+
+        await Assert.That(sessionIdProp).IsNotNull();
+        await Assert.That(accumulatedLengthProp).IsNotNull();
+        await Assert.That((string)sessionIdProp!.GetValue(response)!).IsEqualTo(session.Id);
+        var accumulatedLength = (int?)accumulatedLengthProp!.GetValue(response);
+        await Assert.That(accumulatedLength).IsNotNull();
+        await Assert.That(accumulatedLength!.Value).IsGreaterThan(0);
+    }
+
+    [Test]
+    public async Task ToResponse_WithoutSession_ReturnsResultDirectly()
+    {
+        var runResult = new RunSpecResult
+        {
+            Success = true,
+            Report = new SpecReport { Summary = new SpecSummary { Total = 2, Passed = 2 } },
+            ConsoleOutput = "console output",
+            ErrorOutput = "",
+            ExitCode = 0,
+            DurationMs = 50
+        };
+
+        var result = SpecRunOrchestratorResult.FromResult(runResult, null);
+        var response = result.ToResponse();
+
+        // When no session, should return the RunSpecResult directly
+        await Assert.That(response).IsTypeOf<RunSpecResult>();
+        var typedResponse = (RunSpecResult)response;
+        await Assert.That(typedResponse.Success).IsTrue();
+        await Assert.That(typedResponse.Report!.Summary.Passed).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task ToResponse_WithSessionAndFailedRun_ReturnsSessionInfo()
+    {
+        using var sessionManager = new SessionManager(_logger, _baseTempDir);
+        var session = sessionManager.CreateSession();
+
+        var runResult = new RunSpecResult
+        {
+            Success = false,
+            Report = new SpecReport { Summary = new SpecSummary { Total = 1, Failed = 1 } },
+            Error = new SpecError { Message = "Assertion failed" },
+            ExitCode = 1,
+            DurationMs = 100
+        };
+
+        var result = SpecRunOrchestratorResult.FromResult(runResult, session);
+        var response = result.ToResponse();
+
+        var responseType = response.GetType();
+        var successProp = responseType.GetProperty("Success");
+        var sessionIdProp = responseType.GetProperty("sessionId");
+
+        await Assert.That(successProp).IsNotNull();
+        await Assert.That(sessionIdProp).IsNotNull();
+        await Assert.That((bool)successProp!.GetValue(response)!).IsFalse();
+    }
+
+    #endregion
 }

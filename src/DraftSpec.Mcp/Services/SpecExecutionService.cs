@@ -10,7 +10,7 @@ namespace DraftSpec.Mcp.Services;
 /// <summary>
 /// Executes DraftSpec tests using .NET 10 file-based apps.
 /// </summary>
-public partial class SpecExecutionService
+public partial class SpecExecutionService : ISpecExecutionService
 {
     private readonly TempFileManager _tempFileManager;
     private readonly IAsyncProcessRunner _processRunner;

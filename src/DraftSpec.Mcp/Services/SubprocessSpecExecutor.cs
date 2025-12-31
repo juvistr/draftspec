@@ -4,16 +4,16 @@ namespace DraftSpec.Mcp.Services;
 
 /// <summary>
 /// Executes specs via subprocess with optional progress callback.
-/// Adapts SpecExecutionService to the ISpecExecutor interface.
+/// Adapts ISpecExecutionService to the ISpecExecutor interface.
 /// </summary>
 public class SubprocessSpecExecutor : ISpecExecutor
 {
-    private readonly SpecExecutionService _executionService;
+    private readonly ISpecExecutionService _executionService;
     private readonly Func<SpecProgressNotification, Task>? _onProgress;
     private readonly CancellationToken _cancellationToken;
 
     public SubprocessSpecExecutor(
-        SpecExecutionService executionService,
+        ISpecExecutionService executionService,
         Func<SpecProgressNotification, Task>? onProgress = null,
         CancellationToken cancellationToken = default)
     {

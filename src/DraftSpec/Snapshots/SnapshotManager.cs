@@ -18,6 +18,7 @@ public class SnapshotManager
 
     private readonly IEnvironmentProvider _env;
     private readonly Dictionary<string, Dictionary<string, string>> _snapshotCache = new();
+    private readonly object _lock = new();
 
     /// <summary>
     /// Creates a new snapshot manager.
@@ -71,32 +72,35 @@ public class SnapshotManager
         var actualJson = SnapshotSerializer.Serialize(actual);
         var snapshotPath = GetSnapshotFilePath(specFilePath);
 
-        var snapshots = LoadSnapshots(snapshotPath);
-
-        if (!snapshots.TryGetValue(key, out var expectedJson))
+        lock (_lock)
         {
-            // Snapshot doesn't exist - create it on first run or in update mode
-            // Note: New snapshots are always created, regardless of whether the file exists
-            // The "Missing" status is only used when explicitly disabled (future feature)
-            snapshots[key] = actualJson;
-            SaveSnapshots(snapshotPath, snapshots);
-            return SnapshotResult.Created(key);
+            var snapshots = LoadSnapshots(snapshotPath);
+
+            if (!snapshots.TryGetValue(key, out var expectedJson))
+            {
+                // Snapshot doesn't exist - create it on first run or in update mode
+                // Note: New snapshots are always created, regardless of whether the file exists
+                // The "Missing" status is only used when explicitly disabled (future feature)
+                snapshots[key] = actualJson;
+                SaveSnapshots(snapshotPath, snapshots);
+                return SnapshotResult.Created(key);
+            }
+
+            if (UpdateMode)
+            {
+                // Update existing snapshot
+                snapshots[key] = actualJson;
+                SaveSnapshots(snapshotPath, snapshots);
+                return SnapshotResult.Updated(key);
+            }
+
+            // Compare
+            if (NormalizeJson(actualJson) == NormalizeJson(expectedJson))
+                return SnapshotResult.Matched(key);
+
+            var diff = SnapshotDiff.Generate(expectedJson, actualJson);
+            return SnapshotResult.Mismatched(key, expectedJson, actualJson, diff);
         }
-
-        if (UpdateMode)
-        {
-            // Update existing snapshot
-            snapshots[key] = actualJson;
-            SaveSnapshots(snapshotPath, snapshots);
-            return SnapshotResult.Updated(key);
-        }
-
-        // Compare
-        if (NormalizeJson(actualJson) == NormalizeJson(expectedJson))
-            return SnapshotResult.Matched(key);
-
-        var diff = SnapshotDiff.Generate(expectedJson, actualJson);
-        return SnapshotResult.Mismatched(key, expectedJson, actualJson, diff);
     }
 
     /// <summary>
@@ -104,7 +108,10 @@ public class SnapshotManager
     /// </summary>
     public void ClearCache()
     {
-        _snapshotCache.Clear();
+        lock (_lock)
+        {
+            _snapshotCache.Clear();
+        }
     }
 
     private Dictionary<string, string> LoadSnapshots(string path)

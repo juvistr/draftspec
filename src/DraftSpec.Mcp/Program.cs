@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using DraftSpec.Mcp.Services;
+using DraftSpec.Mcp.DependencyInjection;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -9,15 +9,9 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; });
 
-// Register services
-builder.Services.AddSingleton<TempFileManager>();
-builder.Services.AddSingleton<IAsyncProcessRunner, SystemAsyncProcessRunner>();
-builder.Services.AddSingleton<SessionManager>();
-builder.Services.AddSingleton<SpecExecutionService>();
-builder.Services.AddSingleton<InProcessSpecRunner>();
-
-// Configure MCP server with stdio transport
+// Register services and MCP server with stdio transport
 builder.Services
+    .AddDraftSpecMcp()
     .AddMcpServer()
     .WithStdioServerTransport()
     .WithToolsFromAssembly()
@@ -36,4 +30,6 @@ logger.LogWarning("  See SECURITY.md for deployment guidance.");
 await host.RunAsync();
 
 /// <summary>Marker class for logging.</summary>
-internal partial class Program { }
+internal partial class Program
+{
+}

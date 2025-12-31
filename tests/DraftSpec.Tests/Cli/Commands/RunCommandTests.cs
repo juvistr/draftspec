@@ -2,6 +2,7 @@ using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
+using DraftSpec.Cli.Services;
 using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
@@ -718,6 +719,151 @@ public class RunCommandTests
 
     #endregion
 
+    #region Partition Tests
+
+    [Test]
+    public async Task ExecuteAsync_PartitionEnabled_UsesPartitionedFiles()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        // Partition returns only 2 of the 5 files
+        var partitioner = new MockPartitioner(
+            files: ["partition1.spec.csx", "partition2.spec.csx"],
+            totalFiles: 5);
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["1.spec.csx", "2.spec.csx", "3.spec.csx", "4.spec.csx", "5.spec.csx"],
+            partitioner: partitioner);
+
+        var options = new RunOptions
+        {
+            Path = ".",
+            Partition = new PartitionOptions
+            {
+                Total = 3,
+                Index = 0
+            }
+        };
+        await command.ExecuteAsync(options);
+
+        // Runner should receive only the partitioned files
+        await Assert.That(runner.LastSpecFiles).Count().IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_EmptyPartition_ReturnsZeroWithMessage()
+    {
+        var console = new MockConsole();
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        // Partition returns empty list
+        var partitioner = new MockPartitioner(files: [], totalFiles: 5);
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["1.spec.csx", "2.spec.csx"],
+            partitioner: partitioner);
+
+        var options = new RunOptions
+        {
+            Path = ".",
+            Partition = new PartitionOptions
+            {
+                Total = 10,
+                Index = 9 // Last partition might be empty
+            }
+        };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("No specs in this partition");
+        // Runner should NOT have been called
+        await Assert.That(runner.RunAllCalled).IsFalse();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PartitionWithSpecCounts_DisplaysSpecInfo()
+    {
+        var console = new MockConsole();
+        var partitioner = new MockPartitioner(
+            files: ["test.spec.csx"],
+            totalFiles: 3,
+            totalSpecs: 100,
+            partitionSpecs: 35);
+        var command = CreateCommand(
+            console: console,
+            specFiles: ["test.spec.csx"],
+            partitioner: partitioner);
+
+        var options = new RunOptions
+        {
+            Path = ".",
+            Partition = new PartitionOptions
+            {
+                Total = 3,
+                Index = 0
+            }
+        };
+        await command.ExecuteAsync(options);
+
+        // Should display partition info with spec counts
+        await Assert.That(console.Output).Contains("Partition 1 of 3");
+        await Assert.That(console.Output).Contains("35 spec(s) of 100 total");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PartitionWithoutSpecCounts_DisplaysOnlyFileCounts()
+    {
+        var console = new MockConsole();
+        var partitioner = new MockPartitioner(
+            files: ["test.spec.csx"],
+            totalFiles: 3,
+            totalSpecs: null,
+            partitionSpecs: null);
+        var command = CreateCommand(
+            console: console,
+            specFiles: ["test.spec.csx"],
+            partitioner: partitioner);
+
+        var options = new RunOptions
+        {
+            Path = ".",
+            Partition = new PartitionOptions
+            {
+                Total = 3,
+                Index = 1
+            }
+        };
+        await command.ExecuteAsync(options);
+
+        // Should display partition info with file counts only
+        await Assert.That(console.Output).Contains("Partition 2 of 3");
+        await Assert.That(console.Output).Contains("1 file(s) of 3 total");
+        // Should NOT display spec counts
+        await Assert.That(console.Output).DoesNotContain("spec(s) of");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PartitionDisabled_RunsAllFiles()
+    {
+        var runner = new MockRunner();
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(
+            runnerFactory: runnerFactory,
+            specFiles: ["1.spec.csx", "2.spec.csx", "3.spec.csx"]);
+
+        // Default PartitionOptions has IsEnabled = false
+        var options = new RunOptions { Path = "." };
+        await command.ExecuteAsync(options);
+
+        // All files should be passed to runner
+        await Assert.That(runner.LastSpecFiles).Count().IsEqualTo(3);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static RunCommand CreateCommand(
@@ -725,7 +871,8 @@ public class RunCommandTests
         IInProcessSpecRunnerFactory? runnerFactory = null,
         IReadOnlyList<string>? specFiles = null,
         IFileSystem? fileSystem = null,
-        IEnvironment? environment = null)
+        IEnvironment? environment = null,
+        ISpecPartitioner? partitioner = null)
     {
         var specs = specFiles ?? [];
         return new RunCommand(
@@ -736,7 +883,7 @@ public class RunCommandTests
             fileSystem ?? NullObjects.FileSystem,
             environment ?? NullObjects.Environment,
             NullObjects.StatsCollector,
-            NullObjects.Partitioner);
+            partitioner ?? NullObjects.Partitioner);
     }
 
     #endregion

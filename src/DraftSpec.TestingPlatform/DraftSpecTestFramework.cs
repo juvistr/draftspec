@@ -11,12 +11,14 @@ namespace DraftSpec.TestingPlatform;
 /// <summary>
 /// Microsoft.Testing.Platform adapter for DraftSpec.
 /// Inherits from VSTestBridgedTestFrameworkBase to support both MTP and VSTest modes.
+/// Acts as a thin adapter that delegates orchestration to ITestOrchestrator.
 /// </summary>
 internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
 {
     // Lazy-initialized components (created on first use with project directory)
     private ISpecDiscoverer? _discoverer;
     private IMtpSpecExecutor? _executor;
+    private ITestOrchestrator? _orchestrator;
     private string? _projectDirectory;
 
     /// <summary>
@@ -46,17 +48,20 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
     /// <param name="serviceProvider">Service provider for dependency resolution.</param>
     /// <param name="discoverer">Optional discoverer for testing. Defaults to SpecDiscoverer.</param>
     /// <param name="executor">Optional executor for testing. Defaults to MtpSpecExecutor.</param>
+    /// <param name="orchestrator">Optional orchestrator for testing. Defaults to TestOrchestrator.</param>
     /// <param name="projectDirectory">Optional project directory for testing.</param>
     public DraftSpecTestFramework(
         ITestFrameworkCapabilities capabilities,
         IServiceProvider serviceProvider,
         ISpecDiscoverer? discoverer = null,
         IMtpSpecExecutor? executor = null,
+        ITestOrchestrator? orchestrator = null,
         string? projectDirectory = null)
         : base(serviceProvider, capabilities)
     {
         _discoverer = discoverer;
         _executor = executor;
+        _orchestrator = orchestrator;
         _projectDirectory = projectDirectory;
     }
 
@@ -70,18 +75,7 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
     /// </summary>
     public override Task<CreateTestSessionResult> CreateTestSessionAsync(CreateTestSessionContext context)
     {
-        // Use the test assembly location as the base directory for finding CSX files.
-        // CSX files are copied to the output directory by MSBuild targets.
-        // Environment.CurrentDirectory is unreliable when running from IDE.
-        if (_projectDirectory == null)
-        {
-            var assemblyLocation = typeof(DraftSpecTestFramework).Assembly.Location;
-            _projectDirectory = Path.GetDirectoryName(assemblyLocation) ?? Environment.CurrentDirectory;
-        }
-
-        _discoverer ??= new SpecDiscoverer(_projectDirectory);
-        _executor ??= new MtpSpecExecutor(_projectDirectory);
-
+        EnsureInitialized();
         return Task.FromResult(new CreateTestSessionResult { IsSuccess = true });
     }
 
@@ -110,8 +104,7 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
     /// </summary>
     public override Task<CloseTestSessionResult> CloseTestSessionAsync(CloseTestSessionContext context)
     {
-        _discoverer = null;
-        _executor = null;
+        ResetState();
         return Task.FromResult(new CloseTestSessionResult { IsSuccess = true });
     }
 
@@ -123,35 +116,13 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         IMessageBus messageBus,
         CancellationToken cancellationToken)
     {
-        // Initialize components if not already done
         EnsureInitialized();
 
-        if (_discoverer == null)
-        {
+        if (_orchestrator == null)
             return;
-        }
 
-        var result = await _discoverer.DiscoverAsync(cancellationToken);
-
-        // Publish discovered specs
-        foreach (var spec in result.Specs)
-        {
-            var testNode = TestNodeMapper.CreateDiscoveryNode(spec);
-
-            await messageBus.PublishAsync(
-                this,
-                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
-        }
-
-        // Publish discovery errors as error nodes
-        foreach (var error in result.Errors)
-        {
-            var testNode = TestNodeMapper.CreateErrorNode(error);
-
-            await messageBus.PublishAsync(
-                this,
-                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
-        }
+        var publisher = new MessageBusPublisher(messageBus, this, request.Session.SessionUid);
+        await _orchestrator.DiscoverTestsAsync(publisher, cancellationToken);
     }
 
     /// <summary>
@@ -162,63 +133,21 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         IMessageBus messageBus,
         CancellationToken cancellationToken)
     {
-        // Initialize components if not already done
         EnsureInitialized();
 
-        if (_executor == null || _discoverer == null)
-        {
+        if (_orchestrator == null)
             return;
-        }
 
-        // Run all discovered tests (VSTest provides filtering via its own mechanisms)
-        var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken);
-
-        // Report discovery errors
-        foreach (var error in discoveryResult.Errors)
-        {
-            var testNode = TestNodeMapper.CreateErrorNode(error);
-
-            await messageBus.PublishAsync(
-                this,
-                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
-        }
-
-        // Separate specs with compilation errors from executable specs
-        var executableSpecs = discoveryResult.Specs.Where(s => !s.HasCompilationError).ToList();
-        var compilationErrorSpecs = discoveryResult.Specs.Where(s => s.HasCompilationError).ToList();
-
-        // Report specs with compilation errors as failed
-        foreach (var spec in compilationErrorSpecs)
-        {
-            var testNode = TestNodeMapper.CreateCompilationErrorResultNode(spec);
-
-            await messageBus.PublishAsync(
-                this,
-                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
-        }
-
-        // Execute discovered specs (only those without compilation errors)
-        var fileGroups = executableSpecs.GroupBy(s => s.SourceFile);
-
-        foreach (var group in fileGroups)
-        {
-            var result = await _executor.ExecuteFileAsync(group.Key, cancellationToken);
-
-            foreach (var specResult in result.Results)
-            {
-                var testNode = TestNodeMapper.CreateResultNode(
-                    result.RelativeSourceFile,
-                    result.AbsoluteSourceFile,
-                    specResult);
-
-                await messageBus.PublishAsync(
-                    this,
-                    new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
-            }
-        }
+        var publisher = new MessageBusPublisher(messageBus, this, request.Session.SessionUid);
+        await _orchestrator.RunTestsAsync(requestedTestIds: null, publisher, cancellationToken);
     }
 
-    private void EnsureInitialized()
+    /// <summary>
+    /// Ensures the framework is initialized with discoverer, executor, and orchestrator.
+    /// Uses assembly location as project directory if not provided.
+    /// Internal for testing.
+    /// </summary>
+    internal void EnsureInitialized()
     {
         if (_projectDirectory == null)
         {
@@ -228,6 +157,18 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
 
         _discoverer ??= new SpecDiscoverer(_projectDirectory);
         _executor ??= new MtpSpecExecutor(_projectDirectory);
+        _orchestrator ??= new TestOrchestrator(_discoverer, _executor);
+    }
+
+    /// <summary>
+    /// Resets the framework state (used during close and for testing).
+    /// Internal for testing.
+    /// </summary>
+    internal void ResetState()
+    {
+        _discoverer = null;
+        _executor = null;
+        _orchestrator = null;
     }
 
     /// <summary>
@@ -238,32 +179,11 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         IMessageBus messageBus,
         CancellationToken cancellationToken)
     {
-        if (_discoverer == null)
-        {
+        if (_orchestrator == null)
             return;
-        }
 
-        var result = await _discoverer.DiscoverAsync(cancellationToken);
-
-        // Publish discovered specs
-        foreach (var spec in result.Specs)
-        {
-            var testNode = TestNodeMapper.CreateDiscoveryNode(spec);
-
-            await messageBus.PublishAsync(
-                this,
-                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
-        }
-
-        // Publish discovery errors as error nodes
-        foreach (var error in result.Errors)
-        {
-            var testNode = TestNodeMapper.CreateErrorNode(error);
-
-            await messageBus.PublishAsync(
-                this,
-                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
-        }
+        var publisher = new MessageBusPublisher(messageBus, this, request.Session.SessionUid);
+        await _orchestrator.DiscoverTestsAsync(publisher, cancellationToken);
     }
 
     /// <summary>
@@ -274,96 +194,27 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         IMessageBus messageBus,
         CancellationToken cancellationToken)
     {
-        if (_executor == null || _discoverer == null)
-        {
+        if (_orchestrator == null)
             return;
-        }
 
-        // Check if specific tests are requested via filter
-        var filter = request.Filter;
-        IReadOnlyList<ExecutionResult> executionResults;
-        IReadOnlyList<DiscoveryError> discoveryErrors = [];
-        IReadOnlyList<DiscoveredSpec> compilationErrorSpecs = [];
+        var requestedTestIds = ExtractTestIds(request.Filter);
+        var publisher = new MessageBusPublisher(messageBus, this, request.Session.SessionUid);
+        await _orchestrator.RunTestsAsync(requestedTestIds, publisher, cancellationToken);
+    }
 
+    /// <summary>
+    /// Extracts test IDs from the request filter.
+    /// Internal static for testing.
+    /// </summary>
+    /// <param name="filter">The test filter from the request.</param>
+    /// <returns>Set of test IDs to run, or null if all tests should run.</returns>
+    internal static IReadOnlySet<string>? ExtractTestIds(ITestExecutionFilter? filter)
+    {
         if (filter is TestNodeUidListFilter uidFilter && uidFilter.TestNodeUids.Length > 0)
         {
-            // Run specific tests by ID - discover to identify compilation errors,
-            // but only report results for requested specs
-            var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken);
-
-            // Filter to only requested IDs
-            var requestedIds = uidFilter.TestNodeUids.Select(uid => uid.Value).ToHashSet();
-            var requestedSpecs = discoveryResult.Specs.Where(s => requestedIds.Contains(s.Id)).ToList();
-
-            // Separate into executable and compilation error specs
-            var executableIds = requestedSpecs
-                .Where(s => !s.HasCompilationError)
-                .Select(s => s.Id)
-                .ToHashSet();
-            compilationErrorSpecs = requestedSpecs.Where(s => s.HasCompilationError).ToList();
-
-            // Execute only executable specs (results are filtered to requested IDs in executor)
-            executionResults = executableIds.Count > 0
-                ? await _executor.ExecuteByIdsAsync(executableIds, cancellationToken)
-                : [];
-        }
-        else
-        {
-            // Run all tests - discover and execute all files
-            var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken);
-            discoveryErrors = discoveryResult.Errors;
-
-            // Separate specs with compilation errors from executable specs
-            var executableSpecs = discoveryResult.Specs.Where(s => !s.HasCompilationError).ToList();
-            compilationErrorSpecs = discoveryResult.Specs.Where(s => s.HasCompilationError).ToList();
-
-            // Group executable specs by file and execute
-            var fileGroups = executableSpecs.GroupBy(s => s.SourceFile);
-            var results = new List<ExecutionResult>();
-
-            foreach (var group in fileGroups)
-            {
-                var result = await _executor.ExecuteFileAsync(group.Key, cancellationToken);
-                results.Add(result);
-            }
-
-            executionResults = results;
+            return uidFilter.TestNodeUids.Select(uid => uid.Value).ToHashSet();
         }
 
-        // Publish discovery errors as error nodes
-        foreach (var error in discoveryErrors)
-        {
-            var testNode = TestNodeMapper.CreateErrorNode(error);
-
-            await messageBus.PublishAsync(
-                this,
-                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
-        }
-
-        // Publish specs with compilation errors as failed test nodes
-        foreach (var spec in compilationErrorSpecs)
-        {
-            var testNode = TestNodeMapper.CreateCompilationErrorResultNode(spec);
-
-            await messageBus.PublishAsync(
-                this,
-                new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
-        }
-
-        // Publish results to MTP
-        foreach (var execResult in executionResults)
-        {
-            foreach (var specResult in execResult.Results)
-            {
-                var testNode = TestNodeMapper.CreateResultNode(
-                    execResult.RelativeSourceFile,
-                    execResult.AbsoluteSourceFile,
-                    specResult);
-
-                await messageBus.PublishAsync(
-                    this,
-                    new TestNodeUpdateMessage(request.Session.SessionUid, testNode));
-            }
-        }
+        return null;
     }
 }

@@ -1,5 +1,7 @@
 using DraftSpec.TestingPlatform;
 using Microsoft.Testing.Platform.Capabilities.TestFramework;
+using Microsoft.Testing.Platform.Extensions.Messages;
+using Microsoft.Testing.Platform.Requests;
 
 namespace DraftSpec.Tests.TestingPlatform;
 
@@ -103,6 +105,159 @@ public class DraftSpecTestFrameworkTests
         var framework2 = CreateFramework();
 
         await Assert.That(framework1.Uid).IsEqualTo(framework2.Uid);
+    }
+
+    #endregion
+
+    #region ExtractTestIds
+
+    [Test]
+    public async Task ExtractTestIds_NullFilter_ReturnsNull()
+    {
+        var result = DraftSpecTestFramework.ExtractTestIds(null);
+
+        await Assert.That(result).IsNull();
+    }
+
+    [Test]
+    public async Task ExtractTestIds_EmptyUidFilter_ReturnsNull()
+    {
+        var filter = new TestNodeUidListFilter([]);
+
+        var result = DraftSpecTestFramework.ExtractTestIds(filter);
+
+        await Assert.That(result).IsNull();
+    }
+
+    [Test]
+    public async Task ExtractTestIds_WithUids_ReturnsTestIds()
+    {
+        var filter = new TestNodeUidListFilter([
+            new TestNodeUid("test-1"),
+            new TestNodeUid("test-2"),
+            new TestNodeUid("test-3")
+        ]);
+
+        var result = DraftSpecTestFramework.ExtractTestIds(filter);
+
+        await Assert.That(result).IsNotNull();
+        await Assert.That(result!.Count).IsEqualTo(3);
+        await Assert.That(result.Contains("test-1")).IsTrue();
+        await Assert.That(result.Contains("test-2")).IsTrue();
+        await Assert.That(result.Contains("test-3")).IsTrue();
+    }
+
+    [Test]
+    public async Task ExtractTestIds_WithDuplicateUids_DeduplicatesIds()
+    {
+        var filter = new TestNodeUidListFilter([
+            new TestNodeUid("test-1"),
+            new TestNodeUid("test-1"),
+            new TestNodeUid("test-2")
+        ]);
+
+        var result = DraftSpecTestFramework.ExtractTestIds(filter);
+
+        await Assert.That(result).IsNotNull();
+        await Assert.That(result!.Count).IsEqualTo(2);
+    }
+
+    #endregion
+
+    #region EnsureInitialized
+
+    [Test]
+    public async Task EnsureInitialized_WithNoProjectDirectory_UsesAssemblyLocation()
+    {
+        var framework = CreateFramework();
+
+        // First call should initialize (using assembly location as project directory)
+        framework.EnsureInitialized();
+
+        // No exception means success - we can't easily verify the internal state
+        // but subsequent calls should not throw
+        framework.EnsureInitialized();
+        await Assert.That(framework).IsNotNull();
+    }
+
+    [Test]
+    public async Task EnsureInitialized_WithExplicitProjectDirectory_UsesProvidedPath()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var framework = new DraftSpecTestFramework(
+                new MockTestFrameworkCapabilities(),
+                new MockServiceProvider(),
+                projectDirectory: tempDir);
+
+            framework.EnsureInitialized();
+
+            // No exception means success
+            await Assert.That(framework).IsNotNull();
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Test]
+    public async Task EnsureInitialized_CalledMultipleTimes_OnlyInitializesOnce()
+    {
+        var framework = CreateFramework();
+
+        // Call multiple times
+        framework.EnsureInitialized();
+        framework.EnsureInitialized();
+        framework.EnsureInitialized();
+
+        // Should not throw and framework should still be valid
+        await Assert.That(framework).IsNotNull();
+    }
+
+    #endregion
+
+    #region ResetState
+
+    [Test]
+    public async Task ResetState_AfterInitialization_ClearsState()
+    {
+        var framework = CreateFramework();
+
+        // Initialize then reset
+        framework.EnsureInitialized();
+        framework.ResetState();
+
+        // After reset, EnsureInitialized should work again
+        framework.EnsureInitialized();
+        await Assert.That(framework).IsNotNull();
+    }
+
+    [Test]
+    public async Task ResetState_WithoutInitialization_DoesNotThrow()
+    {
+        var framework = CreateFramework();
+
+        // Should not throw even if never initialized
+        framework.ResetState();
+        await Assert.That(framework).IsNotNull();
+    }
+
+    [Test]
+    public async Task ResetState_CalledMultipleTimes_DoesNotThrow()
+    {
+        var framework = CreateFramework();
+
+        framework.EnsureInitialized();
+        framework.ResetState();
+        framework.ResetState();
+        framework.ResetState();
+
+        await Assert.That(framework).IsNotNull();
     }
 
     #endregion

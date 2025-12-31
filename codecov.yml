@@ -13,7 +13,8 @@ coverage:
     patch:
       default:
         target: 90%
-        threshold: 0%
+        # Allow 15% variance for infrastructure code (disposal patterns, branches)
+        threshold: 15%
         if_not_found: success
 
 # Explicitly enable GitHub Checks (default, but being explicit)

@@ -23,4 +23,13 @@ public class AssertionException : Exception
     public AssertionException(string message) : base(message)
     {
     }
+
+    /// <summary>
+    /// Creates a new assertion exception with the specified message and inner exception.
+    /// </summary>
+    /// <param name="message">A message describing what was expected vs what was found.</param>
+    /// <param name="innerException">The exception that caused this assertion failure.</param>
+    public AssertionException(string message, Exception innerException) : base(message, innerException)
+    {
+    }
 }

@@ -1,4 +1,4 @@
-﻿using DraftSpec.Middleware;
+using DraftSpec.Middleware;
 
 namespace DraftSpec.Tests.Infrastructure.Builders;
 

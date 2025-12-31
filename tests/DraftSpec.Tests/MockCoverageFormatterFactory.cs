@@ -1,4 +1,4 @@
-﻿using DraftSpec.Cli.Coverage;
+using DraftSpec.Cli.Coverage;
 
 namespace DraftSpec.Tests.Infrastructure.Mocks;
 

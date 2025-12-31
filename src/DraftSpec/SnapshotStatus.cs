@@ -1,4 +1,4 @@
-﻿namespace DraftSpec.Snapshots;
+namespace DraftSpec.Snapshots;
 
 /// <summary>
 /// Status of a snapshot comparison.

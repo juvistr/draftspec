@@ -1,4 +1,4 @@
-﻿using DraftSpec.Coverage;
+using DraftSpec.Coverage;
 using DraftSpec.Middleware;
 
 namespace DraftSpec;

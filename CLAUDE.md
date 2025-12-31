@@ -10,7 +10,9 @@ DraftSpec is an RSpec-inspired BDD testing framework for .NET 10, filling the ga
 
 ```bash
 dotnet build                                          # Build all projects
-dotnet run --project tests/DraftSpec.Tests            # Run TUnit tests
+dotnet run --project tests/DraftSpec.Tests            # Run unit tests
+dotnet run --project tests/DraftSpec.Tests -- --treenode-filter '/*/*/SpecRunnerTests/*'  # Filter by class
+dotnet run --project tests/DraftSpec.Cli.IntegrationTests  # Run CLI integration tests
 
 # Run specs via CLI
 draftspec run examples/TodoApi/Specs                  # Run all specs in directory
@@ -31,19 +33,20 @@ src/
     SpecResult.cs                 # Execution result with ContextPath
     SpecRunner.cs                 # Tree walker, executes specs
   DraftSpec.Cli/                  # CLI tool: draftspec run/watch/list
+  DraftSpec.Scripting/            # Roslyn-based CSX script compilation
   DraftSpec.TestingPlatform/      # MTP adapter for dotnet test integration
   DraftSpec.Mcp/                  # MCP server for AI-assisted testing
-  DraftSpec.Formatters.*/         # Output formatters (Console, Html, Markdown, Json)
+  DraftSpec.Formatters.Abstractions/  # IFormatter interface
+  DraftSpec.Formatters.Console/   # Terminal output
+  DraftSpec.Formatters.Html/      # HTML reports
+  DraftSpec.Formatters.Markdown/  # Markdown reports
+  DraftSpec.Formatters.JUnit/     # JUnit XML for CI/CD
 examples/
-  TodoApi/                        # Comprehensive example project
-    spec_helper.csx               # Shared setup + fixtures
-    Specs/
-      features_showcase.spec.csx  # Systematic feature demo
-      TodoService.spec.csx        # Real-world usage patterns
-      async_specs.spec.csx        # Async/await patterns
-      hooks_demo.spec.csx         # Hook execution order
+  TodoApi/                        # Example API project
+  TodoApi.Specs/                  # Specs for TodoApi (MTP integration)
 tests/
-  DraftSpec.Tests/                # TUnit tests for internals
+  DraftSpec.Tests/                # Unit tests for internals
+  DraftSpec.Cli.IntegrationTests/ # CLI integration tests
 ```
 
 ## Spec File Format
@@ -136,7 +139,15 @@ gh pr checks <pr-number>                 # Check PR status
 gh pr checks <pr-number> --watch         # Watch PR checks until completion
 ```
 
-## Research
+## Code Style
 
-- `docs/research/INITIAL.md` - C# 14 features and framework landscape
-- `docs/research/FILE_STRUCTURE.md` - CSX constraints and alternatives
+```bash
+dotnet format                     # Auto-format code
+```
+
+## Architecture
+
+See `ARCHITECTURE.md` for deep dives on:
+- Middleware pipeline (ASP.NET Core-style) for spec execution
+- AsyncLocal thread safety in the static DSL
+- Plugin system (IFormatter, IReporter, ISpecMiddleware)

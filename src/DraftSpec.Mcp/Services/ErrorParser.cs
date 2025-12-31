@@ -77,7 +77,7 @@ public static partial class ErrorParser
             return null;
 
         // Check for AssertionException in stack trace
-        if (!output.Contains("AssertionException", StringComparison.Ordinal) && !output.Contains("Expected", StringComparison.Ordinal) )
+        if (!output.Contains("AssertionException", StringComparison.Ordinal) && !output.Contains("Expected", StringComparison.Ordinal))
             return null;
 
         var match = AssertionErrorPattern().Match(output);

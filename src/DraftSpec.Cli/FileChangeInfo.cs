@@ -1,4 +1,4 @@
-﻿namespace DraftSpec.Cli;
+namespace DraftSpec.Cli;
 
 /// <summary>
 /// Information about a file change event.

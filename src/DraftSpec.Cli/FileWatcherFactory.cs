@@ -1,4 +1,4 @@
-﻿namespace DraftSpec.Cli;
+namespace DraftSpec.Cli;
 
 /// <summary>
 /// Default factory that creates FileWatcher instances.

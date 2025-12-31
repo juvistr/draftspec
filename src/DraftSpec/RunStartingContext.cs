@@ -1,4 +1,4 @@
-﻿using DraftSpec.Formatters;
+using DraftSpec.Formatters;
 
 namespace DraftSpec.Plugins;
 

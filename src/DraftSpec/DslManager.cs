@@ -1,4 +1,4 @@
-﻿namespace DraftSpec;
+namespace DraftSpec;
 
 /// <summary>
 /// Default implementation that delegates to static Dsl.Reset().

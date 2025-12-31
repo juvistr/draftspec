@@ -272,4 +272,139 @@ public class CsxScriptHostTests
         await Assert.ThrowsAsync<CompilationErrorException>(
             async () => await host.ExecuteAsync(csxPath));
     }
+
+    #region Cache Invalidation
+
+    [Test]
+    public async Task Execute_SameFile_UsesCachedScript()
+    {
+        // Arrange
+        var csxContent = """
+            using static DraftSpec.Dsl;
+
+            describe("Cached", () =>
+            {
+                it("spec", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "cached.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act - execute twice
+        var root1 = await host.ExecuteAsync(csxPath);
+        global::DraftSpec.Dsl.Reset();
+        var root2 = await host.ExecuteAsync(csxPath);
+
+        // Assert - both executions should work (cache reused on second)
+        await Assert.That(root1).IsNotNull();
+        await Assert.That(root1!.Description).IsEqualTo("Cached");
+        await Assert.That(root2).IsNotNull();
+        await Assert.That(root2!.Description).IsEqualTo("Cached");
+    }
+
+    [Test]
+    public async Task Execute_ModifiedFile_InvalidatesCache()
+    {
+        // Arrange
+        var csxContent1 = """
+            using static DraftSpec.Dsl;
+
+            describe("Original", () =>
+            {
+                it("original spec", () => { });
+            });
+            """;
+
+        var csxContent2 = """
+            using static DraftSpec.Dsl;
+
+            describe("Modified", () =>
+            {
+                it("new spec", () => { });
+            });
+            """;
+
+        var csxPath = Path.Combine(_tempDir, "modify.spec.csx");
+        await File.WriteAllTextAsync(csxPath, csxContent1);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act - execute first version
+        var root1 = await host.ExecuteAsync(csxPath);
+        global::DraftSpec.Dsl.Reset();
+
+        // Wait a bit to ensure file timestamp changes (minimum 10ms)
+        await Task.Delay(50);
+
+        // Modify the file
+        await File.WriteAllTextAsync(csxPath, csxContent2);
+
+        // Execute again - should pick up the new content
+        var root2 = await host.ExecuteAsync(csxPath);
+
+        // Assert
+        await Assert.That(root1).IsNotNull();
+        await Assert.That(root1!.Description).IsEqualTo("Original");
+        await Assert.That(root2).IsNotNull();
+        await Assert.That(root2!.Description).IsEqualTo("Modified");
+    }
+
+    [Test]
+    public async Task Execute_ModifiedLoadDependency_InvalidatesCache()
+    {
+        // Arrange
+        var helperContent1 = """
+            using static DraftSpec.Dsl;
+
+            describe("HelperV1", () =>
+            {
+                it("v1 spec", () => { });
+            });
+            """;
+
+        var helperContent2 = """
+            using static DraftSpec.Dsl;
+
+            describe("HelperV2", () =>
+            {
+                it("v2 spec", () => { });
+            });
+            """;
+
+        var mainContent = """
+            #load "helper.csx"
+            """;
+
+        var helperPath = Path.Combine(_tempDir, "helper.csx");
+        var mainPath = Path.Combine(_tempDir, "main.spec.csx");
+
+        await File.WriteAllTextAsync(helperPath, helperContent1);
+        await File.WriteAllTextAsync(mainPath, mainContent);
+
+        var host = new CsxScriptHost(_tempDir);
+
+        // Act - execute first version
+        var root1 = await host.ExecuteAsync(mainPath);
+        global::DraftSpec.Dsl.Reset();
+
+        // Wait a bit to ensure file timestamp changes
+        await Task.Delay(50);
+
+        // Modify the helper file (not the main file)
+        await File.WriteAllTextAsync(helperPath, helperContent2);
+
+        // Execute again - should pick up the new helper content
+        var root2 = await host.ExecuteAsync(mainPath);
+
+        // Assert
+        await Assert.That(root1).IsNotNull();
+        await Assert.That(root1!.Description).IsEqualTo("HelperV1");
+        await Assert.That(root2).IsNotNull();
+        await Assert.That(root2!.Description).IsEqualTo("HelperV2");
+    }
+
+    #endregion
 }

@@ -145,6 +145,33 @@ gh pr checks <pr-number> --watch         # Watch PR checks until completion
 dotnet format                     # Auto-format code
 ```
 
+## Dependencies
+
+**Be deliberate about adding dependencies.** Before introducing a new NuGet package:
+1. Check if existing code already solves the problem
+2. Consider if a simple implementation is preferable to a dependency
+3. Discuss with the user before adding new packages
+
+### Testing Patterns
+
+This project uses **handwritten mocks** instead of mocking frameworks (no NSubstitute, Moq, etc.). This is intentional:
+
+- Mock classes live in `tests/DraftSpec.Tests/Infrastructure/Mocks/`
+- Examples: `MockConsole`, `MockFileSystem`, `MockSpecDiscoverer`
+- Pattern: Fluent configuration with `.With*()` methods and call tracking via `*Calls` lists
+
+```csharp
+// Example: Using existing mocks
+var discoverer = new MockSpecDiscoverer()
+    .WithSpecs(spec1, spec2)
+    .WithErrors(error1);
+
+// Verify calls
+await Assert.That(discoverer.DiscoverAsyncCalls).HasCount().EqualTo(1);
+```
+
+Before creating a new mock, check `Infrastructure/Mocks/` for existing implementations.
+
 ## Architecture
 
 See `ARCHITECTURE.md` for deep dives on:

@@ -401,6 +401,9 @@ public class CompilationDiagnosticFormatterTests
         public string ReadAllText(string path) =>
             throw new IOException("Simulated file read error");
 
+        public Task<string> ReadAllTextAsync(string path, CancellationToken ct = default) =>
+            throw new IOException("Simulated file read error");
+
         public void WriteAllText(string path, string content) { }
 
         public Task WriteAllTextAsync(string path, string content, CancellationToken ct = default) =>

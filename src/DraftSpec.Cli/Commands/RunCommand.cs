@@ -1,6 +1,7 @@
 using System.Security;
 using System.Text.RegularExpressions;
 using DraftSpec.Cli.Configuration;
+using DraftSpec.Cli.DependencyGraph;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
@@ -21,6 +22,7 @@ public class RunCommand : ICommand<RunOptions>
     private readonly IEnvironment _environment;
     private readonly ISpecStatsCollector _statsCollector;
     private readonly ISpecPartitioner _partitioner;
+    private readonly IGitService _gitService;
 
     public RunCommand(
         ISpecFinder specFinder,
@@ -30,7 +32,8 @@ public class RunCommand : ICommand<RunOptions>
         IFileSystem fileSystem,
         IEnvironment environment,
         ISpecStatsCollector statsCollector,
-        ISpecPartitioner partitioner)
+        ISpecPartitioner partitioner,
+        IGitService gitService)
     {
         _specFinder = specFinder;
         _runnerFactory = runnerFactory;
@@ -40,6 +43,7 @@ public class RunCommand : ICommand<RunOptions>
         _environment = environment;
         _statsCollector = statsCollector;
         _partitioner = partitioner;
+        _gitService = gitService;
     }
 
     public async Task<int> ExecuteAsync(RunOptions options, CancellationToken ct = default)
@@ -75,6 +79,15 @@ public class RunCommand : ICommand<RunOptions>
         {
             _console.WriteLine("No spec files found.");
             return 0;
+        }
+
+        // Apply test impact analysis filtering if specified
+        if (!string.IsNullOrEmpty(options.AffectedBy))
+        {
+            var impactResult = await ApplyImpactAnalysisAsync(specFiles, options, ct);
+            if (impactResult.ShouldExit)
+                return impactResult.ExitCode;
+            specFiles = impactResult.FilteredFiles;
         }
 
         // Set up presenter for console output
@@ -335,4 +348,86 @@ public class RunCommand : ICommand<RunOptions>
 
         return string.Join(" > ", contextPath) + " > " + description;
     }
+
+    /// <summary>
+    /// Applies test impact analysis to filter spec files based on changed source files.
+    /// </summary>
+    private async Task<ImpactAnalysisResult> ApplyImpactAnalysisAsync(
+        IReadOnlyList<string> specFiles,
+        RunOptions options,
+        CancellationToken ct)
+    {
+        var projectPath = Path.GetFullPath(options.Path);
+        if (_fileSystem.FileExists(projectPath))
+            projectPath = Path.GetDirectoryName(projectPath)!;
+
+        _console.ForegroundColor = ConsoleColor.DarkGray;
+        _console.WriteLine($"Analyzing impact of changes: {options.AffectedBy}");
+        _console.ResetColor();
+
+        // Get changed files from git
+        IReadOnlyList<string> changedFiles;
+        try
+        {
+            changedFiles = await _gitService.GetChangedFilesAsync(options.AffectedBy!, projectPath, ct);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _console.WriteError($"Failed to get changed files: {ex.Message}");
+            return new ImpactAnalysisResult([], ShouldExit: true, ExitCode: 1);
+        }
+
+        if (changedFiles.Count == 0)
+        {
+            _console.WriteLine("No changed files detected.");
+            return new ImpactAnalysisResult([], ShouldExit: true, ExitCode: 0);
+        }
+
+        // Build dependency graph
+        var graphBuilder = new DependencyGraphBuilder();
+        var graph = await graphBuilder.BuildAsync(projectPath, cancellationToken: ct);
+
+        // Get affected specs
+        var affectedSpecs = graph.GetAffectedSpecs(changedFiles);
+
+        // Filter to only specs that exist in our discovered spec files
+        var pathComparer = OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+        var specFileSet = new HashSet<string>(specFiles, pathComparer);
+        var filteredSpecs = affectedSpecs
+            .Where(s => specFileSet.Contains(s))
+            .ToList();
+
+        // Show impact analysis summary
+        _console.ForegroundColor = ConsoleColor.DarkGray;
+        _console.WriteLine($"Changed files: {changedFiles.Count}");
+        _console.WriteLine($"Affected specs: {filteredSpecs.Count} of {specFiles.Count}");
+        _console.ResetColor();
+        _console.WriteLine();
+
+        // If dry run, output affected specs and exit
+        if (options.DryRun)
+        {
+            _console.WriteLine("Affected spec files (dry run):");
+            foreach (var spec in filteredSpecs.OrderBy(s => s))
+            {
+                _console.WriteLine($"  {Path.GetRelativePath(projectPath, spec)}");
+            }
+            return new ImpactAnalysisResult(filteredSpecs, ShouldExit: true, ExitCode: 0);
+        }
+
+        if (filteredSpecs.Count == 0)
+        {
+            _console.WriteLine("No affected specs to run.");
+            return new ImpactAnalysisResult([], ShouldExit: true, ExitCode: 0);
+        }
+
+        return new ImpactAnalysisResult(filteredSpecs, ShouldExit: false, ExitCode: 0);
+    }
+
+    private record ImpactAnalysisResult(
+        IReadOnlyList<string> FilteredFiles,
+        bool ShouldExit,
+        int ExitCode);
 }

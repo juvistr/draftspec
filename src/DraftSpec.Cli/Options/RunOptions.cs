@@ -72,4 +72,16 @@ public class RunOptions
     /// Partitioning options for CI parallelism.
     /// </summary>
     public PartitionOptions Partition { get; set; } = new();
+
+    /// <summary>
+    /// Run only specs affected by changes since the specified reference.
+    /// Can be: "staged", a commit ref (e.g., "HEAD~1", "main"), or a file path containing changed files.
+    /// </summary>
+    public string? AffectedBy { get; set; }
+
+    /// <summary>
+    /// Show which specs would run without actually running them.
+    /// Used with --affected-by to preview impacted specs.
+    /// </summary>
+    public bool DryRun { get; set; }
 }

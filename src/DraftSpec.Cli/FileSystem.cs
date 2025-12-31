@@ -14,6 +14,9 @@ public class FileSystem : IFileSystem
 
     public string ReadAllText(string path) => File.ReadAllText(path);
 
+    public Task<string> ReadAllTextAsync(string path, CancellationToken ct = default)
+        => File.ReadAllTextAsync(path, ct);
+
     public bool DirectoryExists(string path) => Directory.Exists(path);
 
     public void CreateDirectory(string path) => Directory.CreateDirectory(path);

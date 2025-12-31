@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISpecStatsCollector, SpecStatsCollector>();
         services.AddSingleton<ISpecPartitioner, SpecPartitioner>();
         services.AddSingleton<ISpecChangeTracker, SpecChangeTracker>();
+        services.AddSingleton<IGitService, GitService>();
 
         // Commands
         services.AddTransient<RunCommand>();

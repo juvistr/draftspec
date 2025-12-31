@@ -22,7 +22,7 @@ public static class SpecTools
                  "Emits progress notifications during execution for real-time feedback. " +
                  "Use session_id to accumulate specs across multiple calls for iterative development.")]
     public static async Task<string> RunSpec(
-        SpecExecutionService executionService,
+        ISpecExecutionService executionService,
         SessionManager sessionManager,
         McpServer server,
         [Description("The spec content using describe/it/expect syntax. " +
@@ -79,7 +79,7 @@ public static class SpecTools
                  "Supports parallel execution for faster test runs. " +
                  "Returns aggregated summary and individual results.")]
     public static async Task<string> RunSpecsBatch(
-        SpecExecutionService executionService,
+        ISpecExecutionService executionService,
         McpServer server,
         [Description("Array of specs to execute, each with a name and content")]
         List<BatchSpecInput> specs,

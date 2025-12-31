@@ -1,15 +1,324 @@
+using System.Text.Json;
 using DraftSpec.Mcp.Models;
+using DraftSpec.Mcp.Services;
 using DraftSpec.Mcp.Tools;
+using DraftSpec.Tests.Infrastructure.Mocks;
+using Microsoft.Extensions.Logging;
 
 namespace DraftSpec.Tests.Mcp.Tools;
 
 /// <summary>
-/// Tests for SpecTools helper methods.
-/// Note: Full RunSpec/RunSpecsBatch integration tests require subprocess execution
-/// and are covered by SpecRunOrchestratorTests (with mocks) and CLI integration tests.
+/// Tests for SpecTools MCP tool methods and helper methods.
 /// </summary>
 public class SpecToolsTests
 {
+    private readonly ILogger<SessionManager> _logger = new NullLogger<SessionManager>();
+    private readonly string _baseTempDir;
+
+    private class NullLogger<T> : ILogger<T>
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => false;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+    }
+
+    public SpecToolsTests()
+    {
+        _baseTempDir = Path.Combine(Path.GetTempPath(), $"spectools-tests-{Guid.NewGuid()}");
+    }
+
+    [After(Test)]
+    public void Cleanup()
+    {
+        if (Directory.Exists(_baseTempDir))
+        {
+            try { Directory.Delete(_baseTempDir, recursive: true); }
+            catch { /* ignore */ }
+        }
+    }
+
+    #region RunSpec Tests
+
+    [Test]
+    public async Task RunSpec_WithoutSession_ExecutesAndReturnsResult()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+        using var sessionManager = new SessionManager(_logger, _baseTempDir);
+
+        var result = await SpecTools.RunSpec(
+            mockService,
+            sessionManager,
+            null!, // server can be null - there are null checks
+            "describe(\"test\", () => {});",
+            sessionId: null,
+            timeoutSeconds: 10);
+
+        await Assert.That(result).IsNotNull();
+        var parsed = JsonSerializer.Deserialize<JsonElement>(result);
+        await Assert.That(parsed.GetProperty("success").GetBoolean()).IsTrue();
+    }
+
+    [Test]
+    public async Task RunSpec_WithValidSession_CombinesContentAndReturnsSessionInfo()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+        using var sessionManager = new SessionManager(_logger, _baseTempDir);
+        var session = sessionManager.CreateSession();
+        session.AppendContent("// previous content\n");
+
+        var result = await SpecTools.RunSpec(
+            mockService,
+            sessionManager,
+            null!,
+            "describe(\"new\", () => {});",
+            sessionId: session.Id,
+            timeoutSeconds: 10);
+
+        await Assert.That(result).Contains("sessionId");
+        await Assert.That(result).Contains(session.Id);
+    }
+
+    [Test]
+    public async Task RunSpec_WithInvalidSession_ReturnsError()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+        using var sessionManager = new SessionManager(_logger, _baseTempDir);
+
+        var result = await SpecTools.RunSpec(
+            mockService,
+            sessionManager,
+            null!,
+            "describe(\"test\", () => {});",
+            sessionId: "invalid-session-id",
+            timeoutSeconds: 10);
+
+        await Assert.That(result).Contains("success");
+        await Assert.That(result).Contains("false");
+        await Assert.That(result).Contains("not found");
+    }
+
+    [Test]
+    public async Task RunSpec_ClampsTimeoutToMax60()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+        using var sessionManager = new SessionManager(_logger, _baseTempDir);
+
+        await SpecTools.RunSpec(
+            mockService,
+            sessionManager,
+            null!,
+            "describe(\"test\", () => {});",
+            sessionId: null,
+            timeoutSeconds: 120);
+
+        await Assert.That(mockService.LastTimeout).IsEqualTo(TimeSpan.FromSeconds(60));
+    }
+
+    [Test]
+    public async Task RunSpec_ClampsTimeoutToMin1()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+        using var sessionManager = new SessionManager(_logger, _baseTempDir);
+
+        await SpecTools.RunSpec(
+            mockService,
+            sessionManager,
+            null!,
+            "describe(\"test\", () => {});",
+            sessionId: null,
+            timeoutSeconds: -5);
+
+        await Assert.That(mockService.LastTimeout).IsEqualTo(TimeSpan.FromSeconds(1));
+    }
+
+    [Test]
+    public async Task RunSpec_FailedExecution_ReturnsFailureResult()
+    {
+        var mockService = MockSpecExecutionService.Failed("execution failed");
+        using var sessionManager = new SessionManager(_logger, _baseTempDir);
+
+        var result = await SpecTools.RunSpec(
+            mockService,
+            sessionManager,
+            null!,
+            "describe(\"test\", () => {});",
+            sessionId: null,
+            timeoutSeconds: 10);
+
+        var parsed = JsonSerializer.Deserialize<JsonElement>(result);
+        await Assert.That(parsed.GetProperty("success").GetBoolean()).IsFalse();
+    }
+
+    #endregion
+
+    #region RunSpecsBatch Tests
+
+    [Test]
+    public async Task RunSpecsBatch_EmptySpecs_ReturnsEmptyResult()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+
+        var result = await SpecTools.RunSpecsBatch(
+            mockService,
+            null!,
+            [],
+            parallel: true,
+            timeoutSeconds: 10);
+
+        var parsed = JsonSerializer.Deserialize<JsonElement>(result);
+        await Assert.That(parsed.GetProperty("allPassed").GetBoolean()).IsTrue();
+        await Assert.That(parsed.GetProperty("totalSpecs").GetInt32()).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_NullSpecs_ReturnsEmptyResult()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+
+        var result = await SpecTools.RunSpecsBatch(
+            mockService,
+            null!,
+            null!,
+            parallel: true,
+            timeoutSeconds: 10);
+
+        var parsed = JsonSerializer.Deserialize<JsonElement>(result);
+        await Assert.That(parsed.GetProperty("allPassed").GetBoolean()).IsTrue();
+        await Assert.That(parsed.GetProperty("totalSpecs").GetInt32()).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_SingleSpec_ExecutesAndReturnsResult()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "TestSpec", Content = "describe(\"test\", () => {});" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            mockService,
+            null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10);
+
+        var parsed = JsonSerializer.Deserialize<JsonElement>(result);
+        await Assert.That(parsed.GetProperty("totalSpecs").GetInt32()).IsEqualTo(1);
+        await Assert.That(parsed.GetProperty("passedSpecs").GetInt32()).IsEqualTo(1);
+        await Assert.That(mockService.ExecutionCount).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_MultipleSpecs_Parallel_ExecutesAll()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "Spec1", Content = "describe(\"1\", () => {});" },
+            new() { Name = "Spec2", Content = "describe(\"2\", () => {});" },
+            new() { Name = "Spec3", Content = "describe(\"3\", () => {});" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            mockService,
+            null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10);
+
+        var parsed = JsonSerializer.Deserialize<JsonElement>(result);
+        await Assert.That(parsed.GetProperty("totalSpecs").GetInt32()).IsEqualTo(3);
+        await Assert.That(parsed.GetProperty("passedSpecs").GetInt32()).IsEqualTo(3);
+        await Assert.That(mockService.ExecutionCount).IsEqualTo(3);
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_MultipleSpecs_Sequential_ExecutesAll()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "Spec1", Content = "describe(\"1\", () => {});" },
+            new() { Name = "Spec2", Content = "describe(\"2\", () => {});" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            mockService,
+            null!,
+            specs,
+            parallel: false,
+            timeoutSeconds: 10);
+
+        var parsed = JsonSerializer.Deserialize<JsonElement>(result);
+        await Assert.That(parsed.GetProperty("totalSpecs").GetInt32()).IsEqualTo(2);
+        await Assert.That(mockService.ExecutionCount).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_WithFailures_ReportsCorrectCounts()
+    {
+        var mockService = MockSpecExecutionService.Failed("spec failed");
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "FailingSpec", Content = "describe(\"fail\", () => {});" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            mockService,
+            null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10);
+
+        var parsed = JsonSerializer.Deserialize<JsonElement>(result);
+        await Assert.That(parsed.GetProperty("allPassed").GetBoolean()).IsFalse();
+        await Assert.That(parsed.GetProperty("failedSpecs").GetInt32()).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_ClampsTimeout()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "Spec", Content = "describe(\"test\", () => {});" }
+        };
+
+        await SpecTools.RunSpecsBatch(
+            mockService,
+            null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 120);
+
+        await Assert.That(mockService.LastTimeout).IsEqualTo(TimeSpan.FromSeconds(60));
+    }
+
+    [Test]
+    public async Task RunSpecsBatch_IncludesResults_InResponse()
+    {
+        var mockService = MockSpecExecutionService.Successful();
+        var specs = new List<BatchSpecInput>
+        {
+            new() { Name = "MySpec", Content = "describe(\"test\", () => {});" }
+        };
+
+        var result = await SpecTools.RunSpecsBatch(
+            mockService,
+            null!,
+            specs,
+            parallel: true,
+            timeoutSeconds: 10);
+
+        var parsed = JsonSerializer.Deserialize<JsonElement>(result);
+        var results = parsed.GetProperty("results");
+        await Assert.That(results.GetArrayLength()).IsEqualTo(1);
+        await Assert.That(results[0].GetProperty("name").GetString()).IsEqualTo("MySpec");
+    }
+
+    #endregion
+
     #region scaffold_specs
 
     [Test]

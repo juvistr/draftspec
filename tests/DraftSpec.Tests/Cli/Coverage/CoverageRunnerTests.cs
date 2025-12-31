@@ -485,7 +485,7 @@ public class CoverageRunnerTests
 
         // Should return the running state, not try to start again
         await Assert.That(secondResult).IsTrue();
-        await Assert.That(processRunner.StartProcessCalls).IsEqualTo(1);
+        await Assert.That(processRunner.StartProcessCallCount).IsEqualTo(1);
     }
 
     #endregion

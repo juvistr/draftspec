@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 using DraftSpec.Formatters.JUnit;
 
 namespace DraftSpec.Tests.Formatters;

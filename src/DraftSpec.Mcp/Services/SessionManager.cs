@@ -198,16 +198,3 @@ public class SessionManager : IDisposable
         GC.SuppressFinalize(this);
     }
 }
-
-/// <summary>
-/// Information about a session for API responses.
-/// </summary>
-public record SessionInfo
-{
-    public required string Id { get; init; }
-    public DateTime CreatedAt { get; init; }
-    public DateTime LastAccessedAt { get; init; }
-    public int TimeoutMinutes { get; init; }
-    public bool HasAccumulatedContent { get; init; }
-    public bool IsExpired { get; init; }
-}

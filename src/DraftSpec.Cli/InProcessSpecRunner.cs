@@ -1,36 +1,10 @@
 using DraftSpec.Configuration;
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 using DraftSpec.TestingPlatform;
 using Microsoft.CodeAnalysis.Scripting;
 
 namespace DraftSpec.Cli;
-
-/// <summary>
-/// Result of running specs from a single file.
-/// </summary>
-public record InProcessRunResult(
-    string SpecFile,
-    SpecReport Report,
-    TimeSpan Duration,
-    Exception? Error = null)
-{
-    public bool Success => Error == null && Report.Summary.Failed == 0;
-}
-
-/// <summary>
-/// Summary of running multiple spec files.
-/// </summary>
-public record InProcessRunSummary(
-    IReadOnlyList<InProcessRunResult> Results,
-    TimeSpan TotalDuration)
-{
-    public bool Success => Results.All(r => r.Success);
-    public int TotalSpecs => Results.Sum(r => r.Report.Summary.Total);
-    public int Passed => Results.Sum(r => r.Report.Summary.Passed);
-    public int Failed => Results.Sum(r => r.Report.Summary.Failed);
-    public int Pending => Results.Sum(r => r.Report.Summary.Pending);
-    public int Skipped => Results.Sum(r => r.Report.Summary.Skipped);
-}
 
 /// <summary>
 /// Runs spec files in-process using CsxScriptHost.

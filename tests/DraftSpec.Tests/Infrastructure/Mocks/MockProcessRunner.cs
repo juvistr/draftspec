@@ -4,50 +4,67 @@ using DraftSpec.Cli;
 namespace DraftSpec.Tests.Infrastructure.Mocks;
 
 /// <summary>
-/// Mock process runner for unit testing process execution without actually spawning processes.
+/// Mock process runner for testing.
+/// Supports configurable results, process handles, and error simulation.
 /// </summary>
 public class MockProcessRunner : IProcessRunner
 {
-    private readonly Queue<ProcessResult> _results = new();
-    private MockProcessHandle? _processHandle;
+    private readonly Queue<ProcessResult> _runResults = new();
 
     /// <summary>
-    /// Recorded Run calls for assertions.
+    /// The last ProcessStartInfo passed to StartProcess().
     /// </summary>
-    public List<(string FileName, List<string> Arguments, string? WorkingDir)> RunCalls { get; } = [];
+    public ProcessStartInfo? LastStartInfo { get; private set; }
 
     /// <summary>
-    /// Number of times StartProcess was called.
+    /// The process handle to return from StartProcess().
     /// </summary>
-    public int StartProcessCalls { get; private set; }
+    public IProcessHandle? ProcessHandleToReturn { get; set; }
 
     /// <summary>
-    /// When true, Run() throws an exception.
-    /// </summary>
-    public bool ThrowOnRun { get; set; }
-
-    /// <summary>
-    /// When true, StartProcess() throws an exception.
+    /// When true, StartProcess() throws InvalidOperationException.
     /// </summary>
     public bool ThrowOnStartProcess { get; set; }
 
     /// <summary>
-    /// Queue a result to be returned by the next Run() call.
+    /// When true, Run() and RunDotnet() throw InvalidOperationException.
     /// </summary>
-    public MockProcessRunner AddResult(ProcessResult result)
-    {
-        _results.Enqueue(result);
-        return this;
-    }
+    public bool ThrowOnRun { get; set; }
 
     /// <summary>
-    /// Set the process handle returned by StartProcess().
+    /// Count of StartProcess() calls.
     /// </summary>
-    public MockProcessRunner SetProcessHandle(MockProcessHandle handle)
-    {
-        _processHandle = handle;
-        return this;
-    }
+    public int StartProcessCallCount { get; private set; }
+
+    /// <summary>
+    /// Records of Run() calls for assertions.
+    /// </summary>
+    public List<(string FileName, IEnumerable<string> Arguments)> RunCalls { get; } = [];
+
+    /// <summary>
+    /// Records of RunDotnet() calls for assertions.
+    /// </summary>
+    public List<(IEnumerable<string> Args, string? WorkingDir)> RunDotnetCalls { get; } = [];
+
+    /// <summary>
+    /// Records of StartProcess() calls for assertions.
+    /// </summary>
+    public List<ProcessStartInfo> StartProcessCalls { get; } = [];
+
+    /// <summary>
+    /// Add a result to return from Run() or RunDotnet().
+    /// </summary>
+    public void AddResult(ProcessResult result) => _runResults.Enqueue(result);
+
+    /// <summary>
+    /// Add a result to return from Run() or RunDotnet().
+    /// </summary>
+    public void AddRunResult(ProcessResult result) => _runResults.Enqueue(result);
+
+    /// <summary>
+    /// Set the process handle to return from StartProcess().
+    /// </summary>
+    public void SetProcessHandle(IProcessHandle handle) => ProcessHandleToReturn = handle;
 
     public ProcessResult Run(
         string fileName,
@@ -55,11 +72,10 @@ public class MockProcessRunner : IProcessRunner
         string? workingDirectory = null,
         Dictionary<string, string>? environmentVariables = null)
     {
+        RunCalls.Add((fileName, arguments.ToList()));
         if (ThrowOnRun)
             throw new InvalidOperationException("Mock exception on Run");
-
-        RunCalls.Add((fileName, arguments.ToList(), workingDirectory));
-        return _results.Count > 0 ? _results.Dequeue() : new ProcessResult("", "", 0);
+        return _runResults.Count > 0 ? _runResults.Dequeue() : new ProcessResult("", "", 0);
     }
 
     public ProcessResult RunDotnet(
@@ -67,65 +83,21 @@ public class MockProcessRunner : IProcessRunner
         string? workingDirectory = null,
         Dictionary<string, string>? environmentVariables = null)
     {
-        return Run("dotnet", arguments, workingDirectory, environmentVariables);
+        RunDotnetCalls.Add((arguments.ToList(), workingDirectory));
+        if (ThrowOnRun)
+            throw new InvalidOperationException("Mock exception on RunDotnet");
+        return _runResults.Count > 0 ? _runResults.Dequeue() : new ProcessResult("", "", 0);
     }
 
     public IProcessHandle StartProcess(ProcessStartInfo startInfo)
     {
+        StartProcessCallCount++;
+        StartProcessCalls.Add(startInfo);
+        LastStartInfo = startInfo;
+
         if (ThrowOnStartProcess)
-            throw new InvalidOperationException("Mock exception on StartProcess");
+            throw new InvalidOperationException("Process start failed");
 
-        StartProcessCalls++;
-        return _processHandle ?? new MockProcessHandle { HasExited = false };
-    }
-}
-
-/// <summary>
-/// Mock process handle for unit testing.
-/// </summary>
-public class MockProcessHandle : IProcessHandle
-{
-    /// <summary>
-    /// Get or set whether the process has exited.
-    /// </summary>
-    public bool HasExited { get; set; }
-
-    /// <summary>
-    /// When true, WaitForExit() throws an exception.
-    /// </summary>
-    public bool ThrowOnWaitForExit { get; set; }
-
-    /// <summary>
-    /// When true, Kill() throws an exception.
-    /// </summary>
-    public bool ThrowOnKill { get; set; }
-
-    /// <summary>
-    /// Whether Kill() was called.
-    /// </summary>
-    public bool KillCalled { get; private set; }
-
-    /// <summary>
-    /// Whether Dispose() was called.
-    /// </summary>
-    public bool DisposeCalled { get; private set; }
-
-    public bool WaitForExit(int milliseconds)
-    {
-        if (ThrowOnWaitForExit)
-            throw new InvalidOperationException("Mock exception on WaitForExit");
-        return true;
-    }
-
-    public void Kill()
-    {
-        if (ThrowOnKill)
-            throw new InvalidOperationException("Mock exception on Kill");
-        KillCalled = true;
-    }
-
-    public void Dispose()
-    {
-        DisposeCalled = true;
+        return ProcessHandleToReturn ?? new MockProcessHandle();
     }
 }

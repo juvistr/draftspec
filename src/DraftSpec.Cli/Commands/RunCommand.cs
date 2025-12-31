@@ -6,6 +6,7 @@ using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Cli.Commands;

@@ -1,5 +1,6 @@
 using System.Text;
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 
 namespace DraftSpec.Formatters.Markdown;
 

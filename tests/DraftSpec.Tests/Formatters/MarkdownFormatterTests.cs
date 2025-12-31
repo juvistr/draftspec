@@ -1,4 +1,5 @@
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 using DraftSpec.Formatters.Markdown;
 
 namespace DraftSpec.Tests.Formatters;

@@ -1,5 +1,5 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using DraftSpec.Formatters.Abstractions;
 
 namespace DraftSpec.Formatters;
 
@@ -46,48 +46,4 @@ public class SpecReport
     {
         return JsonSerializer.Serialize(this, JsonOptionsProvider.Default);
     }
-}
-
-/// <summary>
-/// Summary statistics for the spec run.
-/// </summary>
-public class SpecSummary
-{
-    public int Total { get; set; }
-    public int Passed { get; set; }
-    public int Failed { get; set; }
-    public int Pending { get; set; }
-    public int Skipped { get; set; }
-    public double DurationMs { get; set; }
-
-    public bool Success => Failed == 0;
-}
-
-/// <summary>
-/// A context (describe block) containing specs and nested contexts.
-/// </summary>
-public class SpecContextReport
-{
-    public string Description { get; set; } = "";
-    public List<SpecResultReport> Specs { get; set; } = [];
-    public List<SpecContextReport> Contexts { get; set; } = [];
-}
-
-/// <summary>
-/// Result of a single spec (it block).
-/// </summary>
-public class SpecResultReport
-{
-    public string Description { get; set; } = "";
-    public string Status { get; set; } = "";
-    public double? DurationMs { get; set; }
-    public string? Error { get; set; }
-
-    [JsonIgnore] public bool Passed => Status == SpecStatusNames.Passed;
-
-    [JsonIgnore] public bool Failed => Status == SpecStatusNames.Failed;
-
-    [JsonIgnore] public bool Pending => Status == SpecStatusNames.Pending;
-
-    [JsonIgnore] public bool Skipped => Status == SpecStatusNames.Skipped;
 }

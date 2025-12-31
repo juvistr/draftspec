@@ -1,65 +1,7 @@
 using System.Reflection;
-using System.Runtime.Loader;
 using DraftSpec.Formatters;
 
 namespace DraftSpec.Cli.DependencyInjection;
-
-/// <summary>
-/// Interface for loading plugins from assemblies.
-/// </summary>
-public interface IPluginLoader
-{
-    /// <summary>
-    /// Discovers and loads all plugins from the specified directories.
-    /// </summary>
-    /// <param name="directories">Optional directories to search. If null, uses default plugin directory.</param>
-    IEnumerable<PluginInfo> DiscoverPlugins(string[]? directories = null);
-
-    /// <summary>
-    /// Registers discovered formatters with the CLI registry.
-    /// </summary>
-    void RegisterFormatters(ICliFormatterRegistry registry);
-}
-
-/// <summary>
-/// Information about a discovered plugin.
-/// </summary>
-public record PluginInfo(
-    string Name,
-    Type Type,
-    PluginKind Kind,
-    Assembly Assembly);
-
-/// <summary>
-/// Kind of plugin discovered.
-/// </summary>
-public enum PluginKind
-{
-    Formatter,
-    Reporter
-}
-
-/// <summary>
-/// Attribute to mark a class as a DraftSpec plugin for auto-discovery.
-/// </summary>
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-public class DraftSpecPluginAttribute : Attribute
-{
-    /// <summary>
-    /// The name used to reference this plugin (e.g., "json", "html").
-    /// </summary>
-    public string Name { get; }
-
-    /// <summary>
-    /// Optional description of the plugin.
-    /// </summary>
-    public string? Description { get; set; }
-
-    public DraftSpecPluginAttribute(string name)
-    {
-        Name = name;
-    }
-}
 
 /// <summary>
 /// Loads plugins from assemblies in specified directories.
@@ -150,29 +92,5 @@ public class PluginLoader : IPluginLoader
                 var instance = _assemblyLoader.CreateInstance(plugin.Type);
                 return (IFormatter)instance!;
             });
-    }
-}
-
-/// <summary>
-/// Custom AssemblyLoadContext for plugin isolation.
-/// </summary>
-internal class PluginLoadContext : AssemblyLoadContext
-{
-    private readonly AssemblyDependencyResolver _resolver;
-
-    public PluginLoadContext(string pluginPath) : base(true)
-    {
-        _resolver = new AssemblyDependencyResolver(pluginPath);
-    }
-
-    protected override Assembly? Load(AssemblyName assemblyName)
-    {
-        // Try to resolve from plugin directory first
-        var assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
-        if (assemblyPath != null)
-            return LoadFromAssemblyPath(assemblyPath);
-
-        // Fall back to default context for shared framework assemblies
-        return null;
     }
 }

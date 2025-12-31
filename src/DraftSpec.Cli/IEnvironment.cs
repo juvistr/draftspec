@@ -16,12 +16,3 @@ public interface IEnvironment
     /// </summary>
     string NewLine { get; }
 }
-
-/// <summary>
-/// Production implementation using System.Environment and System.IO.
-/// </summary>
-public class SystemEnvironment : IEnvironment
-{
-    public string CurrentDirectory => Directory.GetCurrentDirectory();
-    public string NewLine => Environment.NewLine;
-}

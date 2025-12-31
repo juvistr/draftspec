@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 using DraftSpec.Mcp.Models;
 
 namespace DraftSpec.Tests.Mcp;

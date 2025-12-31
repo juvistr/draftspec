@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 
 namespace DraftSpec.Formatters.Html;
 

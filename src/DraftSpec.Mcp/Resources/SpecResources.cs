@@ -262,15 +262,3 @@ public static class SpecResources
         }
     }
 }
-
-/// <summary>
-/// Information about a spec file.
-/// </summary>
-internal class SpecFileInfo
-{
-    public string Path { get; set; } = "";
-    public string FullPath { get; set; } = "";
-    public string Name { get; set; } = "";
-    public long Size { get; set; }
-    public DateTime ModifiedAt { get; set; }
-}

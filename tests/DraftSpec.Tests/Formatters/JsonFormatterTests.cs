@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 
 namespace DraftSpec.Tests.Formatters;
 

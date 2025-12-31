@@ -159,35 +159,41 @@ public class SpecContext
 
     /// <summary>
     /// Gets the cached beforeEach hook chain (parent to child order).
+    /// Thread-safe via Interlocked.CompareExchange for lazy initialization.
     /// </summary>
     internal IReadOnlyList<Func<Task>> GetBeforeEachChain()
     {
-        if (_beforeEachChain == null)
-        {
-            // Check if any hooks exist in the chain before allocating
-            if (!HasBeforeEachHooksInChain())
-            {
-                _beforeEachChain = EmptyHookChain;
-            }
-            else
-            {
-                // Build in child-to-parent order (O(1) per Add), then reverse once (O(n))
-                // This is O(n) total instead of O(n²) from Insert(0, ...) per item
-                var chain = new List<Func<Task>>();
-                var current = this;
-                while (current != null)
-                {
-                    if (current.BeforeEach != null)
-                        chain.Add(current.BeforeEach);
-                    current = current.Parent;
-                }
+        // Fast path: already computed
+        var cached = _beforeEachChain;
+        if (cached != null)
+            return cached;
 
-                chain.Reverse();
-                _beforeEachChain = chain;
+        // Compute the chain
+        IReadOnlyList<Func<Task>> chain;
+        if (!HasBeforeEachHooksInChain())
+        {
+            chain = EmptyHookChain;
+        }
+        else
+        {
+            // Build in child-to-parent order (O(1) per Add), then reverse once (O(n))
+            // This is O(n) total instead of O(n²) from Insert(0, ...) per item
+            var list = new List<Func<Task>>();
+            var current = this;
+            while (current != null)
+            {
+                if (current.BeforeEach != null)
+                    list.Add(current.BeforeEach);
+                current = current.Parent;
             }
+
+            list.Reverse();
+            chain = list;
         }
 
-        return _beforeEachChain;
+        // Thread-safe assignment: if another thread set it first, use their value
+        Interlocked.CompareExchange(ref _beforeEachChain, chain, null);
+        return _beforeEachChain!;
     }
 
     /// <summary>
@@ -207,31 +213,37 @@ public class SpecContext
 
     /// <summary>
     /// Gets the cached afterEach hook chain (child to parent order).
+    /// Thread-safe via Interlocked.CompareExchange for lazy initialization.
     /// </summary>
     internal IReadOnlyList<Func<Task>> GetAfterEachChain()
     {
-        if (_afterEachChain == null)
+        // Fast path: already computed
+        var cached = _afterEachChain;
+        if (cached != null)
+            return cached;
+
+        // Compute the chain
+        IReadOnlyList<Func<Task>> chain;
+        if (!HasAfterEachHooksInChain())
         {
-            // Check if any hooks exist in the chain before allocating
-            if (!HasAfterEachHooksInChain())
+            chain = EmptyHookChain;
+        }
+        else
+        {
+            var list = new List<Func<Task>>();
+            var current = this;
+            while (current != null)
             {
-                _afterEachChain = EmptyHookChain;
+                if (current.AfterEach != null)
+                    list.Add(current.AfterEach);
+                current = current.Parent;
             }
-            else
-            {
-                var chain = new List<Func<Task>>();
-                var current = this;
-                while (current != null)
-                {
-                    if (current.AfterEach != null)
-                        chain.Add(current.AfterEach);
-                    current = current.Parent;
-                }
-                _afterEachChain = chain;
-            }
+            chain = list;
         }
 
-        return _afterEachChain;
+        // Thread-safe assignment: if another thread set it first, use their value
+        Interlocked.CompareExchange(ref _afterEachChain, chain, null);
+        return _afterEachChain!;
     }
 
     /// <summary>

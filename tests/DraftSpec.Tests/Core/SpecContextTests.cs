@@ -155,6 +155,52 @@ public class SpecContextTests
 
     #endregion
 
+    #region Hook Chain Thread Safety
+
+    [Test]
+    public async Task GetBeforeEachChain_ConcurrentAccess_ReturnsSameInstance()
+    {
+        var context = new SpecContext("test") { BeforeEach = () => Task.CompletedTask };
+        var results = new IReadOnlyList<Func<Task>>[100];
+
+        // Access the chain from multiple threads concurrently
+        await Parallel.ForAsync(0, 100, async (i, _) =>
+        {
+            await Task.Yield(); // Force async execution
+            results[i] = context.GetBeforeEachChain();
+        });
+
+        // All results should be the same cached instance
+        var first = results[0];
+        foreach (var result in results)
+        {
+            await Assert.That(ReferenceEquals(result, first)).IsTrue();
+        }
+    }
+
+    [Test]
+    public async Task GetAfterEachChain_ConcurrentAccess_ReturnsSameInstance()
+    {
+        var context = new SpecContext("test") { AfterEach = () => Task.CompletedTask };
+        var results = new IReadOnlyList<Func<Task>>[100];
+
+        // Access the chain from multiple threads concurrently
+        await Parallel.ForAsync(0, 100, async (i, _) =>
+        {
+            await Task.Yield(); // Force async execution
+            results[i] = context.GetAfterEachChain();
+        });
+
+        // All results should be the same cached instance
+        var first = results[0];
+        foreach (var result in results)
+        {
+            await Assert.That(ReferenceEquals(result, first)).IsTrue();
+        }
+    }
+
+    #endregion
+
     #region Hook Chain Order
 
     [Test]

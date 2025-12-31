@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
-namespace DraftSpec.Tests.Parallel;
+namespace DraftSpec.Tests.ParallelExecution;
 
 /// <summary>
 /// Tests for parallel spec execution functionality.

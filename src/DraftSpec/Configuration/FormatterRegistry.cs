@@ -34,7 +34,7 @@ public class FormatterRegistry : IFormatterRegistry
     /// </summary>
     /// <param name="name">The formatter name (case-insensitive).</param>
     /// <returns>The formatter, or null if not found.</returns>
-    public IFormatter? Get(string name)
+    public IFormatter? GetByName(string name)
     {
         return _formatters.TryGetValue(name, out var formatter) ? formatter : null;
     }

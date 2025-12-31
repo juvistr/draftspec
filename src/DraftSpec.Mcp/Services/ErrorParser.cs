@@ -77,7 +77,7 @@ public static partial class ErrorParser
             return null;
 
         // Check for AssertionException in stack trace
-        if (!output.Contains("AssertionException") && !output.Contains("Expected") )
+        if (!output.Contains("AssertionException", StringComparison.Ordinal) && !output.Contains("Expected", StringComparison.Ordinal) )
             return null;
 
         var match = AssertionErrorPattern().Match(output);
@@ -119,7 +119,7 @@ public static partial class ErrorParser
         if (string.IsNullOrWhiteSpace(output))
             return null;
 
-        if (!output.Contains("beforeAll") && !output.Contains("before(") && !output.Contains("Before"))
+        if (!output.Contains("beforeAll", StringComparison.Ordinal) && !output.Contains("before(", StringComparison.Ordinal) && !output.Contains("Before", StringComparison.Ordinal))
             return null;
 
         // Check if it's in a hook context
@@ -145,7 +145,7 @@ public static partial class ErrorParser
         if (string.IsNullOrWhiteSpace(output))
             return null;
 
-        if (!output.Contains("afterAll") && !output.Contains("after(") && !output.Contains("After"))
+        if (!output.Contains("afterAll", StringComparison.Ordinal) && !output.Contains("after(", StringComparison.Ordinal) && !output.Contains("After", StringComparison.Ordinal))
             return null;
 
         if (TeardownErrorPattern().IsMatch(output))
@@ -171,9 +171,9 @@ public static partial class ErrorParser
             return null;
 
         // Check for common configuration issues
-        if (output.Contains("describe") && output.Contains("cannot be nested") ||
-            output.Contains("Invalid spec") ||
-            output.Contains("Configuration error"))
+        if (output.Contains("describe", StringComparison.Ordinal) && output.Contains("cannot be nested", StringComparison.Ordinal) ||
+            output.Contains("Invalid spec", StringComparison.Ordinal) ||
+            output.Contains("Configuration error", StringComparison.Ordinal))
         {
             return new SpecError
             {
@@ -240,8 +240,8 @@ public static partial class ErrorParser
     {
         var lines = output.Split('\n');
         var stackLines = lines
-            .SkipWhile(l => !l.TrimStart().StartsWith("at "))
-            .TakeWhile(l => l.TrimStart().StartsWith("at ") || string.IsNullOrWhiteSpace(l))
+            .SkipWhile(l => !l.TrimStart().StartsWith("at ", StringComparison.Ordinal))
+            .TakeWhile(l => l.TrimStart().StartsWith("at ", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(l))
             .ToList();
 
         return stackLines.Count > 0 ? string.Join("\n", stackLines).Trim() : null;

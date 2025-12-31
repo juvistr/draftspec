@@ -29,7 +29,7 @@ public interface ICoverageTracker : IDisposable
     /// Stop coverage collection.
     /// Called after all specs have completed.
     /// </summary>
-    void Stop();
+    void StopTracking();
 
     /// <summary>
     /// Take a snapshot of current coverage state.

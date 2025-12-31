@@ -261,7 +261,7 @@ file class MockClock : IClock
 file class MockStopwatch : IStopwatch
 {
     public TimeSpan Elapsed => TimeSpan.FromMilliseconds(100);
-    public void Stop() { }
+    public void StopTiming() { }
 }
 
 #endregion

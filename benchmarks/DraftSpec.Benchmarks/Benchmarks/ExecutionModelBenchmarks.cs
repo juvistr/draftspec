@@ -126,7 +126,7 @@ public class ExecutionModelBenchmarks
         var context = new SpecContext("Minimal");
         context.AddSpec(new SpecDefinition("passes", () =>
         {
-            if (1 + 1 != 2) throw new Exception("Failed");
+            if (1 + 1 != 2) throw new InvalidOperationException("Failed");
         }));
 
         var runner = new SpecRunner();

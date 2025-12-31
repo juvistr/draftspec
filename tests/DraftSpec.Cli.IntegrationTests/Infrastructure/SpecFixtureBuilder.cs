@@ -175,7 +175,7 @@ public class SpecFixtureBuilder
     /// </summary>
     public SpecFixtureBuilder WithSpec(string name, string content)
     {
-        var fileName = name.EndsWith(".spec.csx") ? name : $"{name}.spec.csx";
+        var fileName = name.EndsWith(".spec.csx", StringComparison.Ordinal) ? name : $"{name}.spec.csx";
         _specs.Add((fileName, content));
         return this;
     }

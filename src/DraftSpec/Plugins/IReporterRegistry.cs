@@ -21,5 +21,5 @@ public interface IReporterRegistry
     /// </summary>
     /// <param name="name">The reporter name</param>
     /// <returns>The reporter, or null if not found</returns>
-    IReporter? Get(string name);
+    IReporter? GetByName(string name);
 }

@@ -3,5 +3,13 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <!-- Enable SDK analyzers in CI builds -->
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+        <AnalysisLevel>latest-recommended</AnalysisLevel>
     </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Roslynator: 500+ analyzers, refactorings, fixes -->
+        <PackageReference Include="Roslynator.Analyzers" Version="4.15.0" PrivateAssets="All" />
+    </ItemGroup>
 </Project>

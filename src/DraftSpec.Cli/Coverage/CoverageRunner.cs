@@ -326,5 +326,6 @@ public class CoverageRunner : IDisposable
                 // Best-effort cleanup
             }
         }
+        GC.SuppressFinalize(this);
     }
 }

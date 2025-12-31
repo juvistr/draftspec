@@ -31,12 +31,12 @@ public class TimeoutMiddleware : ISpecMiddleware
     /// Execute the middleware, enforcing the configured timeout on spec execution.
     /// </summary>
     public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
-        Func<SpecExecutionContext, Task<SpecResult>> next)
+        Func<SpecExecutionContext, Task<SpecResult>> pipeline)
     {
         using var cts = new CancellationTokenSource();
         context.CancellationToken = cts.Token;
 
-        var specTask = next(context);
+        var specTask = pipeline(context);
         var timeoutTask = Task.Delay(_timeout, cts.Token);
 
         var completedTask = await Task.WhenAny(specTask, timeoutTask);

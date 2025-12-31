@@ -272,7 +272,7 @@ public partial class SpecExecutionService
 
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
         {
-            if (line.StartsWith(ProgressLinePrefix))
+            if (line.StartsWith(ProgressLinePrefix, StringComparison.Ordinal))
             {
                 // Parse and emit progress notification
                 var json = line[ProgressLinePrefix.Length..];

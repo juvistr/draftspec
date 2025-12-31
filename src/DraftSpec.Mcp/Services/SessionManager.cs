@@ -195,6 +195,7 @@ public class SessionManager : IDisposable
         {
             // Ignore cleanup errors
         }
+        GC.SuppressFinalize(this);
     }
 }
 

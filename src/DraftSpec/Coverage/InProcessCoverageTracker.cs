@@ -36,7 +36,7 @@ public class InProcessCoverageTracker : ICoverageTracker
     }
 
     /// <inheritdoc />
-    public void Stop()
+    public void StopTracking()
     {
         ThrowIfDisposed();
         _isActive = false;

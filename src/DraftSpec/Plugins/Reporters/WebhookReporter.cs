@@ -315,6 +315,7 @@ public class WebhookReporter : IReporter, IDisposable
     {
         if (_ownsHttpClient)
             _httpClient.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
 

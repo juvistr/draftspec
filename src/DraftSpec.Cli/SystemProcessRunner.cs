@@ -49,5 +49,9 @@ public class SystemProcessHandle : IProcessHandle
 
     public void Kill() => _process.Kill();
 
-    public void Dispose() => _process.Dispose();
+    public void Dispose()
+    {
+        _process.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }

@@ -71,5 +71,6 @@ public class PluginManager : IDisposable
         foreach (var plugin in _plugins) plugin.Dispose();
         _plugins.Clear();
         _byType.Clear();
+        GC.SuppressFinalize(this);
     }
 }

@@ -167,5 +167,6 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
         if (_disposed) return;
         _disposed = true;
         Plugins.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

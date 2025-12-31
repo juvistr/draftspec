@@ -116,7 +116,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             if (rootContext == null)
             {
                 // No specs defined - return empty report
-                stopwatch.Stop();
+                stopwatch.StopTiming();
                 return new InProcessRunResult(
                     specFile,
                     new SpecReport
@@ -139,12 +139,12 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             var report = SpecReportBuilder.Build(rootContext, results);
             report.Source = fullPath;
 
-            stopwatch.Stop();
+            stopwatch.StopTiming();
             return new InProcessRunResult(specFile, report, stopwatch.Elapsed);
         }
         catch (CompilationErrorException compilationEx)
         {
-            stopwatch.Stop();
+            stopwatch.StopTiming();
 
             // Format the compilation error with source context
             var formattedError = _diagnosticFormatter.Format(compilationEx);
@@ -174,7 +174,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         }
         catch (Exception ex)
         {
-            stopwatch.Stop();
+            stopwatch.StopTiming();
             return new InProcessRunResult(
                 specFile,
                 new SpecReport
@@ -231,7 +231,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             }
         }
 
-        stopwatch.Stop();
+        stopwatch.StopTiming();
         return new InProcessRunSummary(results, stopwatch.Elapsed);
     }
 

@@ -52,7 +52,7 @@ public class FileWatcher : IFileWatcher
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
         // Skip temporary files
-        if (e.Name?.StartsWith(".") == true || e.Name?.EndsWith("~") == true)
+        if (e.Name?.StartsWith('.') == true || e.Name?.EndsWith('~') == true)
             return;
 
         var isSpecFile = e.FullPath.EndsWith(".spec.csx", StringComparison.OrdinalIgnoreCase);
@@ -105,5 +105,6 @@ public class FileWatcher : IFileWatcher
         }
 
         _debounceTimer?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

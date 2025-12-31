@@ -175,13 +175,13 @@ public class ValidateCommand : ICommand<ValidateOptions>
         var msg = issue.Message.ToLowerInvariant();
 
         // These are errors (always fail)
-        if (msg.Contains("missing description argument"))
+        if (msg.Contains("missing description argument", StringComparison.Ordinal))
             return true;
-        if (msg.Contains("empty description"))
+        if (msg.Contains("empty description", StringComparison.Ordinal))
             return true;
-        if (msg.Contains("parse error"))
+        if (msg.Contains("parse error", StringComparison.Ordinal))
             return true;
-        if (msg.Contains("syntax error"))
+        if (msg.Contains("syntax error", StringComparison.Ordinal))
             return true;
 
         // Everything else is a warning

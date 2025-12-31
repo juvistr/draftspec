@@ -19,7 +19,7 @@ public interface IFormatterRegistry
     /// </summary>
     /// <param name="name">The formatter name</param>
     /// <returns>The formatter, or null if not found</returns>
-    IFormatter? Get(string name);
+    IFormatter? GetByName(string name);
 
     /// <summary>
     /// Get all registered formatter names.

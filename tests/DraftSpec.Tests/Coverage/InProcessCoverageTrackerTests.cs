@@ -25,7 +25,7 @@ public class InProcessCoverageTrackerTests
         using var tracker = new InProcessCoverageTracker();
         tracker.Start();
 
-        tracker.Stop();
+        tracker.StopTracking();
 
         await Assert.That(tracker.IsActive).IsFalse();
     }

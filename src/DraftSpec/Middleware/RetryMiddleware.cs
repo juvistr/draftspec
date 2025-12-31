@@ -26,7 +26,7 @@ public class RetryMiddleware : ISpecMiddleware
     /// Execute the middleware, retrying failed specs up to the configured maximum.
     /// </summary>
     public async Task<SpecResult> ExecuteAsync(SpecExecutionContext context,
-        Func<SpecExecutionContext, Task<SpecResult>> next)
+        Func<SpecExecutionContext, Task<SpecResult>> pipeline)
     {
         var attempts = 0;
         SpecResult result;
@@ -34,7 +34,7 @@ public class RetryMiddleware : ISpecMiddleware
         do
         {
             attempts++;
-            result = await next(context);
+            result = await pipeline(context);
 
             if (result.Status != SpecStatus.Failed || attempts > _maxRetries)
                 break;

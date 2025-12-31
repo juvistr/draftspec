@@ -713,7 +713,7 @@ file class MockStopwatch : DraftSpec.IStopwatch
     }
 
     public TimeSpan Elapsed => TimeSpan.FromMilliseconds(_milliseconds);
-    public void Stop() { }
+    public void StopTiming() { }
 }
 
 #endregion

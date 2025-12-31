@@ -58,7 +58,7 @@ public class FileWatcher : IFileWatcher
             // If multiple files change during debounce, escalate to full run
             if (_pendingChange == null)
                 _pendingChange = new FileChangeInfo(normalizedPath, isSpecFile);
-            else if (_pendingChange.IsSpecFile && isSpecFile && !PathsAreEqual(_pendingChange.FilePath, normalizedPath))
+            else if (_pendingChange.IsSpecFile && isSpecFile && !PathsAreEqual(_pendingChange.FilePath!, normalizedPath))
                 // Multiple different spec files changed - run all
                 _pendingChange = new FileChangeInfo(null, false);
             else if (!isSpecFile)
@@ -94,11 +94,9 @@ public class FileWatcher : IFileWatcher
     /// <summary>
     /// Compares two paths for equality, using case-insensitive comparison on Windows.
     /// </summary>
-    private static bool PathsAreEqual(string? path1, string? path2)
+    private static bool PathsAreEqual(string path1, string path2)
     {
-        if (path1 == null || path2 == null)
-            return path1 == path2;
-
+        // Use platform-appropriate comparison (case-insensitive on Windows)
         var comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;

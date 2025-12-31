@@ -1,5 +1,7 @@
 using DraftSpec.TestingPlatform;
 using Microsoft.Testing.Platform.Capabilities.TestFramework;
+using Microsoft.Testing.Platform.Extensions.Messages;
+using Microsoft.Testing.Platform.Requests;
 
 namespace DraftSpec.Tests.TestingPlatform;
 
@@ -103,6 +105,61 @@ public class DraftSpecTestFrameworkTests
         var framework2 = CreateFramework();
 
         await Assert.That(framework1.Uid).IsEqualTo(framework2.Uid);
+    }
+
+    #endregion
+
+    #region ExtractTestIds
+
+    [Test]
+    public async Task ExtractTestIds_NullFilter_ReturnsNull()
+    {
+        var result = DraftSpecTestFramework.ExtractTestIds(null);
+
+        await Assert.That(result).IsNull();
+    }
+
+    [Test]
+    public async Task ExtractTestIds_EmptyUidFilter_ReturnsNull()
+    {
+        var filter = new TestNodeUidListFilter([]);
+
+        var result = DraftSpecTestFramework.ExtractTestIds(filter);
+
+        await Assert.That(result).IsNull();
+    }
+
+    [Test]
+    public async Task ExtractTestIds_WithUids_ReturnsTestIds()
+    {
+        var filter = new TestNodeUidListFilter([
+            new TestNodeUid("test-1"),
+            new TestNodeUid("test-2"),
+            new TestNodeUid("test-3")
+        ]);
+
+        var result = DraftSpecTestFramework.ExtractTestIds(filter);
+
+        await Assert.That(result).IsNotNull();
+        await Assert.That(result!.Count).IsEqualTo(3);
+        await Assert.That(result.Contains("test-1")).IsTrue();
+        await Assert.That(result.Contains("test-2")).IsTrue();
+        await Assert.That(result.Contains("test-3")).IsTrue();
+    }
+
+    [Test]
+    public async Task ExtractTestIds_WithDuplicateUids_DeduplicatesIds()
+    {
+        var filter = new TestNodeUidListFilter([
+            new TestNodeUid("test-1"),
+            new TestNodeUid("test-1"),
+            new TestNodeUid("test-2")
+        ]);
+
+        var result = DraftSpecTestFramework.ExtractTestIds(filter);
+
+        await Assert.That(result).IsNotNull();
+        await Assert.That(result!.Count).IsEqualTo(2);
     }
 
     #endregion

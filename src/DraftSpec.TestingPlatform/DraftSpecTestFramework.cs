@@ -75,19 +75,7 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
     /// </summary>
     public override Task<CreateTestSessionResult> CreateTestSessionAsync(CreateTestSessionContext context)
     {
-        // Use the test assembly location as the base directory for finding CSX files.
-        // CSX files are copied to the output directory by MSBuild targets.
-        // Environment.CurrentDirectory is unreliable when running from IDE.
-        if (_projectDirectory == null)
-        {
-            var assemblyLocation = typeof(DraftSpecTestFramework).Assembly.Location;
-            _projectDirectory = Path.GetDirectoryName(assemblyLocation) ?? Environment.CurrentDirectory;
-        }
-
-        _discoverer ??= new SpecDiscoverer(_projectDirectory);
-        _executor ??= new MtpSpecExecutor(_projectDirectory);
-        _orchestrator ??= new TestOrchestrator(_discoverer, _executor);
-
+        EnsureInitialized();
         return Task.FromResult(new CreateTestSessionResult { IsSuccess = true });
     }
 
@@ -116,9 +104,7 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
     /// </summary>
     public override Task<CloseTestSessionResult> CloseTestSessionAsync(CloseTestSessionContext context)
     {
-        _discoverer = null;
-        _executor = null;
-        _orchestrator = null;
+        ResetState();
         return Task.FromResult(new CloseTestSessionResult { IsSuccess = true });
     }
 
@@ -156,7 +142,12 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         await _orchestrator.RunTestsAsync(requestedTestIds: null, publisher, cancellationToken);
     }
 
-    private void EnsureInitialized()
+    /// <summary>
+    /// Ensures the framework is initialized with discoverer, executor, and orchestrator.
+    /// Uses assembly location as project directory if not provided.
+    /// Internal for testing.
+    /// </summary>
+    internal void EnsureInitialized()
     {
         if (_projectDirectory == null)
         {
@@ -167,6 +158,17 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         _discoverer ??= new SpecDiscoverer(_projectDirectory);
         _executor ??= new MtpSpecExecutor(_projectDirectory);
         _orchestrator ??= new TestOrchestrator(_discoverer, _executor);
+    }
+
+    /// <summary>
+    /// Resets the framework state (used during close and for testing).
+    /// Internal for testing.
+    /// </summary>
+    internal void ResetState()
+    {
+        _discoverer = null;
+        _executor = null;
+        _orchestrator = null;
     }
 
     /// <summary>
@@ -195,16 +197,24 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         if (_orchestrator == null)
             return;
 
-        // Check if specific tests are requested via filter
-        var filter = request.Filter;
-        IReadOnlySet<string>? requestedTestIds = null;
-
-        if (filter is TestNodeUidListFilter uidFilter && uidFilter.TestNodeUids.Length > 0)
-        {
-            requestedTestIds = uidFilter.TestNodeUids.Select(uid => uid.Value).ToHashSet();
-        }
-
+        var requestedTestIds = ExtractTestIds(request.Filter);
         var publisher = new MessageBusPublisher(messageBus, this, request.Session.SessionUid);
         await _orchestrator.RunTestsAsync(requestedTestIds, publisher, cancellationToken);
+    }
+
+    /// <summary>
+    /// Extracts test IDs from the request filter.
+    /// Internal static for testing.
+    /// </summary>
+    /// <param name="filter">The test filter from the request.</param>
+    /// <returns>Set of test IDs to run, or null if all tests should run.</returns>
+    internal static IReadOnlySet<string>? ExtractTestIds(ITestExecutionFilter? filter)
+    {
+        if (filter is TestNodeUidListFilter uidFilter && uidFilter.TestNodeUids.Length > 0)
+        {
+            return uidFilter.TestNodeUids.Select(uid => uid.Value).ToHashSet();
+        }
+
+        return null;
     }
 }

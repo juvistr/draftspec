@@ -334,6 +334,23 @@ public static class CliOptionsParser
                 options.Incremental = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.Incremental));
             }
+            // Test impact analysis options
+            else if (arg == "--affected-by")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--affected-by requires a value (commit ref, 'staged', or file path)";
+                    return options;
+                }
+
+                options.AffectedBy = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.AffectedBy));
+            }
+            else if (arg == "--dry-run")
+            {
+                options.DryRun = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.DryRun));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

@@ -1119,4 +1119,84 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Test Impact Analysis Options
+
+    [Test]
+    public async Task Parse_AffectedByOption_SetsAffectedBy()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--affected-by", "HEAD~1"]);
+
+        await Assert.That(options.AffectedBy).IsEqualTo("HEAD~1");
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.AffectedBy));
+    }
+
+    [Test]
+    public async Task Parse_AffectedByStaged_SetsAffectedBy()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--affected-by", "staged"]);
+
+        await Assert.That(options.AffectedBy).IsEqualTo("staged");
+    }
+
+    [Test]
+    public async Task Parse_AffectedByBranch_SetsAffectedBy()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--affected-by", "main"]);
+
+        await Assert.That(options.AffectedBy).IsEqualTo("main");
+    }
+
+    [Test]
+    public async Task Parse_AffectedByWithFilePath_SetsAffectedBy()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--affected-by", "/tmp/changed-files.txt"]);
+
+        await Assert.That(options.AffectedBy).IsEqualTo("/tmp/changed-files.txt");
+    }
+
+    [Test]
+    public async Task Parse_AffectedByWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--affected-by"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--affected-by requires a value");
+    }
+
+    [Test]
+    public async Task Parse_DryRunOption_SetsDryRun()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--dry-run"]);
+
+        await Assert.That(options.DryRun).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.DryRun));
+    }
+
+    [Test]
+    public async Task Parse_AffectedByWithDryRun_SetsAll()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--affected-by", "HEAD~1", "--dry-run"]);
+
+        await Assert.That(options.AffectedBy).IsEqualTo("HEAD~1");
+        await Assert.That(options.DryRun).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_DefaultAffectedByIsNull()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.AffectedBy).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_DefaultDryRunIsFalse()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.DryRun).IsFalse();
+    }
+
+    #endregion
 }

@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Required for uploading assets to release
+      id-token: write  # Required for provenance attestation
+      attestations: write  # Required for provenance attestation
     environment: nuget  # Requires approval for production pushes
     # Only run for releases targeting main (or manual dispatch)
     if: github.event_name == 'workflow_dispatch' || github.event.release.target_commitish == 'main'
@@ -63,6 +65,12 @@ jobs:
         run: |
           echo "Packages to publish:"
           find src -name "*.nupkg" -type f | grep -v obj
+
+      - name: Generate provenance attestation
+        if: github.event_name == 'release' && !inputs.dry_run
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: 'src/*/bin/Release/*.nupkg'
 
       - name: Publish to NuGet
         if: ${{ !inputs.dry_run }}

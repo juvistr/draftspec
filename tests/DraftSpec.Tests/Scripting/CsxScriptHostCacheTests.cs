@@ -68,7 +68,7 @@ using static DraftSpec.Dsl;
 describe(""cached test"", () => it(""runs from cache"", () => {}));
 ");
 
-        // Act - First run (compiles and caches)
+        // Act - First run (compiles and caches to disk)
         await scriptHost.ExecuteAsync(scriptPath);
 
         var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "scripts");
@@ -78,13 +78,17 @@ describe(""cached test"", () => it(""runs from cache"", () => {}));
         // Small delay to ensure file system timestamps would differ if rewritten
         await Task.Delay(50);
 
-        // Act - Second run (should use cache)
-        scriptHost.Reset();
-        await scriptHost.ExecuteAsync(scriptPath);
+        // Act - Create NEW host instance (empty in-memory cache) to force disk cache hit
+        var scriptHost2 = new CsxScriptHost(_testDir, useDiskCache: true);
+        var context = await scriptHost2.ExecuteAsync(scriptPath);
 
-        // Assert - DLL wasn't rewritten (cache was used)
+        // Assert - DLL wasn't rewritten (disk cache was used)
         var newWriteTime = File.GetLastWriteTimeUtc(cachedDll);
         await Assert.That(newWriteTime).IsEqualTo(originalWriteTime);
+
+        // Assert - context was properly returned from disk cache execution
+        await Assert.That(context).IsNotNull();
+        await Assert.That(context!.Description).IsEqualTo("cached test");
     }
 
     [Test]

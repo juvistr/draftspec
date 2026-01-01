@@ -9,13 +9,15 @@ public sealed class ExecutionRateLimiter : IDisposable
 {
     private readonly SemaphoreSlim _concurrencySemaphore;
     private readonly ConcurrentQueue<DateTime> _executionTimestamps;
+    private readonly int _maxConcurrency;
     private readonly int _maxPerMinute;
     private readonly object _cleanupLock = new();
     private bool _disposed;
 
     public ExecutionRateLimiter(McpOptions options)
     {
-        _concurrencySemaphore = new SemaphoreSlim(options.MaxConcurrentExecutions);
+        _maxConcurrency = options.MaxConcurrentExecutions;
+        _concurrencySemaphore = new SemaphoreSlim(_maxConcurrency);
         _executionTimestamps = new ConcurrentQueue<DateTime>();
         _maxPerMinute = options.MaxExecutionsPerMinute;
     }
@@ -23,9 +25,7 @@ public sealed class ExecutionRateLimiter : IDisposable
     /// <summary>
     /// Number of currently running executions.
     /// </summary>
-    public int CurrentConcurrentExecutions =>
-        _concurrencySemaphore.CurrentCount == 0 ? 0 :
-        ((SemaphoreSlim)_concurrencySemaphore).CurrentCount;
+    public int CurrentConcurrentExecutions => _maxConcurrency - _concurrencySemaphore.CurrentCount;
 
     /// <summary>
     /// Attempts to acquire a rate limit slot. Returns false if limits are exceeded.

@@ -12,11 +12,13 @@ on:
         type: boolean
 
 permissions:
-  contents: write  # Required for creating releases
+  contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for uploading assets to release
     environment: nuget  # Requires approval for production pushes
     # Only run for releases targeting main (or manual dispatch)
     if: github.event_name == 'workflow_dispatch' || github.event.release.target_commitish == 'main'

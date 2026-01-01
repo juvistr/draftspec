@@ -8,18 +8,25 @@ namespace DraftSpec.Mcp.Services;
 public sealed class ExecutionRateLimiter : IDisposable
 {
     private readonly SemaphoreSlim _concurrencySemaphore;
-    private readonly ConcurrentQueue<DateTime> _executionTimestamps;
+    private readonly ConcurrentQueue<DateTimeOffset> _executionTimestamps;
     private readonly int _maxConcurrency;
     private readonly int _maxPerMinute;
+    private readonly TimeProvider _timeProvider;
     private readonly object _cleanupLock = new();
     private bool _disposed;
 
     public ExecutionRateLimiter(McpOptions options)
+        : this(options, TimeProvider.System)
+    {
+    }
+
+    internal ExecutionRateLimiter(McpOptions options, TimeProvider timeProvider)
     {
         _maxConcurrency = options.MaxConcurrentExecutions;
         _concurrencySemaphore = new SemaphoreSlim(_maxConcurrency);
-        _executionTimestamps = new ConcurrentQueue<DateTime>();
+        _executionTimestamps = new ConcurrentQueue<DateTimeOffset>();
         _maxPerMinute = options.MaxExecutionsPerMinute;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -29,21 +36,22 @@ public sealed class ExecutionRateLimiter : IDisposable
 
     /// <summary>
     /// Attempts to acquire a rate limit slot. Returns false if limits are exceeded.
+    /// Thread-safe: uses atomic check-and-acquire to prevent TOCTOU race conditions.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>True if slot acquired, false if rate limited</returns>
     public async Task<bool> TryAcquireAsync(CancellationToken cancellationToken = default)
     {
-        // Check per-minute limit first (quick check without blocking)
-        if (!CheckPerMinuteLimit())
-            return false;
-
-        // Try to acquire concurrency semaphore (non-blocking check)
+        // Acquire concurrency semaphore first (non-blocking)
         if (!await _concurrencySemaphore.WaitAsync(0, cancellationToken))
             return false;
 
-        // Record this execution timestamp
-        _executionTimestamps.Enqueue(DateTime.UtcNow);
+        // Check per-minute limit while holding semaphore to prevent TOCTOU
+        if (!CheckAndRecordExecution())
+        {
+            _concurrencySemaphore.Release();
+            return false;
+        }
 
         return true;
     }
@@ -56,21 +64,32 @@ public sealed class ExecutionRateLimiter : IDisposable
         _concurrencySemaphore.Release();
     }
 
-    private bool CheckPerMinuteLimit()
+    /// <summary>
+    /// Atomically checks rate limit and records execution timestamp.
+    /// Must be called while holding the concurrency semaphore.
+    /// </summary>
+    /// <returns>True if under limit and timestamp recorded, false if rate limited</returns>
+    private bool CheckAndRecordExecution()
     {
-        var cutoff = DateTime.UtcNow.AddMinutes(-1);
+        var now = _timeProvider.GetUtcNow();
+        var cutoff = now.AddMinutes(-1);
 
-        // Clean up old timestamps
         lock (_cleanupLock)
         {
+            // Clean up old timestamps
             while (_executionTimestamps.TryPeek(out var oldest) && oldest < cutoff)
             {
                 _executionTimestamps.TryDequeue(out _);
             }
-        }
 
-        // Check if we're under the limit
-        return _executionTimestamps.Count < _maxPerMinute;
+            // Check if we're under the limit
+            if (_executionTimestamps.Count >= _maxPerMinute)
+                return false;
+
+            // Record this execution timestamp atomically with the check
+            _executionTimestamps.Enqueue(now);
+            return true;
+        }
     }
 
     public void Dispose()

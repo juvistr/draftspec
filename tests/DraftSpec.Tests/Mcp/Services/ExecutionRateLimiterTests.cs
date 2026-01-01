@@ -116,4 +116,85 @@ public class ExecutionRateLimiterTests
     }
 
     #endregion
+
+    #region Thread Safety
+
+    [Test]
+    public async Task TryAcquireAsync_ConcurrentRequests_RespectsPerMinuteLimit()
+    {
+        // Arrange: Allow only 10 per minute, but launch 50 concurrent requests
+        const int perMinuteLimit = 10;
+        const int concurrentRequests = 50;
+        var options = new McpOptions
+        {
+            MaxConcurrentExecutions = concurrentRequests, // High concurrency limit
+            MaxExecutionsPerMinute = perMinuteLimit
+        };
+        using var limiter = new ExecutionRateLimiter(options);
+
+        // Act: Launch all requests concurrently
+        var tasks = Enumerable.Range(0, concurrentRequests)
+            .Select(_ => limiter.TryAcquireAsync())
+            .ToArray();
+        var results = await Task.WhenAll(tasks);
+
+        // Assert: Exactly perMinuteLimit should succeed
+        var successCount = results.Count(r => r);
+        await Assert.That(successCount).IsEqualTo(perMinuteLimit);
+    }
+
+    [Test]
+    public async Task TryAcquireAsync_ConcurrentRequests_RespectsConcurrencyLimit()
+    {
+        // Arrange: Allow only 5 concurrent, but launch 20 concurrent requests
+        const int concurrencyLimit = 5;
+        const int concurrentRequests = 20;
+        var options = new McpOptions
+        {
+            MaxConcurrentExecutions = concurrencyLimit,
+            MaxExecutionsPerMinute = 1000 // High per-minute limit
+        };
+        using var limiter = new ExecutionRateLimiter(options);
+
+        // Act: Launch all requests concurrently
+        var tasks = Enumerable.Range(0, concurrentRequests)
+            .Select(_ => limiter.TryAcquireAsync())
+            .ToArray();
+        var results = await Task.WhenAll(tasks);
+
+        // Assert: Exactly concurrencyLimit should succeed
+        var successCount = results.Count(r => r);
+        await Assert.That(successCount).IsEqualTo(concurrencyLimit);
+    }
+
+    [Test]
+    public async Task TryAcquireAsync_HighConcurrency_NoRaceConditions()
+    {
+        // Arrange: Test with multiple iterations to catch race conditions
+        const int iterations = 100;
+        const int perMinuteLimit = 5;
+        const int threadsPerIteration = 20;
+
+        for (var i = 0; i < iterations; i++)
+        {
+            var options = new McpOptions
+            {
+                MaxConcurrentExecutions = threadsPerIteration,
+                MaxExecutionsPerMinute = perMinuteLimit
+            };
+            using var limiter = new ExecutionRateLimiter(options);
+
+            // Act: Launch requests from multiple threads simultaneously
+            var tasks = Enumerable.Range(0, threadsPerIteration)
+                .Select(_ => Task.Run(() => limiter.TryAcquireAsync()))
+                .ToArray();
+            var results = await Task.WhenAll(tasks);
+
+            // Assert: Never exceed limit (race condition would cause > limit)
+            var successCount = results.Count(r => r);
+            await Assert.That(successCount).IsLessThanOrEqualTo(perMinuteLimit);
+        }
+    }
+
+    #endregion
 }

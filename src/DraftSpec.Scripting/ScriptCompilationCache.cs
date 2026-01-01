@@ -110,35 +110,16 @@ public sealed class ScriptCompilationCache
         {
             var assembly = context.LoadFromAssemblyPath(Path.GetFullPath(assemblyPath));
 
-            // Find the submission type (Roslyn generates Submission#0, etc.)
+            // Find the submission type (Roslyn generates Submission#0)
             var submissionType = assembly.GetTypes()
-                .FirstOrDefault(t => t.Name.StartsWith("Submission#", StringComparison.Ordinal));
+                .FirstOrDefault(t => t.Name.StartsWith("Submission#", StringComparison.Ordinal))
+                ?? throw new InvalidOperationException("Could not find submission type in cached assembly");
 
-            if (submissionType == null)
-            {
-                // Try alternative naming patterns
-                submissionType = assembly.GetTypes()
-                    .FirstOrDefault(t => t.Name.Contains("Submission", StringComparison.Ordinal));
-            }
-
-            if (submissionType == null)
-                throw new InvalidOperationException("Could not find submission type in cached assembly");
-
-            // Find the factory method
+            // Find the factory method (Roslyn generates <Factory>)
             var factoryMethod = submissionType.GetMethod(
                 "<Factory>",
-                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-
-            if (factoryMethod == null)
-            {
-                // Try to find any static async method that takes globals
-                factoryMethod = submissionType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
-                    .FirstOrDefault(m => m.GetParameters().Length >= 1 &&
-                                         m.GetParameters()[0].ParameterType == typeof(object[]));
-            }
-
-            if (factoryMethod == null)
-                throw new InvalidOperationException("Could not find factory method in cached assembly");
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Could not find factory method in cached assembly");
 
             // Invoke the factory method with globals
             var parameters = new object?[] { new object?[] { globals, null } };

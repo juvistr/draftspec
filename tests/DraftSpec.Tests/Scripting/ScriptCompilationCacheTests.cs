@@ -581,6 +581,22 @@ public class ScriptCompilationCacheTests
                 cachedDll, globals, cts.Token));
     }
 
+    [Test]
+    public async Task ExecuteCachedAssemblyAsync_WithNonScriptAssembly_ThrowsInvalidOperation()
+    {
+        // Arrange - use a regular .NET assembly (not a Roslyn script)
+        // This will not have a Submission# type
+        var nonScriptAssembly = typeof(DraftSpec.Dsl).Assembly.Location;
+        var globals = new ScriptGlobals();
+
+        // Act & Assert - should throw because there's no Submission# type
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await ScriptCompilationCache.ExecuteCachedAssemblyAsync(
+                nonScriptAssembly, globals, CancellationToken.None));
+
+        await Assert.That(exception!.Message).Contains("submission type");
+    }
+
     private static Script<object> CreateTestScript(string code)
     {
         var options = ScriptOptions.Default

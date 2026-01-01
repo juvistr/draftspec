@@ -22,7 +22,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.release.target_commitish == 'main'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
 
       - name: Determine version
         id: version
@@ -34,7 +34,7 @@ jobs:
           echo "Publishing version: $VERSION"
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@2016bd2012dba4e32de620c46fe006a3ac9f0602 # v5
         with:
           dotnet-version: '10.0.x'
 
@@ -75,7 +75,7 @@ jobs:
 
       - name: Upload packages to Release
         if: github.event_name == 'release' && !inputs.dry_run
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
           tag_name: ${{ github.event.release.tag_name }}
           files: |

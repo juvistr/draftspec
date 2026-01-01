@@ -40,7 +40,7 @@ jobs:
       - name: Convert TRX to JUnit
         if: ${{ !cancelled() }}
         run: |
-          dotnet tool install -g trx2junit
+          dotnet tool install -g trx2junit --version 2.1.0
           trx2junit tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/test-results.trx --output tests/DraftSpec.Tests/bin/Release/net10.0/TestResults
 
       - name: Run CLI integration tests
@@ -49,7 +49,7 @@ jobs:
 
       - name: Generate coverage report
         run: |
-          dotnet tool install -g dotnet-reportgenerator-globaltool
+          dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.5.1
           reportgenerator -reports:tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml -targetdir:./coverage-report -reporttypes:Html
 
       - name: Enforce coverage threshold

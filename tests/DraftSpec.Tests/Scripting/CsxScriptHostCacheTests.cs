@@ -167,4 +167,52 @@ describe(""outer"", () => {
         await Assert.That(context1.Specs).Count().IsEqualTo(2);
         await Assert.That(context2.Specs).Count().IsEqualTo(2);
     }
+
+    [Test]
+    public async Task ExecuteAsync_SecondRunWithoutReset_UsesInMemoryCache()
+    {
+        // Arrange - test in-memory cache hit (with disk cache enabled)
+        var scriptHost = new CsxScriptHost(_testDir, useDiskCache: true);
+        var scriptPath = Path.Combine(_testDir, "inmemory.csx");
+        await File.WriteAllTextAsync(scriptPath, @"
+using static DraftSpec.Dsl;
+describe(""inmemory test"", () => it(""works"", () => {}));
+");
+
+        // Act - First run (compiles and populates in-memory cache)
+        var context1 = await scriptHost.ExecuteAsync(scriptPath);
+
+        // Second run WITHOUT Reset() - should hit in-memory cache
+        var context2 = await scriptHost.ExecuteAsync(scriptPath);
+
+        // Assert - both runs should return valid contexts
+        await Assert.That(context1).IsNotNull();
+        await Assert.That(context2).IsNotNull();
+        await Assert.That(context1!.Description).IsEqualTo("inmemory test");
+        await Assert.That(context2!.Description).IsEqualTo("inmemory test");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithDiskCacheDisabled_SecondRunUsesInMemoryCache()
+    {
+        // Arrange - test in-memory cache hit (without disk cache)
+        var scriptHost = new CsxScriptHost(_testDir, useDiskCache: false);
+        var scriptPath = Path.Combine(_testDir, "inmemory-nodisk.csx");
+        await File.WriteAllTextAsync(scriptPath, @"
+using static DraftSpec.Dsl;
+describe(""inmemory nodisk"", () => it(""works"", () => {}));
+");
+
+        // Act - First run (compiles and populates in-memory cache)
+        var context1 = await scriptHost.ExecuteAsync(scriptPath);
+
+        // Second run WITHOUT Reset() - should hit in-memory cache
+        var context2 = await scriptHost.ExecuteAsync(scriptPath);
+
+        // Assert - both runs should return valid contexts
+        await Assert.That(context1).IsNotNull();
+        await Assert.That(context2).IsNotNull();
+        await Assert.That(context1!.Description).IsEqualTo("inmemory nodisk");
+        await Assert.That(context2!.Description).IsEqualTo("inmemory nodisk");
+    }
 }

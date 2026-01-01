@@ -123,15 +123,10 @@ public sealed class ScriptCompilationCache
 
             // Invoke the factory method with globals
             var parameters = new object?[] { new object?[] { globals, null } };
-            var task = factoryMethod.Invoke(null, parameters) as Task<object>;
+            var task = (Task<object>)factoryMethod.Invoke(null, parameters)!;
 
-            if (task != null)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                return await task;
-            }
-
-            return null;
+            cancellationToken.ThrowIfCancellationRequested();
+            return await task;
         }
         finally
         {

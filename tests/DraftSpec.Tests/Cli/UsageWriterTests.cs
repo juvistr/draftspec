@@ -184,4 +184,60 @@ public class UsageWriterTests
     }
 
     #endregion
+
+    #region Flaky Command Documentation
+
+    [Test]
+    public async Task Show_NoError_DisplaysFlakyCommand()
+    {
+        _writer.Show();
+
+        await Assert.That(_console.Output).Contains("draftspec flaky");
+        await Assert.That(_console.Output).Contains("flaky test detection");
+    }
+
+    [Test]
+    public async Task Show_NoError_DisplaysFlakyOptions()
+    {
+        _writer.Show();
+
+        await Assert.That(_console.Output).Contains("Flaky Command Options:");
+        await Assert.That(_console.Output).Contains("--min-changes");
+        await Assert.That(_console.Output).Contains("--window-size");
+        await Assert.That(_console.Output).Contains("--clear");
+    }
+
+    #endregion
+
+    #region Estimate Command Documentation
+
+    [Test]
+    public async Task Show_NoError_DisplaysEstimateCommand()
+    {
+        _writer.Show();
+
+        await Assert.That(_console.Output).Contains("draftspec estimate");
+        await Assert.That(_console.Output).Contains("Estimate runtime based on history");
+    }
+
+    [Test]
+    public async Task Show_NoError_DisplaysEstimateOptions()
+    {
+        _writer.Show();
+
+        await Assert.That(_console.Output).Contains("Estimate Command Options:");
+        await Assert.That(_console.Output).Contains("--percentile");
+        await Assert.That(_console.Output).Contains("--output-seconds");
+    }
+
+    [Test]
+    public async Task Show_NoError_DisplaysEstimateExamples()
+    {
+        _writer.Show();
+
+        await Assert.That(_console.Output).Contains("draftspec estimate");
+        await Assert.That(_console.Output).Contains("--percentile 95");
+    }
+
+    #endregion
 }

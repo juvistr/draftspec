@@ -19,6 +19,7 @@ public class CommandFactory : ICommandFactory
     private readonly Func<NewCommand> _newFactory;
     private readonly Func<SchemaCommand> _schemaFactory;
     private readonly Func<FlakyCommand> _flakyFactory;
+    private readonly Func<EstimateCommand> _estimateFactory;
 
     public CommandFactory(
         IConfigApplier configApplier,
@@ -29,7 +30,8 @@ public class CommandFactory : ICommandFactory
         Func<InitCommand> initFactory,
         Func<NewCommand> newFactory,
         Func<SchemaCommand> schemaFactory,
-        Func<FlakyCommand> flakyFactory)
+        Func<FlakyCommand> flakyFactory,
+        Func<EstimateCommand> estimateFactory)
     {
         _configApplier = configApplier;
         _runFactory = runFactory;
@@ -40,6 +42,7 @@ public class CommandFactory : ICommandFactory
         _newFactory = newFactory;
         _schemaFactory = schemaFactory;
         _flakyFactory = flakyFactory;
+        _estimateFactory = estimateFactory;
     }
 
     public Func<CliOptions, CancellationToken, Task<int>>? Create(string commandName)
@@ -67,6 +70,8 @@ public class CommandFactory : ICommandFactory
                 _schemaFactory(), o => o.ToSchemaOptions(), _configApplier),
             "flaky" => new CommandExecutor<FlakyCommand, FlakyOptions>(
                 _flakyFactory(), o => o.ToFlakyOptions(), _configApplier),
+            "estimate" => new CommandExecutor<EstimateCommand, EstimateOptions>(
+                _estimateFactory(), o => o.ToEstimateOptions(), _configApplier),
             _ => null
         };
 }

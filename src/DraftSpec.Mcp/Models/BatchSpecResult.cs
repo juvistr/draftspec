@@ -34,4 +34,9 @@ public class BatchSpecResult
     /// Individual results for each spec.
     /// </summary>
     public List<NamedSpecResult> Results { get; init; } = [];
+
+    /// <summary>
+    /// Error message if the batch failed before execution (e.g., validation error).
+    /// </summary>
+    public string? Error { get; init; }
 }

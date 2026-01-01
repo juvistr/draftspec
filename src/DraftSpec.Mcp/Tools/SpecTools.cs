@@ -25,6 +25,7 @@ public static class SpecTools
         ISpecExecutionService executionService,
         SessionManager sessionManager,
         McpServer server,
+        McpOptions options,
         [Description("The spec content using describe/it/expect syntax. " +
                      "Do NOT include #:package, using directives, or run() - these are added automatically.")]
         string specContent,
@@ -35,6 +36,35 @@ public static class SpecTools
         int timeoutSeconds = 10,
         CancellationToken cancellationToken = default)
     {
+        // Validate content
+        if (string.IsNullOrWhiteSpace(specContent))
+        {
+            var errorResult = new RunSpecResult
+            {
+                Success = false,
+                Error = new SpecError
+                {
+                    Category = ErrorCategory.Validation,
+                    Message = "Spec content cannot be null or empty"
+                }
+            };
+            return JsonSerializer.Serialize(errorResult, JsonOptionsProvider.Default);
+        }
+
+        if (specContent.Length > options.MaxSpecContentSizeBytes)
+        {
+            var errorResult = new RunSpecResult
+            {
+                Success = false,
+                Error = new SpecError
+                {
+                    Category = ErrorCategory.Validation,
+                    Message = $"Spec content exceeds maximum size limit of {options.MaxSpecContentSizeBytes:N0} bytes"
+                }
+            };
+            return JsonSerializer.Serialize(errorResult, JsonOptionsProvider.Default);
+        }
+
         var orchestrator = new SpecRunOrchestrator(sessionManager);
 
         // Set up progress callback (null server check for testing)
@@ -81,6 +111,7 @@ public static class SpecTools
     public static async Task<string> RunSpecsBatch(
         ISpecExecutionService executionService,
         McpServer server,
+        McpOptions options,
         [Description("Array of specs to execute, each with a name and content")]
         List<BatchSpecInput> specs,
         [Description("Run specs in parallel (default: true)")]
@@ -100,6 +131,24 @@ public static class SpecTools
                 TotalDurationMs = 0,
                 Results = []
             }, JsonOptionsProvider.Default);
+        }
+
+        // Validate content size for each spec
+        foreach (var spec in specs)
+        {
+            if (spec.Content != null && spec.Content.Length > options.MaxSpecContentSizeBytes)
+            {
+                return JsonSerializer.Serialize(new BatchSpecResult
+                {
+                    AllPassed = false,
+                    TotalSpecs = specs.Count,
+                    PassedSpecs = 0,
+                    FailedSpecs = specs.Count,
+                    TotalDurationMs = 0,
+                    Results = [],
+                    Error = $"Spec '{spec.Name}' exceeds maximum content size limit of {options.MaxSpecContentSizeBytes:N0} bytes"
+                }, JsonOptionsProvider.Default);
+            }
         }
 
         timeoutSeconds = Math.Clamp(timeoutSeconds, 1, 60);

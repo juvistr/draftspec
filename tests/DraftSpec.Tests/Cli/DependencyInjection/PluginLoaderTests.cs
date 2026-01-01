@@ -414,6 +414,149 @@ public class PluginLoaderTests
         await Assert.That(plugins.Count).IsEqualTo(1);
     }
 
+    [Test]
+    public async Task DiscoverPlugins_RequireSignedPlugins_TrustedCertThumbprint_Loaded()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        assemblyLoader.SetCertificateThumbprint(
+            "/plugins/DraftSpec.MyPlugin.dll",
+            "A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2");
+
+        var console = new MockConsole();
+        var config = new PluginsConfig
+        {
+            RequireSignedPlugins = true,
+            TrustedCertificateThumbprints = ["A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2"]
+        };
+        var loader = new PluginLoader(scanner, assemblyLoader, console, config);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        await Assert.That(plugins.Count).IsEqualTo(1);
+        await Assert.That(plugins[0].Name).IsEqualTo("testformatter");
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_RequireSignedPlugins_UntrustedCertThumbprint_Rejected()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        assemblyLoader.SetCertificateThumbprint(
+            "/plugins/DraftSpec.MyPlugin.dll",
+            "UNTRUSTED0000000000000000000000000000000000000000000000000000000");
+
+        var console = new MockConsole();
+        var config = new PluginsConfig
+        {
+            RequireSignedPlugins = true,
+            TrustedCertificateThumbprints = ["A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2"]
+        };
+        var loader = new PluginLoader(scanner, assemblyLoader, console, config);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        await Assert.That(plugins.Count).IsEqualTo(0);
+        await Assert.That(console.Errors).Contains("untrusted signature");
+        await Assert.That(console.Errors).Contains("certificate");
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_RequireSignedPlugins_CertThumbprintPrecedesPublicKeyToken()
+    {
+        // If both certificate and public key token are present, cert should be checked first
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        // Set both - cert is trusted, but public key token is NOT in the trusted list
+        assemblyLoader.SetCertificateThumbprint(
+            "/plugins/DraftSpec.MyPlugin.dll",
+            "A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2");
+        assemblyLoader.SetPublicKeyToken("/plugins/DraftSpec.MyPlugin.dll", "untrustedtoken");
+
+        var console = new MockConsole();
+        var config = new PluginsConfig
+        {
+            RequireSignedPlugins = true,
+            TrustedCertificateThumbprints = ["A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2"],
+            TrustedPublicKeyTokens = ["differenttoken"] // Not the one the plugin has
+        };
+        var loader = new PluginLoader(scanner, assemblyLoader, console, config);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        // Should load because cert thumbprint is trusted (even though public key token is not)
+        await Assert.That(plugins.Count).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_RequireSignedPlugins_FallsBackToPublicKeyToken()
+    {
+        // If no certificate, should fall back to public key token check
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        // No certificate, but has a trusted public key token
+        assemblyLoader.SetCertificateThumbprint("/plugins/DraftSpec.MyPlugin.dll", null);
+        assemblyLoader.SetPublicKeyToken("/plugins/DraftSpec.MyPlugin.dll", "abc123def456");
+
+        var console = new MockConsole();
+        var config = new PluginsConfig
+        {
+            RequireSignedPlugins = true,
+            TrustedPublicKeyTokens = ["abc123def456"]
+        };
+        var loader = new PluginLoader(scanner, assemblyLoader, console, config);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        // Should load because public key token is trusted
+        await Assert.That(plugins.Count).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_RequireSignedPlugins_CertThumbprintCaseInsensitive()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        // Uppercase thumbprint
+        assemblyLoader.SetCertificateThumbprint(
+            "/plugins/DraftSpec.MyPlugin.dll",
+            "A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2");
+
+        var console = new MockConsole();
+        var config = new PluginsConfig
+        {
+            RequireSignedPlugins = true,
+            // Lowercase in config
+            TrustedCertificateThumbprints = ["a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"]
+        };
+        var loader = new PluginLoader(scanner, assemblyLoader, console, config);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        // Should match case-insensitively
+        await Assert.That(plugins.Count).IsEqualTo(1);
+    }
+
     #endregion
 
     #region Test Types for Plugin Detection
@@ -489,6 +632,7 @@ public class PluginLoaderTests
         private readonly Dictionary<string, List<Type>> _realTypes = [];
         private readonly Dictionary<string, Exception> _loadExceptions = [];
         private readonly Dictionary<string, string?> _publicKeyTokens = [];
+        private readonly Dictionary<string, string?> _certificateThumbprints = [];
 
         /// <summary>
         /// Add a real type to be "discovered" from an assembly path.
@@ -512,6 +656,15 @@ public class PluginLoaderTests
         public void SetPublicKeyToken(string path, string? token)
         {
             _publicKeyTokens[path] = token;
+        }
+
+        /// <summary>
+        /// Set the certificate thumbprint for a given assembly path.
+        /// Pass null to simulate an assembly without Authenticode signature.
+        /// </summary>
+        public void SetCertificateThumbprint(string path, string? thumbprint)
+        {
+            _certificateThumbprints[path] = thumbprint;
         }
 
         public Assembly? LoadAssembly(string path)
@@ -547,6 +700,11 @@ public class PluginLoaderTests
         public string? GetPublicKeyToken(string path)
         {
             return _publicKeyTokens.TryGetValue(path, out var token) ? token : null;
+        }
+
+        public string? GetCertificateThumbprint(string path)
+        {
+            return _certificateThumbprints.TryGetValue(path, out var thumbprint) ? thumbprint : null;
         }
     }
 

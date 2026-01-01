@@ -124,114 +124,53 @@ public sealed partial class CsxScriptHost : IScriptHost
             CaptureRootContext = ctx => capturedContext = ctx
         };
 
-        try
-        {
-            // Try disk cache first for faster cold starts
-            if (_useDiskCache && _diskCache != null)
-            {
-                // We need to preprocess to get the cache key components
-                var (code, _, sourceFiles, _) =
-                    await PreprocessScriptAsync(absolutePath, cancellationToken);
-
-                var (success, _) = await _diskCache.TryExecuteCachedAsync(
-                    absolutePath, sourceFiles, code, globals, cancellationToken);
-
-                if (success)
-                {
-                    return capturedContext;
-                }
-            }
-
-            // Fall back to normal compilation
-            var (script, sourceFilesForCache, preprocessedCode) =
-                await GetOrCreateScriptWithMetadataAsync(absolutePath, cancellationToken);
-
-            await script.RunAsync(globals, cancellationToken: cancellationToken);
-
-            // Cache the compiled script for future runs
-            if (_useDiskCache && _diskCache != null && sourceFilesForCache != null && preprocessedCode != null)
-            {
-                _diskCache.CacheScript(absolutePath, sourceFilesForCache, preprocessedCode, script);
-            }
-
-            return capturedContext;
-        }
-        catch
-        {
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Gets a cached script or creates and caches a new one, returning metadata for disk caching.
-    /// </summary>
-    private async Task<(Script<object> script, IReadOnlyList<string>? sourceFiles, string? preprocessedCode)> GetOrCreateScriptWithMetadataAsync(
-        string absolutePath,
-        CancellationToken cancellationToken)
-    {
-        // Check in-memory cache and validate modification time
+        // 1. Check in-memory cache first (fastest path)
         if (_scriptCache.TryGetValue(absolutePath, out var cached))
         {
-            // Check if any source file has been modified since caching
             var currentMaxModified = GetMaxModificationTime(cached.SourceFiles);
             if (currentMaxModified == cached.MaxModifiedTimeUtc)
             {
-                // In-memory hit - no need to return metadata for disk caching
-                return (cached.Script, null, null);
+                await cached.Script.RunAsync(globals, cancellationToken: cancellationToken);
+                return capturedContext;
             }
 
-            // Files changed - remove stale entry and recompile
+            // Files changed - remove stale entry
             _scriptCache.TryRemove(absolutePath, out _);
         }
 
-        // Parse and preprocess the script
+        // 2. Preprocess once (needed for both disk cache check and compilation)
         var (code, additionalReferences, sourceFiles, maxModifiedTimeUtc) =
             await PreprocessScriptAsync(absolutePath, cancellationToken);
 
-        // Build script options
-        var options = CreateScriptOptions(Path.GetDirectoryName(absolutePath)!, additionalReferences);
-
-        // Create and cache the script - use ScriptGlobals as the globals type
-        var script = CSharpScript.Create(code, options, typeof(ScriptGlobals));
-        var entry = new CacheEntry(script, sourceFiles, maxModifiedTimeUtc);
-        _scriptCache.TryAdd(absolutePath, entry);
-
-        return (script, sourceFiles, code);
-    }
-
-    /// <summary>
-    /// Gets a cached script or creates and caches a new one.
-    /// Validates cache by checking file modification times.
-    /// </summary>
-    private async Task<Script<object>> GetOrCreateScriptAsync(string absolutePath, CancellationToken cancellationToken)
-    {
-        // Check cache and validate modification time
-        if (_scriptCache.TryGetValue(absolutePath, out var cached))
+        // 3. Try disk cache with preprocessed data
+        if (_useDiskCache && _diskCache != null)
         {
-            // Check if any source file has been modified since caching
-            var currentMaxModified = GetMaxModificationTime(cached.SourceFiles);
-            if (currentMaxModified == cached.MaxModifiedTimeUtc)
-            {
-                return cached.Script;
-            }
+            var (success, _) = await _diskCache.TryExecuteCachedAsync(
+                absolutePath, sourceFiles, code, globals, cancellationToken);
 
-            // Files changed - remove stale entry and recompile
-            _scriptCache.TryRemove(absolutePath, out _);
+            if (success)
+            {
+                return capturedContext;
+            }
         }
 
-        // Parse and preprocess the script
-        var (code, additionalReferences, sourceFiles, maxModifiedTimeUtc) =
-            await PreprocessScriptAsync(absolutePath, cancellationToken);
-
-        // Build script options
+        // 4. Compile from already-preprocessed data (no re-preprocessing)
         var options = CreateScriptOptions(Path.GetDirectoryName(absolutePath)!, additionalReferences);
-
-        // Create and cache the script - use ScriptGlobals as the globals type
         var script = CSharpScript.Create(code, options, typeof(ScriptGlobals));
+
+        // Cache in memory for future runs
         var entry = new CacheEntry(script, sourceFiles, maxModifiedTimeUtc);
         _scriptCache.TryAdd(absolutePath, entry);
 
-        return script;
+        await script.RunAsync(globals, cancellationToken: cancellationToken);
+
+        // Cache to disk for future cold starts
+        if (_useDiskCache && _diskCache != null)
+        {
+            _diskCache.CacheScript(absolutePath, sourceFiles, code, script);
+        }
+
+        return capturedContext;
     }
 
     /// <summary>

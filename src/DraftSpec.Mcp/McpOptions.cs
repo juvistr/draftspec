@@ -22,4 +22,11 @@ public class McpOptions
     /// Default: 1MB. Prevents memory exhaustion from very large inputs.
     /// </summary>
     public int MaxSpecContentSizeBytes { get; init; } = 1_000_000;
+
+    /// <summary>
+    /// Whether to include stack traces in error responses.
+    /// Default: false to prevent information disclosure.
+    /// Set to true for debugging during development.
+    /// </summary>
+    public bool IncludeStackTracesInErrors { get; init; }
 }

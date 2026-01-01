@@ -15,6 +15,7 @@ public class SpecExecutionServiceTests
     private TempFileManager _tempFileManager = null!;
     private MockAsyncProcessRunner _mockProcessRunner = null!;
     private ExecutionRateLimiter _rateLimiter = null!;
+    private McpOptions _options = null!;
     private SpecExecutionService _service = null!;
 
     [Before(Test)]
@@ -25,15 +26,17 @@ public class SpecExecutionServiceTests
 
         _mockProcessRunner = new MockAsyncProcessRunner();
 
-        // Default rate limiter with permissive limits for most tests
-        _rateLimiter = new ExecutionRateLimiter(new McpOptions
+        // Default options with permissive limits for most tests
+        _options = new McpOptions
         {
             MaxConcurrentExecutions = 100,
             MaxExecutionsPerMinute = 1000
-        });
+        };
+
+        _rateLimiter = new ExecutionRateLimiter(_options);
 
         var serviceLogger = NullLogger<SpecExecutionService>.Instance;
-        _service = new SpecExecutionService(_tempFileManager, _mockProcessRunner, _rateLimiter, serviceLogger);
+        _service = new SpecExecutionService(_tempFileManager, _mockProcessRunner, _rateLimiter, _options, serviceLogger);
     }
 
     [After(Test)]
@@ -500,13 +503,14 @@ public class SpecExecutionServiceTests
     public async Task ExecuteSpecAsync_WhenConcurrencyLimitExceeded_ReturnsRateLimitError()
     {
         // Arrange - create service with very low concurrency limit
-        var rateLimiter = new ExecutionRateLimiter(new McpOptions
+        var options = new McpOptions
         {
             MaxConcurrentExecutions = 0, // No concurrent executions allowed
             MaxExecutionsPerMinute = 1000
-        });
+        };
+        var rateLimiter = new ExecutionRateLimiter(options);
         var serviceLogger = NullLogger<SpecExecutionService>.Instance;
-        var service = new SpecExecutionService(_tempFileManager, _mockProcessRunner, rateLimiter, serviceLogger);
+        var service = new SpecExecutionService(_tempFileManager, _mockProcessRunner, rateLimiter, options, serviceLogger);
 
         // Act
         var result = await service.ExecuteSpecAsync(
@@ -525,16 +529,17 @@ public class SpecExecutionServiceTests
     public async Task ExecuteSpecAsync_WhenPerMinuteLimitExceeded_ReturnsRateLimitError()
     {
         // Arrange - create service with very low per-minute limit
-        var rateLimiter = new ExecutionRateLimiter(new McpOptions
+        var options = new McpOptions
         {
             MaxConcurrentExecutions = 100,
             MaxExecutionsPerMinute = 1 // Only 1 per minute
-        });
+        };
+        var rateLimiter = new ExecutionRateLimiter(options);
         var mockHandle = new MockAsyncProcessHandle().WithExitCode(0);
         _mockProcessRunner.ReturnsHandle(mockHandle);
 
         var serviceLogger = NullLogger<SpecExecutionService>.Instance;
-        var service = new SpecExecutionService(_tempFileManager, _mockProcessRunner, rateLimiter, serviceLogger);
+        var service = new SpecExecutionService(_tempFileManager, _mockProcessRunner, rateLimiter, options, serviceLogger);
 
         // First execution should succeed
         var result1 = await service.ExecuteSpecAsync(
@@ -570,6 +575,74 @@ public class SpecExecutionServiceTests
         // Assert - should execute without rate limiting
         await Assert.That(result.Error?.Category).IsNotEqualTo(ErrorCategory.RateLimited);
         await Assert.That(_mockProcessRunner.StartCalls).Count().IsEqualTo(1);
+    }
+
+    #endregion
+
+    #region Stack Trace Filtering
+
+    [Test]
+    public async Task ExecuteSpecAsync_WhenExceptionAndStackTracesDisabled_OmitsStackTrace()
+    {
+        // Arrange - create service with stack traces disabled (default)
+        var options = new McpOptions
+        {
+            MaxConcurrentExecutions = 100,
+            MaxExecutionsPerMinute = 1000,
+            IncludeStackTracesInErrors = false
+        };
+        var rateLimiter = new ExecutionRateLimiter(options);
+
+        // Create a mock that will throw an exception
+        var throwingRunner = new MockAsyncProcessRunner();
+        throwingRunner.ThrowsOnStart(new InvalidOperationException("Test exception"));
+
+        var serviceLogger = NullLogger<SpecExecutionService>.Instance;
+        var service = new SpecExecutionService(_tempFileManager, throwingRunner, rateLimiter, options, serviceLogger);
+
+        // Act
+        var result = await service.ExecuteSpecAsync(
+            "describe('test', () => {});",
+            TimeSpan.FromSeconds(30),
+            CancellationToken.None);
+
+        // Assert
+        await Assert.That(result.Success).IsFalse();
+        await Assert.That(result.Error).IsNotNull();
+        await Assert.That(result.Error!.StackTrace).IsNull()
+            .Because("Stack trace should be omitted when IncludeStackTracesInErrors is false");
+    }
+
+    [Test]
+    public async Task ExecuteSpecAsync_WhenExceptionAndStackTracesEnabled_IncludesStackTrace()
+    {
+        // Arrange - create service with stack traces enabled
+        var options = new McpOptions
+        {
+            MaxConcurrentExecutions = 100,
+            MaxExecutionsPerMinute = 1000,
+            IncludeStackTracesInErrors = true
+        };
+        var rateLimiter = new ExecutionRateLimiter(options);
+
+        // Create a mock that will throw an exception
+        var throwingRunner = new MockAsyncProcessRunner();
+        throwingRunner.ThrowsOnStart(new InvalidOperationException("Test exception"));
+
+        var serviceLogger = NullLogger<SpecExecutionService>.Instance;
+        var service = new SpecExecutionService(_tempFileManager, throwingRunner, rateLimiter, options, serviceLogger);
+
+        // Act
+        var result = await service.ExecuteSpecAsync(
+            "describe('test', () => {});",
+            TimeSpan.FromSeconds(30),
+            CancellationToken.None);
+
+        // Assert
+        await Assert.That(result.Success).IsFalse();
+        await Assert.That(result.Error).IsNotNull();
+        await Assert.That(result.Error!.StackTrace).IsNotNull()
+            .Because("Stack trace should be included when IncludeStackTracesInErrors is true");
     }
 
     #endregion

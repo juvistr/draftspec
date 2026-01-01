@@ -28,7 +28,8 @@ jobs:
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
         with:
-          fetch-depth: 0  # Full history needed for git-based tests (HEAD~1)
+          fetch-depth: 0  # Full history needed for MinVer
+          fetch-tags: true  # Required for MinVer to find version tags
 
       - name: Determine version
         id: version
@@ -36,6 +37,13 @@ jobs:
           TAG="${{ github.event.release.tag_name }}"
           # Strip 'v' prefix (v0.1.0-alpha.3 -> 0.1.0-alpha.3)
           VERSION="${TAG#v}"
+
+          # Validate version is not empty
+          if [ -z "$VERSION" ]; then
+            echo "::error::No version tag found. Ensure this workflow was triggered by a release."
+            exit 1
+          fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Publishing version: $VERSION"
 
@@ -48,9 +56,7 @@ jobs:
         run: dotnet restore --locked-mode
 
       - name: Build
-        run: dotnet build --no-restore -c Release
-        env:
-          MinVerVersionOverride: ${{ steps.version.outputs.version }}
+        run: dotnet build --no-restore -c Release -p:MinVerVersionOverride=${{ steps.version.outputs.version }}
 
       - name: Run unit tests
         run: dotnet run --project tests/DraftSpec.Tests --no-build -c Release
@@ -59,9 +65,7 @@ jobs:
         run: dotnet run --project tests/DraftSpec.Cli.IntegrationTests --no-build -c Release
 
       - name: Pack
-        run: dotnet pack --no-build -c Release
-        env:
-          MinVerVersionOverride: ${{ steps.version.outputs.version }}
+        run: dotnet pack --no-build -c Release -p:MinVerVersionOverride=${{ steps.version.outputs.version }}
 
       - name: Display packages
         run: |

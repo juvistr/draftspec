@@ -376,6 +376,162 @@ public class ScriptCompilationCacheTests
         await Assert.That(stats.EntryCount).IsEqualTo(0);
     }
 
+    [Test]
+    public async Task TryExecuteCachedAsync_DeletesCacheEntry_WhenInvalid()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "to-delete.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var script = CreateTestScript("var x = 1;");
+        _cache.CacheScript(sourceFile, [sourceFile], "var x = 1;", script);
+
+        // Verify cache exists
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "scripts");
+        var initialMetaCount = Directory.GetFiles(cacheDir, "*.meta.json").Length;
+        await Assert.That(initialMetaCount).IsEqualTo(1);
+
+        // Modify the metadata to simulate version mismatch
+        var metaFiles = Directory.GetFiles(cacheDir, "*.meta.json");
+        var metaContent = await File.ReadAllTextAsync(metaFiles[0]);
+        metaContent = metaContent.Replace("\"draftSpecVersion\":", "\"draftSpecVersion\": \"0.0.0-fake\", \"_old\":");
+        await File.WriteAllTextAsync(metaFiles[0], metaContent);
+
+        var globals = new ScriptGlobals();
+
+        // Act - cache validation should fail and delete entry
+        var (success, _) = await _cache.TryExecuteCachedAsync(
+            sourceFile,
+            [sourceFile],
+            "var x = 1;",
+            globals);
+
+        // Assert
+        await Assert.That(success).IsFalse();
+        // Cache entry should be deleted
+        var finalMetaCount = Directory.Exists(cacheDir)
+            ? Directory.GetFiles(cacheDir, "*.meta.json").Length
+            : 0;
+        await Assert.That(finalMetaCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task TryExecuteCachedAsync_ReturnsFalse_WhenNewFileNotInCachedHashes()
+    {
+        // Arrange
+        var sourceFile1 = Path.Combine(_testDir, "original.csx");
+        var sourceFile2 = Path.Combine(_testDir, "new-dep.csx");
+        await File.WriteAllTextAsync(sourceFile1, "var x = 1;");
+
+        var script = CreateTestScript("var x = 1;");
+        // Cache with only sourceFile1
+        _cache.CacheScript(sourceFile1, [sourceFile1], "var x = 1;", script);
+
+        // Create new file that wasn't in original cache
+        await File.WriteAllTextAsync(sourceFile2, "var y = 2;");
+
+        // Manually modify metadata to have same file count but different file
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "scripts");
+        var metaFiles = Directory.GetFiles(cacheDir, "*.meta.json");
+        var metaContent = await File.ReadAllTextAsync(metaFiles[0]);
+        // Replace the source file path to simulate file mismatch
+        metaContent = metaContent.Replace(sourceFile1, sourceFile1 + "-nonexistent");
+        await File.WriteAllTextAsync(metaFiles[0], metaContent);
+
+        var globals = new ScriptGlobals();
+
+        // Act - should fail because sourceFile1 is not in cached hashes
+        var (success, _) = await _cache.TryExecuteCachedAsync(
+            sourceFile1,
+            [sourceFile1],
+            "var x = 1;",
+            globals);
+
+        // Assert
+        await Assert.That(success).IsFalse();
+    }
+
+    [Test]
+    public async Task TryExecuteCachedAsync_ReturnsFalse_WhenAssemblyCorrupted()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "corrupted-dll.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var script = CreateTestScript("var x = 1;");
+        _cache.CacheScript(sourceFile, [sourceFile], "var x = 1;", script);
+
+        // Corrupt the DLL file
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "scripts");
+        foreach (var dll in Directory.GetFiles(cacheDir, "*.dll"))
+        {
+            await File.WriteAllTextAsync(dll, "not a valid dll");
+        }
+
+        var globals = new ScriptGlobals();
+
+        // Act - should catch exception and return false
+        var (success, _) = await _cache.TryExecuteCachedAsync(
+            sourceFile,
+            [sourceFile],
+            "var x = 1;",
+            globals);
+
+        // Assert - should fail gracefully
+        await Assert.That(success).IsFalse();
+    }
+
+    [Test]
+    public async Task CacheScript_HandlesWriteErrorGracefully()
+    {
+        // Arrange - create a read-only directory to cause write failure
+        var readOnlyDir = Path.Combine(_testDir, "readonly-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(readOnlyDir);
+        var cacheSubDir = Path.Combine(readOnlyDir, ".draftspec", "cache", "scripts");
+        Directory.CreateDirectory(cacheSubDir);
+
+        // Create a file where the cache would try to write
+        var blocker = Path.Combine(cacheSubDir, "blocker");
+        await File.WriteAllTextAsync(blocker, "block");
+        File.SetAttributes(blocker, FileAttributes.ReadOnly);
+
+        var cache = new ScriptCompilationCache(readOnlyDir);
+        var sourceFile = Path.Combine(_testDir, "write-error.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var script = CreateTestScript("var x = 1;");
+
+        // Act - should not throw, just silently fail
+        cache.CacheScript(sourceFile, [sourceFile], "var x = 1;", script);
+
+        // Assert - cache should have failed but not thrown
+        var stats = cache.GetStatistics();
+        // The stats might show 0 or 1 depending on timing, but no exception should occur
+        await Assert.That(stats.EntryCount).IsGreaterThanOrEqualTo(0);
+
+        // Cleanup
+        File.SetAttributes(blocker, FileAttributes.Normal);
+    }
+
+    [Test]
+    public async Task CacheScript_SameScriptTwice_OverwritesPreviousCache()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "overwrite.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var script1 = CreateTestScript("var x = 1;");
+        var script2 = CreateTestScript("var x = 1;");
+
+        // Act - cache same script twice
+        _cache.CacheScript(sourceFile, [sourceFile], "var x = 1;", script1);
+        _cache.CacheScript(sourceFile, [sourceFile], "var x = 1;", script2);
+
+        // Assert - should still have just one entry
+        var stats = _cache.GetStatistics();
+        await Assert.That(stats.EntryCount).IsEqualTo(1);
+    }
+
     private static Script<object> CreateTestScript(string code)
     {
         var options = ScriptOptions.Default

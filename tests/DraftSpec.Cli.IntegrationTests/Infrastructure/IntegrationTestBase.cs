@@ -61,6 +61,18 @@ public abstract class IntegrationTestBase
         => new(Path.Combine(_tempDir, $"specs_{Guid.NewGuid():N}"));
 
     /// <summary>
+    /// Creates a history file builder for a project directory.
+    /// </summary>
+    protected HistoryFileBuilder CreateHistoryFile(string projectDir)
+        => new(projectDir);
+
+    /// <summary>
+    /// Creates a git repository builder for this test.
+    /// </summary>
+    protected GitRepositoryBuilder CreateGitRepo()
+        => new(Path.Combine(_tempDir, $"repo_{Guid.NewGuid():N}"));
+
+    /// <summary>
     /// Runs the CLI with the given arguments and returns the result.
     /// </summary>
     protected Task<ProcessResult> RunCliAsync(params string[] args)

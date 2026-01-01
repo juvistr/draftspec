@@ -84,6 +84,26 @@ public class CommandFactoryTests
     }
 
     [Test]
+    public async Task Create_Flaky_ReturnsExecutor()
+    {
+        var factory = CreateFactory();
+
+        var executor = factory.Create("flaky");
+
+        await Assert.That(executor).IsNotNull();
+    }
+
+    [Test]
+    public async Task Create_Estimate_ReturnsExecutor()
+    {
+        var factory = CreateFactory();
+
+        var executor = factory.Create("estimate");
+
+        await Assert.That(executor).IsNotNull();
+    }
+
+    [Test]
     public async Task Create_Unknown_ReturnsNull()
     {
         var factory = CreateFactory();
@@ -227,7 +247,8 @@ public class CommandFactoryTests
             CreateInitCommand,
             CreateNewCommand,
             CreateSchemaCommand,
-            CreateFlakyCommand);
+            CreateFlakyCommand,
+            CreateEstimateCommand);
     }
 
     private static RunCommand CreateRunCommand() => new(
@@ -271,6 +292,12 @@ public class CommandFactoryTests
         NullObjects.FileSystem);
 
     private static FlakyCommand CreateFlakyCommand() => new(
+        NullObjects.HistoryService,
+        NullObjects.Console,
+        NullObjects.FileSystem);
+
+    private static EstimateCommand CreateEstimateCommand() => new(
+        NullObjects.RuntimeEstimator,
         NullObjects.HistoryService,
         NullObjects.Console,
         NullObjects.FileSystem);

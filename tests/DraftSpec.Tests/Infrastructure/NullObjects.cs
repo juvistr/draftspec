@@ -99,6 +99,11 @@ public static class NullObjects
     /// </summary>
     public static ISpecHistoryService HistoryService { get; } = new NullHistoryService();
 
+    /// <summary>
+    /// A no-op runtime estimator.
+    /// </summary>
+    public static IRuntimeEstimator RuntimeEstimator { get; } = new NullRuntimeEstimator();
+
     #region Null Object Implementations
 
     private class NullConsole : IConsole
@@ -291,6 +296,25 @@ public static class NullObjects
 
         public Task<bool> ClearSpecAsync(string projectPath, string specId, CancellationToken ct = default)
             => Task.FromResult(false);
+    }
+
+    private class NullRuntimeEstimator : IRuntimeEstimator
+    {
+        public RuntimeEstimate Calculate(SpecHistory history, int percentile = 50)
+            => new()
+            {
+                P50Ms = 0,
+                P95Ms = 0,
+                MaxMs = 0,
+                TotalEstimateMs = 0,
+                Percentile = percentile,
+                SampleSize = 0,
+                SpecCount = 0,
+                SlowestSpecs = []
+            };
+
+        public double CalculatePercentile(IReadOnlyList<double> values, int percentile)
+            => 0;
     }
 
     #endregion

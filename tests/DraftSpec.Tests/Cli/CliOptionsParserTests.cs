@@ -1376,4 +1376,120 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Estimate Command Options
+
+    [Test]
+    public async Task Parse_EstimateCommand_SetsCommand()
+    {
+        var options = CliOptionsParser.Parse(["estimate", "."]);
+
+        await Assert.That(options.Command).IsEqualTo("estimate");
+        await Assert.That(options.Path).IsEqualTo(".");
+    }
+
+    [Test]
+    public async Task Parse_EstimateCommandWithoutPath_UsesDefaultPath()
+    {
+        var options = CliOptionsParser.Parse(["estimate"]);
+
+        await Assert.That(options.Command).IsEqualTo("estimate");
+        await Assert.That(options.Path).IsEqualTo(".");
+    }
+
+    [Test]
+    public async Task Parse_PercentileOption_SetsPercentile()
+    {
+        var options = CliOptionsParser.Parse(["estimate", ".", "--percentile", "95"]);
+
+        await Assert.That(options.Percentile).IsEqualTo(95);
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.Percentile));
+    }
+
+    [Test]
+    public async Task Parse_PercentileWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["estimate", ".", "--percentile"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--percentile requires a value");
+    }
+
+    [Test]
+    public async Task Parse_PercentileInvalidValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["estimate", ".", "--percentile", "abc"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--percentile must be between 1 and 99");
+    }
+
+    [Test]
+    public async Task Parse_PercentileZero_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["estimate", ".", "--percentile", "0"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--percentile must be between 1 and 99");
+    }
+
+    [Test]
+    public async Task Parse_PercentileHundred_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["estimate", ".", "--percentile", "100"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--percentile must be between 1 and 99");
+    }
+
+    [Test]
+    public async Task Parse_PercentileNegative_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["estimate", ".", "--percentile", "-5"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--percentile must be between 1 and 99");
+    }
+
+    [Test]
+    public async Task Parse_PercentileDefaultIs50()
+    {
+        var options = CliOptionsParser.Parse(["estimate", "."]);
+
+        await Assert.That(options.Percentile).IsEqualTo(50);
+    }
+
+    [Test]
+    public async Task Parse_OutputSecondsFlag_SetsOutputSeconds()
+    {
+        var options = CliOptionsParser.Parse(["estimate", ".", "--output-seconds"]);
+
+        await Assert.That(options.OutputSeconds).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.OutputSeconds));
+    }
+
+    [Test]
+    public async Task Parse_OutputSecondsDefaultIsFalse()
+    {
+        var options = CliOptionsParser.Parse(["estimate", "."]);
+
+        await Assert.That(options.OutputSeconds).IsFalse();
+    }
+
+    [Test]
+    public async Task Parse_EstimateWithAllOptions_SetsAll()
+    {
+        var options = CliOptionsParser.Parse([
+            "estimate", "./specs",
+            "--percentile", "95",
+            "--output-seconds"
+        ]);
+
+        await Assert.That(options.Command).IsEqualTo("estimate");
+        await Assert.That(options.Path).IsEqualTo("./specs");
+        await Assert.That(options.Percentile).IsEqualTo(95);
+        await Assert.That(options.OutputSeconds).IsTrue();
+    }
+
+    #endregion
 }

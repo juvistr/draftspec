@@ -257,6 +257,20 @@ public class CliOptions
     /// </summary>
     public string? Clear { get; set; }
 
+    // Estimate command options
+
+    /// <summary>
+    /// Percentile to use for runtime estimation (1-99).
+    /// Default: 50 (median)
+    /// </summary>
+    public int Percentile { get; set; } = 50;
+
+    /// <summary>
+    /// Output the estimate in seconds (machine-readable format).
+    /// Used with estimate command.
+    /// </summary>
+    public bool OutputSeconds { get; set; }
+
     /// <summary>
     /// Apply default values from a project configuration file.
     /// Only applies values that weren't explicitly set via CLI.
@@ -422,6 +436,16 @@ public class CliOptions
         MinStatusChanges = MinStatusChanges,
         WindowSize = WindowSize,
         Clear = Clear
+    };
+
+    /// <summary>
+    /// Converts to EstimateOptions for the estimate command.
+    /// </summary>
+    public EstimateOptions ToEstimateOptions() => new()
+    {
+        Path = Path,
+        Percentile = Percentile,
+        OutputSeconds = OutputSeconds
     };
 
     #endregion

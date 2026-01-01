@@ -46,6 +46,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISpecChangeTracker, SpecChangeTracker>();
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<ISpecHistoryService, SpecHistoryService>();
+        services.AddSingleton<IRuntimeEstimator, RuntimeEstimator>();
 
         // Commands
         services.AddTransient<RunCommand>();
@@ -56,6 +57,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<NewCommand>();
         services.AddTransient<SchemaCommand>();
         services.AddTransient<FlakyCommand>();
+        services.AddTransient<EstimateCommand>();
 
         // Pipeline
         services.AddSingleton<IConfigApplier, ConfigApplier>();
@@ -70,7 +72,8 @@ public static class ServiceCollectionExtensions
             () => sp.GetRequiredService<InitCommand>(),
             () => sp.GetRequiredService<NewCommand>(),
             () => sp.GetRequiredService<SchemaCommand>(),
-            () => sp.GetRequiredService<FlakyCommand>()));
+            () => sp.GetRequiredService<FlakyCommand>(),
+            () => sp.GetRequiredService<EstimateCommand>()));
 
         return services;
     }

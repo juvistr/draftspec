@@ -408,6 +408,29 @@ public static class CliOptionsParser
                 options.Clear = args[++i];
                 options.ExplicitlySet.Add(nameof(CliOptions.Clear));
             }
+            // Estimate command options
+            else if (arg == "--percentile")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--percentile requires a value (1-99)";
+                    return options;
+                }
+
+                if (!int.TryParse(args[++i], out var percentile) || percentile < 1 || percentile > 99)
+                {
+                    options.Error = "--percentile must be between 1 and 99";
+                    return options;
+                }
+
+                options.Percentile = percentile;
+                options.ExplicitlySet.Add(nameof(CliOptions.Percentile));
+            }
+            else if (arg == "--output-seconds")
+            {
+                options.OutputSeconds = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.OutputSeconds));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

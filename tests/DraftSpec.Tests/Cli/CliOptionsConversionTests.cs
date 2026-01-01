@@ -424,4 +424,38 @@ public class CliOptionsConversionTests
     }
 
     #endregion
+
+    #region ToEstimateOptions Tests
+
+    [Test]
+    public async Task ToEstimateOptions_MapsAllProperties()
+    {
+        var cliOptions = new CliOptions
+        {
+            Path = "/project/path",
+            Percentile = 95,
+            OutputSeconds = true
+        };
+
+        var estimateOptions = cliOptions.ToEstimateOptions();
+
+        await Assert.That(estimateOptions.Path).IsEqualTo("/project/path");
+        await Assert.That(estimateOptions.Percentile).IsEqualTo(95);
+        await Assert.That(estimateOptions.OutputSeconds).IsTrue();
+    }
+
+    [Test]
+    public async Task ToEstimateOptions_DefaultValues_CreatesValidOptions()
+    {
+        var cliOptions = new CliOptions();
+
+        var estimateOptions = cliOptions.ToEstimateOptions();
+
+        await Assert.That(estimateOptions).IsNotNull();
+        await Assert.That(estimateOptions.Path).IsEqualTo(".");
+        await Assert.That(estimateOptions.Percentile).IsEqualTo(50);
+        await Assert.That(estimateOptions.OutputSeconds).IsFalse();
+    }
+
+    #endregion
 }

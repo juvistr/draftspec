@@ -22,6 +22,12 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns:
+          - "*"
     labels:
       - "dependencies"
-      - "github-actions"
+      - "ci-cd"
+      - "security"

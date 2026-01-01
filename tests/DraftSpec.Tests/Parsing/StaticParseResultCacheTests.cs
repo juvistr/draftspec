@@ -216,6 +216,72 @@ public class StaticParseResultCacheTests
     }
 
     [Test]
+    public async Task TryGetCachedAsync_ReturnsFalse_WhenMetadataCorrupted()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "corrupted-meta.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var result = new StaticParseResult { Specs = [], Warnings = [], IsComplete = true };
+        await _cache.CacheAsync(sourceFile, [sourceFile], result);
+
+        // Corrupt the metadata file
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "parsing");
+        var metaFiles = Directory.GetFiles(cacheDir, "*.meta.json");
+        await File.WriteAllTextAsync(metaFiles[0], "{ invalid json }}}");
+
+        // Act
+        var (success, _) = await _cache.TryGetCachedAsync(sourceFile, [sourceFile]);
+
+        // Assert - should miss because metadata can't be parsed
+        await Assert.That(success).IsFalse();
+    }
+
+    [Test]
+    public async Task TryGetCachedAsync_ReturnsFalse_WhenResultFileMissing()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "missing-result.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var result = new StaticParseResult { Specs = [], Warnings = [], IsComplete = true };
+        await _cache.CacheAsync(sourceFile, [sourceFile], result);
+
+        // Delete the result file but keep metadata
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "parsing");
+        var resultFiles = Directory.GetFiles(cacheDir, "*.result.json");
+        File.Delete(resultFiles[0]);
+
+        // Act
+        var (success, _) = await _cache.TryGetCachedAsync(sourceFile, [sourceFile]);
+
+        // Assert - should miss because result file doesn't exist
+        await Assert.That(success).IsFalse();
+    }
+
+    [Test]
+    public async Task TryGetCachedAsync_ReturnsFalse_WhenResultCorrupted()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "corrupted-result.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var result = new StaticParseResult { Specs = [], Warnings = [], IsComplete = true };
+        await _cache.CacheAsync(sourceFile, [sourceFile], result);
+
+        // Corrupt the result file
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "parsing");
+        var resultFiles = Directory.GetFiles(cacheDir, "*.result.json");
+        await File.WriteAllTextAsync(resultFiles[0], "{ not valid json");
+
+        // Act
+        var (success, _) = await _cache.TryGetCachedAsync(sourceFile, [sourceFile]);
+
+        // Assert - should miss because result can't be parsed
+        await Assert.That(success).IsFalse();
+    }
+
+    [Test]
     public async Task CacheAsync_PreservesSpecDetails()
     {
         // Arrange

@@ -1,6 +1,8 @@
 <Project>
     <PropertyGroup>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <!-- Enable NuGet package lock files for supply chain security -->
+        <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <!-- Enable SDK analyzers in CI builds -->

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using DraftSpec.Configuration;
+using DraftSpec.Execution;
 using DraftSpec.Middleware;
 using DraftSpec.Plugins;
 using DraftSpec.Snapshots;
@@ -15,7 +16,7 @@ public class SpecRunner : ISpecRunner
     private readonly IReadOnlyList<ISpecMiddleware> _middleware;
     private readonly Func<SpecExecutionContext, Task<SpecResult>> _pipeline;
     private readonly DraftSpecConfiguration? _configuration;
-    private readonly int _maxDegreeOfParallelism;
+    private readonly ISpecExecutionStrategy _executionStrategy;
     private readonly IReadOnlyList<IReporter> _reporters;
     private readonly bool _bail;
     private volatile bool _bailTriggered;
@@ -23,7 +24,7 @@ public class SpecRunner : ISpecRunner
     /// <summary>
     /// Create a SpecRunner with no middleware (default behavior).
     /// </summary>
-    public SpecRunner() : this([], null, 0, false)
+    public SpecRunner() : this([], null, SequentialExecutionStrategy.Instance, false)
     {
     }
 
@@ -39,10 +40,32 @@ public class SpecRunner : ISpecRunner
         DraftSpecConfiguration? configuration = null,
         int maxDegreeOfParallelism = 0,
         bool bail = false)
+        : this(
+            middleware,
+            configuration,
+            maxDegreeOfParallelism > 1
+                ? new ParallelExecutionStrategy(maxDegreeOfParallelism)
+                : SequentialExecutionStrategy.Instance,
+            bail)
+    {
+    }
+
+    /// <summary>
+    /// Create a SpecRunner with the specified execution strategy.
+    /// </summary>
+    /// <param name="middleware">Middleware executed in order (first wraps last)</param>
+    /// <param name="configuration">Optional configuration for reporters and formatters</param>
+    /// <param name="executionStrategy">Strategy for executing specs</param>
+    /// <param name="bail">Stop execution after first failure</param>
+    public SpecRunner(
+        IEnumerable<ISpecMiddleware> middleware,
+        DraftSpecConfiguration? configuration,
+        ISpecExecutionStrategy executionStrategy,
+        bool bail = false)
     {
         _middleware = middleware.ToList();
         _configuration = configuration;
-        _maxDegreeOfParallelism = maxDegreeOfParallelism;
+        _executionStrategy = executionStrategy;
         _bail = bail;
         _reporters = configuration?.Reporters.All.ToList() ?? [];
         _pipeline = BuildPipeline();
@@ -193,11 +216,25 @@ public class SpecRunner : ISpecRunner
 
         try
         {
-            // Run specs in this context (parallel or sequential)
-            if (_maxDegreeOfParallelism > 1 && context.Specs.Count > 1)
-                await RunSpecsParallelAsync(context, contextPath, results, hasFocused, cancellationToken);
-            else
-                await RunSpecsSequentialAsync(context, contextPath, results, hasFocused, cancellationToken);
+            // Take a snapshot of the context path for this batch of specs
+            var pathSnapshot = contextPath.ToArray();
+
+            // Run specs in this context using the configured execution strategy
+            var strategyContext = new SpecExecutionStrategyContext
+            {
+                Specs = context.Specs,
+                Context = context,
+                ContextPath = pathSnapshot,
+                Results = results,
+                HasFocused = hasFocused,
+                RunSpec = RunSpecAsync,
+                NotifyCompleted = NotifySpecCompletedAsync,
+                NotifyBatchCompleted = NotifySpecsBatchCompletedAsync,
+                IsBailTriggered = () => _bailTriggered,
+                SignalBail = () => _bailTriggered = true,
+                BailEnabled = _bail
+            };
+            await _executionStrategy.ExecuteAsync(strategyContext, cancellationToken);
 
             // Recurse into children (always sequential to maintain context isolation)
             foreach (var child in context.Children)
@@ -225,117 +262,6 @@ public class SpecRunner : ISpecRunner
             if (context.AfterAll != null)
                 await context.AfterAll();
         }
-    }
-
-    private async Task RunSpecsSequentialAsync(
-        SpecContext context,
-        List<string> contextPath,
-        List<SpecResult> results,
-        bool hasFocused,
-        CancellationToken cancellationToken)
-    {
-        // Take a snapshot of the context path for this batch of specs
-        // This avoids repeated ToArray() calls for each spec in the same context
-        var pathSnapshot = contextPath.ToArray();
-
-        foreach (var spec in context.Specs)
-        {
-            // Check for cancellation
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // If bail triggered, skip remaining specs
-            if (_bailTriggered)
-            {
-                var skippedResult = new SpecResult(spec, SpecStatus.Skipped, pathSnapshot);
-                results.Add(skippedResult);
-                await NotifySpecCompletedAsync(skippedResult);
-                continue;
-            }
-
-            var result = await RunSpecAsync(spec, context, pathSnapshot, hasFocused);
-            results.Add(result);
-            await NotifySpecCompletedAsync(result);
-
-            // Check if we should bail
-            if (_bail && result.Status == SpecStatus.Failed)
-            {
-                _bailTriggered = true;
-            }
-        }
-    }
-
-    private async Task RunSpecsParallelAsync(
-        SpecContext context,
-        List<string> contextPath,
-        List<SpecResult> results,
-        bool hasFocused,
-        CancellationToken cancellationToken)
-    {
-        // Take a snapshot of the context path for this batch of specs
-        var pathSnapshot = contextPath.ToArray();
-
-        // Create indexed list to preserve order
-        var indexedSpecs = context.Specs.Select((spec, index) => (spec, index)).ToList();
-        var resultArray = new SpecResult[indexedSpecs.Count];
-        var processedFlags = new bool[indexedSpecs.Count];
-
-        // Link external cancellation token with bail cancellation
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-        var options = new ParallelOptions
-        {
-            MaxDegreeOfParallelism = _maxDegreeOfParallelism,
-            CancellationToken = cts.Token
-        };
-
-        try
-        {
-            await Parallel.ForEachAsync(indexedSpecs, options, async (item, ct) =>
-            {
-                var (spec, index) = item;
-
-                // Check if bail was triggered before starting
-                if (_bailTriggered)
-                {
-                    resultArray[index] = new SpecResult(spec, SpecStatus.Skipped, pathSnapshot);
-                    processedFlags[index] = true;
-                    return;
-                }
-
-                var result = await RunSpecAsync(spec, context, pathSnapshot, hasFocused);
-                resultArray[index] = result;
-                processedFlags[index] = true;
-
-                // Check if we should bail
-                if (_bail && result.Status == SpecStatus.Failed)
-                {
-                    _bailTriggered = true;
-                    cts.Cancel();
-                }
-            });
-        }
-        catch (OperationCanceledException) when (_bailTriggered || cancellationToken.IsCancellationRequested)
-        {
-            // Expected when bail is triggered or external cancellation requested
-        }
-
-        // Rethrow if this was external cancellation (not bail)
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Fill in any specs that weren't processed due to cancellation
-        for (var i = 0; i < resultArray.Length; i++)
-        {
-            if (!processedFlags[i])
-            {
-                resultArray[i] = new SpecResult(indexedSpecs[i].spec, SpecStatus.Skipped, pathSnapshot);
-            }
-        }
-
-        // Add results in original order
-        results.AddRange(resultArray);
-
-        // Notify reporters in batch (parallel notification to multiple reporters)
-        await NotifySpecsBatchCompletedAsync(resultArray);
     }
 
     private async Task<SpecResult> RunSpecAsync(

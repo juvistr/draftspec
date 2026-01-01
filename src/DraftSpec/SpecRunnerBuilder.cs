@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using DraftSpec.Configuration;
 using DraftSpec.Coverage;
+using DraftSpec.Execution;
 using DraftSpec.Middleware;
 
 namespace DraftSpec;
@@ -18,6 +19,7 @@ public class SpecRunnerBuilder
     private readonly List<ISpecMiddleware> _middleware = [];
     private DraftSpecConfiguration? _configuration;
     private int _maxDegreeOfParallelism;
+    private ISpecExecutionStrategy? _executionStrategy;
     private bool _bail;
     private ICoverageTracker? _coverageTracker;
     private CoverageIndex? _coverageIndex;
@@ -227,6 +229,22 @@ public class SpecRunnerBuilder
         _maxDegreeOfParallelism = maxDegreeOfParallelism <= 0
             ? Environment.ProcessorCount
             : maxDegreeOfParallelism;
+        _executionStrategy = null; // Clear explicit strategy, use parallelism config
+        return this;
+    }
+
+    /// <summary>
+    /// Set a custom execution strategy.
+    /// </summary>
+    /// <param name="strategy">The execution strategy to use</param>
+    /// <remarks>
+    /// This overrides any parallelism configuration set via WithParallelExecution.
+    /// Use this when you need custom execution behavior beyond sequential or parallel.
+    /// </remarks>
+    public SpecRunnerBuilder WithExecutionStrategy(ISpecExecutionStrategy strategy)
+    {
+        _executionStrategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
+        _maxDegreeOfParallelism = 0; // Clear parallelism config
         return this;
     }
 
@@ -307,6 +325,11 @@ public class SpecRunnerBuilder
             middleware.Insert(0, new CoverageMiddleware(_coverageTracker, _coverageIndex));
         }
 
-        return new SpecRunner(middleware, _configuration, _maxDegreeOfParallelism, _bail);
+        // Determine execution strategy
+        var strategy = _executionStrategy ?? (_maxDegreeOfParallelism > 1
+            ? new ParallelExecutionStrategy(_maxDegreeOfParallelism)
+            : SequentialExecutionStrategy.Instance);
+
+        return new SpecRunner(middleware, _configuration, strategy, _bail);
     }
 }

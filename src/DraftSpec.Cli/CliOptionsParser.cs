@@ -449,11 +449,16 @@ public static class CliOptionsParser
             // For 'new' command, second arg is the spec name
             if (options.Command == "new")
                 options.SpecName = positional[1];
+            // For 'cache' command, second arg is the subcommand (stats, clear)
+            else if (options.Command == "cache")
+                options.CacheSubcommand = positional[1].ToLowerInvariant();
             else
                 options.Path = ParsePathWithLineNumbers(positional[1], options);
         }
 
         if (positional.Count > 2 && options.Command == "new")
+            options.Path = positional[2];
+        if (positional.Count > 2 && options.Command == "cache")
             options.Path = positional[2];
 
         // Cross-validate partition options: both must be specified together

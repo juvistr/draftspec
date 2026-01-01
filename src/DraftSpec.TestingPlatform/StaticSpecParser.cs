@@ -14,6 +14,7 @@ namespace DraftSpec.TestingPlatform;
 public sealed partial class StaticSpecParser
 {
     private readonly string _baseDirectory;
+    private readonly StaticParseResultCache? _cache;
 
     /// <summary>
     /// Regex to match #load directives for file includes.
@@ -25,9 +26,11 @@ public sealed partial class StaticSpecParser
     /// Creates a new static spec parser.
     /// </summary>
     /// <param name="baseDirectory">Base directory for resolving relative paths.</param>
-    public StaticSpecParser(string baseDirectory)
+    /// <param name="useCache">Whether to use disk-based caching for parse results.</param>
+    public StaticSpecParser(string baseDirectory, bool useCache = false)
     {
         _baseDirectory = baseDirectory;
+        _cache = useCache ? new StaticParseResultCache(baseDirectory) : null;
     }
 
     /// <summary>
@@ -54,8 +57,22 @@ public sealed partial class StaticSpecParser
 
         try
         {
-            // Get combined source with #load files inlined
-            var combinedSource = await GetCombinedSourceAsync(absolutePath, cancellationToken);
+            // Resolve all source files (main + #load dependencies)
+            var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var sourceFiles = new List<string>();
+            var codeBuilder = new StringBuilder();
+            await ProcessFileAsync(absolutePath, processedFiles, sourceFiles, codeBuilder, cancellationToken);
+            var combinedSource = codeBuilder.ToString();
+
+            // Try cache first
+            if (_cache != null)
+            {
+                var (hit, cached) = await _cache.TryGetCachedAsync(absolutePath, sourceFiles, cancellationToken);
+                if (hit && cached != null)
+                {
+                    return cached;
+                }
+            }
 
             // Parse the syntax tree (without compilation)
             var syntaxTree = CSharpSyntaxTree.ParseText(
@@ -67,12 +84,20 @@ public sealed partial class StaticSpecParser
             var walker = new SpecSyntaxWalker();
             walker.Visit(syntaxTree.GetRoot(cancellationToken));
 
-            return new StaticParseResult
+            var result = new StaticParseResult
             {
                 Specs = walker.Specs,
                 Warnings = walker.Warnings,
                 IsComplete = walker.IsComplete
             };
+
+            // Cache the result
+            if (_cache != null)
+            {
+                await _cache.CacheAsync(absolutePath, sourceFiles, result, cancellationToken);
+            }
+
+            return result;
         }
         catch (Exception ex)
         {
@@ -86,26 +111,17 @@ public sealed partial class StaticSpecParser
     }
 
     /// <summary>
-    /// Gets the combined source with #load files inlined.
-    /// </summary>
-    private async Task<string> GetCombinedSourceAsync(
-        string absolutePath,
-        CancellationToken cancellationToken)
-    {
-        var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var codeBuilder = new StringBuilder();
-
-        await ProcessFileAsync(absolutePath, processedFiles, codeBuilder, cancellationToken);
-
-        return codeBuilder.ToString();
-    }
-
-    /// <summary>
     /// Recursively processes a CSX file and its #load dependencies.
     /// </summary>
+    /// <param name="filePath">Path to the file to process.</param>
+    /// <param name="processedFiles">Set of already processed files to prevent circular dependencies.</param>
+    /// <param name="sourceFiles">List to populate with all source file paths in processing order.</param>
+    /// <param name="codeBuilder">StringBuilder to accumulate the combined source code.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     private async Task ProcessFileAsync(
         string filePath,
         HashSet<string> processedFiles,
+        List<string> sourceFiles,
         StringBuilder codeBuilder,
         CancellationToken cancellationToken)
     {
@@ -116,6 +132,9 @@ public sealed partial class StaticSpecParser
         {
             return;
         }
+
+        // Track this source file
+        sourceFiles.Add(absolutePath);
 
         string content;
         try
@@ -138,7 +157,7 @@ public sealed partial class StaticSpecParser
             var loadAbsolutePath = Path.GetFullPath(loadPath, fileDirectory);
 
             // Recursively process the loaded file
-            await ProcessFileAsync(loadAbsolutePath, processedFiles, codeBuilder, cancellationToken);
+            await ProcessFileAsync(loadAbsolutePath, processedFiles, sourceFiles, codeBuilder, cancellationToken);
         }
 
         // Remove #load and #r directives from code (they're not valid in parsed source)

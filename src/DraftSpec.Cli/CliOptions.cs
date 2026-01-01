@@ -271,6 +271,14 @@ public class CliOptions
     /// </summary>
     public bool OutputSeconds { get; set; }
 
+    // Cache command options
+
+    /// <summary>
+    /// Cache subcommand: stats, clear.
+    /// Used with cache command.
+    /// </summary>
+    public string CacheSubcommand { get; set; } = "stats";
+
     /// <summary>
     /// Apply default values from a project configuration file.
     /// Only applies values that weren't explicitly set via CLI.
@@ -446,6 +454,15 @@ public class CliOptions
         Path = Path,
         Percentile = Percentile,
         OutputSeconds = OutputSeconds
+    };
+
+    /// <summary>
+    /// Converts to CacheOptions for the cache command.
+    /// </summary>
+    public CacheOptions ToCacheOptions() => new()
+    {
+        Subcommand = CacheSubcommand,
+        Path = Path
     };
 
     #endregion

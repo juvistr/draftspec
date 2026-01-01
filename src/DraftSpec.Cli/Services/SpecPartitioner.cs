@@ -63,7 +63,7 @@ public class SpecPartitioner : ISpecPartitioner
         CancellationToken ct)
     {
         // Parse each file to get spec count
-        var parser = new StaticSpecParser(projectPath);
+        var parser = new StaticSpecParser(projectPath, useCache: true);
         var fileSpecCounts = new List<(string File, int Count)>();
 
         foreach (var file in sortedFiles)

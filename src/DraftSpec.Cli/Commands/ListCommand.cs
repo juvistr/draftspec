@@ -45,7 +45,7 @@ public class ListCommand : ICommand<ListOptions>
         }
 
         // 3. Use static parser to discover specs (no execution)
-        var parser = new StaticSpecParser(projectPath);
+        var parser = new StaticSpecParser(projectPath, useCache: true);
         var allSpecs = new List<DiscoveredSpec>();
         var allErrors = new List<DiscoveryError>();
 

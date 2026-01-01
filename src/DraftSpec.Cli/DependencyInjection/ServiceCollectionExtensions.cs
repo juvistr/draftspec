@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<SchemaCommand>();
         services.AddTransient<FlakyCommand>();
         services.AddTransient<EstimateCommand>();
+        services.AddTransient<CacheCommand>();
 
         // Pipeline
         services.AddSingleton<IConfigApplier, ConfigApplier>();
@@ -112,6 +113,11 @@ public static class ServiceCollectionExtensions
                 "estimate",
                 () => sp.GetRequiredService<EstimateCommand>(),
                 o => o.ToEstimateOptions());
+
+            registry.Register<CacheCommand, CacheOptions>(
+                "cache",
+                () => sp.GetRequiredService<CacheCommand>(),
+                o => o.ToCacheOptions());
 
             return registry;
         });

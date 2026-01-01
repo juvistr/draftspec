@@ -55,7 +55,7 @@ public class ValidateCommand : ICommand<ValidateOptions>
         if (!options.Quiet)
             _console.WriteLine("Validating spec structure...\n");
 
-        var parser = new StaticSpecParser(projectPath);
+        var parser = new StaticSpecParser(projectPath, useCache: true);
         var results = new List<FileValidationResult>();
         var totalSpecs = 0;
         var totalErrors = 0;

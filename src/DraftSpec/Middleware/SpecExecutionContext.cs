@@ -38,20 +38,20 @@ public class SpecExecutionContext
     /// <summary>
     /// Backing field for lazy-initialized Items dictionary.
     /// </summary>
-    private ConcurrentDictionary<string, object>? _items;
+    private ConcurrentDictionary<object, object>? _items;
 
     /// <summary>
     /// Thread-safe mutable bag for middleware to share state.
-    /// Key: middleware type name, Value: arbitrary data.
+    /// Uses object keys to enable type-safe extension methods.
     /// Uses ConcurrentDictionary for safe parallel access.
     /// Lazy-initialized to avoid allocation when not used.
     /// </summary>
-    public ConcurrentDictionary<string, object> Items
+    public ConcurrentDictionary<object, object> Items
     {
         get
         {
             if (_items is not null) return _items;
-            Interlocked.CompareExchange(ref _items, new ConcurrentDictionary<string, object>(), null);
+            Interlocked.CompareExchange(ref _items, new ConcurrentDictionary<object, object>(), null);
             return _items;
         }
     }

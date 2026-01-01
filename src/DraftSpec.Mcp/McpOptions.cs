@@ -16,4 +16,10 @@ public class McpOptions
     /// Default: 60 (1 per second average).
     /// </summary>
     public int MaxExecutionsPerMinute { get; init; } = 60;
+
+    /// <summary>
+    /// Maximum size in bytes for spec content input.
+    /// Default: 1MB. Prevents memory exhaustion from very large inputs.
+    /// </summary>
+    public int MaxSpecContentSizeBytes { get; init; } = 1_000_000;
 }

@@ -33,5 +33,8 @@ public enum ErrorCategory
     Configuration,
 
     /// <summary>Request rejected due to rate limiting.</summary>
-    RateLimited
+    RateLimited,
+
+    /// <summary>Input validation failed (e.g., content size limit exceeded).</summary>
+    Validation
 }

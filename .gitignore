@@ -40,6 +40,9 @@ bld/
 *.coveragexml
 coverage.cobertura.xml
 
+# Mutation testing
+StrykerOutput/
+
 # Benchmark results
 BenchmarkDotNet.Artifacts/
 

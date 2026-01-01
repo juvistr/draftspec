@@ -1,0 +1,33 @@
+{
+  "stryker-config": {
+    "solution": "DraftSpec.sln",
+    "test-projects": ["tests/DraftSpec.Tests/DraftSpec.Tests.csproj"],
+    "reporters": ["html", "json", "progress", "dashboard"],
+    "report-file-name": "mutation-report",
+    "dashboard-api-key": "${STRYKER_DASHBOARD_API_KEY}",
+    "project": "github.com/juvistr/draftspec",
+    "threshold-high": 80,
+    "threshold-low": 60,
+    "threshold-break": 50,
+    "concurrency": 4,
+    "timeout-ms": 30000,
+    "log-level": "info",
+    "mutate": [
+      "src/DraftSpec/**/*.cs",
+      "src/DraftSpec.Cli/**/*.cs",
+      "src/DraftSpec.Scripting/**/*.cs",
+      "src/DraftSpec.TestingPlatform/**/*.cs",
+      "src/DraftSpec.Mcp/**/*.cs",
+      "src/DraftSpec.Formatters.Abstractions/**/*.cs",
+      "src/DraftSpec.Formatters.Console/**/*.cs",
+      "src/DraftSpec.Formatters.Html/**/*.cs",
+      "src/DraftSpec.Formatters.Markdown/**/*.cs",
+      "src/DraftSpec.Formatters.JUnit/**/*.cs",
+      "!**/*AssemblyInfo.cs",
+      "!**/obj/**/*.cs"
+    ],
+    "ignore-mutations": [
+      "string"
+    ]
+  }
+}

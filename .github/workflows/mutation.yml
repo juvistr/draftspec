@@ -1,0 +1,99 @@
+name: Mutation Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: 'Project to mutate (or "all" for full solution)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - DraftSpec
+          - DraftSpec.Cli
+          - DraftSpec.Scripting
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  mutate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@2016bd2012dba4e32de620c46fe006a3ac9f0602 # v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore --locked-mode
+
+      - name: Install Stryker
+        run: dotnet tool restore
+
+      - name: Run mutation testing
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.project }}" = "all" ] || [ -z "${{ github.event.inputs.project }}" ]; then
+            dotnet stryker --config-file stryker-config.json
+          else
+            dotnet stryker --config-file stryker-config.json --project src/${{ github.event.inputs.project }}/${{ github.event.inputs.project }}.csproj
+          fi
+
+      - name: Upload mutation report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: mutation-report
+          path: |
+            StrykerOutput/**/reports/
+          retention-days: 30
+
+      - name: Upload mutation JSON
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: mutation-json
+          path: |
+            StrykerOutput/**/mutation-report.json
+          retention-days: 90
+
+      - name: Post summary
+        if: always()
+        run: |
+          if [ -f StrykerOutput/*/reports/mutation-report.json ]; then
+            SCORE=$(jq '.mutationScore' StrykerOutput/*/reports/mutation-report.json 2>/dev/null || echo "N/A")
+            KILLED=$(jq '.killed' StrykerOutput/*/reports/mutation-report.json 2>/dev/null || echo "N/A")
+            SURVIVED=$(jq '.survived' StrykerOutput/*/reports/mutation-report.json 2>/dev/null || echo "N/A")
+            TIMEOUT=$(jq '.timeout' StrykerOutput/*/reports/mutation-report.json 2>/dev/null || echo "N/A")
+
+            echo "## Mutation Testing Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Mutation Score | ${SCORE}% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Killed | ${KILLED} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Survived | ${SURVIVED} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Timeout | ${TIMEOUT} |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "[View full report on Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/juvistr/draftspec/main)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Mutation Testing Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Report not found. Check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
+          fi

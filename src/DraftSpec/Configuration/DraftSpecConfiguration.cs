@@ -11,8 +11,8 @@ namespace DraftSpec.Configuration;
 public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
 {
     private readonly PluginContext _pluginContext;
-    private bool _initialized;
-    private bool _disposed;
+    private int _initialized;
+    private int _disposed;
 
     /// <summary>
     /// Create a new DraftSpec configuration instance.
@@ -134,8 +134,8 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// </summary>
     internal void Initialize()
     {
-        if (_initialized) return;
-        _initialized = true;
+        if (Interlocked.CompareExchange(ref _initialized, 1, 0) != 0)
+            return;
 
         // Initialize all plugins
         foreach (var plugin in Plugins.All) plugin.Initialize(_pluginContext);
@@ -164,8 +164,8 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.CompareExchange(ref _disposed, 1, 0) != 0)
+            return;
         Plugins.Dispose();
         GC.SuppressFinalize(this);
     }

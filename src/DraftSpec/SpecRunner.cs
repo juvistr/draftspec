@@ -433,6 +433,9 @@ public class SpecRunner : ISpecRunner
             ctx.ContextPath,
             ctx.Spec.Description);
 
+        // Set let scope for let/get fixtures
+        LetScope.Current = new LetScope(ctx.Context);
+
         try
         {
             await ctx.Spec.Body!.Invoke();
@@ -447,6 +450,7 @@ public class SpecRunner : ISpecRunner
         }
         finally
         {
+            LetScope.Current = null;
             SnapshotContext.Current = null;
         }
 

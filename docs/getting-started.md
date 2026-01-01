@@ -223,5 +223,6 @@ Rider has built-in support for CSX files. The `omnisharp.json` configuration hel
 
 - **[DSL Reference](dsl-reference.md)** - Full API for describe, it, hooks, and more
 - **[Assertions](assertions.md)** - Complete expect() API
+- **[Best Practices](best-practices.md)** - Patterns for effective specs
 - **[CLI Reference](cli.md)** - All command-line options
 - **[Configuration](configuration.md)** - Middleware, plugins, and customization

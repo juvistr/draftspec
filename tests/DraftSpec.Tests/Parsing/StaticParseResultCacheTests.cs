@@ -134,6 +134,45 @@ public class StaticParseResultCacheTests
     }
 
     [Test]
+    public async Task TryGetCachedAsync_DeletesStaleCacheFiles_WhenVersionMismatch()
+    {
+        // Arrange - cache a file, then modify the metadata to have wrong version
+        // This triggers IsCacheValid failure which calls DeleteCacheEntry
+        var sourceFile = Path.Combine(_testDir, "stale-delete.csx");
+        await File.WriteAllTextAsync(sourceFile, "describe(\"v1\", () => {});");
+
+        var result = new StaticParseResult { Specs = [], Warnings = [], IsComplete = true };
+        await _cache.CacheAsync(sourceFile, [sourceFile], result);
+
+        // Verify cache files exist
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "parsing");
+        var metaFilesBefore = Directory.GetFiles(cacheDir, "*.meta.json");
+        var resultFilesBefore = Directory.GetFiles(cacheDir, "*.result.json");
+        await Assert.That(metaFilesBefore.Length).IsEqualTo(1);
+        await Assert.That(resultFilesBefore.Length).IsEqualTo(1);
+
+        // Modify the metadata to have a wrong version (simulates DraftSpec upgrade)
+        var metaFile = metaFilesBefore[0];
+        var metaContent = await File.ReadAllTextAsync(metaFile);
+        // Replace the version with a wrong one
+        var wrongVersionMeta = System.Text.RegularExpressions.Regex.Replace(
+            metaContent,
+            @"""draftSpecVersion""\s*:\s*""[^""]+""",
+            @"""draftSpecVersion"":""0.0.0-wrong""");
+        await File.WriteAllTextAsync(metaFile, wrongVersionMeta);
+
+        // Act - metadata exists with same key, but version mismatch triggers DeleteCacheEntry
+        var (success, _) = await _cache.TryGetCachedAsync(sourceFile, [sourceFile]);
+
+        // Assert - cache miss and stale files should be deleted
+        await Assert.That(success).IsFalse();
+        var metaFilesAfter = Directory.GetFiles(cacheDir, "*.meta.json");
+        var resultFilesAfter = Directory.GetFiles(cacheDir, "*.result.json");
+        await Assert.That(metaFilesAfter.Length).IsEqualTo(0);
+        await Assert.That(resultFilesAfter.Length).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task GetStatistics_ReturnsCorrectCounts()
     {
         // Arrange

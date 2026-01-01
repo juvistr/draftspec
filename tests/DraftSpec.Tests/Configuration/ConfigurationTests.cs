@@ -205,6 +205,41 @@ public class ConfigurationTests
     }
 
     [Test]
+    public async Task Configuration_Initialize_ConcurrentCalls_OnlyInitializesOnce()
+    {
+        var config = new DraftSpecConfiguration();
+        var plugin = new CountingPlugin();
+        config.UsePlugin(plugin);
+
+        // Call Initialize concurrently from multiple threads
+        var tasks = Enumerable.Range(0, 10)
+            .Select(_ => Task.Run(() => config.Initialize()))
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+
+        await Assert.That(plugin.InitializeCount).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task Configuration_Dispose_ConcurrentCalls_OnlyDisposesOnce()
+    {
+        var config = new DraftSpecConfiguration();
+        var plugin = new CountingPlugin();
+        config.UsePlugin(plugin);
+        config.Initialize();
+
+        // Call Dispose concurrently from multiple threads
+        var tasks = Enumerable.Range(0, 10)
+            .Select(_ => Task.Run(() => config.Dispose()))
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+
+        await Assert.That(plugin.DisposeCount).IsEqualTo(1);
+    }
+
+    [Test]
     public async Task Configuration_InitializeMiddleware_RegistersMiddlewareFromPlugins()
     {
         var config = new DraftSpecConfiguration();
@@ -331,6 +366,27 @@ public class ConfigurationTests
         {
             RegisterReportersCalled = true;
             registry.Register(new TestReporter("test-reporter"));
+        }
+    }
+
+    private class CountingPlugin : IPlugin
+    {
+        public string Name => "counting";
+        public string Version => "1.0.0";
+        private int _initializeCount;
+        private int _disposeCount;
+
+        public int InitializeCount => _initializeCount;
+        public int DisposeCount => _disposeCount;
+
+        public void Initialize(IPluginContext context)
+        {
+            Interlocked.Increment(ref _initializeCount);
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Increment(ref _disposeCount);
         }
     }
 

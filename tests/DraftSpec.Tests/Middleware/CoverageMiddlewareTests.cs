@@ -76,10 +76,10 @@ public class CoverageMiddlewareTests
             return new SpecResult(ctx.Spec, SpecStatus.Passed, ctx.ContextPath);
         });
 
-        // Assert
-        await Assert.That(context.Items.ContainsKey(CoverageMiddleware.CoverageDataKey)).IsTrue();
-        var coverageData = context.Items[CoverageMiddleware.CoverageDataKey] as SpecCoverageData;
+        // Assert - use type-safe extension method
+        var coverageData = context.GetCoverageData();
         await Assert.That(coverageData).IsNotNull();
+        await Assert.That(coverageData!.SpecId).IsEqualTo("test spec");
     }
 
     [Test]

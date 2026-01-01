@@ -18,11 +18,6 @@ public class CoverageMiddleware : ISpecMiddleware
     private readonly CoverageIndex? _index;
 
     /// <summary>
-    /// Key used to store coverage data in SpecExecutionContext.Items.
-    /// </summary>
-    public const string CoverageDataKey = "CoverageMiddleware.CoverageData";
-
-    /// <summary>
     /// Create coverage middleware with a tracker.
     /// </summary>
     /// <param name="tracker">Coverage tracker implementation</param>
@@ -54,7 +49,7 @@ public class CoverageMiddleware : ISpecMiddleware
         var coverageData = _tracker.GetCoverageSince(snapshot, specId);
 
         // Store in context for potential use by other middleware
-        context.Items[CoverageDataKey] = coverageData;
+        context.SetCoverageData(coverageData);
 
         // Update the coverage index if provided
         _index?.AddSpecCoverage(coverageData);

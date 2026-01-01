@@ -643,5 +643,73 @@ public class ConfigLoaderTests
         await Assert.That(errors.Count).IsGreaterThanOrEqualTo(4);
     }
 
+    [Test]
+    public async Task Validate_RequireSignedPlugins_WithoutTrustedTokens_ReturnsError()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Plugins = new PluginsConfig
+            {
+                RequireSignedPlugins = true,
+                TrustedPublicKeyTokens = null
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).Contains("plugins.trustedPublicKeyTokens is required when plugins.requireSignedPlugins is true");
+    }
+
+    [Test]
+    public async Task Validate_RequireSignedPlugins_WithEmptyTrustedTokens_ReturnsError()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Plugins = new PluginsConfig
+            {
+                RequireSignedPlugins = true,
+                TrustedPublicKeyTokens = []
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).Contains("plugins.trustedPublicKeyTokens is required when plugins.requireSignedPlugins is true");
+    }
+
+    [Test]
+    public async Task Validate_RequireSignedPlugins_WithTrustedTokens_ReturnsEmpty()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Plugins = new PluginsConfig
+            {
+                RequireSignedPlugins = true,
+                TrustedPublicKeyTokens = ["b77a5c561934e089"]
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).IsEmpty();
+    }
+
+    [Test]
+    public async Task Validate_RequireSignedPlugins_False_WithoutTrustedTokens_ReturnsEmpty()
+    {
+        var config = new DraftSpecProjectConfig
+        {
+            Plugins = new PluginsConfig
+            {
+                RequireSignedPlugins = false,
+                TrustedPublicKeyTokens = null
+            }
+        };
+
+        var errors = config.Validate();
+
+        await Assert.That(errors).IsEmpty();
+    }
+
     #endregion
 }

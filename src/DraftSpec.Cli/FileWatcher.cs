@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace DraftSpec.Cli;
 
 public class FileWatcher : IFileWatcher
@@ -93,16 +95,38 @@ public class FileWatcher : IFileWatcher
     }
 
     /// <summary>
-    /// Compares two paths for equality, using case-insensitive comparison on Windows.
+    /// Compares two paths for equality, handling symlinks.
+    /// Uses case-insensitive comparison to safely detect same-file events.
     /// </summary>
     private static bool PathsAreEqual(string path1, string path2)
     {
-        // Use platform-appropriate comparison (case-insensitive on Windows)
-        var comparison = OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
+        // Normalize paths to handle common symlink patterns (e.g., /var -> /private/var on macOS)
+        var normalized1 = NormalizePath(path1);
+        var normalized2 = NormalizePath(path2);
 
-        return string.Equals(path1, path2, comparison);
+        return string.Equals(normalized1, normalized2, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Normalizes a path by resolving common system symlinks.
+    /// Excluded from coverage: platform-specific code only runs on macOS.
+    /// </summary>
+    [ExcludeFromCodeCoverage]
+    private static string NormalizePath(string path)
+    {
+        // On macOS, /var is a symlink to /private/var, /tmp to /private/tmp, etc.
+        // FileSystemWatcher events may use either form inconsistently.
+        if (OperatingSystem.IsMacOS())
+        {
+            if (path.StartsWith("/var/", StringComparison.Ordinal))
+                return "/private" + path;
+            if (path.StartsWith("/tmp/", StringComparison.Ordinal))
+                return "/private" + path;
+            if (path.StartsWith("/etc/", StringComparison.Ordinal))
+                return "/private" + path;
+        }
+
+        return path;
     }
 
     public void Dispose()

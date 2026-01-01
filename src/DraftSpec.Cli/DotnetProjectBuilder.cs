@@ -9,6 +9,7 @@ public class DotnetProjectBuilder : IProjectBuilder
     private readonly IProcessRunner _processRunner;
     private readonly IBuildCache _buildCache;
     private readonly IClock _clock;
+    private readonly Dictionary<string, DateTime> _sourceModificationCache = new(StringComparer.OrdinalIgnoreCase);
 
     public DotnetProjectBuilder(
         IFileSystem fileSystem,
@@ -52,6 +53,9 @@ public class DotnetProjectBuilder : IProjectBuilder
 
         // Update build cache on successful build
         _buildCache.UpdateCache(projectDir, _clock.UtcNow, latestSource);
+
+        // Invalidate source cache to detect new changes on next run
+        InvalidateSourceCache(projectDir);
     }
 
     public string FindOutputDirectory(string specDirectory)
@@ -77,6 +81,7 @@ public class DotnetProjectBuilder : IProjectBuilder
     public void ClearBuildCache()
     {
         _buildCache.Clear();
+        _sourceModificationCache.Clear();
     }
 
     /// <summary>
@@ -103,8 +108,26 @@ public class DotnetProjectBuilder : IProjectBuilder
 
     /// <summary>
     /// Get the latest source file modification time in the directory.
+    /// Uses a cache to avoid repeated file system scans within the same session.
     /// </summary>
     internal DateTime GetLatestSourceModification(string directory)
+    {
+        var normalizedDir = Path.GetFullPath(directory);
+
+        if (_sourceModificationCache.TryGetValue(normalizedDir, out var cached))
+        {
+            return cached;
+        }
+
+        var latest = ScanForLatestModification(normalizedDir);
+        _sourceModificationCache[normalizedDir] = latest;
+        return latest;
+    }
+
+    /// <summary>
+    /// Scan directory for latest source file modification time.
+    /// </summary>
+    private DateTime ScanForLatestModification(string directory)
     {
         var latest = DateTime.MinValue;
 
@@ -121,5 +144,15 @@ public class DotnetProjectBuilder : IProjectBuilder
         }
 
         return latest;
+    }
+
+    /// <summary>
+    /// Invalidate the source modification cache for a directory.
+    /// Called after successful build to detect new changes.
+    /// </summary>
+    internal void InvalidateSourceCache(string directory)
+    {
+        var normalizedDir = Path.GetFullPath(directory);
+        _sourceModificationCache.Remove(normalizedDir);
     }
 }

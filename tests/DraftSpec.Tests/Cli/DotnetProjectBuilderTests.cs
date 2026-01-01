@@ -212,5 +212,130 @@ public class DotnetProjectBuilderTests
     }
 
     #endregion
+
+    #region Source Modification Cache Tests
+
+    [Test]
+    public async Task GetLatestSourceModification_CachesResult()
+    {
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj", "Program.cs");
+        var originalTime = DateTime.UtcNow.AddHours(-1);
+        fileSystem.SetLastWriteTime("/project/Program.cs", originalTime);
+        fileSystem.SetLastWriteTime("/project/MyProject.csproj", originalTime);
+
+        var builder = new DotnetProjectBuilder(
+            fileSystem,
+            new MockProcessRunner(),
+            new InMemoryBuildCache(),
+            new MockClock());
+
+        // First call scans files
+        var first = builder.GetLatestSourceModification("/project");
+
+        // Modify the file time (simulating file change)
+        var newTime = DateTime.UtcNow;
+        fileSystem.SetLastWriteTime("/project/Program.cs", newTime);
+
+        // Second call returns cached value, not new time
+        var second = builder.GetLatestSourceModification("/project");
+
+        await Assert.That(first).IsEqualTo(originalTime);
+        await Assert.That(second).IsEqualTo(originalTime); // Cached, not newTime
+    }
+
+    [Test]
+    public async Task InvalidateSourceCache_RemovesCachedEntry()
+    {
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj", "Program.cs");
+        var originalTime = DateTime.UtcNow.AddHours(-1);
+        fileSystem.SetLastWriteTime("/project/Program.cs", originalTime);
+        fileSystem.SetLastWriteTime("/project/MyProject.csproj", originalTime);
+
+        var builder = new DotnetProjectBuilder(
+            fileSystem,
+            new MockProcessRunner(),
+            new InMemoryBuildCache(),
+            new MockClock());
+
+        // First call caches result
+        var first = builder.GetLatestSourceModification("/project");
+
+        // Modify file and invalidate cache
+        var newTime = DateTime.UtcNow;
+        fileSystem.SetLastWriteTime("/project/Program.cs", newTime);
+        builder.InvalidateSourceCache("/project");
+
+        // Should now return the new time
+        var second = builder.GetLatestSourceModification("/project");
+
+        await Assert.That(first).IsEqualTo(originalTime);
+        await Assert.That(second).IsEqualTo(newTime);
+    }
+
+    [Test]
+    public async Task ClearBuildCache_AlsoClearsSourceModificationCache()
+    {
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj", "Program.cs");
+        var originalTime = DateTime.UtcNow.AddHours(-1);
+        fileSystem.SetLastWriteTime("/project/Program.cs", originalTime);
+        fileSystem.SetLastWriteTime("/project/MyProject.csproj", originalTime);
+
+        var builder = new DotnetProjectBuilder(
+            fileSystem,
+            new MockProcessRunner(),
+            new InMemoryBuildCache(),
+            new MockClock());
+
+        // Cache the modification time
+        var first = builder.GetLatestSourceModification("/project");
+
+        // Modify file and clear all caches
+        var newTime = DateTime.UtcNow;
+        fileSystem.SetLastWriteTime("/project/Program.cs", newTime);
+        builder.ClearBuildCache();
+
+        // Should now return the new time
+        var second = builder.GetLatestSourceModification("/project");
+
+        await Assert.That(first).IsEqualTo(originalTime);
+        await Assert.That(second).IsEqualTo(newTime);
+    }
+
+    [Test]
+    public async Task BuildProjects_InvalidatesSourceCacheAfterBuild()
+    {
+        var now = DateTime.UtcNow;
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFilesInDirectory("/project", "MyProject.csproj", "Program.cs");
+        fileSystem.SetLastWriteTime("/project/Program.cs", now.AddHours(-1));
+        fileSystem.SetLastWriteTime("/project/MyProject.csproj", now.AddHours(-1));
+
+        var processRunner = new MockProcessRunner();
+        processRunner.AddResult(new ProcessResult("Build succeeded", "", 0));
+        processRunner.AddResult(new ProcessResult("Build succeeded", "", 0));
+
+        var buildCache = new InMemoryBuildCache();
+        var timeProvider = new MockClock { CurrentUtcNow = now };
+
+        var builder = new DotnetProjectBuilder(fileSystem, processRunner, buildCache, timeProvider);
+
+        // First build
+        builder.BuildProjects("/project");
+
+        // Simulate file modification after build
+        fileSystem.SetLastWriteTime("/project/Program.cs", now.AddMinutes(5));
+
+        // Second build should detect new changes
+        builder.BuildProjects("/project");
+
+        // Both builds should have executed
+        await Assert.That(processRunner.RunDotnetCalls).Count().IsEqualTo(2);
+    }
+
+    #endregion
 }
+
 

@@ -1,4 +1,5 @@
 using System.Reflection;
+using DraftSpec.Cli.Configuration;
 using DraftSpec.Formatters;
 
 namespace DraftSpec.Cli.DependencyInjection;
@@ -11,19 +12,26 @@ public class PluginLoader : IPluginLoader
     private readonly IPluginScanner _scanner;
     private readonly IAssemblyLoader _assemblyLoader;
     private readonly IConsole _console;
+    private readonly PluginsConfig? _pluginsConfig;
     private readonly List<PluginInfo> _discoveredPlugins = [];
 
     /// <summary>
     /// Creates a new PluginLoader with injected dependencies.
     /// </summary>
+    /// <param name="scanner">Scanner for finding plugin files.</param>
+    /// <param name="assemblyLoader">Loader for loading plugin assemblies.</param>
+    /// <param name="console">Console for logging.</param>
+    /// <param name="pluginsConfig">Optional plugin security configuration.</param>
     public PluginLoader(
         IPluginScanner scanner,
         IAssemblyLoader assemblyLoader,
-        IConsole console)
+        IConsole console,
+        PluginsConfig? pluginsConfig = null)
     {
         _scanner = scanner;
         _assemblyLoader = assemblyLoader;
         _console = console;
+        _pluginsConfig = pluginsConfig;
     }
 
     private static string GetDefaultPluginDirectory()
@@ -64,6 +72,23 @@ public class PluginLoader : IPluginLoader
 
     private IEnumerable<PluginInfo> LoadPluginsFromAssembly(string assemblyPath)
     {
+        // Verify signature if required
+        if (_pluginsConfig?.RequireSignedPlugins == true)
+        {
+            var publicKeyToken = _assemblyLoader.GetPublicKeyToken(assemblyPath);
+            if (publicKeyToken == null)
+            {
+                _console.WriteError($"Warning: Plugin {Path.GetFileName(assemblyPath)} is not signed. Skipping.");
+                yield break;
+            }
+
+            if (_pluginsConfig.TrustedPublicKeyTokens?.Contains(publicKeyToken, StringComparer.OrdinalIgnoreCase) != true)
+            {
+                _console.WriteError($"Warning: Plugin {Path.GetFileName(assemblyPath)} has untrusted signature ({publicKeyToken}). Skipping.");
+                yield break;
+            }
+        }
+
         var assembly = _assemblyLoader.LoadAssembly(assemblyPath);
         if (assembly == null)
             yield break;

@@ -1,5 +1,6 @@
 using System.Reflection;
 using DraftSpec.Cli;
+using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Formatters;
 using DraftSpec.Tests.Infrastructure.Mocks;
@@ -266,6 +267,155 @@ public class PluginLoaderTests
 
     #endregion
 
+    #region Signature Verification Tests
+
+    [Test]
+    public async Task DiscoverPlugins_WithoutConfig_LoadsAllPlugins()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        // No public key token set - unsigned
+
+        var console = new MockConsole();
+        var loader = new PluginLoader(scanner, assemblyLoader, console); // No config
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        // Should load plugin without verification
+        await Assert.That(plugins.Count).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_RequireSignedPlugins_UnsignedPlugin_Rejected()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        assemblyLoader.SetPublicKeyToken("/plugins/DraftSpec.MyPlugin.dll", null); // Unsigned
+
+        var console = new MockConsole();
+        var config = new PluginsConfig
+        {
+            RequireSignedPlugins = true,
+            TrustedPublicKeyTokens = ["abc123def456"]
+        };
+        var loader = new PluginLoader(scanner, assemblyLoader, console, config);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        await Assert.That(plugins.Count).IsEqualTo(0);
+        await Assert.That(console.Errors).Contains("not signed");
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_RequireSignedPlugins_UntrustedToken_Rejected()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        assemblyLoader.SetPublicKeyToken("/plugins/DraftSpec.MyPlugin.dll", "untrustedtoken");
+
+        var console = new MockConsole();
+        var config = new PluginsConfig
+        {
+            RequireSignedPlugins = true,
+            TrustedPublicKeyTokens = ["abc123def456"]
+        };
+        var loader = new PluginLoader(scanner, assemblyLoader, console, config);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        await Assert.That(plugins.Count).IsEqualTo(0);
+        await Assert.That(console.Errors).Contains("untrusted signature");
+        await Assert.That(console.Errors).Contains("untrustedtoken");
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_RequireSignedPlugins_TrustedToken_Loaded()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        assemblyLoader.SetPublicKeyToken("/plugins/DraftSpec.MyPlugin.dll", "abc123def456");
+
+        var console = new MockConsole();
+        var config = new PluginsConfig
+        {
+            RequireSignedPlugins = true,
+            TrustedPublicKeyTokens = ["abc123def456"]
+        };
+        var loader = new PluginLoader(scanner, assemblyLoader, console, config);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        await Assert.That(plugins.Count).IsEqualTo(1);
+        await Assert.That(plugins[0].Name).IsEqualTo("testformatter");
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_RequireSignedPlugins_CaseInsensitiveTokenMatch()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        assemblyLoader.SetPublicKeyToken("/plugins/DraftSpec.MyPlugin.dll", "ABC123DEF456"); // Uppercase
+
+        var console = new MockConsole();
+        var config = new PluginsConfig
+        {
+            RequireSignedPlugins = true,
+            TrustedPublicKeyTokens = ["abc123def456"] // Lowercase
+        };
+        var loader = new PluginLoader(scanner, assemblyLoader, console, config);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        // Should match case-insensitively
+        await Assert.That(plugins.Count).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task DiscoverPlugins_RequireSignedPlugins_False_LoadsUnsignedPlugins()
+    {
+        var scanner = new MockPluginScanner();
+        scanner.AddDirectory("/plugins");
+        scanner.AddPluginFile("/plugins", "DraftSpec.MyPlugin.dll");
+
+        var assemblyLoader = new MockAssemblyLoader();
+        assemblyLoader.AddRealType("/plugins/DraftSpec.MyPlugin.dll", typeof(TestFormatterWithAttribute));
+        assemblyLoader.SetPublicKeyToken("/plugins/DraftSpec.MyPlugin.dll", null); // Unsigned
+
+        var console = new MockConsole();
+        var config = new PluginsConfig
+        {
+            RequireSignedPlugins = false // Explicitly disabled
+        };
+        var loader = new PluginLoader(scanner, assemblyLoader, console, config);
+
+        var plugins = loader.DiscoverPlugins(["/plugins"]).ToList();
+
+        // Should load without verification
+        await Assert.That(plugins.Count).IsEqualTo(1);
+    }
+
+    #endregion
+
     #region Test Types for Plugin Detection
 
     /// <summary>
@@ -338,6 +488,7 @@ public class PluginLoaderTests
     {
         private readonly Dictionary<string, List<Type>> _realTypes = [];
         private readonly Dictionary<string, Exception> _loadExceptions = [];
+        private readonly Dictionary<string, string?> _publicKeyTokens = [];
 
         /// <summary>
         /// Add a real type to be "discovered" from an assembly path.
@@ -352,6 +503,15 @@ public class PluginLoaderTests
         public void SetLoadException(string path, Exception exception)
         {
             _loadExceptions[path] = exception;
+        }
+
+        /// <summary>
+        /// Set the public key token for a given assembly path.
+        /// Pass null to simulate an unsigned assembly.
+        /// </summary>
+        public void SetPublicKeyToken(string path, string? token)
+        {
+            _publicKeyTokens[path] = token;
         }
 
         public Assembly? LoadAssembly(string path)
@@ -382,6 +542,11 @@ public class PluginLoaderTests
         public object? CreateInstance(Type type)
         {
             return Activator.CreateInstance(type);
+        }
+
+        public string? GetPublicKeyToken(string path)
+        {
+            return _publicKeyTokens.TryGetValue(path, out var token) ? token : null;
         }
     }
 

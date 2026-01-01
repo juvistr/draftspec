@@ -79,6 +79,12 @@ public class DraftSpecProjectConfig
     public CoverageConfig? Coverage { get; set; }
 
     /// <summary>
+    /// Plugin loading and security configuration.
+    /// </summary>
+    [JsonPropertyName("plugins")]
+    public PluginsConfig? Plugins { get; set; }
+
+    /// <summary>
     /// Validates the configuration values.
     /// </summary>
     /// <returns>List of validation errors, empty if valid.</returns>
@@ -107,6 +113,13 @@ public class DraftSpecProjectConfig
                 { "cobertura", "xml", "html", "json", "coverage" };
             foreach (var format in Coverage.Formats.Where(f => !validFormats.Contains(f)))
                 errors.Add($"Unknown coverage format: {format}");
+        }
+
+        // Validate plugins configuration
+        if (Plugins?.RequireSignedPlugins == true &&
+            (Plugins.TrustedPublicKeyTokens == null || Plugins.TrustedPublicKeyTokens.Count == 0))
+        {
+            errors.Add("plugins.trustedPublicKeyTokens is required when plugins.requireSignedPlugins is true");
         }
 
         return errors;

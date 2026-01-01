@@ -19,4 +19,20 @@ public class IsolatedAssemblyLoader : IAssemblyLoader
 
     public object? CreateInstance(Type type)
         => Activator.CreateInstance(type);
+
+    public string? GetPublicKeyToken(string path)
+    {
+        try
+        {
+            var assemblyName = AssemblyName.GetAssemblyName(path);
+            var publicKeyToken = assemblyName.GetPublicKeyToken();
+            if (publicKeyToken == null || publicKeyToken.Length == 0)
+                return null;
+            return Convert.ToHexStringLower(publicKeyToken);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }

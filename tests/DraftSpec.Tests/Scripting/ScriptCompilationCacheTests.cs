@@ -729,6 +729,136 @@ public class ScriptCompilationCacheTests
         await Assert.That(result).IsTrue();
     }
 
+    #region IsCacheValidWithHashes Tests
+
+    [Test]
+    public async Task IsCacheValidWithHashes_ReturnsTrue_WhenHashesMatch()
+    {
+        // Arrange - cache a real script to get valid metadata with correct hashes
+        var sourceFile = Path.Combine(_testDir, "hash-valid.csx");
+        var code = "var x = 1;";
+        await File.WriteAllTextAsync(sourceFile, code);
+
+        var script = CreateTestScript(code);
+        _cache.CacheScript(sourceFile, [sourceFile], code, script);
+
+        // Read the generated metadata
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "scripts");
+        var metaFile = Directory.GetFiles(cacheDir, "*.meta.json").Single();
+        var metaJson = await File.ReadAllTextAsync(metaFile);
+        var metadata = System.Text.Json.JsonSerializer.Deserialize<ScriptCompilationCache.CacheMetadata>(
+            metaJson,
+            new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+
+        // Use the same hashes from metadata (simulating pre-computed hashes)
+        var fileHashes = metadata!.SourceFileHashes;
+
+        // Act
+        var result = _cache.IsCacheValidWithHashes(metadata, fileHashes);
+
+        // Assert
+        await Assert.That(result).IsTrue();
+    }
+
+    [Test]
+    public async Task IsCacheValidWithHashes_ReturnsFalse_WhenVersionMismatch()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "hash-version-test.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var metadata = new ScriptCompilationCache.CacheMetadata
+        {
+            DraftSpecVersion = "0.0.0-wrong-version",
+            SourceFiles = [sourceFile],
+            SourceFileHashes = new Dictionary<string, string> { [sourceFile] = "somehash" }
+        };
+
+        var fileHashes = new Dictionary<string, string> { [sourceFile] = "somehash" };
+
+        // Act
+        var result = _cache.IsCacheValidWithHashes(metadata, fileHashes);
+
+        // Assert
+        await Assert.That(result).IsFalse();
+    }
+
+    [Test]
+    public async Task IsCacheValidWithHashes_ReturnsFalse_WhenFileCountMismatch()
+    {
+        // Arrange
+        var sourceFile1 = Path.Combine(_testDir, "hash-count1.csx");
+        var sourceFile2 = Path.Combine(_testDir, "hash-count2.csx");
+
+        var metadata = new ScriptCompilationCache.CacheMetadata
+        {
+            DraftSpecVersion = typeof(DraftSpec.Dsl).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            SourceFiles = [sourceFile1], // Only one file
+            SourceFileHashes = new Dictionary<string, string> { [sourceFile1] = "hash1" }
+        };
+
+        // Pass two files in hash dictionary
+        var fileHashes = new Dictionary<string, string>
+        {
+            [sourceFile1] = "hash1",
+            [sourceFile2] = "hash2"
+        };
+
+        // Act
+        var result = _cache.IsCacheValidWithHashes(metadata, fileHashes);
+
+        // Assert
+        await Assert.That(result).IsFalse();
+    }
+
+    [Test]
+    public async Task IsCacheValidWithHashes_ReturnsFalse_WhenFileNotInCachedHashes()
+    {
+        // Arrange
+        var sourceFile1 = Path.Combine(_testDir, "hash-missing1.csx");
+        var sourceFile2 = Path.Combine(_testDir, "hash-missing2.csx");
+
+        var metadata = new ScriptCompilationCache.CacheMetadata
+        {
+            DraftSpecVersion = typeof(DraftSpec.Dsl).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            SourceFiles = [sourceFile1],
+            SourceFileHashes = new Dictionary<string, string> { [sourceFile1] = "hash1" } // Only has sourceFile1
+        };
+
+        // Current hashes has different file
+        var fileHashes = new Dictionary<string, string> { [sourceFile2] = "hash2" };
+
+        // Act
+        var result = _cache.IsCacheValidWithHashes(metadata, fileHashes);
+
+        // Assert
+        await Assert.That(result).IsFalse();
+    }
+
+    [Test]
+    public async Task IsCacheValidWithHashes_ReturnsFalse_WhenHashesDiffer()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "hash-differ.csx");
+
+        var metadata = new ScriptCompilationCache.CacheMetadata
+        {
+            DraftSpecVersion = typeof(DraftSpec.Dsl).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            SourceFiles = [sourceFile],
+            SourceFileHashes = new Dictionary<string, string> { [sourceFile] = "old-hash" }
+        };
+
+        var fileHashes = new Dictionary<string, string> { [sourceFile] = "new-hash" };
+
+        // Act
+        var result = _cache.IsCacheValidWithHashes(metadata, fileHashes);
+
+        // Assert
+        await Assert.That(result).IsFalse();
+    }
+
+    #endregion
+
     private static Script<object> CreateTestScript(string code)
     {
         var options = ScriptOptions.Default

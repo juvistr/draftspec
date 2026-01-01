@@ -63,7 +63,10 @@ public sealed class ScriptCompilationCache
     {
         try
         {
-            var cacheKey = ComputeCacheKey(sourcePath, sourceFiles, preprocessedCode);
+            // Compute file hashes once and reuse for both cache key and validation
+            var fileHashes = ComputeFileHashes(sourceFiles);
+
+            var cacheKey = ComputeCacheKeyFromHashes(sourcePath, fileHashes, preprocessedCode);
             var metadataPath = GetMetadataPath(cacheKey);
 
             if (!File.Exists(metadataPath))
@@ -73,8 +76,8 @@ public sealed class ScriptCompilationCache
             if (metadata == null)
                 return (false, null);
 
-            // Validate cache
-            if (!IsCacheValid(metadata, sourceFiles))
+            // Validate cache using pre-computed hashes
+            if (!IsCacheValidWithHashes(metadata, fileHashes))
             {
                 // Remove stale cache files
                 DeleteCacheEntry(cacheKey);
@@ -239,23 +242,70 @@ public sealed class ScriptCompilationCache
     }
 
     /// <summary>
+    /// Computes SHA256 hashes for all source files.
+    /// </summary>
+    private static Dictionary<string, string> ComputeFileHashes(IReadOnlyList<string> sourceFiles)
+    {
+        return sourceFiles
+            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(f => f, ComputeFileHash, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Computes a cache key based on source path, dependencies, and content.
     /// </summary>
     private string ComputeCacheKey(string sourcePath, IReadOnlyList<string> sourceFiles, string preprocessedCode)
+    {
+        var fileHashes = ComputeFileHashes(sourceFiles);
+        return ComputeCacheKeyFromHashes(sourcePath, fileHashes, preprocessedCode);
+    }
+
+    /// <summary>
+    /// Computes a cache key using pre-computed file hashes.
+    /// </summary>
+    private string ComputeCacheKeyFromHashes(
+        string sourcePath,
+        Dictionary<string, string> fileHashes,
+        string preprocessedCode)
     {
         var keyBuilder = new StringBuilder();
         keyBuilder.AppendLine(_draftSpecVersion);
         keyBuilder.AppendLine(sourcePath);
 
         // Include all dependency file hashes in sorted order for determinism
-        foreach (var file in sourceFiles.OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+        foreach (var (file, hash) in fileHashes.OrderBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase))
         {
-            keyBuilder.AppendLine($"{file}:{ComputeFileHash(file)}");
+            keyBuilder.AppendLine($"{file}:{hash}");
         }
 
         keyBuilder.AppendLine(ComputeHash(preprocessedCode));
 
         return ComputeHash(keyBuilder.ToString())[..16]; // Use first 16 chars of hash
+    }
+
+    /// <summary>
+    /// Validates that a cache entry is still valid using pre-computed hashes.
+    /// </summary>
+    internal bool IsCacheValidWithHashes(CacheMetadata metadata, Dictionary<string, string> currentFileHashes)
+    {
+        // Check DraftSpec version
+        if (metadata.DraftSpecVersion != _draftSpecVersion)
+            return false;
+
+        // Check that all source files match
+        if (metadata.SourceFiles.Count != currentFileHashes.Count)
+            return false;
+
+        foreach (var (file, currentHash) in currentFileHashes)
+        {
+            if (!metadata.SourceFileHashes.TryGetValue(file, out var cachedHash))
+                return false;
+
+            if (currentHash != cachedHash)
+                return false;
+        }
+
+        return true;
     }
 
     /// <summary>

@@ -5,6 +5,18 @@ namespace DraftSpec.Tests.Mcp.Services;
 
 public class ExecutionRateLimiterTests
 {
+    /// <summary>
+    /// Fake time provider for testing time-dependent logic.
+    /// </summary>
+    private sealed class FakeTimeProvider : TimeProvider
+    {
+        private DateTimeOffset _utcNow = DateTimeOffset.UtcNow;
+
+        public override DateTimeOffset GetUtcNow() => _utcNow;
+
+        public void Advance(TimeSpan duration) => _utcNow = _utcNow.Add(duration);
+    }
+
     #region CurrentConcurrentExecutions
 
     [Test]
@@ -163,6 +175,38 @@ public class ExecutionRateLimiterTests
         await Assert.That(result).IsFalse();
         // Semaphore should still be at full capacity (10)
         await Assert.That(limiter.CurrentConcurrentExecutions).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task TryAcquireAsync_AfterOneMinute_CleansUpOldTimestamps()
+    {
+        // Arrange: Use fake time provider to control time
+        var timeProvider = new FakeTimeProvider();
+        var options = new McpOptions
+        {
+            MaxConcurrentExecutions = 10,
+            MaxExecutionsPerMinute = 2
+        };
+        using var limiter = new ExecutionRateLimiter(options, timeProvider);
+
+        // Exhaust per-minute limit at time T
+        await limiter.TryAcquireAsync();
+        limiter.Release();
+        await limiter.TryAcquireAsync();
+        limiter.Release();
+
+        // Verify limit is reached
+        var blockedResult = await limiter.TryAcquireAsync();
+        await Assert.That(blockedResult).IsFalse();
+
+        // Advance time by > 1 minute (timestamps should be cleaned up)
+        timeProvider.Advance(TimeSpan.FromMinutes(1.1));
+
+        // Act: Try to acquire again - old timestamps should be cleaned up
+        var result = await limiter.TryAcquireAsync();
+
+        // Assert: Should succeed because old timestamps were cleaned up
+        await Assert.That(result).IsTrue();
     }
 
     #endregion

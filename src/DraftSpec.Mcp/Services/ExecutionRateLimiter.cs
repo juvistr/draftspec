@@ -8,18 +8,25 @@ namespace DraftSpec.Mcp.Services;
 public sealed class ExecutionRateLimiter : IDisposable
 {
     private readonly SemaphoreSlim _concurrencySemaphore;
-    private readonly ConcurrentQueue<DateTime> _executionTimestamps;
+    private readonly ConcurrentQueue<DateTimeOffset> _executionTimestamps;
     private readonly int _maxConcurrency;
     private readonly int _maxPerMinute;
+    private readonly TimeProvider _timeProvider;
     private readonly object _cleanupLock = new();
     private bool _disposed;
 
     public ExecutionRateLimiter(McpOptions options)
+        : this(options, TimeProvider.System)
+    {
+    }
+
+    internal ExecutionRateLimiter(McpOptions options, TimeProvider timeProvider)
     {
         _maxConcurrency = options.MaxConcurrentExecutions;
         _concurrencySemaphore = new SemaphoreSlim(_maxConcurrency);
-        _executionTimestamps = new ConcurrentQueue<DateTime>();
+        _executionTimestamps = new ConcurrentQueue<DateTimeOffset>();
         _maxPerMinute = options.MaxExecutionsPerMinute;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -39,22 +46,14 @@ public sealed class ExecutionRateLimiter : IDisposable
         if (!await _concurrencySemaphore.WaitAsync(0, cancellationToken))
             return false;
 
-        try
-        {
-            // Check per-minute limit while holding semaphore to prevent TOCTOU
-            if (!CheckAndRecordExecution())
-            {
-                _concurrencySemaphore.Release();
-                return false;
-            }
-
-            return true;
-        }
-        catch
+        // Check per-minute limit while holding semaphore to prevent TOCTOU
+        if (!CheckAndRecordExecution())
         {
             _concurrencySemaphore.Release();
-            throw;
+            return false;
         }
+
+        return true;
     }
 
     /// <summary>
@@ -72,7 +71,7 @@ public sealed class ExecutionRateLimiter : IDisposable
     /// <returns>True if under limit and timestamp recorded, false if rate limited</returns>
     private bool CheckAndRecordExecution()
     {
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow();
         var cutoff = now.AddMinutes(-1);
 
         lock (_cleanupLock)

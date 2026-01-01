@@ -31,6 +31,7 @@ public class UsageWriter : IUsageWriter
         _console.WriteLine("  draftspec list <path> [options]  List specs without running them");
         _console.WriteLine("  draftspec flaky [path] [options] Show flaky test detection report");
         _console.WriteLine("  draftspec estimate [path]        Estimate runtime based on history");
+        _console.WriteLine("  draftspec cache <subcommand>     Manage cached data (stats, clear)");
         _console.WriteLine("  draftspec init [path]            Initialize spec infrastructure");
         _console.WriteLine("  draftspec new <name> [path]      Create a new spec file");
         _console.WriteLine();
@@ -72,6 +73,10 @@ public class UsageWriter : IUsageWriter
         _console.WriteLine("  --percentile <n>        Percentile for estimation (1-99, default: 50)");
         _console.WriteLine("  --output-seconds        Output estimate in seconds (for scripting)");
         _console.WriteLine();
+        _console.WriteLine("Cache Command:");
+        _console.WriteLine("  draftspec cache stats [path]   Show cache statistics");
+        _console.WriteLine("  draftspec cache clear [path]   Clear all cached data");
+        _console.WriteLine();
         _console.WriteLine("Path can be:");
         _console.WriteLine("  - A directory (runs all *.spec.csx files recursively)");
         _console.WriteLine("  - A single .spec.csx file");
@@ -91,6 +96,8 @@ public class UsageWriter : IUsageWriter
         _console.WriteLine("  draftspec run . --quarantine        # Skip known flaky tests");
         _console.WriteLine("  draftspec estimate                  # Show runtime estimate");
         _console.WriteLine("  draftspec estimate --percentile 95  # P95 estimate for CI timeout");
+        _console.WriteLine("  draftspec cache stats               # Show cache statistics");
+        _console.WriteLine("  draftspec cache clear               # Clear all cached data");
 
         return errorMessage != null ? 1 : 0;
     }

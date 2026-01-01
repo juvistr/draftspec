@@ -208,7 +208,7 @@ public class WatchCommand : ICommand<WatchOptions>
                             if (File.Exists(projectPath))
                                 projectPath = Path.GetDirectoryName(projectPath)!;
 
-                            var parser = new StaticSpecParser(projectPath);
+                            var parser = new StaticSpecParser(projectPath, useCache: !options.NoCache);
                             var newResult = parser.ParseFileAsync(changedSpec, cts.Token).GetAwaiter().GetResult();
 
                             // Check if any dependencies (like spec_helper.csx) changed

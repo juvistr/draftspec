@@ -25,7 +25,7 @@ public class SpecStatsCollector : ISpecStatsCollector
                 FileCount: 0);
         }
 
-        var parser = new StaticSpecParser(projectPath);
+        var parser = new StaticSpecParser(projectPath, useCache: true);
         var allSpecs = new List<StaticSpec>();
 
         foreach (var specFile in specFiles)

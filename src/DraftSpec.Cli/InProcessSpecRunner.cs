@@ -124,7 +124,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             var formattedError = _diagnosticFormatter.Format(compilationEx);
 
             // Use static parsing to discover specs despite the compilation error
-            var parser = new StaticSpecParser(workingDir);
+            var parser = new StaticSpecParser(workingDir, useCache: true);
             var parseResult = await parser.ParseFileAsync(fullPath, ct);
 
             // Create enhanced exception with discovered specs

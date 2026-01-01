@@ -1492,4 +1492,71 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Cache Command Options
+
+    [Test]
+    public async Task Parse_CacheCommand_SetsCommand()
+    {
+        var options = CliOptionsParser.Parse(["cache", "stats"]);
+
+        await Assert.That(options.Command).IsEqualTo("cache");
+        await Assert.That(options.CacheSubcommand).IsEqualTo("stats");
+    }
+
+    [Test]
+    public async Task Parse_CacheStatsWithPath_SetsBoth()
+    {
+        var options = CliOptionsParser.Parse(["cache", "stats", "./project"]);
+
+        await Assert.That(options.Command).IsEqualTo("cache");
+        await Assert.That(options.CacheSubcommand).IsEqualTo("stats");
+        await Assert.That(options.Path).IsEqualTo("./project");
+    }
+
+    [Test]
+    public async Task Parse_CacheClearCommand_SetsClear()
+    {
+        var options = CliOptionsParser.Parse(["cache", "clear"]);
+
+        await Assert.That(options.Command).IsEqualTo("cache");
+        await Assert.That(options.CacheSubcommand).IsEqualTo("clear");
+    }
+
+    [Test]
+    public async Task Parse_CacheClearWithPath_SetsBoth()
+    {
+        var options = CliOptionsParser.Parse(["cache", "clear", "./my-project"]);
+
+        await Assert.That(options.Command).IsEqualTo("cache");
+        await Assert.That(options.CacheSubcommand).IsEqualTo("clear");
+        await Assert.That(options.Path).IsEqualTo("./my-project");
+    }
+
+    [Test]
+    public async Task Parse_CacheSubcommandIsCaseInsensitive()
+    {
+        var options = CliOptionsParser.Parse(["cache", "CLEAR"]);
+
+        await Assert.That(options.CacheSubcommand).IsEqualTo("clear");
+    }
+
+    [Test]
+    public async Task Parse_CacheWithoutSubcommand_UsesDefaultStats()
+    {
+        var options = CliOptionsParser.Parse(["cache"]);
+
+        await Assert.That(options.Command).IsEqualTo("cache");
+        await Assert.That(options.CacheSubcommand).IsEqualTo("stats");
+    }
+
+    [Test]
+    public async Task Parse_CacheDefaultPath_IsDot()
+    {
+        var options = CliOptionsParser.Parse(["cache", "stats"]);
+
+        await Assert.That(options.Path).IsEqualTo(".");
+    }
+
+    #endregion
 }

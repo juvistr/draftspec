@@ -386,7 +386,7 @@ public class RunCommand : ICommand<RunOptions>
         if (_fileSystem.FileExists(projectPath))
             projectPath = Path.GetDirectoryName(projectPath)!;
 
-        var parser = new StaticSpecParser(projectPath);
+        var parser = new StaticSpecParser(projectPath, useCache: !options.NoCache);
 
         foreach (var filter in options.Filter.LineFilters!)
         {

@@ -458,4 +458,35 @@ public class CliOptionsConversionTests
     }
 
     #endregion
+
+    #region ToCacheOptions Tests
+
+    [Test]
+    public async Task ToCacheOptions_MapsAllProperties()
+    {
+        var cliOptions = new CliOptions
+        {
+            Path = "/project/path",
+            CacheSubcommand = "clear"
+        };
+
+        var cacheOptions = cliOptions.ToCacheOptions();
+
+        await Assert.That(cacheOptions.Path).IsEqualTo("/project/path");
+        await Assert.That(cacheOptions.Subcommand).IsEqualTo("clear");
+    }
+
+    [Test]
+    public async Task ToCacheOptions_DefaultValues_CreatesValidOptions()
+    {
+        var cliOptions = new CliOptions();
+
+        var cacheOptions = cliOptions.ToCacheOptions();
+
+        await Assert.That(cacheOptions).IsNotNull();
+        await Assert.That(cacheOptions.Path).IsEqualTo(".");
+        await Assert.That(cacheOptions.Subcommand).IsEqualTo("stats");
+    }
+
+    #endregion
 }

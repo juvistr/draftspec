@@ -117,6 +117,88 @@ public class ExecutionRateLimiterTests
 
     #endregion
 
+    #region PerMinuteLimit
+
+    [Test]
+    public async Task TryAcquireAsync_ExceedsPerMinuteLimit_ReturnsFalse()
+    {
+        var options = new McpOptions
+        {
+            MaxConcurrentExecutions = 10,
+            MaxExecutionsPerMinute = 3
+        };
+        using var limiter = new ExecutionRateLimiter(options);
+
+        // Acquire up to the per-minute limit
+        await limiter.TryAcquireAsync();
+        limiter.Release();
+        await limiter.TryAcquireAsync();
+        limiter.Release();
+        await limiter.TryAcquireAsync();
+        limiter.Release();
+
+        // Next acquire should fail due to per-minute limit
+        var result = await limiter.TryAcquireAsync();
+
+        await Assert.That(result).IsFalse();
+    }
+
+    [Test]
+    public async Task TryAcquireAsync_PerMinuteLimitExceeded_ReleasesSemaphore()
+    {
+        var options = new McpOptions
+        {
+            MaxConcurrentExecutions = 10,
+            MaxExecutionsPerMinute = 1
+        };
+        using var limiter = new ExecutionRateLimiter(options);
+
+        // Exhaust per-minute limit
+        await limiter.TryAcquireAsync();
+        limiter.Release();
+
+        // Try again - should fail but not hold semaphore
+        var result = await limiter.TryAcquireAsync();
+
+        await Assert.That(result).IsFalse();
+        // Semaphore should still be at full capacity (10)
+        await Assert.That(limiter.CurrentConcurrentExecutions).IsEqualTo(0);
+    }
+
+    #endregion
+
+    #region Cancellation
+
+    [Test]
+    public async Task TryAcquireAsync_CancelledToken_ThrowsOperationCancelledException()
+    {
+        var options = new McpOptions { MaxConcurrentExecutions = 2 };
+        using var limiter = new ExecutionRateLimiter(options);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            async () => await limiter.TryAcquireAsync(cts.Token));
+    }
+
+    #endregion
+
+    #region Dispose
+
+    [Test]
+    public async Task Dispose_CalledMultipleTimes_DoesNotThrow()
+    {
+        var options = new McpOptions { MaxConcurrentExecutions = 2 };
+        var limiter = new ExecutionRateLimiter(options);
+
+        limiter.Dispose();
+        limiter.Dispose(); // Should not throw
+
+        await Assert.That(true).IsTrue(); // Test passes if no exception
+    }
+
+    #endregion
+
     #region Thread Safety
 
     [Test]

@@ -37,6 +37,7 @@ public class SpecContext
     // Internal mutable lists
     private readonly List<SpecContext> _children = [];
     private readonly List<SpecDefinition> _specs = [];
+    private Dictionary<string, Func<object>>? _letDefinitions;
 
     // Cached counts computed during tree construction
     private int _totalSpecCount;
@@ -259,5 +260,33 @@ public class SpecContext
             current = current.Parent;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Adds a let definition to this context.
+    /// </summary>
+    /// <param name="name">The name of the fixture</param>
+    /// <param name="factory">Factory function that creates the value</param>
+    internal void AddLetDefinition(string name, Func<object> factory)
+    {
+        _letDefinitions ??= new Dictionary<string, Func<object>>();
+        _letDefinitions[name] = factory;
+    }
+
+    /// <summary>
+    /// Gets the factory for a let definition, searching this context and ancestors.
+    /// </summary>
+    /// <param name="name">The name of the fixture</param>
+    /// <returns>The factory function, or null if not found</returns>
+    internal Func<object>? GetLetFactory(string name)
+    {
+        var current = this;
+        while (current != null)
+        {
+            if (current._letDefinitions?.TryGetValue(name, out var factory) == true)
+                return factory;
+            current = current.Parent;
+        }
+        return null;
     }
 }

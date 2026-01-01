@@ -261,7 +261,7 @@ public sealed class ScriptCompilationCache
     /// <summary>
     /// Validates that a cache entry is still valid.
     /// </summary>
-    private bool IsCacheValid(CacheMetadata metadata, IReadOnlyList<string> currentSourceFiles)
+    internal bool IsCacheValid(CacheMetadata metadata, IReadOnlyList<string> currentSourceFiles)
     {
         // Check DraftSpec version
         if (metadata.DraftSpecVersion != _draftSpecVersion)
@@ -371,7 +371,7 @@ public sealed class ScriptCompilationCache
     /// <summary>
     /// Metadata stored alongside cached assemblies.
     /// </summary>
-    private sealed class CacheMetadata
+    internal sealed class CacheMetadata
     {
         public string CacheKey { get; set; } = "";
         public string SourcePath { get; set; } = "";

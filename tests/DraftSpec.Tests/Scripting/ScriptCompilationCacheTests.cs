@@ -597,6 +597,138 @@ public class ScriptCompilationCacheTests
         await Assert.That(exception!.Message).Contains("submission type");
     }
 
+    [Test]
+    public async Task IsCacheValid_ReturnsFalse_WhenVersionMismatch()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "version-test.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var metadata = new ScriptCompilationCache.CacheMetadata
+        {
+            DraftSpecVersion = "0.0.0-wrong-version",
+            SourceFiles = [sourceFile],
+            SourceFileHashes = new Dictionary<string, string> { [sourceFile] = "somehash" }
+        };
+
+        // Act
+        var result = _cache.IsCacheValid(metadata, [sourceFile]);
+
+        // Assert
+        await Assert.That(result).IsFalse();
+    }
+
+    [Test]
+    public async Task IsCacheValid_ReturnsFalse_WhenFileCountMismatch()
+    {
+        // Arrange
+        var sourceFile1 = Path.Combine(_testDir, "file1.csx");
+        var sourceFile2 = Path.Combine(_testDir, "file2.csx");
+        await File.WriteAllTextAsync(sourceFile1, "var x = 1;");
+        await File.WriteAllTextAsync(sourceFile2, "var y = 2;");
+
+        var metadata = new ScriptCompilationCache.CacheMetadata
+        {
+            DraftSpecVersion = typeof(DraftSpec.Dsl).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            SourceFiles = [sourceFile1], // Only one file in metadata
+            SourceFileHashes = new Dictionary<string, string> { [sourceFile1] = "hash1" }
+        };
+
+        // Act - pass two files but metadata has one
+        var result = _cache.IsCacheValid(metadata, [sourceFile1, sourceFile2]);
+
+        // Assert
+        await Assert.That(result).IsFalse();
+    }
+
+    [Test]
+    public async Task IsCacheValid_ReturnsFalse_WhenFileDoesNotExist()
+    {
+        // Arrange
+        var missingFile = Path.Combine(_testDir, "missing.csx");
+
+        var metadata = new ScriptCompilationCache.CacheMetadata
+        {
+            DraftSpecVersion = typeof(DraftSpec.Dsl).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            SourceFiles = [missingFile],
+            SourceFileHashes = new Dictionary<string, string> { [missingFile] = "somehash" }
+        };
+
+        // Act - file doesn't exist
+        var result = _cache.IsCacheValid(metadata, [missingFile]);
+
+        // Assert
+        await Assert.That(result).IsFalse();
+    }
+
+    [Test]
+    public async Task IsCacheValid_ReturnsFalse_WhenFileNotInCachedHashes()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "not-in-hash.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var metadata = new ScriptCompilationCache.CacheMetadata
+        {
+            DraftSpecVersion = typeof(DraftSpec.Dsl).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            SourceFiles = [sourceFile],
+            SourceFileHashes = new Dictionary<string, string>() // Empty - file not in hashes
+        };
+
+        // Act
+        var result = _cache.IsCacheValid(metadata, [sourceFile]);
+
+        // Assert
+        await Assert.That(result).IsFalse();
+    }
+
+    [Test]
+    public async Task IsCacheValid_ReturnsFalse_WhenHashMismatch()
+    {
+        // Arrange
+        var sourceFile = Path.Combine(_testDir, "hash-mismatch.csx");
+        await File.WriteAllTextAsync(sourceFile, "var x = 1;");
+
+        var metadata = new ScriptCompilationCache.CacheMetadata
+        {
+            DraftSpecVersion = typeof(DraftSpec.Dsl).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            SourceFiles = [sourceFile],
+            SourceFileHashes = new Dictionary<string, string> { [sourceFile] = "wrong-hash-value" }
+        };
+
+        // Act
+        var result = _cache.IsCacheValid(metadata, [sourceFile]);
+
+        // Assert
+        await Assert.That(result).IsFalse();
+    }
+
+    [Test]
+    public async Task IsCacheValid_ReturnsTrue_WhenAllChecksPass()
+    {
+        // Arrange - cache a real script to get valid metadata
+        var sourceFile = Path.Combine(_testDir, "valid-cache.csx");
+        var code = "var x = 1;";
+        await File.WriteAllTextAsync(sourceFile, code);
+
+        var script = CreateTestScript(code);
+        _cache.CacheScript(sourceFile, [sourceFile], code, script);
+
+        // Read the generated metadata
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "scripts");
+        var metaFile = Directory.GetFiles(cacheDir, "*.meta.json").Single();
+        var metaJson = await File.ReadAllTextAsync(metaFile);
+        var metadata = System.Text.Json.JsonSerializer.Deserialize<ScriptCompilationCache.CacheMetadata>(
+            metaJson,
+            new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+
+        // Act
+        var result = _cache.IsCacheValid(metadata!, [sourceFile]);
+
+        // Assert
+        await Assert.That(result).IsTrue();
+    }
+
     private static Script<object> CreateTestScript(string code)
     {
         var options = ScriptOptions.Default

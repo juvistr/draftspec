@@ -1,6 +1,7 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.History;
+using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
@@ -62,18 +63,61 @@ public static class ServiceCollectionExtensions
         // Pipeline
         services.AddSingleton<IConfigApplier, ConfigApplier>();
 
-        // Factory with explicit command factories for testability
-        services.AddSingleton<ICommandFactory>(sp => new CommandFactory(
-            sp.GetRequiredService<IConfigApplier>(),
-            () => sp.GetRequiredService<RunCommand>(),
-            () => sp.GetRequiredService<WatchCommand>(),
-            () => sp.GetRequiredService<ListCommand>(),
-            () => sp.GetRequiredService<ValidateCommand>(),
-            () => sp.GetRequiredService<InitCommand>(),
-            () => sp.GetRequiredService<NewCommand>(),
-            () => sp.GetRequiredService<SchemaCommand>(),
-            () => sp.GetRequiredService<FlakyCommand>(),
-            () => sp.GetRequiredService<EstimateCommand>()));
+        // Command Registry - registers all commands in one place
+        services.AddSingleton<ICommandRegistry>(sp =>
+        {
+            var registry = new CommandRegistry(sp.GetRequiredService<IConfigApplier>());
+
+            registry.Register<RunCommand, RunOptions>(
+                "run",
+                () => sp.GetRequiredService<RunCommand>(),
+                o => o.ToRunOptions());
+
+            registry.Register<WatchCommand, WatchOptions>(
+                "watch",
+                () => sp.GetRequiredService<WatchCommand>(),
+                o => o.ToWatchOptions());
+
+            registry.Register<ListCommand, ListOptions>(
+                "list",
+                () => sp.GetRequiredService<ListCommand>(),
+                o => o.ToListOptions());
+
+            registry.Register<ValidateCommand, ValidateOptions>(
+                "validate",
+                () => sp.GetRequiredService<ValidateCommand>(),
+                o => o.ToValidateOptions());
+
+            registry.Register<InitCommand, InitOptions>(
+                "init",
+                () => sp.GetRequiredService<InitCommand>(),
+                o => o.ToInitOptions());
+
+            registry.Register<NewCommand, NewOptions>(
+                "new",
+                () => sp.GetRequiredService<NewCommand>(),
+                o => o.ToNewOptions());
+
+            registry.Register<SchemaCommand, SchemaOptions>(
+                "schema",
+                () => sp.GetRequiredService<SchemaCommand>(),
+                o => o.ToSchemaOptions());
+
+            registry.Register<FlakyCommand, FlakyOptions>(
+                "flaky",
+                () => sp.GetRequiredService<FlakyCommand>(),
+                o => o.ToFlakyOptions());
+
+            registry.Register<EstimateCommand, EstimateOptions>(
+                "estimate",
+                () => sp.GetRequiredService<EstimateCommand>(),
+                o => o.ToEstimateOptions());
+
+            return registry;
+        });
+
+        // Factory delegates to registry
+        services.AddSingleton<ICommandFactory, CommandFactory>();
 
         return services;
     }

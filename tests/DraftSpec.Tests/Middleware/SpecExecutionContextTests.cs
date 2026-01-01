@@ -49,7 +49,7 @@ public class SpecExecutionContextTests
         var items = context.Items;
 
         await Assert.That(items).IsNotNull();
-        await Assert.That(items).IsTypeOf<ConcurrentDictionary<string, object>>();
+        await Assert.That(items).IsTypeOf<ConcurrentDictionary<object, object>>();
     }
 
     [Test]

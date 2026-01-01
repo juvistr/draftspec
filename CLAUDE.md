@@ -172,6 +172,14 @@ await Assert.That(discoverer.DiscoverAsyncCalls).HasCount().EqualTo(1);
 
 Before creating a new mock, check `Infrastructure/Mocks/` for existing implementations.
 
+### Code Coverage
+
+**Target near-100% coverage on new code.** Before opening a PR:
+1. Add comprehensive unit tests for all new classes and methods
+2. Cover edge cases (null inputs, empty collections, error conditions)
+3. Test both success and failure paths
+4. Use descriptive test names that explain the expected behavior
+
 ## Architecture
 
 See `ARCHITECTURE.md` for deep dives on:

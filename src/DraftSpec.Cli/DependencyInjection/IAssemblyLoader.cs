@@ -30,4 +30,12 @@ public interface IAssemblyLoader
     /// <param name="path">Path to the assembly file.</param>
     /// <returns>Lowercase hex string of the public key token, or null if not signed.</returns>
     string? GetPublicKeyToken(string path);
+
+    /// <summary>
+    /// Gets the SHA256 thumbprint of the Authenticode signing certificate.
+    /// Returns null if the assembly is not Authenticode-signed or cannot be read.
+    /// </summary>
+    /// <param name="path">Path to the assembly file.</param>
+    /// <returns>Uppercase hex string of the certificate SHA256 thumbprint, or null if not signed.</returns>
+    string? GetCertificateThumbprint(string path);
 }

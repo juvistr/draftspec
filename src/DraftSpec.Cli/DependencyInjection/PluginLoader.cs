@@ -75,18 +75,8 @@ public class PluginLoader : IPluginLoader
         // Verify signature if required
         if (_pluginsConfig?.RequireSignedPlugins == true)
         {
-            var publicKeyToken = _assemblyLoader.GetPublicKeyToken(assemblyPath);
-            if (publicKeyToken == null)
-            {
-                _console.WriteError($"Warning: Plugin {Path.GetFileName(assemblyPath)} is not signed. Skipping.");
+            if (!IsPluginTrusted(assemblyPath))
                 yield break;
-            }
-
-            if (_pluginsConfig.TrustedPublicKeyTokens?.Contains(publicKeyToken, StringComparer.OrdinalIgnoreCase) != true)
-            {
-                _console.WriteError($"Warning: Plugin {Path.GetFileName(assemblyPath)} has untrusted signature ({publicKeyToken}). Skipping.");
-                yield break;
-            }
         }
 
         var assembly = _assemblyLoader.LoadAssembly(assemblyPath);
@@ -107,6 +97,52 @@ public class PluginLoader : IPluginLoader
 
             yield return new PluginInfo(attribute.Name, type, kind, assembly);
         }
+    }
+
+    /// <summary>
+    /// Checks if a plugin is trusted based on public key token or certificate thumbprint.
+    /// </summary>
+    /// <param name="assemblyPath">Path to the plugin assembly.</param>
+    /// <returns>True if the plugin is trusted, false otherwise.</returns>
+    private bool IsPluginTrusted(string assemblyPath)
+    {
+        var fileName = Path.GetFileName(assemblyPath);
+
+        // Check certificate thumbprint first (stronger verification)
+        var certThumbprint = _assemblyLoader.GetCertificateThumbprint(assemblyPath);
+        if (certThumbprint != null)
+        {
+            if (_pluginsConfig?.TrustedCertificateThumbprints?.Contains(
+                    certThumbprint, StringComparer.OrdinalIgnoreCase) == true)
+            {
+                return true;
+            }
+        }
+
+        // Fall back to public key token check
+        var publicKeyToken = _assemblyLoader.GetPublicKeyToken(assemblyPath);
+        if (publicKeyToken != null)
+        {
+            if (_pluginsConfig?.TrustedPublicKeyTokens?.Contains(
+                    publicKeyToken, StringComparer.OrdinalIgnoreCase) == true)
+            {
+                return true;
+            }
+        }
+
+        // Not signed at all
+        if (publicKeyToken == null && certThumbprint == null)
+        {
+            _console.WriteError($"Warning: Plugin {fileName} is not signed. Skipping.");
+            return false;
+        }
+
+        // Signed but not trusted
+        var signatureInfo = certThumbprint != null
+            ? $"certificate: {certThumbprint[..16]}..."
+            : $"public key token: {publicKeyToken}";
+        _console.WriteError($"Warning: Plugin {fileName} has untrusted signature ({signatureInfo}). Skipping.");
+        return false;
     }
 
     public void RegisterFormatters(ICliFormatterRegistry registry)

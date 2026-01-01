@@ -4,19 +4,20 @@ This roadmap tracks development priorities from the initial v0.4.0 release throu
 
 ---
 
-## Current Status: v0.4.x (Production Ready)
+## Current Status: v0.7.0-alpha.1 (Prerelease)
 
-**Released December 2025** - All foundational work complete.
+**Released January 2026** - Test intelligence features complete, undergoing additional dogfooding before stable release.
 
 | Area | Status | Highlights |
 |------|--------|------------|
 | Core DSL | Complete | `describe`/`it`/`expect` API, hooks, focus/skip/pending |
-| Security | Complete | Path traversal protection, temp file hardening, JSON limits |
+| Security | Complete | Path traversal protection, temp file hardening, JSON limits, plugin signing |
 | Performance | Complete | Zero-allocation assertions, incremental builds, parallel execution |
 | Architecture | Complete | DI container, plugin discovery, result streaming |
-| Test Coverage | ~90% | 515+ tests across all modules |
+| Test Coverage | ~90% | 550+ tests across all modules |
 | Static Parsing | Complete | Roslyn-based spec discovery from CSX files |
 | MTP Integration | Complete | Microsoft.Testing.Platform support for IDE integration |
+| Test Intelligence | Complete | Dependency graphs, result caching, flaky detection, runtime estimation |
 
 ---
 
@@ -49,44 +50,61 @@ This roadmap tracks development priorities from the initial v0.4.0 release throu
 
 ---
 
-## v0.6.1: Testability Foundations
+## v0.6.1: Testability Foundations ✅
 
 **Theme**: Extract interfaces for better unit testing and parallel test execution.
 
-| Issue | Feature | Priority |
-|-------|---------|----------|
-| [#253](https://github.com/juvistr/draftspec/issues/253) | Extract ISpecFileProvider for testable file discovery | HIGH |
-| [#254](https://github.com/juvistr/draftspec/issues/254) | Extract ISpecStateManager for state isolation | HIGH |
+| Issue | Feature | Status |
+|-------|---------|--------|
+| [#253](https://github.com/juvistr/draftspec/issues/253) | Extract ISpecFileProvider for testable file discovery | ✅ |
+| [#254](https://github.com/juvistr/draftspec/issues/254) | Extract ISpecStateManager for state isolation | ✅ |
 
 ---
 
-## v0.6.2: Repository Quality
+## v0.6.2: Repository Quality ✅
 
 **Theme**: OSS best practices, automation, and contributor experience.
 
-| Issue | Feature | Priority |
-|-------|---------|----------|
-| [#276](https://github.com/juvistr/draftspec/issues/276) | CODEOWNERS, Dependabot, EditorConfig, global.json | HIGH |
-| [#277](https://github.com/juvistr/draftspec/issues/277) | Roslyn analyzers (StyleCop + Roslynator) | HIGH |
-| [#278](https://github.com/juvistr/draftspec/issues/278) | Pre-commit hooks via Husky.Net | MEDIUM |
-| [#279](https://github.com/juvistr/draftspec/issues/279) | GitHub automation (stale bot, release drafter, all-contributors) | MEDIUM |
-| [#280](https://github.com/juvistr/draftspec/issues/280) | Discussion templates | LOW |
-| [#281](https://github.com/juvistr/draftspec/issues/281) | OpenSSF Scorecard badge + VS Code settings | LOW |
+| Issue | Feature | Status |
+|-------|---------|--------|
+| [#276](https://github.com/juvistr/draftspec/issues/276) | CODEOWNERS, Dependabot, EditorConfig, global.json | ✅ |
+| [#277](https://github.com/juvistr/draftspec/issues/277) | Roslyn analyzers (StyleCop + Roslynator) | ✅ |
+| [#278](https://github.com/juvistr/draftspec/issues/278) | Pre-commit hooks via Husky.Net | ✅ |
+| [#279](https://github.com/juvistr/draftspec/issues/279) | GitHub automation (stale bot, release drafter, all-contributors) | ✅ |
+| [#280](https://github.com/juvistr/draftspec/issues/280) | Discussion templates | ✅ |
+| [#281](https://github.com/juvistr/draftspec/issues/281) | OpenSSF Scorecard badge + VS Code settings | ✅ |
 
 ---
 
-## v0.7.0: Test Intelligence
+## v0.7.0: Test Intelligence ✅
 
 **Theme**: Smart test selection and historical analysis.
 
-| Order | Issue | Feature | Dependencies |
-|-------|-------|---------|--------------|
-| 1 | [#207](https://github.com/juvistr/draftspec/issues/207) | Spec authoring best practices guide | None (docs) |
-| 2 | [#198](https://github.com/juvistr/draftspec/issues/198) | Dependency graph from `#load` directives | Foundation |
-| 3 | [#201](https://github.com/juvistr/draftspec/issues/201) | Result caching for watch mode | #198 patterns |
-| 4 | [#197](https://github.com/juvistr/draftspec/issues/197) | Test impact analysis (`--affected-by`) | #198 |
-| 5 | [#199](https://github.com/juvistr/draftspec/issues/199) | Flaky test detection and quarantine | #201 storage |
-| 6 | [#200](https://github.com/juvistr/draftspec/issues/200) | Runtime estimation from historical data | #201 history |
+| Issue | Feature | Status |
+|-------|---------|--------|
+| [#207](https://github.com/juvistr/draftspec/issues/207) | Spec authoring best practices guide | ✅ |
+| [#198](https://github.com/juvistr/draftspec/issues/198) | Dependency graph from `#load` directives | ✅ |
+| [#201](https://github.com/juvistr/draftspec/issues/201) | Result caching for watch mode | ✅ |
+| [#197](https://github.com/juvistr/draftspec/issues/197) | Test impact analysis (`--affected-by`) | ✅ |
+| [#199](https://github.com/juvistr/draftspec/issues/199) | Flaky test detection and quarantine | ✅ |
+| [#200](https://github.com/juvistr/draftspec/issues/200) | Runtime estimation from historical data | ✅ |
+
+---
+
+## v0.7.1: Patch Release
+
+**Theme**: Address review findings from v0.7.0 and improve reliability.
+
+| Issue | Feature | Priority |
+|-------|---------|----------|
+| [#358](https://github.com/juvistr/draftspec/issues/358) | Fix rate limiter TOCTOU race condition | HIGH |
+| [#359](https://github.com/juvistr/draftspec/issues/359) | Eliminate redundant file hashing in caches | MEDIUM |
+| [#360](https://github.com/juvistr/draftspec/issues/360) | Optimize RuntimeEstimator LINQ iterations | MEDIUM |
+| [#361](https://github.com/juvistr/draftspec/issues/361) | Avoid double preprocessing on cache miss | MEDIUM |
+| [#362](https://github.com/juvistr/draftspec/issues/362) | Add logging to silent exception handlers | MEDIUM |
+| [#363](https://github.com/juvistr/draftspec/issues/363) | Enhance plugin signing with cert chain validation | MEDIUM |
+| [#365](https://github.com/juvistr/draftspec/issues/365) | Extract common base class for disk caches | LOW |
+| [#310](https://github.com/juvistr/draftspec/issues/310) | Set up mutation testing with Stryker.NET | LOW |
 
 ---
 
@@ -149,8 +167,8 @@ Split into focused sub-milestones for parallel development.
 
 ## Tracking
 
-All features above are tracked in the [Static Parsing Epic (#185)](https://github.com/juvistr/draftspec/issues/185).
+All features through v0.7.0 were tracked in the [Static Parsing Epic (#185)](https://github.com/juvistr/draftspec/issues/185).
 
 ---
 
-*Last updated: December 2025*
+*Last updated: January 2026*

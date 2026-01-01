@@ -99,7 +99,7 @@ public sealed class ScriptCompilationCache
     /// <summary>
     /// Loads and executes a cached script assembly.
     /// </summary>
-    private static async Task<object?> ExecuteCachedAssemblyAsync(
+    internal static async Task<object?> ExecuteCachedAssemblyAsync(
         string assemblyPath,
         ScriptGlobals globals,
         CancellationToken cancellationToken)

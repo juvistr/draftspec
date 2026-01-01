@@ -532,6 +532,55 @@ public class ScriptCompilationCacheTests
         await Assert.That(stats.EntryCount).IsEqualTo(1);
     }
 
+    [Test]
+    public async Task ExecuteCachedAssemblyAsync_WithValidCachedAssembly_ExecutesScript()
+    {
+        // Arrange - cache a real script to get a valid Roslyn assembly
+        var sourceFile = Path.Combine(_testDir, "exec-test.csx");
+        // Script that returns a value (last expression is the return value)
+        var code = "42";
+        await File.WriteAllTextAsync(sourceFile, code);
+
+        var script = CreateTestScript(code);
+        _cache.CacheScript(sourceFile, [sourceFile], code, script);
+
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "scripts");
+        var cachedDll = Directory.GetFiles(cacheDir, "*.dll").Single();
+        var globals = new ScriptGlobals();
+
+        // Act - call internal method directly
+        var result = await ScriptCompilationCache.ExecuteCachedAssemblyAsync(
+            cachedDll, globals, CancellationToken.None);
+
+        // Assert - script should execute and return the integer
+        await Assert.That(result).IsEqualTo(42);
+    }
+
+    [Test]
+    public async Task ExecuteCachedAssemblyAsync_WithCancellation_ThrowsOperationCanceled()
+    {
+        // Arrange - cache a real script
+        var sourceFile = Path.Combine(_testDir, "cancel-test.csx");
+        var code = "42";
+        await File.WriteAllTextAsync(sourceFile, code);
+
+        var script = CreateTestScript(code);
+        _cache.CacheScript(sourceFile, [sourceFile], code, script);
+
+        var cacheDir = Path.Combine(_testDir, ".draftspec", "cache", "scripts");
+        var cachedDll = Directory.GetFiles(cacheDir, "*.dll").Single();
+        var globals = new ScriptGlobals();
+
+        // Pre-canceled token
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act & Assert - should throw OperationCanceledException
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await ScriptCompilationCache.ExecuteCachedAssemblyAsync(
+                cachedDll, globals, cts.Token));
+    }
+
     private static Script<object> CreateTestScript(string code)
     {
         var options = ScriptOptions.Default

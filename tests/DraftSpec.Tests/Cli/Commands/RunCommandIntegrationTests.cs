@@ -385,7 +385,8 @@ public class RunCommandIntegrationTests
             environment ?? NullObjects.Environment,
             NullObjects.StatsCollector,
             NullObjects.Partitioner,
-            NullObjects.GitService);
+            NullObjects.GitService,
+            NullObjects.HistoryService);
     }
 
     #endregion

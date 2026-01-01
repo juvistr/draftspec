@@ -223,6 +223,40 @@ public class CliOptions
     /// </summary>
     public bool DryRun { get; set; }
 
+    // Flaky test detection options
+
+    /// <summary>
+    /// Skip known flaky tests during execution.
+    /// Flaky specs are identified from execution history.
+    /// </summary>
+    public bool Quarantine { get; set; }
+
+    /// <summary>
+    /// Disable recording of test results to history.
+    /// By default, results are saved to .draftspec/history.json.
+    /// </summary>
+    public bool NoHistory { get; set; }
+
+    // Flaky command options
+
+    /// <summary>
+    /// Minimum status changes to be considered flaky.
+    /// Default: 2
+    /// </summary>
+    public int MinStatusChanges { get; set; } = 2;
+
+    /// <summary>
+    /// Number of recent runs to analyze for flakiness.
+    /// Default: 10
+    /// </summary>
+    public int WindowSize { get; set; } = 10;
+
+    /// <summary>
+    /// Spec ID to clear from history.
+    /// Used with flaky command.
+    /// </summary>
+    public string? Clear { get; set; }
+
     /// <summary>
     /// Apply default values from a project configuration file.
     /// Only applies values that weren't explicitly set via CLI.
@@ -272,7 +306,9 @@ public class CliOptions
         Coverage = ToCoverageOptions(),
         Partition = ToPartitionOptions(),
         AffectedBy = AffectedBy,
-        DryRun = DryRun
+        DryRun = DryRun,
+        Quarantine = Quarantine,
+        NoHistory = NoHistory
     };
 
     /// <summary>
@@ -375,6 +411,17 @@ public class CliOptions
     public SchemaOptions ToSchemaOptions() => new()
     {
         OutputFile = OutputFile
+    };
+
+    /// <summary>
+    /// Converts to FlakyOptions for the flaky command.
+    /// </summary>
+    public FlakyOptions ToFlakyOptions() => new()
+    {
+        Path = Path,
+        MinStatusChanges = MinStatusChanges,
+        WindowSize = WindowSize,
+        Clear = Clear
     };
 
     #endregion

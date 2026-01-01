@@ -1004,7 +1004,8 @@ public class RunCommandTests
             environment ?? NullObjects.Environment,
             NullObjects.StatsCollector,
             partitioner ?? NullObjects.Partitioner,
-            gitService ?? NullObjects.GitService);
+            gitService ?? NullObjects.GitService,
+            NullObjects.HistoryService);
     }
 
     #endregion

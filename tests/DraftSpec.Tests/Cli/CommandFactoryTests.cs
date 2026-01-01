@@ -226,7 +226,8 @@ public class CommandFactoryTests
             CreateValidateCommand,
             CreateInitCommand,
             CreateNewCommand,
-            CreateSchemaCommand);
+            CreateSchemaCommand,
+            CreateFlakyCommand);
     }
 
     private static RunCommand CreateRunCommand() => new(
@@ -238,7 +239,8 @@ public class CommandFactoryTests
         NullObjects.Environment,
         NullObjects.StatsCollector,
         NullObjects.Partitioner,
-        NullObjects.GitService);
+        NullObjects.GitService,
+        NullObjects.HistoryService);
 
     private static WatchCommand CreateWatchCommand() => new(
         NullObjects.SpecFinder,
@@ -265,6 +267,11 @@ public class CommandFactoryTests
         NullObjects.FileSystem);
 
     private static SchemaCommand CreateSchemaCommand() => new(
+        NullObjects.Console,
+        NullObjects.FileSystem);
+
+    private static FlakyCommand CreateFlakyCommand() => new(
+        NullObjects.HistoryService,
         NullObjects.Console,
         NullObjects.FileSystem);
 

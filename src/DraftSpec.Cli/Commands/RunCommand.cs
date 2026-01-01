@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyGraph;
 using DraftSpec.Cli.DependencyInjection;
+using DraftSpec.Cli.History;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
@@ -23,6 +24,7 @@ public class RunCommand : ICommand<RunOptions>
     private readonly ISpecStatsCollector _statsCollector;
     private readonly ISpecPartitioner _partitioner;
     private readonly IGitService _gitService;
+    private readonly ISpecHistoryService _historyService;
 
     public RunCommand(
         ISpecFinder specFinder,
@@ -33,7 +35,8 @@ public class RunCommand : ICommand<RunOptions>
         IEnvironment environment,
         ISpecStatsCollector statsCollector,
         ISpecPartitioner partitioner,
-        IGitService gitService)
+        IGitService gitService,
+        ISpecHistoryService historyService)
     {
         _specFinder = specFinder;
         _runnerFactory = runnerFactory;
@@ -44,10 +47,37 @@ public class RunCommand : ICommand<RunOptions>
         _statsCollector = statsCollector;
         _partitioner = partitioner;
         _gitService = gitService;
+        _historyService = historyService;
     }
 
     public async Task<int> ExecuteAsync(RunOptions options, CancellationToken ct = default)
     {
+        // Get project path early for history operations
+        var projectPath = Path.GetFullPath(options.Path);
+        if (_fileSystem.FileExists(projectPath))
+            projectPath = Path.GetDirectoryName(projectPath)!;
+
+        // Apply quarantine filtering if specified
+        var excludeName = options.Filter.ExcludeName;
+        if (options.Quarantine)
+        {
+            var history = await _historyService.LoadAsync(projectPath, ct);
+            var flakySpecs = _historyService.GetFlakySpecs(history);
+
+            if (flakySpecs.Count > 0)
+            {
+                _console.ForegroundColor = ConsoleColor.DarkGray;
+                _console.WriteLine($"Quarantining {flakySpecs.Count} flaky spec(s)");
+                _console.ResetColor();
+
+                // Build exclude pattern from flaky display names
+                var flakyPattern = string.Join("|", flakySpecs.Select(f => Regex.Escape(f.DisplayName)));
+                excludeName = string.IsNullOrEmpty(excludeName)
+                    ? $"^({flakyPattern})$"
+                    : $"({excludeName})|^({flakyPattern})$";
+            }
+        }
+
         // Apply line number filtering if specified
         var filterName = options.Filter.FilterName;
         if (options.Filter.LineFilters is { Count: > 0 })
@@ -70,7 +100,7 @@ public class RunCommand : ICommand<RunOptions>
             options.Filter.FilterTags,
             options.Filter.ExcludeTags,
             filterName,
-            options.Filter.ExcludeName,
+            excludeName,
             options.Filter.FilterContext,
             options.Filter.ExcludeContext);
 
@@ -92,11 +122,6 @@ public class RunCommand : ICommand<RunOptions>
 
         // Set up presenter for console output
         var presenter = new ConsolePresenter(_console, watchMode: false);
-
-        // Get project path for stats collection and partitioning
-        var projectPath = Path.GetFullPath(options.Path);
-        if (_fileSystem.FileExists(projectPath))
-            projectPath = Path.GetDirectoryName(projectPath)!;
 
         // Apply partitioning if specified
         if (options.Partition.IsEnabled)
@@ -185,7 +210,87 @@ public class RunCommand : ICommand<RunOptions>
             _console.WriteLine(output);
         }
 
+        // Record results to history (unless disabled)
+        if (!options.NoHistory)
+        {
+            var records = ExtractRunRecords(summary.Results, projectPath);
+            if (records.Count > 0)
+            {
+                await _historyService.RecordRunAsync(projectPath, records, ct);
+            }
+        }
+
         return summary.Success ? 0 : 1;
+    }
+
+    /// <summary>
+    /// Extracts spec run records from run results for history tracking.
+    /// </summary>
+    private static List<SpecRunRecord> ExtractRunRecords(
+        IReadOnlyList<InProcessRunResult> results,
+        string projectPath)
+    {
+        var records = new List<SpecRunRecord>();
+
+        foreach (var result in results)
+        {
+            var relativePath = Path.GetRelativePath(projectPath, result.SpecFile);
+
+            // Traverse the context tree to extract all specs
+            foreach (var context in result.Report.Contexts)
+            {
+                ExtractSpecsFromContext(context, [], relativePath, records);
+            }
+        }
+
+        return records;
+    }
+
+    /// <summary>
+    /// Recursively extracts specs from a context and its children.
+    /// </summary>
+    private static void ExtractSpecsFromContext(
+        SpecContextReport context,
+        List<string> contextPath,
+        string relativePath,
+        List<SpecRunRecord> records)
+    {
+        // Add current context to path
+        var currentPath = new List<string>(contextPath) { context.Description };
+
+        // Extract specs in this context
+        foreach (var spec in context.Specs)
+        {
+            var specId = GenerateSpecId(relativePath, currentPath, spec.Description);
+            var displayName = GenerateDisplayName(currentPath, spec.Description);
+
+            records.Add(new SpecRunRecord
+            {
+                SpecId = specId,
+                DisplayName = displayName,
+                Status = spec.Status.ToLowerInvariant(),
+                DurationMs = spec.DurationMs ?? 0,
+                ErrorMessage = spec.Error
+            });
+        }
+
+        // Recurse into child contexts
+        foreach (var child in context.Contexts)
+        {
+            ExtractSpecsFromContext(child, currentPath, relativePath, records);
+        }
+    }
+
+    /// <summary>
+    /// Generates a stable spec ID from file path, context path, and description.
+    /// </summary>
+    private static string GenerateSpecId(
+        string relativePath,
+        IReadOnlyList<string> contextPath,
+        string description)
+    {
+        var path = string.Join("/", contextPath);
+        return $"{relativePath}:{path}/{description}";
     }
 
     private void ShowConsoleOutput(InProcessRunSummary summary, string basePath, ConsolePresenter presenter)

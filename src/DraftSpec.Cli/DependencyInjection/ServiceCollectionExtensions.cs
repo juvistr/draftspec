@@ -1,5 +1,6 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
+using DraftSpec.Cli.History;
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
@@ -44,6 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISpecPartitioner, SpecPartitioner>();
         services.AddSingleton<ISpecChangeTracker, SpecChangeTracker>();
         services.AddSingleton<IGitService, GitService>();
+        services.AddSingleton<ISpecHistoryService, SpecHistoryService>();
 
         // Commands
         services.AddTransient<RunCommand>();
@@ -53,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<InitCommand>();
         services.AddTransient<NewCommand>();
         services.AddTransient<SchemaCommand>();
+        services.AddTransient<FlakyCommand>();
 
         // Pipeline
         services.AddSingleton<IConfigApplier, ConfigApplier>();
@@ -66,7 +69,8 @@ public static class ServiceCollectionExtensions
             () => sp.GetRequiredService<ValidateCommand>(),
             () => sp.GetRequiredService<InitCommand>(),
             () => sp.GetRequiredService<NewCommand>(),
-            () => sp.GetRequiredService<SchemaCommand>()));
+            () => sp.GetRequiredService<SchemaCommand>(),
+            () => sp.GetRequiredService<FlakyCommand>()));
 
         return services;
     }

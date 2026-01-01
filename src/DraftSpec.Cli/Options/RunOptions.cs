@@ -84,4 +84,16 @@ public class RunOptions
     /// Used with --affected-by to preview impacted specs.
     /// </summary>
     public bool DryRun { get; set; }
+
+    /// <summary>
+    /// Skip known flaky tests during execution.
+    /// Flaky specs are identified from execution history.
+    /// </summary>
+    public bool Quarantine { get; set; }
+
+    /// <summary>
+    /// Disable recording of test results to history.
+    /// By default, results are saved to .draftspec/history.json.
+    /// </summary>
+    public bool NoHistory { get; set; }
 }

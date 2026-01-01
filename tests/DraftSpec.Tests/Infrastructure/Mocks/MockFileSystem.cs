@@ -164,4 +164,39 @@ public class MockFileSystem : IFileSystem
         var fullPath = Path.GetFullPath(path);
         return _lastWriteTimes.TryGetValue(fullPath, out var time) ? time : DateTime.MinValue;
     }
+
+    public void MoveFile(string sourceFileName, string destFileName, bool overwrite = false)
+    {
+        var sourcePath = Path.GetFullPath(sourceFileName);
+        var destPath = Path.GetFullPath(destFileName);
+
+        if (!_files.Contains(sourcePath))
+            throw new FileNotFoundException("Source file not found", sourcePath);
+
+        if (_files.Contains(destPath) && !overwrite)
+            throw new IOException("Destination file already exists");
+
+        _files.Remove(sourcePath);
+        _files.Add(destPath);
+
+        if (_fileContents.TryGetValue(sourcePath, out var content))
+        {
+            _fileContents.Remove(sourcePath);
+            _fileContents[destPath] = content;
+        }
+
+        if (_lastWriteTimes.TryGetValue(sourcePath, out var time))
+        {
+            _lastWriteTimes.Remove(sourcePath);
+            _lastWriteTimes[destPath] = time;
+        }
+    }
+
+    public void DeleteFile(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        _files.Remove(fullPath);
+        _fileContents.Remove(fullPath);
+        _lastWriteTimes.Remove(fullPath);
+    }
 }

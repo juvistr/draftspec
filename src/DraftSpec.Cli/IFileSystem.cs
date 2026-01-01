@@ -64,4 +64,14 @@ public interface IFileSystem
     /// Get the last write time of a file in UTC.
     /// </summary>
     DateTime GetLastWriteTimeUtc(string path);
+
+    /// <summary>
+    /// Move a file from source to destination, overwriting if destination exists.
+    /// </summary>
+    void MoveFile(string sourceFileName, string destFileName, bool overwrite = true);
+
+    /// <summary>
+    /// Delete a file if it exists.
+    /// </summary>
+    void DeleteFile(string path);
 }

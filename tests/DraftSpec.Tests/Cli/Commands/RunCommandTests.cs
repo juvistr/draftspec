@@ -1,5 +1,6 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
+using DraftSpec.Cli.History;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
@@ -983,6 +984,92 @@ public class RunCommandTests
 
     #endregion
 
+    #region History Integration Tests
+
+    [Test]
+    public async Task ExecuteAsync_RecordsHistoryAfterRun()
+    {
+        var historyService = new MockSpecHistoryService();
+        var runner = new MockRunner(passedCount: 1, includeContexts: true);
+        var runnerFactory = new MockRunnerFactory(runner);
+        var command = CreateCommand(
+            runnerFactory: runnerFactory,
+            specFiles: ["test.spec.csx"],
+            historyService: historyService);
+
+        var options = new RunOptions { Path = "." };
+        await command.ExecuteAsync(options);
+
+        await Assert.That(historyService.RecordRunAsyncCalls).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_NoHistoryFlag_SkipsRecording()
+    {
+        var historyService = new MockSpecHistoryService();
+        var command = CreateCommand(
+            specFiles: ["test.spec.csx"],
+            historyService: historyService);
+
+        var options = new RunOptions { Path = ".", NoHistory = true };
+        await command.ExecuteAsync(options);
+
+        await Assert.That(historyService.RecordRunAsyncCalls).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Quarantine_ExcludesFlakySpecs()
+    {
+        var console = new MockConsole();
+        var runnerFactory = new MockRunnerFactory();
+        var flakySpec = new FlakySpec
+        {
+            SpecId = "test.spec.csx:Context/spec1",
+            DisplayName = "Context > spec1",
+            StatusChanges = 3,
+            TotalRuns = 5,
+            PassRate = 0.6
+        };
+        var historyService = new MockSpecHistoryService()
+            .WithFlakySpecs(flakySpec);
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["test.spec.csx"],
+            historyService: historyService);
+
+        var options = new RunOptions { Path = ".", Quarantine = true };
+        await command.ExecuteAsync(options);
+
+        // Should create a runner with an exclude filter for the flaky spec (regex-escaped)
+        await Assert.That(runnerFactory.LastExcludeName).IsNotNull();
+        await Assert.That(runnerFactory.LastExcludeName!).Contains(@"Context\ >\ spec1");
+        await Assert.That(console.Output).Contains("Quarantining 1 flaky spec");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Quarantine_NoFlakySpecs_RunsAll()
+    {
+        var console = new MockConsole();
+        var runnerFactory = new MockRunnerFactory();
+        var historyService = new MockSpecHistoryService();
+        // No flaky specs configured
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: ["test.spec.csx"],
+            historyService: historyService);
+
+        var options = new RunOptions { Path = ".", Quarantine = true };
+        await command.ExecuteAsync(options);
+
+        // Should not have an exclude filter for flaky specs
+        await Assert.That(runnerFactory.LastExcludeName).IsNull();
+        await Assert.That(console.Output).DoesNotContain("Quarantining");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static RunCommand CreateCommand(
@@ -992,7 +1079,8 @@ public class RunCommandTests
         IFileSystem? fileSystem = null,
         IEnvironment? environment = null,
         ISpecPartitioner? partitioner = null,
-        IGitService? gitService = null)
+        IGitService? gitService = null,
+        MockSpecHistoryService? historyService = null)
     {
         var specs = specFiles ?? [];
         return new RunCommand(
@@ -1005,7 +1093,7 @@ public class RunCommandTests
             NullObjects.StatsCollector,
             partitioner ?? NullObjects.Partitioner,
             gitService ?? NullObjects.GitService,
-            NullObjects.HistoryService);
+            historyService ?? new MockSpecHistoryService());
     }
 
     #endregion

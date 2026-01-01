@@ -387,4 +387,41 @@ public class CliOptionsConversionTests
     }
 
     #endregion
+
+    #region ToFlakyOptions Tests
+
+    [Test]
+    public async Task ToFlakyOptions_MapsAllProperties()
+    {
+        var cliOptions = new CliOptions
+        {
+            Path = "/project/path",
+            MinStatusChanges = 3,
+            WindowSize = 15,
+            Clear = "test.spec.csx:Context/spec1"
+        };
+
+        var flakyOptions = cliOptions.ToFlakyOptions();
+
+        await Assert.That(flakyOptions.Path).IsEqualTo("/project/path");
+        await Assert.That(flakyOptions.MinStatusChanges).IsEqualTo(3);
+        await Assert.That(flakyOptions.WindowSize).IsEqualTo(15);
+        await Assert.That(flakyOptions.Clear).IsEqualTo("test.spec.csx:Context/spec1");
+    }
+
+    [Test]
+    public async Task ToFlakyOptions_DefaultValues_CreatesValidOptions()
+    {
+        var cliOptions = new CliOptions();
+
+        var flakyOptions = cliOptions.ToFlakyOptions();
+
+        await Assert.That(flakyOptions).IsNotNull();
+        await Assert.That(flakyOptions.Path).IsEqualTo(".");
+        await Assert.That(flakyOptions.MinStatusChanges).IsEqualTo(2);
+        await Assert.That(flakyOptions.WindowSize).IsEqualTo(10);
+        await Assert.That(flakyOptions.Clear).IsNull();
+    }
+
+    #endregion
 }

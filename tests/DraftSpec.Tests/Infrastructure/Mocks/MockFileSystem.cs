@@ -37,6 +37,11 @@ public class MockFileSystem : IFileSystem
     public int CreateDirectoryCalls { get; private set; }
 
     /// <summary>
+    /// Gets how many times MoveFile() was called.
+    /// </summary>
+    public int MoveFileCalls { get; private set; }
+
+    /// <summary>
     /// Add a file that will be reported as existing.
     /// </summary>
     public MockFileSystem AddFile(string path, string? content = null)
@@ -167,6 +172,7 @@ public class MockFileSystem : IFileSystem
 
     public void MoveFile(string sourceFileName, string destFileName, bool overwrite = false)
     {
+        MoveFileCalls++;
         var sourcePath = Path.GetFullPath(sourceFileName);
         var destPath = Path.GetFullPath(destFileName);
 

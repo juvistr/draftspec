@@ -463,4 +463,110 @@ public class SpecHistoryServiceTests
     }
 
     #endregion
+
+    #region Error Handling Tests
+
+    [Test]
+    public async Task LoadAsync_MalformedJson_ReturnsEmptyAndShowsWarning()
+    {
+        // Arrange
+        var malformedJson = "{ this is not valid json }";
+        var fileSystem = new MockFileSystem()
+            .AddDirectory("/project/.draftspec")
+            .AddFile("/project/.draftspec/history.json", malformedJson);
+        var console = new MockConsole();
+        var service = new SpecHistoryService(fileSystem, console);
+
+        // Act
+        var history = await service.LoadAsync("/project");
+
+        // Assert
+        await Assert.That(history.Specs).IsEmpty();
+        await Assert.That(console.Warnings).Contains("Corrupt history file");
+    }
+
+    [Test]
+    public async Task SaveAsync_UsesTempFileForAtomicWrite()
+    {
+        // Arrange
+        var fileSystem = new MockFileSystem().AddDirectory("/project/.draftspec");
+        var console = new MockConsole();
+        var service = new SpecHistoryService(fileSystem, console);
+        var history = new SpecHistory
+        {
+            Specs = new Dictionary<string, SpecHistoryEntry>
+            {
+                ["test:spec"] = new SpecHistoryEntry { DisplayName = "test spec", Runs = [] }
+            }
+        };
+
+        // Act
+        await service.SaveAsync("/project", history);
+
+        // Assert - MoveFile should have been called (atomic write pattern)
+        await Assert.That(fileSystem.MoveFileCalls).IsGreaterThan(0);
+    }
+
+    #endregion
+
+    #region RecordRunAsync Edge Cases
+
+    [Test]
+    public async Task RecordRunAsync_SkipsPendingSpecs()
+    {
+        // Arrange
+        var fileSystem = new MockFileSystem().AddDirectory("/project/.draftspec");
+        var console = new MockConsole();
+        var service = new SpecHistoryService(fileSystem, console);
+
+        var results = new List<SpecRunRecord>
+        {
+            new() { SpecId = "test:pending", DisplayName = "pending spec", Status = "pending", DurationMs = 0 }
+        };
+
+        // Act
+        await service.RecordRunAsync("/project", results);
+
+        // Assert
+        var history = await service.LoadAsync("/project");
+        await Assert.That(history.Specs).IsEmpty(); // Pending specs are not recorded
+    }
+
+    [Test]
+    public async Task RecordRunAsync_SkipsSkippedSpecs()
+    {
+        // Arrange
+        var fileSystem = new MockFileSystem().AddDirectory("/project/.draftspec");
+        var console = new MockConsole();
+        var service = new SpecHistoryService(fileSystem, console);
+
+        var results = new List<SpecRunRecord>
+        {
+            new() { SpecId = "test:skipped", DisplayName = "skipped spec", Status = "skipped", DurationMs = 0 }
+        };
+
+        // Act
+        await service.RecordRunAsync("/project", results);
+
+        // Assert
+        var history = await service.LoadAsync("/project");
+        await Assert.That(history.Specs).IsEmpty(); // Skipped specs are not recorded
+    }
+
+    [Test]
+    public async Task RecordRunAsync_EmptyResults_DoesNothing()
+    {
+        // Arrange
+        var fileSystem = new MockFileSystem().AddDirectory("/project/.draftspec");
+        var console = new MockConsole();
+        var service = new SpecHistoryService(fileSystem, console);
+
+        // Act
+        await service.RecordRunAsync("/project", []);
+
+        // Assert
+        await Assert.That(fileSystem.WrittenFiles).IsEmpty(); // No writes should occur
+    }
+
+    #endregion
 }

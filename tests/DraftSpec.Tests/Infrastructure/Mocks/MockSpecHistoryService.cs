@@ -11,6 +11,7 @@ public class MockSpecHistoryService : ISpecHistoryService
     private readonly List<SpecRunRecord> _recordedResults = new();
     private readonly HashSet<string> _quarantinedIds = new();
     private readonly List<FlakySpec> _flakySpecs = new();
+    private bool _clearSpecResult = true;
 
     /// <summary>
     /// Gets all recorded results for assertions.
@@ -60,6 +61,15 @@ public class MockSpecHistoryService : ISpecHistoryService
         return this;
     }
 
+    /// <summary>
+    /// Configure the result of ClearSpecAsync.
+    /// </summary>
+    public MockSpecHistoryService WithClearSpecResult(bool result)
+    {
+        _clearSpecResult = result;
+        return this;
+    }
+
     public Task<SpecHistory> LoadAsync(string projectPath, CancellationToken ct = default)
     {
         LoadAsyncCalls++;
@@ -92,6 +102,6 @@ public class MockSpecHistoryService : ISpecHistoryService
 
     public Task<bool> ClearSpecAsync(string projectPath, string specId, CancellationToken ct = default)
     {
-        return Task.FromResult(true);
+        return Task.FromResult(_clearSpecResult);
     }
 }

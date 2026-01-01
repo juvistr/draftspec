@@ -1199,4 +1199,181 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Flaky Command Options
+
+    [Test]
+    public async Task Parse_FlakyCommand_SetsCommand()
+    {
+        var options = CliOptionsParser.Parse(["flaky", "."]);
+
+        await Assert.That(options.Command).IsEqualTo("flaky");
+        await Assert.That(options.Path).IsEqualTo(".");
+    }
+
+    [Test]
+    public async Task Parse_QuarantineFlag_SetsQuarantine()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--quarantine"]);
+
+        await Assert.That(options.Quarantine).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.Quarantine));
+    }
+
+    [Test]
+    public async Task Parse_QuarantineDefaultIsFalse()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.Quarantine).IsFalse();
+    }
+
+    [Test]
+    public async Task Parse_NoHistoryFlag_SetsNoHistory()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--no-history"]);
+
+        await Assert.That(options.NoHistory).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.NoHistory));
+    }
+
+    [Test]
+    public async Task Parse_NoHistoryDefaultIsFalse()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.NoHistory).IsFalse();
+    }
+
+    [Test]
+    public async Task Parse_MinChangesOption_SetsMinStatusChanges()
+    {
+        var options = CliOptionsParser.Parse(["flaky", ".", "--min-changes", "3"]);
+
+        await Assert.That(options.MinStatusChanges).IsEqualTo(3);
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.MinStatusChanges));
+    }
+
+    [Test]
+    public async Task Parse_MinChangesWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["flaky", ".", "--min-changes"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--min-changes requires a value");
+    }
+
+    [Test]
+    public async Task Parse_MinChangesInvalidValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["flaky", ".", "--min-changes", "abc"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--min-changes must be a positive integer");
+    }
+
+    [Test]
+    public async Task Parse_MinChangesZero_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["flaky", ".", "--min-changes", "0"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--min-changes must be a positive integer");
+    }
+
+    [Test]
+    public async Task Parse_MinChangesDefaultIs2()
+    {
+        var options = CliOptionsParser.Parse(["flaky", "."]);
+
+        await Assert.That(options.MinStatusChanges).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task Parse_WindowSizeOption_SetsWindowSize()
+    {
+        var options = CliOptionsParser.Parse(["flaky", ".", "--window-size", "20"]);
+
+        await Assert.That(options.WindowSize).IsEqualTo(20);
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.WindowSize));
+    }
+
+    [Test]
+    public async Task Parse_WindowSizeWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["flaky", ".", "--window-size"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--window-size requires a value");
+    }
+
+    [Test]
+    public async Task Parse_WindowSizeInvalidValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["flaky", ".", "--window-size", "abc"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--window-size must be at least 2");
+    }
+
+    [Test]
+    public async Task Parse_WindowSizeOne_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["flaky", ".", "--window-size", "1"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--window-size must be at least 2");
+    }
+
+    [Test]
+    public async Task Parse_WindowSizeDefaultIs10()
+    {
+        var options = CliOptionsParser.Parse(["flaky", "."]);
+
+        await Assert.That(options.WindowSize).IsEqualTo(10);
+    }
+
+    [Test]
+    public async Task Parse_ClearOption_SetsClear()
+    {
+        var options = CliOptionsParser.Parse(["flaky", ".", "--clear", "test.spec.csx:Context/spec1"]);
+
+        await Assert.That(options.Clear).IsEqualTo("test.spec.csx:Context/spec1");
+    }
+
+    [Test]
+    public async Task Parse_ClearWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["flaky", ".", "--clear"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--clear requires a spec ID");
+    }
+
+    [Test]
+    public async Task Parse_FlakyWithAllOptions_SetsAll()
+    {
+        var options = CliOptionsParser.Parse([
+            "flaky", "./specs",
+            "--min-changes", "3",
+            "--window-size", "15"
+        ]);
+
+        await Assert.That(options.Command).IsEqualTo("flaky");
+        await Assert.That(options.Path).IsEqualTo("./specs");
+        await Assert.That(options.MinStatusChanges).IsEqualTo(3);
+        await Assert.That(options.WindowSize).IsEqualTo(15);
+    }
+
+    [Test]
+    public async Task Parse_RunWithQuarantineAndNoHistory_SetsAll()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--quarantine", "--no-history"]);
+
+        await Assert.That(options.Command).IsEqualTo("run");
+        await Assert.That(options.Quarantine).IsTrue();
+        await Assert.That(options.NoHistory).IsTrue();
+    }
+
+    #endregion
 }

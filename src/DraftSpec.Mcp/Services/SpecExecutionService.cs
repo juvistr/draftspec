@@ -15,6 +15,7 @@ public partial class SpecExecutionService : ISpecExecutionService
     private readonly TempFileManager _tempFileManager;
     private readonly IAsyncProcessRunner _processRunner;
     private readonly ExecutionRateLimiter _rateLimiter;
+    private readonly McpOptions _options;
     private readonly ILogger<SpecExecutionService> _logger;
 
     /// <summary>
@@ -47,11 +48,13 @@ public partial class SpecExecutionService : ISpecExecutionService
         TempFileManager tempFileManager,
         IAsyncProcessRunner processRunner,
         ExecutionRateLimiter rateLimiter,
+        McpOptions options,
         ILogger<SpecExecutionService> logger)
     {
         _tempFileManager = tempFileManager;
         _processRunner = processRunner;
         _rateLimiter = rateLimiter;
+        _options = options;
         _logger = logger;
     }
 
@@ -204,7 +207,7 @@ public partial class SpecExecutionService : ISpecExecutionService
                 {
                     Category = ErrorCategory.Runtime,
                     Message = $"Execution failed: {ex.Message}",
-                    StackTrace = ex.StackTrace
+                    StackTrace = _options.IncludeStackTracesInErrors ? ex.StackTrace : null
                 },
                 ErrorOutput = $"Execution failed: {ex.Message}",
                 DurationMs = stopwatch.Elapsed.TotalMilliseconds

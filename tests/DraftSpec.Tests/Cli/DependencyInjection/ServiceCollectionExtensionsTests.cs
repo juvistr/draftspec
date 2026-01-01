@@ -26,4 +26,19 @@ public class ServiceCollectionExtensionsTests
         await Assert.That(provider.GetService<IFileSystem>()).IsNotNull();
         await Assert.That(provider.GetService<IProjectResolver>()).IsNotNull();
     }
+
+    [Test]
+    public async Task AddDraftSpec_CommandFactory_CanCreateFlakyCommand()
+    {
+        var services = new ServiceCollection();
+        services.AddDraftSpec();
+        var provider = services.BuildServiceProvider();
+
+        var factory = provider.GetRequiredService<ICommandFactory>();
+
+        // Exercise the lambda factory for FlakyCommand (lines 72-73 in ServiceCollectionExtensions)
+        var command = factory.Create("flaky");
+
+        await Assert.That(command).IsNotNull();
+    }
 }

@@ -416,6 +416,8 @@ public class CompilationDiagnosticFormatterTests
         public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
         public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
         public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
+        public void MoveFile(string sourceFileName, string destFileName, bool overwrite = false) { }
+        public void DeleteFile(string path) { }
     }
 
     #endregion

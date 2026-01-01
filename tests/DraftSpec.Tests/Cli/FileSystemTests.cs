@@ -183,4 +183,62 @@ public class FileSystemTests : IDisposable
     }
 
     #endregion
+
+    #region MoveFile Operations
+
+    [Test]
+    public async Task MoveFile_MovesFileToDestination()
+    {
+        var source = Path.Combine(_tempDir, "source.txt");
+        var dest = Path.Combine(_tempDir, "dest.txt");
+        File.WriteAllText(source, "move me");
+
+        _fileSystem.MoveFile(source, dest);
+
+        await Assert.That(File.Exists(source)).IsFalse();
+        await Assert.That(File.Exists(dest)).IsTrue();
+        await Assert.That(File.ReadAllText(dest)).IsEqualTo("move me");
+    }
+
+    [Test]
+    public async Task MoveFile_WithOverwrite_ReplacesExistingFile()
+    {
+        var source = Path.Combine(_tempDir, "source.txt");
+        var dest = Path.Combine(_tempDir, "dest.txt");
+        File.WriteAllText(source, "new content");
+        File.WriteAllText(dest, "old content");
+
+        _fileSystem.MoveFile(source, dest, overwrite: true);
+
+        await Assert.That(File.Exists(source)).IsFalse();
+        await Assert.That(File.ReadAllText(dest)).IsEqualTo("new content");
+    }
+
+    #endregion
+
+    #region DeleteFile Operations
+
+    [Test]
+    public async Task DeleteFile_ExistingFile_DeletesFile()
+    {
+        var path = Path.Combine(_tempDir, "delete-me.txt");
+        File.WriteAllText(path, "delete me");
+
+        _fileSystem.DeleteFile(path);
+
+        await Assert.That(File.Exists(path)).IsFalse();
+    }
+
+    [Test]
+    public async Task DeleteFile_NonExistingFile_DoesNotThrow()
+    {
+        var path = Path.Combine(_tempDir, "nonexistent.txt");
+
+        // Should not throw
+        _fileSystem.DeleteFile(path);
+
+        await Assert.That(File.Exists(path)).IsFalse();
+    }
+
+    #endregion
 }

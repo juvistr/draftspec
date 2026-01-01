@@ -351,6 +351,63 @@ public static class CliOptionsParser
                 options.DryRun = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.DryRun));
             }
+            // Flaky test detection options
+            else if (arg == "--quarantine")
+            {
+                options.Quarantine = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.Quarantine));
+            }
+            else if (arg == "--no-history")
+            {
+                options.NoHistory = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.NoHistory));
+            }
+            // Flaky command options
+            else if (arg == "--min-changes")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--min-changes requires a value (minimum status changes)";
+                    return options;
+                }
+
+                if (!int.TryParse(args[++i], out var minChanges) || minChanges < 1)
+                {
+                    options.Error = "--min-changes must be a positive integer";
+                    return options;
+                }
+
+                options.MinStatusChanges = minChanges;
+                options.ExplicitlySet.Add(nameof(CliOptions.MinStatusChanges));
+            }
+            else if (arg == "--window-size")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--window-size requires a value (number of runs to analyze)";
+                    return options;
+                }
+
+                if (!int.TryParse(args[++i], out var windowSize) || windowSize < 2)
+                {
+                    options.Error = "--window-size must be at least 2";
+                    return options;
+                }
+
+                options.WindowSize = windowSize;
+                options.ExplicitlySet.Add(nameof(CliOptions.WindowSize));
+            }
+            else if (arg == "--clear")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--clear requires a spec ID to clear";
+                    return options;
+                }
+
+                options.Clear = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.Clear));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

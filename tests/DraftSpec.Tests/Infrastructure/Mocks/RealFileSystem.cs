@@ -36,4 +36,9 @@ public class RealFileSystem : IFileSystem
         => Directory.EnumerateDirectories(path, searchPattern);
 
     public DateTime GetLastWriteTimeUtc(string path) => File.GetLastWriteTimeUtc(path);
+
+    public void MoveFile(string sourceFileName, string destFileName, bool overwrite = false)
+        => File.Move(sourceFileName, destFileName, overwrite);
+
+    public void DeleteFile(string path) => File.Delete(path);
 }

@@ -19,6 +19,7 @@ public class MockRunner : IInProcessSpecRunner
     private readonly int _skippedCount;
     private readonly int _delayMs;
     private readonly bool _throwArgumentException;
+    private readonly bool _includeContexts;
 
     /// <summary>
     /// Creates a MockRunner with configurable behavior.
@@ -30,7 +31,8 @@ public class MockRunner : IInProcessSpecRunner
         int pendingCount = 0,
         int skippedCount = 0,
         int delayMs = 0,
-        bool throwArgumentException = false)
+        bool throwArgumentException = false,
+        bool includeContexts = false)
     {
         _success = success;
         _passedCount = passedCount;
@@ -39,6 +41,7 @@ public class MockRunner : IInProcessSpecRunner
         _skippedCount = skippedCount;
         _delayMs = delayMs;
         _throwArgumentException = throwArgumentException;
+        _includeContexts = includeContexts;
     }
 
     // Call tracking
@@ -107,19 +110,40 @@ public class MockRunner : IInProcessSpecRunner
     private InProcessRunResult CreateResult(string specFile)
     {
         var total = _passedCount + _failedCount + _pendingCount + _skippedCount;
+        var report = new SpecReport
+        {
+            Summary = new SpecSummary
+            {
+                Total = total > 0 ? total : 1,
+                Passed = _passedCount,
+                Failed = _failedCount,
+                Pending = _pendingCount,
+                Skipped = _skippedCount
+            }
+        };
+
+        if (_includeContexts)
+        {
+            var specs = new List<SpecResultReport>();
+            for (var i = 0; i < _passedCount; i++)
+                specs.Add(new SpecResultReport { Description = $"passed spec {i + 1}", Status = "passed", DurationMs = 10 });
+            for (var i = 0; i < _failedCount; i++)
+                specs.Add(new SpecResultReport { Description = $"failed spec {i + 1}", Status = "failed", DurationMs = 10 });
+            for (var i = 0; i < _pendingCount; i++)
+                specs.Add(new SpecResultReport { Description = $"pending spec {i + 1}", Status = "pending", DurationMs = 0 });
+            for (var i = 0; i < _skippedCount; i++)
+                specs.Add(new SpecResultReport { Description = $"skipped spec {i + 1}", Status = "skipped", DurationMs = 0 });
+
+            report.Contexts.Add(new SpecContextReport
+            {
+                Description = "Test Context",
+                Specs = specs
+            });
+        }
+
         return new InProcessRunResult(
             specFile,
-            new SpecReport
-            {
-                Summary = new SpecSummary
-                {
-                    Total = total > 0 ? total : 1,
-                    Passed = _passedCount,
-                    Failed = _failedCount,
-                    Pending = _pendingCount,
-                    Skipped = _skippedCount
-                }
-            },
+            report,
             TimeSpan.Zero,
             _success ? null : new Exception("Test failed"));
     }

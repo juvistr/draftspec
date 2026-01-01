@@ -34,4 +34,13 @@ public class FileSystem : IFileSystem
         => Directory.EnumerateDirectories(path, searchPattern);
 
     public DateTime GetLastWriteTimeUtc(string path) => File.GetLastWriteTimeUtc(path);
+
+    public void MoveFile(string sourceFileName, string destFileName, bool overwrite = true)
+        => File.Move(sourceFileName, destFileName, overwrite);
+
+    public void DeleteFile(string path)
+    {
+        if (File.Exists(path))
+            File.Delete(path);
+    }
 }

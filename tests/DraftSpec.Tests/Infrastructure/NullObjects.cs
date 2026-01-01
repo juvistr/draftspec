@@ -1,6 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
+using DraftSpec.Cli.History;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Pipeline;
@@ -93,6 +94,11 @@ public static class NullObjects
     /// </summary>
     public static IGitService GitService { get; } = new NullGitService();
 
+    /// <summary>
+    /// A no-op history service.
+    /// </summary>
+    public static ISpecHistoryService HistoryService { get; } = new NullHistoryService();
+
     #region Null Object Implementations
 
     private class NullConsole : IConsole
@@ -122,6 +128,8 @@ public static class NullObjects
         public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption) => [];
         public IEnumerable<string> EnumerateDirectories(string path, string searchPattern) => [];
         public DateTime GetLastWriteTimeUtc(string path) => DateTime.MinValue;
+        public void MoveFile(string sourceFileName, string destFileName, bool overwrite = false) { }
+        public void DeleteFile(string path) { }
     }
 
     private class NullSpecFinder : ISpecFinder
@@ -262,6 +270,27 @@ public static class NullObjects
             string directory,
             CancellationToken cancellationToken = default)
             => Task.FromResult(true);
+    }
+
+    private class NullHistoryService : ISpecHistoryService
+    {
+        public Task<SpecHistory> LoadAsync(string projectPath, CancellationToken ct = default)
+            => Task.FromResult(SpecHistory.Empty);
+
+        public Task SaveAsync(string projectPath, SpecHistory history, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task RecordRunAsync(string projectPath, IReadOnlyList<SpecRunRecord> results, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public IReadOnlyList<FlakySpec> GetFlakySpecs(SpecHistory history, int minStatusChanges = 2, int windowSize = 10)
+            => [];
+
+        public IReadOnlySet<string> GetQuarantinedSpecIds(SpecHistory history, int minStatusChanges = 2, int windowSize = 10)
+            => new HashSet<string>();
+
+        public Task<bool> ClearSpecAsync(string projectPath, string specId, CancellationToken ct = default)
+            => Task.FromResult(false);
     }
 
     #endregion

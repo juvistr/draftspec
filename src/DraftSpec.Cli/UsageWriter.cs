@@ -29,6 +29,7 @@ public class UsageWriter : IUsageWriter
         _console.WriteLine("  draftspec run <path> [options]   Run specs once and exit");
         _console.WriteLine("  draftspec watch <path> [options] Watch for changes and re-run");
         _console.WriteLine("  draftspec list <path> [options]  List specs without running them");
+        _console.WriteLine("  draftspec flaky [path] [options] Show flaky test detection report");
         _console.WriteLine("  draftspec init [path]            Initialize spec infrastructure");
         _console.WriteLine("  draftspec new <name> [path]      Create a new spec file");
         _console.WriteLine();
@@ -57,6 +58,15 @@ public class UsageWriter : IUsageWriter
         _console.WriteLine("Watch Options:");
         _console.WriteLine("  --incremental, -i       Only re-run changed specs (not entire files)");
         _console.WriteLine();
+        _console.WriteLine("Flaky Test Options (run command):");
+        _console.WriteLine("  --quarantine            Skip known flaky tests during execution");
+        _console.WriteLine("  --no-history            Disable recording results to history");
+        _console.WriteLine();
+        _console.WriteLine("Flaky Command Options:");
+        _console.WriteLine("  --min-changes <n>       Minimum status changes to be flaky (default: 2)");
+        _console.WriteLine("  --window-size <n>       Number of recent runs to analyze (default: 10)");
+        _console.WriteLine("  --clear <spec-id>       Clear a specific spec from history");
+        _console.WriteLine();
         _console.WriteLine("Path can be:");
         _console.WriteLine("  - A directory (runs all *.spec.csx files recursively)");
         _console.WriteLine("  - A single .spec.csx file");
@@ -72,6 +82,8 @@ public class UsageWriter : IUsageWriter
         _console.WriteLine("  draftspec watch . --incremental");
         _console.WriteLine("  draftspec list . --list-format json -o specs.json");
         _console.WriteLine("  draftspec list . --focused-only");
+        _console.WriteLine("  draftspec flaky                     # Show flaky test report");
+        _console.WriteLine("  draftspec run . --quarantine        # Skip known flaky tests");
 
         return errorMessage != null ? 1 : 0;
     }

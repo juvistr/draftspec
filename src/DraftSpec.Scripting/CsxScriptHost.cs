@@ -18,6 +18,9 @@ public sealed partial class CsxScriptHost : IScriptHost
 {
     private readonly string _baseDirectory;
     private readonly IReadOnlyList<Assembly> _referenceAssemblies;
+    private readonly ScriptCompilationCache? _diskCache;
+    private readonly bool _useDiskCache;
+
     /// <summary>
     /// Cache entry containing the compiled script, source file paths, and max modification time.
     /// </summary>
@@ -54,10 +57,45 @@ public sealed partial class CsxScriptHost : IScriptHost
     /// </summary>
     /// <param name="baseDirectory">Base directory for resolving relative paths (typically output directory).</param>
     /// <param name="referenceAssemblies">Additional assemblies to reference in scripts.</param>
-    public CsxScriptHost(string baseDirectory, IEnumerable<Assembly>? referenceAssemblies = null)
+    /// <param name="useDiskCache">Whether to use disk-based compilation cache.</param>
+    /// <param name="cacheDirectory">Directory for disk cache (defaults to .draftspec in baseDirectory).</param>
+    public CsxScriptHost(
+        string baseDirectory,
+        IEnumerable<Assembly>? referenceAssemblies = null,
+        bool useDiskCache = true,
+        string? cacheDirectory = null)
     {
         _baseDirectory = baseDirectory;
         _referenceAssemblies = referenceAssemblies?.ToList() ?? [];
+        _useDiskCache = useDiskCache;
+
+        if (useDiskCache)
+        {
+            var cacheDir = cacheDirectory ?? FindProjectRoot(baseDirectory) ?? baseDirectory;
+            _diskCache = new ScriptCompilationCache(cacheDir);
+        }
+    }
+
+    /// <summary>
+    /// Finds the project root by looking for .draftspec or .git directory.
+    /// </summary>
+    private static string? FindProjectRoot(string startDirectory)
+    {
+        var current = startDirectory;
+        while (!string.IsNullOrEmpty(current))
+        {
+            if (Directory.Exists(Path.Combine(current, ".draftspec")) ||
+                Directory.Exists(Path.Combine(current, ".git")))
+            {
+                return current;
+            }
+
+            var parent = Directory.GetParent(current)?.FullName;
+            if (parent == current)
+                break;
+            current = parent;
+        }
+        return null;
     }
 
     /// <summary>
@@ -88,14 +126,77 @@ public sealed partial class CsxScriptHost : IScriptHost
 
         try
         {
-            var script = await GetOrCreateScriptAsync(absolutePath, cancellationToken);
+            // Try disk cache first for faster cold starts
+            if (_useDiskCache && _diskCache != null)
+            {
+                // We need to preprocess to get the cache key components
+                var (code, _, sourceFiles, _) =
+                    await PreprocessScriptAsync(absolutePath, cancellationToken);
+
+                var (success, _) = await _diskCache.TryExecuteCachedAsync(
+                    absolutePath, sourceFiles, code, globals, cancellationToken);
+
+                if (success)
+                {
+                    return capturedContext;
+                }
+            }
+
+            // Fall back to normal compilation
+            var (script, sourceFilesForCache, preprocessedCode) =
+                await GetOrCreateScriptWithMetadataAsync(absolutePath, cancellationToken);
+
             await script.RunAsync(globals, cancellationToken: cancellationToken);
+
+            // Cache the compiled script for future runs
+            if (_useDiskCache && _diskCache != null && sourceFilesForCache != null && preprocessedCode != null)
+            {
+                _diskCache.CacheScript(absolutePath, sourceFilesForCache, preprocessedCode, script);
+            }
+
             return capturedContext;
         }
         catch
         {
             throw;
         }
+    }
+
+    /// <summary>
+    /// Gets a cached script or creates and caches a new one, returning metadata for disk caching.
+    /// </summary>
+    private async Task<(Script<object> script, IReadOnlyList<string>? sourceFiles, string? preprocessedCode)> GetOrCreateScriptWithMetadataAsync(
+        string absolutePath,
+        CancellationToken cancellationToken)
+    {
+        // Check in-memory cache and validate modification time
+        if (_scriptCache.TryGetValue(absolutePath, out var cached))
+        {
+            // Check if any source file has been modified since caching
+            var currentMaxModified = GetMaxModificationTime(cached.SourceFiles);
+            if (currentMaxModified == cached.MaxModifiedTimeUtc)
+            {
+                // In-memory hit - no need to return metadata for disk caching
+                return (cached.Script, null, null);
+            }
+
+            // Files changed - remove stale entry and recompile
+            _scriptCache.TryRemove(absolutePath, out _);
+        }
+
+        // Parse and preprocess the script
+        var (code, additionalReferences, sourceFiles, maxModifiedTimeUtc) =
+            await PreprocessScriptAsync(absolutePath, cancellationToken);
+
+        // Build script options
+        var options = CreateScriptOptions(Path.GetDirectoryName(absolutePath)!, additionalReferences);
+
+        // Create and cache the script - use ScriptGlobals as the globals type
+        var script = CSharpScript.Create(code, options, typeof(ScriptGlobals));
+        var entry = new CacheEntry(script, sourceFiles, maxModifiedTimeUtc);
+        _scriptCache.TryAdd(absolutePath, entry);
+
+        return (script, sourceFiles, code);
     }
 
     /// <summary>

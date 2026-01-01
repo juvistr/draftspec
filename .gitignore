@@ -53,6 +53,9 @@ publish/
 .DS_Store
 Thumbs.db
 
+# DraftSpec cache
+.draftspec/
+
 # User-specific
 *.rsuser
 *.DotSettings.user

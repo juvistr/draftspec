@@ -1559,4 +1559,172 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Docs Command Options
+
+    [Test]
+    public async Task Parse_DocsCommand_SetsCommand()
+    {
+        var options = CliOptionsParser.Parse(["docs", "."]);
+
+        await Assert.That(options.Command).IsEqualTo("docs");
+        await Assert.That(options.Path).IsEqualTo(".");
+    }
+
+    [Test]
+    public async Task Parse_DocsCommandWithoutPath_UsesDefaultPath()
+    {
+        var options = CliOptionsParser.Parse(["docs"]);
+
+        await Assert.That(options.Command).IsEqualTo("docs");
+        await Assert.That(options.Path).IsEqualTo(".");
+    }
+
+    [Test]
+    public async Task Parse_DocsFormatMarkdown_SetsFormat()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--docs-format", "markdown"]);
+
+        await Assert.That(options.DocsFormat).IsEqualTo(DocsFormat.Markdown);
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.DocsFormat));
+    }
+
+    [Test]
+    public async Task Parse_DocsFormatMd_SetsFormat()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--docs-format", "md"]);
+
+        await Assert.That(options.DocsFormat).IsEqualTo(DocsFormat.Markdown);
+    }
+
+    [Test]
+    public async Task Parse_DocsFormatHtml_SetsFormat()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--docs-format", "html"]);
+
+        await Assert.That(options.DocsFormat).IsEqualTo(DocsFormat.Html);
+    }
+
+    [Test]
+    public async Task Parse_DocsFormatIsCaseInsensitive()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--docs-format", "HTML"]);
+
+        await Assert.That(options.DocsFormat).IsEqualTo(DocsFormat.Html);
+    }
+
+    [Test]
+    public async Task Parse_DocsFormatWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--docs-format"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--docs-format requires a value");
+    }
+
+    [Test]
+    public async Task Parse_DocsFormatDefaultIsMarkdown()
+    {
+        var options = CliOptionsParser.Parse(["docs", "."]);
+
+        await Assert.That(options.DocsFormat).IsEqualTo(DocsFormat.Markdown);
+    }
+
+    [Test]
+    public async Task Parse_DocsContext_SetsDocsContext()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--docs-context", "UserService"]);
+
+        await Assert.That(options.DocsContext).IsEqualTo("UserService");
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.DocsContext));
+    }
+
+    [Test]
+    public async Task Parse_DocsContextWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--docs-context"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--docs-context requires a value");
+    }
+
+    [Test]
+    public async Task Parse_DocsContextDefaultIsNull()
+    {
+        var options = CliOptionsParser.Parse(["docs", "."]);
+
+        await Assert.That(options.DocsContext).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_WithResultsFlag_SetsWithResults()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--with-results"]);
+
+        await Assert.That(options.WithResults).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.WithResults));
+    }
+
+    [Test]
+    public async Task Parse_WithResultsDefaultIsFalse()
+    {
+        var options = CliOptionsParser.Parse(["docs", "."]);
+
+        await Assert.That(options.WithResults).IsFalse();
+    }
+
+    [Test]
+    public async Task Parse_ResultsFile_SetsResultsFile()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--results-file", "results.json"]);
+
+        await Assert.That(options.ResultsFile).IsEqualTo("results.json");
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.ResultsFile));
+    }
+
+    [Test]
+    public async Task Parse_ResultsFileWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--results-file"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--results-file requires a path");
+    }
+
+    [Test]
+    public async Task Parse_ResultsFileDefaultIsNull()
+    {
+        var options = CliOptionsParser.Parse(["docs", "."]);
+
+        await Assert.That(options.ResultsFile).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_DocsWithAllOptions_SetsAll()
+    {
+        var options = CliOptionsParser.Parse([
+            "docs", "./specs",
+            "--docs-format", "html",
+            "--docs-context", "UserService",
+            "--with-results",
+            "--results-file", "results.json"
+        ]);
+
+        await Assert.That(options.Command).IsEqualTo("docs");
+        await Assert.That(options.Path).IsEqualTo("./specs");
+        await Assert.That(options.DocsFormat).IsEqualTo(DocsFormat.Html);
+        await Assert.That(options.DocsContext).IsEqualTo("UserService");
+        await Assert.That(options.WithResults).IsTrue();
+        await Assert.That(options.ResultsFile).IsEqualTo("results.json");
+    }
+
+    [Test]
+    public async Task Parse_DocsWithFilterName_SetsFilterName()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--filter-name", "Calculator"]);
+
+        await Assert.That(options.FilterName).IsEqualTo("Calculator");
+    }
+
+    #endregion
 }

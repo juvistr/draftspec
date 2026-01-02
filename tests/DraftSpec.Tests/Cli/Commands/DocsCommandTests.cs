@@ -494,6 +494,108 @@ public class DocsCommandTests
         await Assert.That(_console.Errors).Contains("Failed to parse results file");
     }
 
+    [Test]
+    public async Task ExecuteAsync_WithResults_ValidJson_IncludesResultsInOutput()
+    {
+        CreateSpecFile("feature.spec.csx", """
+            describe("Feature", () => {
+                it("passing spec", () => { });
+                it("failing spec", () => { });
+            });
+            """);
+
+        // Create valid JSON results file matching SpecReport structure
+        var resultsJson = """
+            {
+                "timestamp": "2025-06-15T10:00:00Z",
+                "source": "feature.spec.csx",
+                "summary": { "total": 2, "passed": 1, "failed": 1, "pending": 0, "skipped": 0 },
+                "contexts": [
+                    {
+                        "description": "Feature",
+                        "specs": [
+                            { "description": "passing spec", "status": "passed", "durationMs": 10.5 },
+                            { "description": "failing spec", "status": "failed", "durationMs": 5.2, "error": "Expected true but was false" }
+                        ],
+                        "contexts": []
+                    }
+                ]
+            }
+            """;
+        var resultsFile = Path.Combine(_tempDir, "results.json");
+        await File.WriteAllTextAsync(resultsFile, resultsJson);
+
+        var command = CreateCommand();
+        var options = new DocsOptions
+        {
+            Path = _tempDir,
+            WithResults = true,
+            ResultsFile = resultsFile,
+            Format = DocsFormat.Markdown
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        var output = _console.Output;
+        // Should contain results statistics
+        await Assert.That(output).Contains("passed");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithResults_NestedContexts_FlattensCorrectly()
+    {
+        CreateSpecFile("nested.spec.csx", """
+            describe("Parent", () => {
+                describe("Child", () => {
+                    it("nested spec", () => { });
+                });
+            });
+            """);
+
+        // Create valid JSON with nested contexts
+        var resultsJson = """
+            {
+                "timestamp": "2025-06-15T10:00:00Z",
+                "source": "nested.spec.csx",
+                "summary": { "total": 1, "passed": 1, "failed": 0, "pending": 0, "skipped": 0 },
+                "contexts": [
+                    {
+                        "description": "Parent",
+                        "specs": [],
+                        "contexts": [
+                            {
+                                "description": "Child",
+                                "specs": [
+                                    { "description": "nested spec", "status": "passed", "durationMs": 15.0 }
+                                ],
+                                "contexts": []
+                            }
+                        ]
+                    }
+                ]
+            }
+            """;
+        var resultsFile = Path.Combine(_tempDir, "results.json");
+        await File.WriteAllTextAsync(resultsFile, resultsJson);
+
+        var command = CreateCommand();
+        var options = new DocsOptions
+        {
+            Path = _tempDir,
+            WithResults = true,
+            ResultsFile = resultsFile,
+            Format = DocsFormat.Html
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        // The command should successfully process nested contexts
+        await Assert.That(_console.Output).Contains("Parent");
+        await Assert.That(_console.Output).Contains("Child");
+    }
+
     #endregion
 
     #region Unknown Format

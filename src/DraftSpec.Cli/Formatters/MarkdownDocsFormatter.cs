@@ -22,7 +22,7 @@ public sealed class MarkdownDocsFormatter : IDocsFormatter
         // Render tree as markdown
         foreach (var child in tree.Children)
         {
-            RenderContext(child, sb, level: 2);
+            RenderContext(child, sb, level: 2, metadata.Results);
         }
 
         // Render any root-level specs
@@ -44,7 +44,7 @@ public sealed class MarkdownDocsFormatter : IDocsFormatter
         return sb.ToString();
     }
 
-    private static void RenderContext(TreeNode node, StringBuilder sb, int level)
+    private static void RenderContext(TreeNode node, StringBuilder sb, int level, IReadOnlyDictionary<string, string>? results)
     {
         // Context heading (max 6 levels in markdown)
         var heading = new string('#', Math.Min(level, 6));
@@ -52,12 +52,12 @@ public sealed class MarkdownDocsFormatter : IDocsFormatter
         sb.AppendLine();
 
         // Render specs in this context
-        RenderSpecs(node.Specs, sb, results: null);
+        RenderSpecs(node.Specs, sb, results);
 
         // Render child contexts
         foreach (var child in node.Children)
         {
-            RenderContext(child, sb, level + 1);
+            RenderContext(child, sb, level + 1, results);
         }
     }
 

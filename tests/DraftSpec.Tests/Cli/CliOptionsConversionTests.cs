@@ -489,4 +489,62 @@ public class CliOptionsConversionTests
     }
 
     #endregion
+
+    #region ToDocsOptions Tests
+
+    [Test]
+    public async Task ToDocsOptions_MapsBasicProperties()
+    {
+        var cliOptions = new CliOptions
+        {
+            Path = "/docs/path",
+            DocsFormat = DocsFormat.Html,
+            DocsContext = "UserService",
+            WithResults = true,
+            ResultsFile = "results.json"
+        };
+
+        var docsOptions = cliOptions.ToDocsOptions();
+
+        await Assert.That(docsOptions.Path).IsEqualTo("/docs/path");
+        await Assert.That(docsOptions.Format).IsEqualTo(DocsFormat.Html);
+        await Assert.That(docsOptions.Context).IsEqualTo("UserService");
+        await Assert.That(docsOptions.WithResults).IsTrue();
+        await Assert.That(docsOptions.ResultsFile).IsEqualTo("results.json");
+    }
+
+    [Test]
+    public async Task ToDocsOptions_MapsFilterOptions()
+    {
+        var cliOptions = new CliOptions
+        {
+            FilterName = "Calculator",
+            FilterTags = "unit",
+            ExcludeName = "legacy"
+        };
+
+        var docsOptions = cliOptions.ToDocsOptions();
+
+        await Assert.That(docsOptions.Filter.FilterName).IsEqualTo("Calculator");
+        await Assert.That(docsOptions.Filter.FilterTags).IsEqualTo("unit");
+        await Assert.That(docsOptions.Filter.ExcludeName).IsEqualTo("legacy");
+    }
+
+    [Test]
+    public async Task ToDocsOptions_DefaultValues_CreatesValidOptions()
+    {
+        var cliOptions = new CliOptions();
+
+        var docsOptions = cliOptions.ToDocsOptions();
+
+        await Assert.That(docsOptions).IsNotNull();
+        await Assert.That(docsOptions.Path).IsEqualTo(".");
+        await Assert.That(docsOptions.Format).IsEqualTo(DocsFormat.Markdown);
+        await Assert.That(docsOptions.Context).IsNull();
+        await Assert.That(docsOptions.WithResults).IsFalse();
+        await Assert.That(docsOptions.ResultsFile).IsNull();
+        await Assert.That(docsOptions.Filter).IsNotNull();
+    }
+
+    #endregion
 }

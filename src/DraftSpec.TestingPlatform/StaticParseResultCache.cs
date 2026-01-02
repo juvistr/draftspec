@@ -1,8 +1,7 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DraftSpec.Scripting;
+using Microsoft.Extensions.Logging;
 
 namespace DraftSpec.TestingPlatform;
 
@@ -10,15 +9,11 @@ namespace DraftSpec.TestingPlatform;
 /// Disk-based cache for static parse results.
 /// Stores parsed spec structures to avoid re-parsing unchanged files.
 /// </summary>
-public sealed class StaticParseResultCache
+public sealed class StaticParseResultCache : DiskCacheBase
 {
     private const string CacheDirectoryName = ".draftspec";
     private const string ParsingCacheSubdirectory = "cache/parsing";
-    private const string MetadataExtension = ".meta.json";
     private const string ResultExtension = ".result.json";
-
-    private readonly string _cacheDirectory;
-    private readonly string _draftSpecVersion;
 
     /// <summary>
     /// JSON serialization options for cache data.
@@ -35,10 +30,13 @@ public sealed class StaticParseResultCache
     /// Creates a new static parse result cache.
     /// </summary>
     /// <param name="projectDirectory">The project directory containing .draftspec folder.</param>
-    public StaticParseResultCache(string projectDirectory)
+    /// <param name="logger">Optional logger for cache operations.</param>
+    public StaticParseResultCache(string projectDirectory, ILogger? logger = null)
+        : base(
+            Path.Combine(projectDirectory, CacheDirectoryName, ParsingCacheSubdirectory),
+            typeof(StaticParseResult).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            logger)
     {
-        _cacheDirectory = Path.Combine(projectDirectory, CacheDirectoryName, ParsingCacheSubdirectory);
-        _draftSpecVersion = typeof(StaticParseResult).Assembly.GetName().Version?.ToString() ?? "0.0.0";
     }
 
     /// <summary>
@@ -58,7 +56,7 @@ public sealed class StaticParseResultCache
             // Compute file hashes once and reuse for both cache key and validation
             var fileHashes = ComputeFileHashes(sourceFiles);
 
-            var cacheKey = ComputeCacheKeyFromHashes(sourcePath, fileHashes);
+            var cacheKey = ComputeCacheKeyFromHashes(sourcePath, fileHashes, additionalContent: null);
             var metadataPath = GetMetadataPath(cacheKey);
 
             if (!File.Exists(metadataPath))
@@ -87,9 +85,10 @@ public sealed class StaticParseResultCache
 
             return (true, result);
         }
-        catch
+        catch (Exception ex)
         {
             // Cache read errors should fall back to parsing
+            Logger.LogDebug(ex, "Cache read failed for {SourcePath}, falling back to parsing", sourcePath);
             return (false, null);
         }
     }
@@ -120,7 +119,7 @@ public sealed class StaticParseResultCache
                 SourcePath = sourcePath,
                 SourceFiles = sourceFiles.ToList(),
                 SourceFileHashes = sourceFiles.ToDictionary(f => f, ComputeFileHash),
-                DraftSpecVersion = _draftSpecVersion,
+                DraftSpecVersion = Version,
                 CachedAtUtc = DateTime.UtcNow
             };
 
@@ -143,28 +142,19 @@ public sealed class StaticParseResultCache
 
             await SaveResultAsync(GetResultPath(cacheKey), resultData, cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
             // Cache write errors should not fail parsing
+            Logger.LogDebug(ex, "Failed to cache parse result for {SourcePath}", sourcePath);
         }
     }
 
     /// <summary>
     /// Clears all cached parse results.
     /// </summary>
-    public void Clear()
+    public override void Clear()
     {
-        try
-        {
-            if (Directory.Exists(_cacheDirectory))
-            {
-                Directory.Delete(_cacheDirectory, recursive: true);
-            }
-        }
-        catch
-        {
-            // Ignore errors when clearing cache
-        }
+        base.Clear();
     }
 
     /// <summary>
@@ -172,63 +162,7 @@ public sealed class StaticParseResultCache
     /// </summary>
     public CacheStatistics GetStatistics()
     {
-        try
-        {
-            if (!Directory.Exists(_cacheDirectory))
-                return new CacheStatistics();
-
-            var metaFiles = Directory.GetFiles(_cacheDirectory, "*" + MetadataExtension);
-            var resultFiles = Directory.GetFiles(_cacheDirectory, "*" + ResultExtension);
-            var totalSize = resultFiles.Sum(f => new FileInfo(f).Length);
-
-            return new CacheStatistics
-            {
-                EntryCount = metaFiles.Length,
-                TotalSizeBytes = totalSize,
-                CacheDirectory = _cacheDirectory
-            };
-        }
-        catch
-        {
-            return new CacheStatistics();
-        }
-    }
-
-    /// <summary>
-    /// Computes SHA256 hashes for all source files.
-    /// </summary>
-    private static Dictionary<string, string> ComputeFileHashes(IReadOnlyList<string> sourceFiles)
-    {
-        return sourceFiles
-            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(f => f, ComputeFileHash, StringComparer.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// Computes a cache key based on source path and dependencies.
-    /// </summary>
-    private string ComputeCacheKey(string sourcePath, IReadOnlyList<string> sourceFiles)
-    {
-        var fileHashes = ComputeFileHashes(sourceFiles);
-        return ComputeCacheKeyFromHashes(sourcePath, fileHashes);
-    }
-
-    /// <summary>
-    /// Computes a cache key using pre-computed file hashes.
-    /// </summary>
-    private string ComputeCacheKeyFromHashes(string sourcePath, Dictionary<string, string> fileHashes)
-    {
-        var keyBuilder = new StringBuilder();
-        keyBuilder.AppendLine(_draftSpecVersion);
-        keyBuilder.AppendLine(sourcePath);
-
-        // Include all dependency file hashes in sorted order for determinism
-        foreach (var (file, hash) in fileHashes.OrderBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase))
-        {
-            keyBuilder.AppendLine($"{file}:{hash}");
-        }
-
-        return ComputeHash(keyBuilder.ToString())[..16]; // Use first 16 chars of hash
+        return base.GetStatistics(ResultExtension);
     }
 
     /// <summary>
@@ -236,24 +170,7 @@ public sealed class StaticParseResultCache
     /// </summary>
     internal bool IsCacheValidWithHashes(CacheMetadata metadata, Dictionary<string, string> currentFileHashes)
     {
-        // Check DraftSpec version
-        if (metadata.DraftSpecVersion != _draftSpecVersion)
-            return false;
-
-        // Check that all source files match
-        if (metadata.SourceFiles.Count != currentFileHashes.Count)
-            return false;
-
-        foreach (var (file, currentHash) in currentFileHashes)
-        {
-            if (!metadata.SourceFileHashes.TryGetValue(file, out var cachedHash))
-                return false;
-
-            if (currentHash != cachedHash)
-                return false;
-        }
-
-        return true;
+        return ValidateHashesMatch(metadata, currentFileHashes);
     }
 
     /// <summary>
@@ -261,101 +178,28 @@ public sealed class StaticParseResultCache
     /// </summary>
     internal bool IsCacheValid(CacheMetadata metadata, IReadOnlyList<string> currentSourceFiles)
     {
-        // Check DraftSpec version
-        if (metadata.DraftSpecVersion != _draftSpecVersion)
-            return false;
-
-        // Check that all source files still exist and haven't changed
-        if (metadata.SourceFiles.Count != currentSourceFiles.Count)
-            return false;
-
-        foreach (var file in currentSourceFiles)
-        {
-            if (!File.Exists(file))
-                return false;
-
-            if (!metadata.SourceFileHashes.TryGetValue(file, out var cachedHash))
-                return false;
-
-            var currentHash = ComputeFileHash(file);
-            if (currentHash != cachedHash)
-                return false;
-        }
-
-        return true;
+        return ValidateFilesUnchanged(metadata, currentSourceFiles);
     }
-
-    /// <summary>
-    /// Computes SHA256 hash of a string.
-    /// </summary>
-    private static string ComputeHash(string content)
-    {
-        var bytes = Encoding.UTF8.GetBytes(content);
-        var hash = SHA256.HashData(bytes);
-        return Convert.ToHexString(hash).ToLowerInvariant();
-    }
-
-    /// <summary>
-    /// Computes SHA256 hash of a file's contents.
-    /// </summary>
-    private static string ComputeFileHash(string filePath)
-    {
-        using var stream = File.OpenRead(filePath);
-        var hash = SHA256.HashData(stream);
-        return Convert.ToHexString(hash).ToLowerInvariant();
-    }
-
-    private void EnsureCacheDirectoryExists()
-    {
-        Directory.CreateDirectory(_cacheDirectory);
-    }
-
-    private string GetMetadataPath(string cacheKey) =>
-        Path.Combine(_cacheDirectory, cacheKey + MetadataExtension);
 
     private string GetResultPath(string cacheKey) =>
-        Path.Combine(_cacheDirectory, cacheKey + ResultExtension);
+        GetFilePath(cacheKey, ResultExtension);
 
     private void DeleteCacheEntry(string cacheKey)
     {
-        try
-        {
-            var metaPath = GetMetadataPath(cacheKey);
-            var resultPath = GetResultPath(cacheKey);
-
-            if (File.Exists(metaPath)) File.Delete(metaPath);
-            if (File.Exists(resultPath)) File.Delete(resultPath);
-        }
-        catch
-        {
-            // Ignore deletion errors
-        }
+        DeleteFiles(cacheKey, ResultExtension);
     }
 
-    private static async Task<CacheMetadata?> LoadMetadataAsync(string path, CancellationToken ct)
+    private async Task<CacheMetadata?> LoadMetadataAsync(string path, CancellationToken ct)
     {
-        try
-        {
-            await using var stream = File.OpenRead(path);
-            return await JsonSerializer.DeserializeAsync<CacheMetadata>(stream, JsonOptions, ct);
-        }
-        catch
-        {
-            return null;
-        }
+        return await LoadJsonAsync<CacheMetadata>(path, JsonOptions, ct);
     }
 
     private static async Task SaveMetadataAsync(string path, CacheMetadata metadata, CancellationToken ct)
     {
-        var tempPath = path + ".tmp";
-        await using (var stream = new FileStream(tempPath, FileMode.Create))
-        {
-            await JsonSerializer.SerializeAsync(stream, metadata, JsonOptions, ct);
-        }
-        File.Move(tempPath, path, overwrite: true);
+        await AtomicWriteJsonAsync(path, metadata, JsonOptions, ct);
     }
 
-    private static async Task<StaticParseResult?> LoadResultAsync(string path, CancellationToken ct)
+    private async Task<StaticParseResult?> LoadResultAsync(string path, CancellationToken ct)
     {
         try
         {
@@ -378,26 +222,22 @@ public sealed class StaticParseResultCache
                 IsComplete = cached.IsComplete
             };
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.LogDebug(ex, "Failed to load result from {Path}", path);
             return null;
         }
     }
 
     private static async Task SaveResultAsync(string path, CachedResult result, CancellationToken ct)
     {
-        var tempPath = path + ".tmp";
-        await using (var stream = new FileStream(tempPath, FileMode.Create))
-        {
-            await JsonSerializer.SerializeAsync(stream, result, JsonOptions, ct);
-        }
-        File.Move(tempPath, path, overwrite: true);
+        await AtomicWriteJsonAsync(path, result, JsonOptions, ct);
     }
 
     /// <summary>
     /// Metadata stored alongside cached results.
     /// </summary>
-    internal sealed class CacheMetadata
+    internal sealed class CacheMetadata : ICacheMetadata
     {
         public string CacheKey { get; set; } = "";
         public string SourcePath { get; set; } = "";

@@ -56,7 +56,12 @@ public class SystemProcessHandleTests
 
         using var handle = new SystemProcessHandle(process);
 
-        var completed = handle.WaitForExit(50); // Very short timeout
+        // Give the process time to actually start on slower CI machines
+        await Task.Delay(100);
+
+        // Use a longer timeout to avoid race conditions, but still short enough
+        // that a 30-second sleep won't complete
+        var completed = handle.WaitForExit(200);
 
         await Assert.That(completed).IsFalse();
 

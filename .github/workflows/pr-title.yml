@@ -38,6 +38,7 @@ jobs:
             scripting
             formatters
             deps
+            ci
           # Require scope to be one of the listed values (if provided)
           requireScope: false
           # Allow breaking change indicator (!)

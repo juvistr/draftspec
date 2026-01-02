@@ -7,6 +7,8 @@ using System.Text.Json.Serialization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DraftSpec.Scripting;
 
@@ -24,6 +26,7 @@ public sealed class ScriptCompilationCache
 
     private readonly string _cacheDirectory;
     private readonly string _draftSpecVersion;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// JSON serialization options for cache metadata.
@@ -39,10 +42,12 @@ public sealed class ScriptCompilationCache
     /// Creates a new script compilation cache.
     /// </summary>
     /// <param name="projectDirectory">The project directory containing .draftspec folder.</param>
-    public ScriptCompilationCache(string projectDirectory)
+    /// <param name="logger">Optional logger for cache operations. Debug level logs cache hits/misses and errors.</param>
+    public ScriptCompilationCache(string projectDirectory, ILogger? logger = null)
     {
         _cacheDirectory = Path.Combine(projectDirectory, CacheDirectoryName, ScriptsCacheSubdirectory);
         _draftSpecVersion = typeof(Dsl).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+        _logger = logger ?? NullLogger.Instance;
     }
 
     /// <summary>
@@ -92,9 +97,10 @@ public sealed class ScriptCompilationCache
             var result = await ExecuteCachedAssemblyAsync(assemblyPath, globals, cancellationToken);
             return (true, result);
         }
-        catch
+        catch (Exception ex)
         {
             // Cache read/execute errors should fall back to normal compilation
+            _logger.LogDebug(ex, "Cache read/execute failed for {SourcePath}, falling back to compilation", sourcePath);
             return (false, null);
         }
     }
@@ -190,9 +196,10 @@ public sealed class ScriptCompilationCache
 
             SaveMetadata(GetMetadataPath(cacheKey), metadata);
         }
-        catch
+        catch (Exception ex)
         {
             // Cache write errors should not fail the build
+            _logger.LogDebug(ex, "Failed to cache compiled script for {SourcePath}", sourcePath);
         }
     }
 
@@ -208,9 +215,10 @@ public sealed class ScriptCompilationCache
                 Directory.Delete(_cacheDirectory, recursive: true);
             }
         }
-        catch
+        catch (Exception ex)
         {
             // Ignore errors when clearing cache
+            _logger.LogDebug(ex, "Failed to clear cache directory {CacheDirectory}", _cacheDirectory);
         }
     }
 
@@ -235,8 +243,9 @@ public sealed class ScriptCompilationCache
                 CacheDirectory = _cacheDirectory
             };
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "Failed to read cache statistics from {CacheDirectory}", _cacheDirectory);
             return new CacheStatistics();
         }
     }
@@ -391,21 +400,23 @@ public sealed class ScriptCompilationCache
             if (File.Exists(dllPath)) File.Delete(dllPath);
             if (File.Exists(pdbPath)) File.Delete(pdbPath);
         }
-        catch
+        catch (Exception ex)
         {
             // Ignore deletion errors
+            _logger.LogDebug(ex, "Failed to delete cache entry {CacheKey}", cacheKey);
         }
     }
 
-    private static CacheMetadata? LoadMetadata(string path)
+    private CacheMetadata? LoadMetadata(string path)
     {
         try
         {
             var json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<CacheMetadata>(json, JsonOptions);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "Failed to load cache metadata from {Path}", path);
             return null;
         }
     }

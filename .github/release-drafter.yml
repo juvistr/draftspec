@@ -4,6 +4,38 @@ tag-template: 'v$RESOLVED_VERSION'
 # Include prerelease tags when resolving the previous version
 include-pre-releases: true
 
+# Auto-label PRs based on conventional commit prefixes in title
+autolabeler:
+  - label: 'feature'
+    title:
+      - '/^feat(\(.+\))?:/i'
+  - label: 'fix'
+    title:
+      - '/^fix(\(.+\))?:/i'
+  - label: 'documentation'
+    title:
+      - '/^docs(\(.+\))?:/i'
+  - label: 'refactor'
+    title:
+      - '/^refactor(\(.+\))?:/i'
+  - label: 'chore'
+    title:
+      - '/^chore(\(.+\))?:/i'
+      - '/^ci(\(.+\))?:/i'
+      - '/^build(\(.+\))?:/i'
+  - label: 'performance'
+    title:
+      - '/^perf(\(.+\))?:/i'
+  - label: 'test'
+    title:
+      - '/^test(\(.+\))?:/i'
+  - label: 'security'
+    title:
+      - '/^security(\(.+\))?:/i'
+  - label: 'breaking'
+    title:
+      - '/^.+!:/i'  # Matches feat!:, fix!:, etc.
+
 categories:
   - title: '🚀 Features'
     labels:
@@ -13,9 +45,18 @@ categories:
     labels:
       - bug
       - fix
+  - title: '⚡ Performance'
+    labels:
+      - performance
+  - title: '🔒 Security'
+    labels:
+      - security
   - title: '📚 Documentation'
     labels:
       - documentation
+  - title: '🧪 Tests'
+    labels:
+      - test
   - title: '🔧 Maintenance'
     labels:
       - refactor
@@ -44,6 +85,9 @@ version-resolver:
       - chore
       - dependencies
       - refactor
+      - performance
+      - security
+      - test
   default: patch
 
 template: |

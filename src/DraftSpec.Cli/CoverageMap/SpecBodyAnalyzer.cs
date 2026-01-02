@@ -253,28 +253,11 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
 
     private void VisitLambdaBody(ExpressionSyntax expression)
     {
-        switch (expression)
+        // Specs always use parenthesized lambda syntax: () => { }
+        // SimpleLambda (x => ...) and AnonymousMethod (delegate { }) are not used by the DSL
+        if (expression is ParenthesizedLambdaExpressionSyntax lambda && lambda.Body != null)
         {
-            case ParenthesizedLambdaExpressionSyntax lambda:
-                if (lambda.Body != null)
-                {
-                    Visit(lambda.Body);
-                }
-                break;
-
-            case SimpleLambdaExpressionSyntax simpleLambda:
-                if (simpleLambda.Body != null)
-                {
-                    Visit(simpleLambda.Body);
-                }
-                break;
-
-            case AnonymousMethodExpressionSyntax anonymousMethod:
-                if (anonymousMethod.Body != null)
-                {
-                    Visit(anonymousMethod.Body);
-                }
-                break;
+            Visit(lambda.Body);
         }
     }
 

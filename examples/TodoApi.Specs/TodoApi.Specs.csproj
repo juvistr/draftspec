@@ -11,8 +11,8 @@
 
   <ItemGroup>
     <!-- DraftSpec Testing Platform integration -->
-    <PackageReference Include="Microsoft.Testing.Platform" Version="2.0.2" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Testing.Platform" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" />
 
     <!-- Reference the project under test -->
     <ProjectReference Include="..\TodoApi\TodoApi.csproj" />

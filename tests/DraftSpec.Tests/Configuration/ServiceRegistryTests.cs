@@ -1,84 +1,113 @@
 using DraftSpec.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DraftSpec.Tests.Configuration;
 
 /// <summary>
-/// Tests for ServiceRegistry.
+/// Tests for DraftSpecConfiguration DI integration with IServiceCollection.
 /// </summary>
-public class ServiceRegistryTests
+public class DraftSpecConfigurationDiTests
 {
     [Test]
-    public async Task Register_Service_CanBeRetrieved()
+    public async Task AddService_RegistersSingleton_CanBeRetrieved()
     {
-        var registry = new ServiceRegistry();
+        var config = new DraftSpecConfiguration();
         var service = new TestService();
 
-        registry.Register(service);
+        config.AddService(service);
 
-        await Assert.That(registry.GetService<TestService>()).IsSameReferenceAs(service);
+        await Assert.That(config.GetService<TestService>()).IsSameReferenceAs(service);
     }
 
     [Test]
     public async Task GetService_NotRegistered_ReturnsNull()
     {
-        var registry = new ServiceRegistry();
+        var config = new DraftSpecConfiguration();
 
-        await Assert.That(registry.GetService<TestService>()).IsNull();
+        await Assert.That(config.GetService<TestService>()).IsNull();
     }
 
     [Test]
-    public async Task HasService_WhenRegistered_ReturnsTrue()
+    public async Task Services_ExposesIServiceCollection()
     {
-        var registry = new ServiceRegistry();
-        registry.Register(new TestService());
+        var config = new DraftSpecConfiguration();
 
-        await Assert.That(registry.HasService<TestService>()).IsTrue();
+        await Assert.That(config.Services).IsAssignableTo<IServiceCollection>();
     }
 
     [Test]
-    public async Task HasService_NotRegistered_ReturnsFalse()
+    public async Task ServiceProvider_ExposesIServiceProvider()
     {
-        var registry = new ServiceRegistry();
+        var config = new DraftSpecConfiguration();
 
-        await Assert.That(registry.HasService<TestService>()).IsFalse();
+        await Assert.That(config.ServiceProvider).IsAssignableTo<IServiceProvider>();
     }
 
     [Test]
-    public async Task Count_ReturnsNumberOfServices()
+    public async Task Services_AddTransient_CreatesNewInstanceEachTime()
     {
-        var registry = new ServiceRegistry();
+        var config = new DraftSpecConfiguration();
+        config.Services.AddTransient<TestService>();
 
-        await Assert.That(registry.Count).IsEqualTo(0);
+        var service1 = config.ServiceProvider.GetService<TestService>();
+        var service2 = config.ServiceProvider.GetService<TestService>();
 
-        registry.Register(new TestService());
-        await Assert.That(registry.Count).IsEqualTo(1);
-
-        registry.Register(new AnotherService());
-        await Assert.That(registry.Count).IsEqualTo(2);
+        await Assert.That(service1).IsNotNull();
+        await Assert.That(service2).IsNotNull();
+        await Assert.That(service1).IsNotSameReferenceAs(service2);
     }
 
     [Test]
-    public void Register_NullService_ThrowsArgumentNullException()
+    public async Task Services_AddSingleton_ReturnsSameInstance()
     {
-        var registry = new ServiceRegistry();
+        var config = new DraftSpecConfiguration();
+        config.Services.AddSingleton<TestService>();
 
-        Assert.Throws<ArgumentNullException>(() => registry.Register<TestService>(null!));
+        var service1 = config.ServiceProvider.GetService<TestService>();
+        var service2 = config.ServiceProvider.GetService<TestService>();
+
+        await Assert.That(service1).IsNotNull();
+        await Assert.That(service1).IsSameReferenceAs(service2);
     }
 
     [Test]
-    public async Task Register_SameTypeTwice_OverwritesPrevious()
+    public async Task Services_AddSingletonWithInterface_ResolvesCorrectly()
     {
-        var registry = new ServiceRegistry();
-        var service1 = new TestService();
-        var service2 = new TestService();
+        var config = new DraftSpecConfiguration();
+        config.Services.AddSingleton<ITestService, TestService>();
 
-        registry.Register(service1);
-        registry.Register(service2);
+        var service = config.ServiceProvider.GetService<ITestService>();
 
-        await Assert.That(registry.GetService<TestService>()).IsSameReferenceAs(service2);
-        await Assert.That(registry.Count).IsEqualTo(1);
+        await Assert.That(service).IsNotNull();
+        await Assert.That(service).IsTypeOf<TestService>();
     }
 
-    private class TestService;
-    private class AnotherService;
+    [Test]
+    public async Task ServiceProvider_GetRequiredService_ThrowsWhenNotRegistered()
+    {
+        var config = new DraftSpecConfiguration();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            config.ServiceProvider.GetRequiredService<TestService>());
+    }
+
+    [Test]
+    public async Task Services_SupportsFactoryRegistration()
+    {
+        var config = new DraftSpecConfiguration();
+        var callCount = 0;
+        config.Services.AddTransient<TestService>(_ =>
+        {
+            callCount++;
+            return new TestService();
+        });
+
+        config.ServiceProvider.GetService<TestService>();
+        config.ServiceProvider.GetService<TestService>();
+
+        await Assert.That(callCount).IsEqualTo(2);
+    }
+
+    private interface ITestService;
+    private class TestService : ITestService;
 }

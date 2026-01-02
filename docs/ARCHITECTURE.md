@@ -384,6 +384,61 @@ IFormatter.Format()
 JSON / HTML / Markdown
 ```
 
+## Dependency Injection
+
+DraftSpec uses `Microsoft.Extensions.DependencyInjection` throughout for consistent service registration and resolution across all layers.
+
+### Configuration API
+
+`DraftSpecConfiguration` exposes the full MS.DI API:
+
+```csharp
+var config = new DraftSpecConfiguration();
+
+// Register services using standard MS.DI patterns
+config.Services.AddSingleton<IMyService, MyService>();
+config.Services.AddTransient<IFactory, Factory>();
+
+// Convenience method for singleton instances
+config.AddService(new MyService());
+
+// Resolve services
+var service = config.ServiceProvider.GetService<IMyService>();
+```
+
+### Service Lifetimes
+
+| Lifetime | Registration | Behavior |
+|----------|--------------|----------|
+| Singleton | `AddSingleton<T>()` | Single instance for entire configuration |
+| Transient | `AddTransient<T>()` | New instance per resolution |
+| Scoped | `AddScoped<T>()` | New instance per scope |
+
+### Plugin Service Access
+
+Plugins access services via `IPluginContext`:
+
+```csharp
+public class MyPlugin : IPlugin
+{
+    public void Initialize(IPluginContext context)
+    {
+        var service = context.GetService<IMyService>();
+        var required = context.GetRequiredService<ILogger>();
+    }
+}
+```
+
+### Unified Across Projects
+
+| Project | DI Approach |
+|---------|-------------|
+| DraftSpec (core) | `DraftSpecConfiguration.Services` (IServiceCollection) |
+| DraftSpec.Cli | `ServiceCollectionExtensions.AddDraftSpec()` |
+| DraftSpec.Mcp | `ServiceCollectionExtensions.AddDraftSpecMcp()` |
+
+All projects use the same `Microsoft.Extensions.DependencyInjection` patterns.
+
 ## Key Design Decisions
 
 See [Architecture Decision Records](./adr/) for detailed rationale:

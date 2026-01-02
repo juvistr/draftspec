@@ -12,8 +12,8 @@
 
     <ItemGroup>
         <!-- Roslynator: 500+ analyzers, refactorings, fixes -->
-        <PackageReference Include="Roslynator.Analyzers" Version="4.15.0" PrivateAssets="All" />
+        <PackageReference Include="Roslynator.Analyzers" PrivateAssets="All" />
         <!-- Meziantou: async patterns, string culture, modern .NET best practices -->
-        <PackageReference Include="Meziantou.Analyzer" Version="2.0.182" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" PrivateAssets="All" />
     </ItemGroup>
 </Project>

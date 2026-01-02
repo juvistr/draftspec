@@ -37,6 +37,7 @@ public class ServiceCollectionExtensionsTests
     [Arguments("schema")]
     [Arguments("flaky")]
     [Arguments("estimate")]
+    [Arguments("docs")]
     public async Task AddDraftSpec_CommandFactory_CanCreateCommand(string commandName)
     {
         var services = new ServiceCollection();
@@ -61,6 +62,7 @@ public class ServiceCollectionExtensionsTests
     [Arguments("schema")]
     [Arguments("flaky")]
     [Arguments("estimate")]
+    [Arguments("docs")]
     public async Task AddDraftSpec_CommandExecutor_InvokesOptionsConverter(string commandName)
     {
         var services = new ServiceCollection();

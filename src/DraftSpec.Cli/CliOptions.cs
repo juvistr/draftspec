@@ -279,6 +279,30 @@ public class CliOptions
     /// </summary>
     public string CacheSubcommand { get; set; } = "stats";
 
+    // Docs command options
+
+    /// <summary>
+    /// Output format for the docs command: markdown or html.
+    /// Default: markdown
+    /// </summary>
+    public DocsFormat DocsFormat { get; set; } = DocsFormat.Markdown;
+
+    /// <summary>
+    /// Filter to a specific describe/context block.
+    /// </summary>
+    public string? DocsContext { get; set; }
+
+    /// <summary>
+    /// Include test results from a previous run.
+    /// </summary>
+    public bool WithResults { get; set; }
+
+    /// <summary>
+    /// Path to JSON results file (used with --with-results).
+    /// </summary>
+    public string? ResultsFile { get; set; }
+
+
     /// <summary>
     /// Apply default values from a project configuration file.
     /// Only applies values that weren't explicitly set via CLI.
@@ -463,6 +487,19 @@ public class CliOptions
     {
         Subcommand = CacheSubcommand,
         Path = Path
+    };
+
+    /// <summary>
+    /// Converts to DocsOptions for the docs command.
+    /// </summary>
+    public DocsOptions ToDocsOptions() => new()
+    {
+        Path = Path,
+        Format = DocsFormat,
+        Context = DocsContext,
+        WithResults = WithResults,
+        ResultsFile = ResultsFile,
+        Filter = ToFilterOptions()
     };
 
     #endregion

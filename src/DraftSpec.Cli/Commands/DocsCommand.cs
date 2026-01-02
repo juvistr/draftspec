@@ -1,27 +1,30 @@
+using System.Text.Json;
 using DraftSpec.Cli.Formatters;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
+using DraftSpec.Formatters;
+using DraftSpec.Formatters.Abstractions;
 using DraftSpec.TestingPlatform;
 
 namespace DraftSpec.Cli.Commands;
 
 /// <summary>
-/// Lists discovered specs without executing them.
+/// Generates living documentation from spec structure.
 /// Uses static parsing to discover spec structure from CSX files.
 /// </summary>
-public class ListCommand : ICommand<ListOptions>
+public class DocsCommand : ICommand<DocsOptions>
 {
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
 
-    public ListCommand(IConsole console, IFileSystem fileSystem)
+    public DocsCommand(IConsole console, IFileSystem fileSystem)
     {
         _console = console;
         _fileSystem = fileSystem;
     }
 
-    public async Task<int> ExecuteAsync(ListOptions options, CancellationToken ct = default)
+    public async Task<int> ExecuteAsync(DocsOptions options, CancellationToken ct = default)
     {
         // 1. Resolve path
         var projectPath = Path.GetFullPath(options.Path);
@@ -41,14 +44,12 @@ public class ListCommand : ICommand<ListOptions>
         // 3. Use static parser to discover specs (no execution)
         var parser = new StaticSpecParser(projectPath, useCache: true);
         var allSpecs = new List<DiscoveredSpec>();
-        var allErrors = new List<DiscoveryError>();
 
         foreach (var specFile in specFiles)
         {
             var result = await parser.ParseFileAsync(specFile, ct);
             var relativePath = Path.GetRelativePath(projectPath, specFile);
 
-            // Convert StaticSpec to DiscoveredSpec for formatter compatibility
             foreach (var staticSpec in result.Specs)
             {
                 var id = GenerateId(relativePath, staticSpec.ContextPath, staticSpec.Description);
@@ -69,30 +70,27 @@ public class ListCommand : ICommand<ListOptions>
                     Tags = []
                 });
             }
-
-            // Report warnings as errors for files that couldn't be fully parsed
-            if (!result.IsComplete)
-            {
-                foreach (var warning in result.Warnings)
-                {
-                    allErrors.Add(new DiscoveryError
-                    {
-                        SourceFile = specFile,
-                        RelativeSourceFile = relativePath,
-                        Message = warning
-                    });
-                }
-            }
         }
 
         // 4. Apply filters
         var filteredSpecs = ApplyFilters(allSpecs, options);
 
-        // 5. Format output based on ListFormat
-        var formatter = CreateFormatter(options);
-        var output = formatter.Format(filteredSpecs, allErrors);
+        // 5. Load results if --with-results
+        IReadOnlyDictionary<string, string>? results = null;
+        if (options.WithResults)
+        {
+            results = await LoadResultsAsync(options.ResultsFile, ct);
+        }
 
-        // 6. Write output
+        // 6. Format output
+        var formatter = CreateFormatter(options.Format);
+        var metadata = new DocsMetadata(
+            DateTime.UtcNow,
+            Path.GetRelativePath(Environment.CurrentDirectory, projectPath),
+            results);
+        var output = formatter.Format(filteredSpecs, metadata);
+
+        // 7. Write output
         _console.WriteLine(output);
 
         return 0;
@@ -129,48 +127,89 @@ public class ListCommand : ICommand<ListOptions>
 
     private static IReadOnlyList<DiscoveredSpec> ApplyFilters(
         IReadOnlyList<DiscoveredSpec> specs,
-        ListOptions options)
+        DocsOptions options)
     {
         var filtered = specs.AsEnumerable();
 
-        // Status filters (OR'd together if multiple specified)
-        var hasStatusFilter = options.FocusedOnly || options.PendingOnly || options.SkippedOnly;
-        if (hasStatusFilter)
+        // Context filter
+        if (!string.IsNullOrEmpty(options.Context))
         {
+            var matcher = PatternMatcher.Create(options.Context);
             filtered = filtered.Where(s =>
-                (options.FocusedOnly && s.IsFocused) ||
-                (options.PendingOnly && s.IsPending) ||
-                (options.SkippedOnly && s.IsSkipped));
+                s.ContextPath.Any(c => matcher.Matches(c)) ||
+                matcher.Matches(s.DisplayName));
         }
 
-        // Pattern filter on name (AND'd with status filters)
+        // Pattern filter on name
         if (!string.IsNullOrEmpty(options.Filter.FilterName))
         {
             var matcher = PatternMatcher.Create(options.Filter.FilterName);
             filtered = filtered.Where(s => matcher.Matches(s.DisplayName));
         }
 
-        // Tag filter (AND'd with other filters)
-        if (!string.IsNullOrEmpty(options.Filter.FilterTags))
-        {
-            var tags = options.Filter.FilterTags.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(t => t.Trim())
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            filtered = filtered.Where(s => s.Tags.Any(t => tags.Contains(t)));
-        }
-
         return filtered.ToList();
     }
 
-    private static IListFormatter CreateFormatter(ListOptions options)
+    private async Task<IReadOnlyDictionary<string, string>?> LoadResultsAsync(string? resultsFile, CancellationToken ct)
     {
-        return options.Format switch
+        if (string.IsNullOrEmpty(resultsFile))
         {
-            ListFormat.Tree => new TreeListFormatter(options.ShowLineNumbers),
-            ListFormat.Flat => new FlatListFormatter(options.ShowLineNumbers),
-            ListFormat.Json => new JsonListFormatter(),
-            _ => throw new ArgumentOutOfRangeException(nameof(options), options.Format, "Unknown list format")
+            _console.WriteError("--with-results requires --results-file to specify the JSON results file.");
+            return null;
+        }
+
+        if (!_fileSystem.FileExists(resultsFile))
+        {
+            _console.WriteError($"Results file not found: {resultsFile}");
+            return null;
+        }
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(resultsFile, ct);
+            var report = SpecReport.FromJson(json);
+
+            // Flatten results to dictionary of ID -> status
+            var results = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            FlattenResults(report.Contexts, [], results);
+            return results;
+        }
+        catch (Exception ex)
+        {
+            _console.WriteError($"Failed to parse results file: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static void FlattenResults(
+        IList<SpecContextReport> contexts,
+        List<string> path,
+        Dictionary<string, string> results)
+    {
+        foreach (var context in contexts)
+        {
+            path.Add(context.Description);
+
+            foreach (var spec in context.Specs)
+            {
+                // Generate ID matching the format used in discovery
+                var contextPath = string.Join("/", path);
+                var id = $":{contextPath}/{spec.Description}";
+                results[id] = spec.Status;
+            }
+
+            FlattenResults(context.Contexts, path, results);
+            path.RemoveAt(path.Count - 1);
+        }
+    }
+
+    private static IDocsFormatter CreateFormatter(DocsFormat format)
+    {
+        return format switch
+        {
+            DocsFormat.Markdown => new MarkdownDocsFormatter(),
+            DocsFormat.Html => new HtmlDocsFormatter(),
+            _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown docs format")
         };
     }
 }

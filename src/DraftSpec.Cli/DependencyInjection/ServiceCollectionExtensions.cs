@@ -60,6 +60,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<FlakyCommand>();
         services.AddTransient<EstimateCommand>();
         services.AddTransient<CacheCommand>();
+        services.AddTransient<DocsCommand>();
 
         // Pipeline
         services.AddSingleton<IConfigApplier, ConfigApplier>();
@@ -118,6 +119,11 @@ public static class ServiceCollectionExtensions
                 "cache",
                 () => sp.GetRequiredService<CacheCommand>(),
                 o => o.ToCacheOptions());
+
+            registry.Register<DocsCommand, DocsOptions>(
+                "docs",
+                () => sp.GetRequiredService<DocsCommand>(),
+                o => o.ToDocsOptions());
 
             return registry;
         });

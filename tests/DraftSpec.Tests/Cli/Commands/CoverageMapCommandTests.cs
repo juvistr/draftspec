@@ -69,6 +69,80 @@ public class CoverageMapCommandTests
         await Assert.That(_console.Errors).Contains("No C# source files found");
     }
 
+    [Test]
+    public async Task ExecuteAsync_NonCsFile_ReturnsError()
+    {
+        // Create a file that's not a .cs file
+        var txtFile = Path.Combine(_tempDir, "readme.txt");
+        File.WriteAllText(txtFile, "This is not a C# file");
+
+        var command = CreateCommand();
+        var options = new CoverageMapOptions { SourcePath = txtFile };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("No C# source files found");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_NonSpecFile_ReturnsError()
+    {
+        // Create source file but point spec path to a non-.spec.csx file
+        CreateSourceFile("Service.cs", """
+            namespace MyApp;
+
+            public class UserService
+            {
+                public void CreateUser() { }
+            }
+            """);
+        var txtFile = Path.Combine(_tempDir, "readme.txt");
+        File.WriteAllText(txtFile, "This is not a spec file");
+
+        var command = CreateCommand();
+        var options = new CoverageMapOptions
+        {
+            SourcePath = _tempDir,
+            SpecPath = txtFile
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        // Returns error because no spec files found
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("No spec files found");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_EmptySpecDirectory_ReturnsError()
+    {
+        CreateSourceFile("Service.cs", """
+            namespace MyApp;
+
+            public class UserService
+            {
+                public void CreateUser() { }
+            }
+            """);
+        // Create empty spec directory
+        var specDir = Path.Combine(_tempDir, "specs");
+        Directory.CreateDirectory(specDir);
+
+        var command = CreateCommand();
+        var options = new CoverageMapOptions
+        {
+            SourcePath = _tempDir,
+            SpecPath = specDir
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        // Returns error because no spec files found
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("No spec files found");
+    }
+
     #endregion
 
     #region Source File Discovery

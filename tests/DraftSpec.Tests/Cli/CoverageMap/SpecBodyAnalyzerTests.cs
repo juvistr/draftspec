@@ -769,6 +769,120 @@ public class SpecBodyAnalyzerTests
 
     #endregion
 
+    #region Lambda Expression Variants
+
+    [Test]
+    public async Task HandlesSimpleLambdaInSpec()
+    {
+        // Arrange - simple lambda: x => x.Method()
+        var source = """
+            using static DraftSpec.Dsl;
+
+            describe("Test", () =>
+            {
+                it("uses simple lambda", () =>
+                {
+                    var items = new[] { 1, 2, 3 };
+                    items.Select(x => x.ToString());
+                });
+            });
+            """;
+
+        // Act
+        var specs = ParseSpecs(source);
+
+        // Assert
+        await Assert.That(specs).Count().IsEqualTo(1);
+        // The ToString method call inside the simple lambda should be extracted
+        await Assert.That(specs[0].MethodCalls.Any(m => m.MethodName == "ToString")).IsTrue();
+    }
+
+    [Test]
+    public async Task HandlesSimpleLambdaWithTypeCreation()
+    {
+        // Arrange - simple lambda with new expression
+        var source = """
+            using static DraftSpec.Dsl;
+
+            describe("Test", () =>
+            {
+                it("creates in simple lambda", () =>
+                {
+                    var items = new[] { "a", "b" };
+                    items.Select(s => new Wrapper(s));
+                });
+            });
+            """;
+
+        // Act
+        var specs = ParseSpecs(source);
+
+        // Assert
+        await Assert.That(specs).Count().IsEqualTo(1);
+        await Assert.That(specs[0].TypeReferences.Any(t => t.TypeName == "Wrapper")).IsTrue();
+    }
+
+    [Test]
+    public async Task HandlesAnonymousMethodInSpec()
+    {
+        // Arrange - delegate { } syntax
+        var source = """
+            using static DraftSpec.Dsl;
+            using System;
+
+            describe("Test", () =>
+            {
+                it("uses anonymous method", () =>
+                {
+                    Action action = delegate
+                    {
+                        var service = new AnonymousService();
+                        service.Execute();
+                    };
+                });
+            });
+            """;
+
+        // Act
+        var specs = ParseSpecs(source);
+
+        // Assert
+        await Assert.That(specs).Count().IsEqualTo(1);
+        await Assert.That(specs[0].TypeReferences.Any(t => t.TypeName == "AnonymousService")).IsTrue();
+        await Assert.That(specs[0].MethodCalls.Any(m => m.MethodName == "Execute")).IsTrue();
+    }
+
+    [Test]
+    public async Task HandlesAnonymousMethodWithParameter()
+    {
+        // Arrange - delegate(x) { } syntax
+        var source = """
+            using static DraftSpec.Dsl;
+            using System;
+
+            describe("Test", () =>
+            {
+                it("uses anonymous method with param", () =>
+                {
+                    Action<string> action = delegate(string s)
+                    {
+                        new Processor().Process(s);
+                    };
+                });
+            });
+            """;
+
+        // Act
+        var specs = ParseSpecs(source);
+
+        // Assert
+        await Assert.That(specs).Count().IsEqualTo(1);
+        await Assert.That(specs[0].TypeReferences.Any(t => t.TypeName == "Processor")).IsTrue();
+        await Assert.That(specs[0].MethodCalls.Any(m => m.MethodName == "Process")).IsTrue();
+    }
+
+    #endregion
+
     private static List<SpecReference> ParseSpecs(
         string source,
         string projectPath = "/project",

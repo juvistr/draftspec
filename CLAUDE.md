@@ -130,6 +130,38 @@ Add table-driven test support with withData method.
 Closes #72
 ```
 
+## PR Title Format (Conventional Commits)
+
+**IMPORTANT**: Use conventional commit format for PR titles. This enables automatic labeling and categorized release notes.
+
+```
+<type>(<scope>): <description>
+```
+
+| Type | Label | When to Use |
+|------|-------|-------------|
+| `feat` | `feature` | New functionality |
+| `fix` | `fix` | Bug fixes |
+| `perf` | `performance` | Performance improvements |
+| `security` | `security` | Security fixes |
+| `docs` | `documentation` | Documentation only |
+| `test` | `test` | Test additions/changes |
+| `refactor` | `refactor` | Code refactoring |
+| `chore` | `chore` | Build, CI, dependencies |
+| `ci` | `chore` | CI/CD changes |
+
+**Breaking changes**: Add `!` after the type (e.g., `feat!:` or `fix(auth)!:`)
+
+**Common scopes**: `cli`, `runner`, `dsl`, `mtp`, `mcp`, `scripting`, `formatters`, `deps`
+
+Examples:
+```
+feat(cli): add watch mode for continuous testing
+fix(runner): handle async disposal correctly
+perf(cache): eliminate redundant file hashing
+refactor(scripting): extract common cache base class
+```
+
 ## CI Commands
 
 ```bash

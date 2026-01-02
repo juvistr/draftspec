@@ -243,6 +243,357 @@ public class CoverageMapperTests
         await Assert.That(result.AllMethods[0].CoveringSpecs[0].MatchReason).Contains("Direct call");
     }
 
+    #region Method Name Matching
+
+    [Test]
+    public async Task MatchesSyncMethodToAsyncCall()
+    {
+        // Arrange - sync method, async call
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("TodoService", "Create", isAsync: false)
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpec("creates todo", methodCalls: [CreateMethodCall("CreateAsync")])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].Confidence).IsEqualTo(CoverageConfidence.High);
+    }
+
+    #endregion
+
+    #region Type Reference Matching
+
+    [Test]
+    public async Task MediumConfidence_TypeOfReference()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("UserService", "CreateAsync")
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpec("checks type", typeRefs: [CreateTypeRef("UserService", ReferenceKind.TypeOf)])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].Confidence).IsEqualTo(CoverageConfidence.Medium);
+        await Assert.That(result.AllMethods[0].CoveringSpecs[0].MatchReason).Contains("typeof");
+    }
+
+    [Test]
+    public async Task MediumConfidence_CastReference()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("UserService", "CreateAsync")
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpec("casts object", typeRefs: [CreateTypeRef("UserService", ReferenceKind.Cast)])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].Confidence).IsEqualTo(CoverageConfidence.Medium);
+        await Assert.That(result.AllMethods[0].CoveringSpecs[0].MatchReason).Contains("cast to");
+    }
+
+    [Test]
+    public async Task MediumConfidence_VariableReference()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("UserService", "CreateAsync")
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpec("declares variable", typeRefs: [CreateTypeRef("UserService", ReferenceKind.Variable)])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].Confidence).IsEqualTo(CoverageConfidence.Medium);
+        await Assert.That(result.AllMethods[0].CoveringSpecs[0].MatchReason).Contains("variable of type");
+    }
+
+    #endregion
+
+    #region Namespace Matching Edge Cases
+
+    [Test]
+    public async Task NoConfidence_EmptyMethodNamespace()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("Service", "DoWork", "") // Empty namespace
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpec("spec", usings: ["SomeNamespace"])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].Confidence).IsEqualTo(CoverageConfidence.None);
+    }
+
+    [Test]
+    public async Task NoConfidence_EmptyUsingNamespace()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("Service", "DoWork", "MyNamespace")
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpec("spec", usings: [""])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].Confidence).IsEqualTo(CoverageConfidence.None);
+    }
+
+    #endregion
+
+    #region Display Name and Spec File
+
+    [Test]
+    public async Task BuildsDisplayNameWithContextPath()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("Service", "DoWork")
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpecWithContext("does work", ["Parent", "Child"], methodCalls: [CreateMethodCall("DoWork")])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].CoveringSpecs[0].DisplayName).IsEqualTo("Parent > Child > does work");
+    }
+
+    [Test]
+    public async Task BuildsDisplayNameWithEmptyContextPath()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("Service", "DoWork")
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpecWithContext("root spec", [], methodCalls: [CreateMethodCall("DoWork")])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].CoveringSpecs[0].DisplayName).IsEqualTo("root spec");
+    }
+
+    [Test]
+    public async Task ExtractsRelativeSpecFile()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("Service", "DoWork")
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpec("does work", methodCalls: [CreateMethodCall("DoWork")])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].CoveringSpecs[0].SpecFile).IsEqualTo("test.spec.csx");
+    }
+
+    #endregion
+
+    #region Sort Order
+
+    [Test]
+    public async Task SortsSpecsByConfidenceThenByName()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("TodoService", "CreateAsync", "MyApp.Services")
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpec("z low confidence", usings: ["MyApp.Services"]),
+            CreateSpec("a high confidence", methodCalls: [CreateMethodCall("CreateAsync")]),
+            CreateSpec("m medium confidence", typeRefs: [CreateTypeRef("TodoService", ReferenceKind.New)])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        var coveringSpecs = result.AllMethods[0].CoveringSpecs;
+        await Assert.That(coveringSpecs).Count().IsEqualTo(3);
+        // Sorted by confidence (High > Medium > Low), then by name
+        await Assert.That(coveringSpecs[0].Confidence).IsEqualTo(CoverageConfidence.High);
+        await Assert.That(coveringSpecs[1].Confidence).IsEqualTo(CoverageConfidence.Medium);
+        await Assert.That(coveringSpecs[2].Confidence).IsEqualTo(CoverageConfidence.Low);
+    }
+
+    [Test]
+    public async Task SortsSpecsByNameWhenSameConfidence()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("Service", "DoWork")
+        };
+
+        var specs = new List<SpecReference>
+        {
+            CreateSpec("z spec", methodCalls: [CreateMethodCall("DoWork")]),
+            CreateSpec("a spec", methodCalls: [CreateMethodCall("DoWork")]),
+            CreateSpec("m spec", methodCalls: [CreateMethodCall("DoWork")])
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        var coveringSpecs = result.AllMethods[0].CoveringSpecs;
+        await Assert.That(coveringSpecs).Count().IsEqualTo(3);
+        // All HIGH confidence, sorted by name
+        await Assert.That(coveringSpecs[0].DisplayName).Contains("a spec");
+        await Assert.That(coveringSpecs[1].DisplayName).Contains("m spec");
+        await Assert.That(coveringSpecs[2].DisplayName).Contains("z spec");
+    }
+
+    #endregion
+
+    #region Paths in Result
+
+    [Test]
+    public async Task IncludesSourcePathInResult()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>();
+        var specs = new List<SpecReference>();
+
+        // Act
+        var result = _mapper.Map(methods, specs, sourcePath: "src/Services/");
+
+        // Assert
+        await Assert.That(result.SourcePath).IsEqualTo("src/Services/");
+    }
+
+    [Test]
+    public async Task IncludesSpecPathInResult()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>();
+        var specs = new List<SpecReference>();
+
+        // Act
+        var result = _mapper.Map(methods, specs, specPath: "specs/unit/");
+
+        // Assert
+        await Assert.That(result.SpecPath).IsEqualTo("specs/unit/");
+    }
+
+    #endregion
+
+    #region Empty Inputs
+
+    [Test]
+    public async Task HandlesEmptyMethodsList()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>();
+        var specs = new List<SpecReference>
+        {
+            CreateSpec("some spec")
+        };
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(0);
+        await Assert.That(result.Summary.TotalMethods).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task HandlesEmptySpecsList()
+    {
+        // Arrange
+        var methods = new List<SourceMethod>
+        {
+            CreateMethod("Service", "DoWork")
+        };
+        var specs = new List<SpecReference>();
+
+        // Act
+        var result = _mapper.Map(methods, specs);
+
+        // Assert
+        await Assert.That(result.AllMethods).Count().IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].Confidence).IsEqualTo(CoverageConfidence.None);
+        await Assert.That(result.AllMethods[0].CoveringSpecs).Count().IsEqualTo(0);
+    }
+
+    #endregion
+
     // Helper methods
     private static SourceMethod CreateMethod(
         string className,
@@ -290,5 +641,26 @@ public class CoverageMapperTests
     private static TypeReference CreateTypeRef(string typeName, ReferenceKind kind)
     {
         return new TypeReference { TypeName = typeName, Kind = kind, LineNumber = 1 };
+    }
+
+    private static SpecReference CreateSpecWithContext(
+        string description,
+        IReadOnlyList<string> contextPath,
+        IReadOnlyList<MethodCall>? methodCalls = null,
+        IReadOnlyList<TypeReference>? typeRefs = null,
+        IReadOnlyList<string>? usings = null)
+    {
+        var contextPathString = contextPath.Count > 0 ? string.Join("/", contextPath) + "/" : "";
+        return new SpecReference
+        {
+            SpecId = $"test.spec.csx:{contextPathString}{description}",
+            SpecDescription = description,
+            ContextPath = contextPath.ToList(),
+            MethodCalls = methodCalls ?? [],
+            TypeReferences = typeRefs ?? [],
+            UsingNamespaces = usings ?? [],
+            SourceFile = "/test/test.spec.csx",
+            LineNumber = 1
+        };
     }
 }

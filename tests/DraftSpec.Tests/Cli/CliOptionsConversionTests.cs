@@ -547,4 +547,98 @@ public class CliOptionsConversionTests
     }
 
     #endregion
+
+    #region ToCoverageMapOptions Tests
+
+    [Test]
+    public async Task ToCoverageMapOptions_MapsAllProperties()
+    {
+        var cliOptions = new CliOptions
+        {
+            CoverageMapSourcePath = "/src/path",
+            CoverageMapSpecPath = "/specs/path",
+            CoverageMapFormat = CoverageMapFormat.Json,
+            GapsOnly = true,
+            CoverageMapNamespaceFilter = "MyApp.Services"
+        };
+
+        var coverageMapOptions = cliOptions.ToCoverageMapOptions();
+
+        await Assert.That(coverageMapOptions.SourcePath).IsEqualTo("/src/path");
+        await Assert.That(coverageMapOptions.SpecPath).IsEqualTo("/specs/path");
+        await Assert.That(coverageMapOptions.Format).IsEqualTo(CoverageMapFormat.Json);
+        await Assert.That(coverageMapOptions.GapsOnly).IsTrue();
+        await Assert.That(coverageMapOptions.NamespaceFilter).IsEqualTo("MyApp.Services");
+    }
+
+    [Test]
+    public async Task ToCoverageMapOptions_UsesPathAsFallbackForSourcePath()
+    {
+        var cliOptions = new CliOptions
+        {
+            Path = "/fallback/path",
+            CoverageMapSourcePath = null
+        };
+
+        var coverageMapOptions = cliOptions.ToCoverageMapOptions();
+
+        await Assert.That(coverageMapOptions.SourcePath).IsEqualTo("/fallback/path");
+    }
+
+    [Test]
+    public async Task ToCoverageMapOptions_ExplicitSourcePath_OverridesPath()
+    {
+        var cliOptions = new CliOptions
+        {
+            Path = "/general/path",
+            CoverageMapSourcePath = "/explicit/source"
+        };
+
+        var coverageMapOptions = cliOptions.ToCoverageMapOptions();
+
+        await Assert.That(coverageMapOptions.SourcePath).IsEqualTo("/explicit/source");
+    }
+
+    [Test]
+    public async Task ToCoverageMapOptions_DefaultValues_CreatesValidOptions()
+    {
+        var cliOptions = new CliOptions();
+
+        var coverageMapOptions = cliOptions.ToCoverageMapOptions();
+
+        await Assert.That(coverageMapOptions).IsNotNull();
+        await Assert.That(coverageMapOptions.SourcePath).IsEqualTo(".");
+        await Assert.That(coverageMapOptions.SpecPath).IsNull();
+        await Assert.That(coverageMapOptions.Format).IsEqualTo(CoverageMapFormat.Console);
+        await Assert.That(coverageMapOptions.GapsOnly).IsFalse();
+        await Assert.That(coverageMapOptions.NamespaceFilter).IsNull();
+    }
+
+    [Test]
+    public async Task ToCoverageMapOptions_GapsOnlyFalse_MapsCorrectly()
+    {
+        var cliOptions = new CliOptions
+        {
+            GapsOnly = false
+        };
+
+        var coverageMapOptions = cliOptions.ToCoverageMapOptions();
+
+        await Assert.That(coverageMapOptions.GapsOnly).IsFalse();
+    }
+
+    [Test]
+    public async Task ToCoverageMapOptions_ConsoleFormat_MapsCorrectly()
+    {
+        var cliOptions = new CliOptions
+        {
+            CoverageMapFormat = CoverageMapFormat.Console
+        };
+
+        var coverageMapOptions = cliOptions.ToCoverageMapOptions();
+
+        await Assert.That(coverageMapOptions.Format).IsEqualTo(CoverageMapFormat.Console);
+    }
+
+    #endregion
 }

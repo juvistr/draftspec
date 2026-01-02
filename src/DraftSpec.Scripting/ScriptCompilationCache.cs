@@ -1,14 +1,11 @@
 using System.Reflection;
 using System.Runtime.Loader;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DraftSpec.Scripting;
 
@@ -16,17 +13,12 @@ namespace DraftSpec.Scripting;
 /// Disk-based cache for compiled CSX scripts.
 /// Stores compiled assemblies and metadata to avoid recompilation on subsequent runs.
 /// </summary>
-public sealed class ScriptCompilationCache
+public sealed class ScriptCompilationCache : DiskCacheBase
 {
     private const string CacheDirectoryName = ".draftspec";
     private const string ScriptsCacheSubdirectory = "cache/scripts";
-    private const string MetadataExtension = ".meta.json";
     private const string AssemblyExtension = ".dll";
     private const string PdbExtension = ".pdb";
-
-    private readonly string _cacheDirectory;
-    private readonly string _draftSpecVersion;
-    private readonly ILogger _logger;
 
     /// <summary>
     /// JSON serialization options for cache metadata.
@@ -44,10 +36,11 @@ public sealed class ScriptCompilationCache
     /// <param name="projectDirectory">The project directory containing .draftspec folder.</param>
     /// <param name="logger">Optional logger for cache operations. Debug level logs cache hits/misses and errors.</param>
     public ScriptCompilationCache(string projectDirectory, ILogger? logger = null)
+        : base(
+            Path.Combine(projectDirectory, CacheDirectoryName, ScriptsCacheSubdirectory),
+            typeof(Dsl).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            logger)
     {
-        _cacheDirectory = Path.Combine(projectDirectory, CacheDirectoryName, ScriptsCacheSubdirectory);
-        _draftSpecVersion = typeof(Dsl).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-        _logger = logger ?? NullLogger.Instance;
     }
 
     /// <summary>
@@ -100,7 +93,7 @@ public sealed class ScriptCompilationCache
         catch (Exception ex)
         {
             // Cache read/execute errors should fall back to normal compilation
-            _logger.LogDebug(ex, "Cache read/execute failed for {SourcePath}, falling back to compilation", sourcePath);
+            Logger.LogDebug(ex, "Cache read/execute failed for {SourcePath}, falling back to compilation", sourcePath);
             return (false, null);
         }
     }
@@ -189,7 +182,7 @@ public sealed class ScriptCompilationCache
                 SourceFiles = sourceFiles.ToList(),
                 SourceFileHashes = sourceFiles.ToDictionary(f => f, ComputeFileHash),
                 ContentHash = ComputeHash(preprocessedCode),
-                DraftSpecVersion = _draftSpecVersion,
+                DraftSpecVersion = Version,
                 CachedAtUtc = DateTime.UtcNow,
                 MaxModifiedTimeUtc = GetMaxModificationTime(sourceFiles)
             };
@@ -199,27 +192,16 @@ public sealed class ScriptCompilationCache
         catch (Exception ex)
         {
             // Cache write errors should not fail the build
-            _logger.LogDebug(ex, "Failed to cache compiled script for {SourcePath}", sourcePath);
+            Logger.LogDebug(ex, "Failed to cache compiled script for {SourcePath}", sourcePath);
         }
     }
 
     /// <summary>
     /// Clears all cached scripts.
     /// </summary>
-    public void Clear()
+    public override void Clear()
     {
-        try
-        {
-            if (Directory.Exists(_cacheDirectory))
-            {
-                Directory.Delete(_cacheDirectory, recursive: true);
-            }
-        }
-        catch (Exception ex)
-        {
-            // Ignore errors when clearing cache
-            _logger.LogDebug(ex, "Failed to clear cache directory {CacheDirectory}", _cacheDirectory);
-        }
+        base.Clear();
     }
 
     /// <summary>
@@ -227,69 +209,7 @@ public sealed class ScriptCompilationCache
     /// </summary>
     public CacheStatistics GetStatistics()
     {
-        try
-        {
-            if (!Directory.Exists(_cacheDirectory))
-                return new CacheStatistics();
-
-            var metaFiles = Directory.GetFiles(_cacheDirectory, "*" + MetadataExtension);
-            var dllFiles = Directory.GetFiles(_cacheDirectory, "*" + AssemblyExtension);
-            var totalSize = dllFiles.Sum(f => new FileInfo(f).Length);
-
-            return new CacheStatistics
-            {
-                EntryCount = metaFiles.Length,
-                TotalSizeBytes = totalSize,
-                CacheDirectory = _cacheDirectory
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to read cache statistics from {CacheDirectory}", _cacheDirectory);
-            return new CacheStatistics();
-        }
-    }
-
-    /// <summary>
-    /// Computes SHA256 hashes for all source files.
-    /// </summary>
-    private static Dictionary<string, string> ComputeFileHashes(IReadOnlyList<string> sourceFiles)
-    {
-        return sourceFiles
-            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(f => f, ComputeFileHash, StringComparer.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// Computes a cache key based on source path, dependencies, and content.
-    /// </summary>
-    private string ComputeCacheKey(string sourcePath, IReadOnlyList<string> sourceFiles, string preprocessedCode)
-    {
-        var fileHashes = ComputeFileHashes(sourceFiles);
-        return ComputeCacheKeyFromHashes(sourcePath, fileHashes, preprocessedCode);
-    }
-
-    /// <summary>
-    /// Computes a cache key using pre-computed file hashes.
-    /// </summary>
-    private string ComputeCacheKeyFromHashes(
-        string sourcePath,
-        Dictionary<string, string> fileHashes,
-        string preprocessedCode)
-    {
-        var keyBuilder = new StringBuilder();
-        keyBuilder.AppendLine(_draftSpecVersion);
-        keyBuilder.AppendLine(sourcePath);
-
-        // Include all dependency file hashes in sorted order for determinism
-        foreach (var (file, hash) in fileHashes.OrderBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase))
-        {
-            keyBuilder.AppendLine($"{file}:{hash}");
-        }
-
-        keyBuilder.AppendLine(ComputeHash(preprocessedCode));
-
-        return ComputeHash(keyBuilder.ToString())[..16]; // Use first 16 chars of hash
+        return base.GetStatistics(AssemblyExtension);
     }
 
     /// <summary>
@@ -297,24 +217,7 @@ public sealed class ScriptCompilationCache
     /// </summary>
     internal bool IsCacheValidWithHashes(CacheMetadata metadata, Dictionary<string, string> currentFileHashes)
     {
-        // Check DraftSpec version
-        if (metadata.DraftSpecVersion != _draftSpecVersion)
-            return false;
-
-        // Check that all source files match
-        if (metadata.SourceFiles.Count != currentFileHashes.Count)
-            return false;
-
-        foreach (var (file, currentHash) in currentFileHashes)
-        {
-            if (!metadata.SourceFileHashes.TryGetValue(file, out var cachedHash))
-                return false;
-
-            if (currentHash != cachedHash)
-                return false;
-        }
-
-        return true;
+        return ValidateHashesMatch(metadata, currentFileHashes);
     }
 
     /// <summary>
@@ -322,48 +225,7 @@ public sealed class ScriptCompilationCache
     /// </summary>
     internal bool IsCacheValid(CacheMetadata metadata, IReadOnlyList<string> currentSourceFiles)
     {
-        // Check DraftSpec version
-        if (metadata.DraftSpecVersion != _draftSpecVersion)
-            return false;
-
-        // Check that all source files still exist and haven't changed
-        if (metadata.SourceFiles.Count != currentSourceFiles.Count)
-            return false;
-
-        foreach (var file in currentSourceFiles)
-        {
-            if (!File.Exists(file))
-                return false;
-
-            if (!metadata.SourceFileHashes.TryGetValue(file, out var cachedHash))
-                return false;
-
-            var currentHash = ComputeFileHash(file);
-            if (currentHash != cachedHash)
-                return false;
-        }
-
-        return true;
-    }
-
-    /// <summary>
-    /// Computes SHA256 hash of a string.
-    /// </summary>
-    private static string ComputeHash(string content)
-    {
-        var bytes = Encoding.UTF8.GetBytes(content);
-        var hash = SHA256.HashData(bytes);
-        return Convert.ToHexString(hash).ToLowerInvariant();
-    }
-
-    /// <summary>
-    /// Computes SHA256 hash of a file's contents.
-    /// </summary>
-    private static string ComputeFileHash(string filePath)
-    {
-        using var stream = File.OpenRead(filePath);
-        var hash = SHA256.HashData(stream);
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        return ValidateFilesUnchanged(metadata, currentSourceFiles);
     }
 
     /// <summary>
@@ -374,65 +236,31 @@ public sealed class ScriptCompilationCache
         return files.Max(f => File.GetLastWriteTimeUtc(f));
     }
 
-    private void EnsureCacheDirectoryExists()
-    {
-        Directory.CreateDirectory(_cacheDirectory);
-    }
-
-    private string GetMetadataPath(string cacheKey) =>
-        Path.Combine(_cacheDirectory, cacheKey + MetadataExtension);
-
     private string GetAssemblyPath(string cacheKey) =>
-        Path.Combine(_cacheDirectory, cacheKey + AssemblyExtension);
+        GetFilePath(cacheKey, AssemblyExtension);
 
     private string GetPdbPath(string cacheKey) =>
-        Path.Combine(_cacheDirectory, cacheKey + PdbExtension);
+        GetFilePath(cacheKey, PdbExtension);
 
     private void DeleteCacheEntry(string cacheKey)
     {
-        try
-        {
-            var metaPath = GetMetadataPath(cacheKey);
-            var dllPath = GetAssemblyPath(cacheKey);
-            var pdbPath = GetPdbPath(cacheKey);
-
-            if (File.Exists(metaPath)) File.Delete(metaPath);
-            if (File.Exists(dllPath)) File.Delete(dllPath);
-            if (File.Exists(pdbPath)) File.Delete(pdbPath);
-        }
-        catch (Exception ex)
-        {
-            // Ignore deletion errors
-            _logger.LogDebug(ex, "Failed to delete cache entry {CacheKey}", cacheKey);
-        }
+        DeleteFiles(cacheKey, AssemblyExtension, PdbExtension);
     }
 
     private CacheMetadata? LoadMetadata(string path)
     {
-        try
-        {
-            var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<CacheMetadata>(json, JsonOptions);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to load cache metadata from {Path}", path);
-            return null;
-        }
+        return LoadJson<CacheMetadata>(path, JsonOptions);
     }
 
     private static void SaveMetadata(string path, CacheMetadata metadata)
     {
-        var tempPath = path + ".tmp";
-        var json = JsonSerializer.Serialize(metadata, JsonOptions);
-        File.WriteAllText(tempPath, json);
-        File.Move(tempPath, path, overwrite: true);
+        AtomicWriteJson(path, metadata, JsonOptions);
     }
 
     /// <summary>
     /// Metadata stored alongside cached assemblies.
     /// </summary>
-    internal sealed class CacheMetadata
+    internal sealed class CacheMetadata : ICacheMetadata
     {
         public string CacheKey { get; set; } = "";
         public string SourcePath { get; set; } = "";
@@ -444,4 +272,3 @@ public sealed class ScriptCompilationCache
         public DateTime MaxModifiedTimeUtc { get; set; }
     }
 }
-

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using DraftSpec.Cli.Formatters;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
@@ -16,11 +15,6 @@ namespace DraftSpec.Cli.Commands;
 /// </summary>
 public class DocsCommand : ICommand<DocsOptions>
 {
-    /// <summary>
-    /// Timeout for regex operations to prevent ReDoS attacks.
-    /// </summary>
-    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
-
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
 
@@ -140,49 +134,17 @@ public class DocsCommand : ICommand<DocsOptions>
         // Context filter
         if (!string.IsNullOrEmpty(options.Context))
         {
-            try
-            {
-                var regex = new Regex(options.Context, RegexOptions.IgnoreCase, RegexTimeout);
-                filtered = filtered.Where(s =>
-                    s.ContextPath.Any(c => regex.IsMatch(c)) ||
-                    regex.IsMatch(s.DisplayName));
-            }
-            catch (RegexParseException)
-            {
-                var pattern = options.Context;
-                filtered = filtered.Where(s =>
-                    s.ContextPath.Any(c => c.Contains(pattern, StringComparison.OrdinalIgnoreCase)) ||
-                    s.DisplayName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
-            }
-            catch (RegexMatchTimeoutException)
-            {
-                var pattern = options.Context;
-                filtered = filtered.Where(s =>
-                    s.ContextPath.Any(c => c.Contains(pattern, StringComparison.OrdinalIgnoreCase)) ||
-                    s.DisplayName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
-            }
+            var matcher = PatternMatcher.Create(options.Context);
+            filtered = filtered.Where(s =>
+                s.ContextPath.Any(c => matcher.Matches(c)) ||
+                matcher.Matches(s.DisplayName));
         }
 
         // Pattern filter on name
         if (!string.IsNullOrEmpty(options.Filter.FilterName))
         {
-            try
-            {
-                var regex = new Regex(options.Filter.FilterName, RegexOptions.IgnoreCase, RegexTimeout);
-                filtered = filtered.Where(s => regex.IsMatch(s.DisplayName));
-            }
-            catch (RegexParseException)
-            {
-                var pattern = options.Filter.FilterName;
-                filtered = filtered.Where(s =>
-                    s.DisplayName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
-            }
-            catch (RegexMatchTimeoutException)
-            {
-                var pattern = options.Filter.FilterName;
-                filtered = filtered.Where(s =>
-                    s.DisplayName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
-            }
+            var matcher = PatternMatcher.Create(options.Filter.FilterName);
+            filtered = filtered.Where(s => matcher.Matches(s.DisplayName));
         }
 
         return filtered.ToList();

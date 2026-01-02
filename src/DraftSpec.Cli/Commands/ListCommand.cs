@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using DraftSpec.Cli.Formatters;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
@@ -13,11 +12,6 @@ namespace DraftSpec.Cli.Commands;
 /// </summary>
 public class ListCommand : ICommand<ListOptions>
 {
-    /// <summary>
-    /// Timeout for regex operations to prevent ReDoS attacks.
-    /// </summary>
-    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
-
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
 
@@ -152,25 +146,8 @@ public class ListCommand : ICommand<ListOptions>
         // Pattern filter on name (AND'd with status filters)
         if (!string.IsNullOrEmpty(options.Filter.FilterName))
         {
-            try
-            {
-                var regex = new Regex(options.Filter.FilterName, RegexOptions.IgnoreCase, RegexTimeout);
-                filtered = filtered.Where(s => regex.IsMatch(s.DisplayName));
-            }
-            catch (RegexParseException)
-            {
-                // Fall back to simple substring match
-                var pattern = options.Filter.FilterName;
-                filtered = filtered.Where(s =>
-                    s.DisplayName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
-            }
-            catch (RegexMatchTimeoutException)
-            {
-                // Pattern caused timeout - fall back to substring match
-                var pattern = options.Filter.FilterName;
-                filtered = filtered.Where(s =>
-                    s.DisplayName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
-            }
+            var matcher = PatternMatcher.Create(options.Filter.FilterName);
+            filtered = filtered.Where(s => matcher.Matches(s.DisplayName));
         }
 
         // Tag filter (AND'd with other filters)

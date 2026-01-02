@@ -30,8 +30,21 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore --locked-mode
 
+      - name: Audit NuGet dependencies for vulnerabilities
+        run: |
+          OUTPUT=$(dotnet list package --vulnerable --include-transitive 2>&1)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "has the following vulnerable packages"; then
+            echo "::error::Vulnerable NuGet packages detected. Update affected packages to secure versions."
+            exit 1
+          fi
+          echo "::notice::No known vulnerabilities found in NuGet dependencies"
+
       - name: Build
         run: dotnet build --no-restore -c Release
+
+      - name: Verify code formatting
+        run: dotnet format --no-restore --verify-no-changes --verbosity diagnostic
 
       - name: Run tests with coverage
         run: |

@@ -33,8 +33,63 @@ Use semantic prefixes:
 
 1. Create a feature branch from `main`
 2. Make changes and add tests
-3. Open PR with issue reference in body (e.g., `Closes #123`)
-4. Squash merge via PR (merge commits disabled)
+3. Open PR with conventional commit title (see below)
+4. Add issue reference in body (e.g., `Closes #123`)
+5. Squash merge via PR (merge commits disabled)
+
+## PR Title Format (Conventional Commits)
+
+Use conventional commit format for PR titles. This enables automatic labeling and categorized release notes.
+
+```
+<type>(<scope>): <description>
+```
+
+### Types and Labels
+
+| Type | Label | Release Category | When to Use |
+|------|-------|------------------|-------------|
+| `feat` | `feature` | 🚀 Features | New functionality |
+| `fix` | `fix` | 🐛 Bug Fixes | Bug fixes |
+| `perf` | `performance` | ⚡ Performance | Performance improvements |
+| `security` | `security` | 🔒 Security | Security fixes |
+| `docs` | `documentation` | 📚 Documentation | Documentation only |
+| `test` | `test` | 🧪 Tests | Test additions/changes |
+| `refactor` | `refactor` | 🔧 Maintenance | Code refactoring |
+| `chore` | `chore` | 🔧 Maintenance | Build, CI, dependencies |
+| `ci` | `chore` | 🔧 Maintenance | CI/CD changes |
+| `build` | `chore` | 🔧 Maintenance | Build system changes |
+
+### Breaking Changes
+
+Add `!` after the type for breaking changes:
+```
+feat!: remove deprecated API
+fix(auth)!: change token format
+```
+
+### Examples
+
+```
+feat(cli): add watch mode for continuous testing
+fix(runner): handle async disposal correctly
+perf(cache): eliminate redundant file hashing
+docs: update README with new examples
+refactor(scripting): extract common cache base class
+chore(deps): update TUnit to v1.8.0
+```
+
+### Scope (Optional)
+
+The scope indicates the affected area:
+- `cli` - Command-line tool
+- `runner` - Spec runner
+- `dsl` - DSL API
+- `mtp` - Testing Platform adapter
+- `mcp` - MCP server
+- `scripting` - CSX compilation
+- `formatters` - Output formatters
+- `deps` - Dependencies
 
 ## Release Process
 

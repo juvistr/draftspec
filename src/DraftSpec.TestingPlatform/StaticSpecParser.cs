@@ -19,7 +19,7 @@ public sealed partial class StaticSpecParser
     /// <summary>
     /// Regex to match #load directives for file includes.
     /// </summary>
-    [GeneratedRegex(@"^\s*#load\s+""([^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"^\s*#load\s+""(?<path>[^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex LoadDirectiveRegex();
 
     /// <summary>
@@ -159,7 +159,7 @@ public sealed partial class StaticSpecParser
         var loadMatches = LoadDirectiveRegex().Matches(content);
         foreach (Match match in loadMatches)
         {
-            var loadPath = match.Groups[1].Value;
+            var loadPath = match.Groups["path"].Value;
             var loadAbsolutePath = Path.GetFullPath(loadPath, fileDirectory);
 
             // Recursively process the loaded file

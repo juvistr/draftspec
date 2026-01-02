@@ -43,8 +43,8 @@ dotnet_diagnostic.MA0051.severity = suggestion  # Method too long - style prefer
 # Demoted to suggestion (valid but would require large refactor)
 dotnet_diagnostic.MA0002.severity = suggestion  # IEqualityComparer - gradual adoption
 dotnet_diagnostic.MA0016.severity = suggestion  # Collection abstraction - DTOs need concrete types for serialization
-dotnet_diagnostic.MA0023.severity = suggestion  # RegexOptions.ExplicitCapture - good practice
 dotnet_diagnostic.MA0015.severity = suggestion  # ArgumentException with param name - refactor later
+
 dotnet_diagnostic.MA0046.severity = suggestion  # Delegate parameter count - progress delegates are 1-param by design
 dotnet_diagnostic.MA0049.severity = suggestion  # Type name vs namespace - DependencyGraph namespace is intentional
 dotnet_diagnostic.MA0140.severity = suggestion  # Identical if/else branches - intentional for clarity
@@ -52,6 +52,7 @@ dotnet_diagnostic.MA0140.severity = suggestion  # Identical if/else branches - i
 # Keep as warning (high value, catch real bugs)
 dotnet_diagnostic.MA0004.severity = warning     # ConfigureAwait(false) in library code
 dotnet_diagnostic.MA0006.severity = warning     # String.Equals instead of ==
+dotnet_diagnostic.MA0023.severity = warning     # RegexOptions.ExplicitCapture - prevents accidental captures
 
 # --- Demoted to suggestion (valid but not enforced) ---
 dotnet_diagnostic.CA1822.severity = suggestion  # Mark members as static

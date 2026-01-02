@@ -36,21 +36,21 @@ public sealed partial class CsxScriptHost : IScriptHost
     /// Regex to match #r directives (assembly references).
     /// Captures the path/name in group 1.
     /// </summary>
-    [GeneratedRegex(@"^\s*#r\s+""([^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"^\s*#r\s+""(?<path>[^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex AssemblyReferenceRegex();
 
     /// <summary>
     /// Regex to match #load directives (file includes).
     /// Captures the path in group 1.
     /// </summary>
-    [GeneratedRegex(@"^\s*#load\s+""([^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"^\s*#load\s+""(?<path>[^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex LoadDirectiveRegex();
 
     /// <summary>
     /// Regex to match using directives.
     /// Matches both 'using X;' and 'using static X;' forms.
     /// </summary>
-    [GeneratedRegex(@"^\s*using\s+(static\s+)?[^;]+;\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"^\s*using\s+(?:static\s+)?[^;]+;\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex UsingDirectiveRegex();
 
     /// <summary>
@@ -264,7 +264,7 @@ public sealed partial class CsxScriptHost : IScriptHost
         var loadMatches = LoadDirectiveRegex().Matches(content);
         foreach (Match match in loadMatches)
         {
-            var loadPath = match.Groups[1].Value;
+            var loadPath = match.Groups["path"].Value;
             var loadAbsolutePath = Path.GetFullPath(loadPath, fileDirectory);
 
             // Recursively process the loaded file
@@ -275,7 +275,7 @@ public sealed partial class CsxScriptHost : IScriptHost
         var refMatches = AssemblyReferenceRegex().Matches(content);
         foreach (Match match in refMatches)
         {
-            var reference = match.Groups[1].Value;
+            var reference = match.Groups["path"].Value;
 
             // Skip NuGet references - DraftSpec is available via project reference
             if (reference.StartsWith("nuget:", StringComparison.OrdinalIgnoreCase))

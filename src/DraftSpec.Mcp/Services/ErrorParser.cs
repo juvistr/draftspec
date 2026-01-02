@@ -282,13 +282,13 @@ public static partial class ErrorParser
     /// <summary>
     /// Matches setup hook errors.
     /// </summary>
-    [GeneratedRegex(@"(beforeAll|before\s*\(|Before.*failed)", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"(?:beforeAll|before\s*\(|Before.*failed)", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex SetupErrorPattern();
 
     /// <summary>
     /// Matches teardown hook errors.
     /// </summary>
-    [GeneratedRegex(@"(afterAll|after\s*\(|After.*failed)", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"(?:afterAll|after\s*\(|After.*failed)", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex TeardownErrorPattern();
 
     /// <summary>

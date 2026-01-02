@@ -69,8 +69,8 @@ public static partial class CoberturaParser
                             var match = ConditionCoveragePattern().Match(condCov);
                             if (match.Success)
                             {
-                                lineCov.BranchesCovered = ParseInt(match.Groups[1].Value, 0);
-                                lineCov.BranchesTotal = ParseInt(match.Groups[2].Value, 0);
+                                lineCov.BranchesCovered = ParseInt(match.Groups["covered"].Value, 0);
+                                lineCov.BranchesTotal = ParseInt(match.Groups["total"].Value, 0);
                             }
                         }
                     }
@@ -127,6 +127,6 @@ public static partial class CoberturaParser
     /// <summary>
     /// Regex to match condition-coverage like "75% (3/4)".
     /// </summary>
-    [GeneratedRegex(@"\((\d+)/(\d+)\)", RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"\((?<covered>\d+)/(?<total>\d+)\)", RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex ConditionCoveragePattern();
 }

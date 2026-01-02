@@ -13,14 +13,14 @@ public sealed partial class DependencyGraphBuilder
     /// Regex to match #load directives in CSX files.
     /// Captures the file path in group 1.
     /// </summary>
-    [GeneratedRegex(@"^\s*#load\s+""([^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"^\s*#load\s+""(?<path>[^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex LoadDirectiveRegex();
 
     /// <summary>
     /// Regex to match using directives.
     /// Captures the namespace in group 1 (after optional 'static' keyword).
     /// </summary>
-    [GeneratedRegex(@"^\s*using\s+(?:static\s+)?([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*;", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"^\s*using\s+(?:static\s+)?(?<ns>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*;", RegexOptions.Multiline | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex UsingDirectiveRegex();
 
     /// <summary>
@@ -28,7 +28,7 @@ public sealed partial class DependencyGraphBuilder
     /// Supports both traditional and file-scoped namespace syntax.
     /// Captures the namespace in group 1.
     /// </summary>
-    [GeneratedRegex(@"^\s*namespace\s+([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*[;{]", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"^\s*namespace\s+(?<ns>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*[;{]", RegexOptions.Multiline | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex NamespaceDeclarationRegex();
 
     /// <summary>
@@ -117,7 +117,7 @@ public sealed partial class DependencyGraphBuilder
         var loadMatches = LoadDirectiveRegex().Matches(content);
         foreach (Match match in loadMatches)
         {
-            var loadPath = match.Groups[1].Value;
+            var loadPath = match.Groups["path"].Value;
             var loadAbsolutePath = Path.GetFullPath(loadPath, fileDirectory);
 
             dependencies.Add(loadAbsolutePath);
@@ -137,7 +137,7 @@ public sealed partial class DependencyGraphBuilder
 
         foreach (Match match in matches)
         {
-            var ns = match.Groups[1].Value;
+            var ns = match.Groups["ns"].Value;
 
             // Filter out system namespaces - we only care about project namespaces
             if (!ns.StartsWith("System", StringComparison.Ordinal) &&
@@ -177,7 +177,7 @@ public sealed partial class DependencyGraphBuilder
 
             foreach (Match match in matches)
             {
-                var ns = match.Groups[1].Value;
+                var ns = match.Groups["ns"].Value;
                 graph.AddNamespaceMapping(Path.GetFullPath(csFile), ns);
             }
         }

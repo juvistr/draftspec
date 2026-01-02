@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using DraftSpec.Cli;
 using DraftSpec.Cli.Coverage;
+using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Coverage;
@@ -10,12 +11,47 @@ namespace DraftSpec.Tests.Cli.Coverage;
 /// </summary>
 public class CoverageRunnerTests
 {
+    private MockProcessRunner _processRunner = null!;
+    private MockFileSystem _fileSystem = null!;
+
+    [Before(Test)]
+    public void SetUp()
+    {
+        _processRunner = new MockProcessRunner();
+        _fileSystem = new MockFileSystem();
+    }
+
+    private CoverageRunner CreateRunner(string? outputDir = null, string? format = null) =>
+        new(outputDir ?? TestPaths.CoverageDir, format ?? "cobertura", _processRunner, _fileSystem);
+
+    private CoverageRunner CreateRunnerWithFormatter(
+        MockCoverageFormatterFactory formatterFactory,
+        string? outputDir = null,
+        string? format = null) =>
+        new(outputDir ?? TestPaths.CoverageDir, format ?? "cobertura", _processRunner, _fileSystem, formatterFactory);
+
+    private void SetupRunningProcess(bool hasExited = false)
+    {
+        _processRunner.ProcessHandleToReturn = new MockProcessHandle { HasExited = hasExited };
+    }
+
+    private MockProcessHandle SetupRunningProcessWithHandle(bool hasExited = false)
+    {
+        var handle = new MockProcessHandle { HasExited = hasExited };
+        _processRunner.ProcessHandleToReturn = handle;
+        return handle;
+    }
+
+    private void SetupCoverageDirectory() => _fileSystem.AddDirectory(TestPaths.CoverageDir);
+
+    private void SetupCoverageFile() => _fileSystem.AddFile(TestPaths.Coverage("coverage.cobertura.xml"));
+
     #region GetFileExtension
 
     [Test]
     public async Task GetFileExtension_Cobertura_ReturnsXmlExtension()
     {
-        var runner = new CoverageRunner("/tmp", "cobertura");
+        var runner = CreateRunner(format: "cobertura");
 
         var extension = runner.GetFileExtension();
 
@@ -25,7 +61,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task GetFileExtension_Xml_ReturnsXml()
     {
-        var runner = new CoverageRunner("/tmp", "xml");
+        var runner = CreateRunner(format: "xml");
 
         var extension = runner.GetFileExtension();
 
@@ -35,7 +71,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task GetFileExtension_Coverage_ReturnsCoverage()
     {
-        var runner = new CoverageRunner("/tmp", "coverage");
+        var runner = CreateRunner(format: "coverage");
 
         var extension = runner.GetFileExtension();
 
@@ -45,7 +81,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task GetFileExtension_Unknown_DefaultsToCobertura()
     {
-        var runner = new CoverageRunner("/tmp", "unknown");
+        var runner = CreateRunner(format: "unknown");
 
         var extension = runner.GetFileExtension();
 
@@ -55,7 +91,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task GetFileExtension_IsCaseInsensitive()
     {
-        var runner = new CoverageRunner("/tmp", "COBERTURA");
+        var runner = CreateRunner(format: "COBERTURA");
 
         var extension = runner.GetFileExtension();
 
@@ -189,15 +225,15 @@ public class CoverageRunnerTests
     [Test]
     public async Task Constructor_SetsOutputDirectory()
     {
-        using var runner = new CoverageRunner("/custom/path", "cobertura");
+        using var runner = CreateRunner();
 
-        await Assert.That(runner.OutputDirectory).IsEqualTo("/custom/path");
+        await Assert.That(runner.OutputDirectory).IsEqualTo(TestPaths.CoverageDir);
     }
 
     [Test]
     public async Task Constructor_SetsFormat()
     {
-        using var runner = new CoverageRunner("/tmp", "xml");
+        using var runner = CreateRunner(format: "xml");
 
         await Assert.That(runner.Format).IsEqualTo("xml");
     }
@@ -205,7 +241,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task Constructor_DefaultsToCobertura()
     {
-        using var runner = new CoverageRunner("/tmp");
+        using var runner = new CoverageRunner(TestPaths.CoverageDir, processRunner: _processRunner, fileSystem: _fileSystem);
 
         await Assert.That(runner.Format).IsEqualTo("cobertura");
     }
@@ -213,7 +249,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task Constructor_NormalizesFormatToLowercase()
     {
-        using var runner = new CoverageRunner("/tmp", "COBERTURA");
+        using var runner = CreateRunner(format: "COBERTURA");
 
         await Assert.That(runner.Format).IsEqualTo("cobertura");
     }
@@ -221,7 +257,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task Constructor_GeneratesSessionId()
     {
-        using var runner = new CoverageRunner("/tmp");
+        using var runner = CreateRunner();
 
         await Assert.That(runner.SessionId).StartsWith("draftspec-");
         await Assert.That(runner.SessionId.Length).IsGreaterThan(20);
@@ -230,8 +266,8 @@ public class CoverageRunnerTests
     [Test]
     public async Task Constructor_SetsUniqueSessions()
     {
-        using var runner1 = new CoverageRunner("/tmp");
-        using var runner2 = new CoverageRunner("/tmp");
+        using var runner1 = CreateRunner();
+        using var runner2 = CreateRunner();
 
         await Assert.That(runner1.SessionId).IsNotEqualTo(runner2.SessionId);
     }
@@ -239,15 +275,15 @@ public class CoverageRunnerTests
     [Test]
     public async Task Constructor_SetsCoverageFilePath()
     {
-        using var runner = new CoverageRunner("/tmp/coverage", "cobertura");
+        using var runner = CreateRunner();
 
-        await Assert.That(runner.CoverageFile).IsEqualTo("/tmp/coverage/coverage.cobertura.xml");
+        await Assert.That(runner.CoverageFile).IsEqualTo(TestPaths.Coverage("coverage.cobertura.xml"));
     }
 
     [Test]
     public async Task IsServerRunning_InitiallyFalse()
     {
-        using var runner = new CoverageRunner("/tmp");
+        using var runner = CreateRunner();
 
         await Assert.That(runner.IsServerRunning).IsFalse();
     }
@@ -255,7 +291,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task GetCoverageFile_ReturnsNullWhenFileDoesNotExist()
     {
-        using var runner = new CoverageRunner("/tmp/nonexistent");
+        using var runner = CreateRunner(outputDir: TestPaths.SpecsSubDir("nonexistent"));
 
         await Assert.That(runner.GetCoverageFile()).IsNull();
     }
@@ -263,7 +299,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task Shutdown_ReturnsFalseWhenServerNotStarted()
     {
-        using var runner = new CoverageRunner("/tmp");
+        using var runner = CreateRunner();
 
         var result = runner.Shutdown();
 
@@ -277,20 +313,11 @@ public class CoverageRunnerTests
     [Test]
     public async Task RunWithCoverage_ServerRunning_UsesConnect()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-        fileSystem.AddDirectory("/tmp/coverage");
+        SetupCoverageDirectory();
+        var mockProcessHandle = SetupRunningProcessWithHandle(hasExited: false);
+        _processRunner.AddResult(new ProcessResult("", "", 0)); // For connect command
 
-        // Simulate server process that hasn't exited
-        var mockProcessHandle = new MockProcessHandle { HasExited = false };
-        processRunner.SetProcessHandle(mockProcessHandle);
-        processRunner.AddResult(new ProcessResult("", "", 0)); // For connect command
-
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         // Start the server to set _serverStarted = true
         runner.StartServer();
@@ -299,9 +326,9 @@ public class CoverageRunnerTests
         var result = runner.RunWithCoverage(["test", "MyProject.csproj"]);
 
         // Verify connect was called (not collect)
-        await Assert.That(processRunner.RunCalls.Count).IsGreaterThanOrEqualTo(1);
+        await Assert.That(_processRunner.RunCalls.Count).IsGreaterThanOrEqualTo(1);
 
-        var lastCall = processRunner.RunCalls.Last();
+        var lastCall = _processRunner.RunCalls.Last();
         await Assert.That(lastCall.FileName).IsEqualTo("dotnet-coverage");
         await Assert.That(lastCall.Arguments.First()).IsEqualTo("connect");
     }
@@ -309,24 +336,17 @@ public class CoverageRunnerTests
     [Test]
     public async Task RunWithCoverage_ServerNotRunning_FallsBackToCollect()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
+        _processRunner.AddResult(new ProcessResult("", "", 0)); // For collect command
 
-        processRunner.AddResult(new ProcessResult("", "", 0)); // For collect command
-
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         // Don't start the server - directly call RunWithCoverage
         var result = runner.RunWithCoverage(["test", "MyProject.csproj"]);
 
         // Verify collect was called (standalone mode)
-        await Assert.That(processRunner.RunCalls.Count).IsEqualTo(1);
+        await Assert.That(_processRunner.RunCalls.Count).IsEqualTo(1);
 
-        var call = processRunner.RunCalls.First();
+        var call = _processRunner.RunCalls.First();
         await Assert.That(call.FileName).IsEqualTo("dotnet-coverage");
         await Assert.That(call.Arguments.First()).IsEqualTo("collect");
     }
@@ -334,20 +354,11 @@ public class CoverageRunnerTests
     [Test]
     public async Task RunWithCoverage_ServerExited_FallsBackToCollect()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-        fileSystem.AddDirectory("/tmp/coverage");
+        SetupCoverageDirectory();
+        var mockProcessHandle = SetupRunningProcessWithHandle(hasExited: true);
+        _processRunner.AddResult(new ProcessResult("", "", 0)); // For collect command
 
-        // Simulate server process that HAS exited
-        var mockProcessHandle = new MockProcessHandle { HasExited = true };
-        processRunner.SetProcessHandle(mockProcessHandle);
-        processRunner.AddResult(new ProcessResult("", "", 0)); // For collect command
-
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         // Start the server (but process has exited)
         runner.StartServer();
@@ -356,7 +367,7 @@ public class CoverageRunnerTests
         var result = runner.RunWithCoverage(["test", "MyProject.csproj"]);
 
         // Verify collect was called (fallback mode) since server is not running
-        var lastCall = processRunner.RunCalls.Last();
+        var lastCall = _processRunner.RunCalls.Last();
         await Assert.That(lastCall.FileName).IsEqualTo("dotnet-coverage");
         await Assert.That(lastCall.Arguments.First()).IsEqualTo("collect");
     }
@@ -368,8 +379,6 @@ public class CoverageRunnerTests
     [Test]
     public async Task GenerateReports_CallsFormatterFactory()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
         var formatterFactory = new MockCoverageFormatterFactory();
 
         var mockFormatter = new MockCoverageFormatter
@@ -381,14 +390,9 @@ public class CoverageRunnerTests
         formatterFactory.AddFormatter("html", mockFormatter);
 
         // Add a file that exists so FileExists returns true
-        fileSystem.AddFile("/tmp/coverage/coverage.cobertura.xml");
+        SetupCoverageFile();
 
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem,
-            formatterFactory);
+        using var runner = CreateRunnerWithFormatter(formatterFactory);
 
         // Call GenerateReports - note: this will fail because CoberturaParser.TryParseFile
         // reads directly from the file system, but we can verify the factory was invoked
@@ -404,16 +408,9 @@ public class CoverageRunnerTests
     [Test]
     public async Task GenerateReports_FileNotExists_ReturnsEmptyDictionary()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
         var formatterFactory = new MockCoverageFormatterFactory();
 
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem,
-            formatterFactory);
+        using var runner = CreateRunnerWithFormatter(formatterFactory);
 
         var reports = runner.GenerateReports(["html", "json"]);
 
@@ -427,37 +424,21 @@ public class CoverageRunnerTests
     [Test]
     public async Task StartServer_CreatesOutputDirectory()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
+        SetupRunningProcess();
 
-        var mockProcessHandle = new MockProcessHandle { HasExited = false };
-        processRunner.SetProcessHandle(mockProcessHandle);
-
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         runner.StartServer();
 
-        await Assert.That(fileSystem.DirectoryExists("/tmp/coverage")).IsTrue();
+        await Assert.That(_fileSystem.DirectoryExists(TestPaths.CoverageDir)).IsTrue();
     }
 
     [Test]
     public async Task StartServer_ReturnsTrue_WhenProcessStartsSuccessfully()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
+        SetupRunningProcess();
 
-        var mockProcessHandle = new MockProcessHandle { HasExited = false };
-        processRunner.SetProcessHandle(mockProcessHandle);
-
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         var result = runner.StartServer();
 
@@ -468,24 +449,16 @@ public class CoverageRunnerTests
     [Test]
     public async Task StartServer_CalledTwice_ReturnsCachedState()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
+        SetupRunningProcess();
 
-        var mockProcessHandle = new MockProcessHandle { HasExited = false };
-        processRunner.SetProcessHandle(mockProcessHandle);
-
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         runner.StartServer();
         var secondResult = runner.StartServer();
 
         // Should return the running state, not try to start again
         await Assert.That(secondResult).IsTrue();
-        await Assert.That(processRunner.StartProcessCallCount).IsEqualTo(1);
+        await Assert.That(_processRunner.StartProcessCallCount).IsEqualTo(1);
     }
 
     #endregion
@@ -495,14 +468,7 @@ public class CoverageRunnerTests
     [Test]
     public async Task Dispose_WhenNotStarted_DoesNotThrow()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-
-        var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        var runner = CreateRunner();
 
         // Dispose without starting should not throw
         runner.Dispose();
@@ -513,16 +479,9 @@ public class CoverageRunnerTests
     [Test]
     public async Task Dispose_CalledTwice_DoesNotThrow()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-        var mockProcessHandle = new MockProcessHandle { HasExited = false };
-        processRunner.SetProcessHandle(mockProcessHandle);
+        SetupRunningProcess();
 
-        var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        var runner = CreateRunner();
 
         runner.StartServer();
         runner.Dispose();
@@ -534,23 +493,16 @@ public class CoverageRunnerTests
     [Test]
     public async Task Dispose_WhenServerStarted_CallsShutdown()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-        var mockProcessHandle = new MockProcessHandle { HasExited = false };
-        processRunner.SetProcessHandle(mockProcessHandle);
-        processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown
+        SetupRunningProcess();
+        _processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown
 
-        var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        var runner = CreateRunner();
 
         runner.StartServer();
         runner.Dispose();
 
         // Verify shutdown was called
-        var shutdownCall = processRunner.RunCalls.FirstOrDefault(c =>
+        var shutdownCall = _processRunner.RunCalls.FirstOrDefault(c =>
             c.FileName == "dotnet-coverage" && c.Arguments.Contains("shutdown"));
         await Assert.That(shutdownCall.FileName).IsNotNull();
     }
@@ -558,17 +510,10 @@ public class CoverageRunnerTests
     [Test]
     public async Task Dispose_WhenShutdownFails_DoesNotThrow()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-        var mockProcessHandle = new MockProcessHandle { HasExited = false };
-        processRunner.SetProcessHandle(mockProcessHandle);
-        processRunner.ThrowOnRun = true; // Make shutdown throw
+        SetupRunningProcess();
+        _processRunner.ThrowOnRun = true; // Make shutdown throw
 
-        var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        var runner = CreateRunner();
 
         runner.StartServer();
         runner.Dispose(); // Should not throw
@@ -579,17 +524,10 @@ public class CoverageRunnerTests
     [Test]
     public async Task Dispose_KillsServerProcess_WhenStillRunning()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-        var mockProcessHandle = new MockProcessHandle { HasExited = false };
-        processRunner.SetProcessHandle(mockProcessHandle);
-        processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown
+        var mockProcessHandle = SetupRunningProcessWithHandle(hasExited: false);
+        _processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown
 
-        var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        var runner = CreateRunner();
 
         runner.StartServer();
         runner.Dispose();
@@ -601,17 +539,10 @@ public class CoverageRunnerTests
     [Test]
     public async Task Dispose_WhenProcessAlreadyExited_DoesNotKill()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-        var mockProcessHandle = new MockProcessHandle { HasExited = true };
-        processRunner.SetProcessHandle(mockProcessHandle);
-        processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown
+        var mockProcessHandle = SetupRunningProcessWithHandle(hasExited: true);
+        _processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown
 
-        var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        var runner = CreateRunner();
 
         runner.StartServer();
         mockProcessHandle.HasExited = true; // Mark as exited
@@ -624,17 +555,11 @@ public class CoverageRunnerTests
     [Test]
     public async Task Dispose_WhenKillThrows_DoesNotThrow()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
         var mockProcessHandle = new MockProcessHandle { HasExited = false, ThrowOnKill = true };
-        processRunner.SetProcessHandle(mockProcessHandle);
-        processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown
+        _processRunner.ProcessHandleToReturn = mockProcessHandle;
+        _processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown
 
-        var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        var runner = CreateRunner();
 
         runner.StartServer();
         runner.Dispose(); // Should not throw despite Kill throwing
@@ -649,14 +574,9 @@ public class CoverageRunnerTests
     [Test]
     public async Task StartServer_WhenProcessStartThrows_ReturnsFalse()
     {
-        var processRunner = new MockProcessRunner { ThrowOnStartProcess = true };
-        var fileSystem = new MockFileSystem();
+        _processRunner.ThrowOnStartProcess = true;
 
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         var result = runner.StartServer();
 
@@ -667,16 +587,9 @@ public class CoverageRunnerTests
     [Test]
     public async Task StartServer_WhenProcessExitsImmediately_ReturnsFalse()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-        var mockProcessHandle = new MockProcessHandle { HasExited = true };
-        processRunner.SetProcessHandle(mockProcessHandle);
+        SetupRunningProcess(hasExited: true);
 
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         var result = runner.StartServer();
 
@@ -690,17 +603,11 @@ public class CoverageRunnerTests
     [Test]
     public async Task Shutdown_WhenWaitForExitThrows_DoesNotThrow()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
         var mockProcessHandle = new MockProcessHandle { HasExited = false, ThrowOnWaitForExit = true };
-        processRunner.SetProcessHandle(mockProcessHandle);
-        processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown command
+        _processRunner.ProcessHandleToReturn = mockProcessHandle;
+        _processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown command
 
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         runner.StartServer();
         var result = runner.Shutdown(); // Should not throw
@@ -712,20 +619,11 @@ public class CoverageRunnerTests
     [Test]
     public async Task Shutdown_ReturnsTrue_WhenCoverageFileExists()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-        var mockProcessHandle = new MockProcessHandle { HasExited = false };
-        processRunner.SetProcessHandle(mockProcessHandle);
-        processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown command
+        SetupRunningProcess();
+        _processRunner.AddResult(new ProcessResult("", "", 0)); // For shutdown command
+        SetupCoverageFile();
 
-        // Add coverage file to mock file system
-        fileSystem.AddFile("/tmp/coverage/coverage.cobertura.xml");
-
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         runner.StartServer();
         var result = runner.Shutdown();
@@ -736,17 +634,10 @@ public class CoverageRunnerTests
     [Test]
     public async Task Shutdown_ReturnsFalse_WhenShutdownCommandFails()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
-        var mockProcessHandle = new MockProcessHandle { HasExited = false };
-        processRunner.SetProcessHandle(mockProcessHandle);
-        processRunner.AddResult(new ProcessResult("", "error", 1)); // Failed shutdown command
+        SetupRunningProcess();
+        _processRunner.AddResult(new ProcessResult("", "error", 1)); // Failed shutdown command
 
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem);
+        using var runner = CreateRunner();
 
         runner.StartServer();
         var result = runner.Shutdown();
@@ -761,7 +652,6 @@ public class CoverageRunnerTests
     [Test]
     public async Task GenerateReports_WithValidCoberturaFile_GeneratesFormatted()
     {
-        var processRunner = new MockProcessRunner();
         var formatterFactory = new MockCoverageFormatterFactory();
         var mockFormatter = new MockCoverageFormatter
         {
@@ -803,7 +693,7 @@ public class CoverageRunnerTests
             using var runner = new CoverageRunner(
                 tempDir,
                 "cobertura",
-                processRunner,
+                _processRunner,
                 fileSystem,
                 formatterFactory);
 
@@ -821,7 +711,6 @@ public class CoverageRunnerTests
     [Test]
     public async Task GenerateReports_WithMultipleFormats_GeneratesAll()
     {
-        var processRunner = new MockProcessRunner();
         var formatterFactory = new MockCoverageFormatterFactory();
 
         var htmlFormatter = new MockCoverageFormatter { FileExtension = ".html", FormatName = "html" };
@@ -848,7 +737,7 @@ public class CoverageRunnerTests
             using var runner = new CoverageRunner(
                 tempDir,
                 "cobertura",
-                processRunner,
+                _processRunner,
                 fileSystem,
                 formatterFactory);
 
@@ -867,7 +756,6 @@ public class CoverageRunnerTests
     [Test]
     public async Task GenerateReports_WithUnknownFormat_SkipsIt()
     {
-        var processRunner = new MockProcessRunner();
         var formatterFactory = new MockCoverageFormatterFactory();
         var htmlFormatter = new MockCoverageFormatter { FileExtension = ".html", FormatName = "html" };
         formatterFactory.AddFormatter("html", htmlFormatter);
@@ -891,7 +779,7 @@ public class CoverageRunnerTests
             using var runner = new CoverageRunner(
                 tempDir,
                 "cobertura",
-                processRunner,
+                _processRunner,
                 fileSystem,
                 formatterFactory);
 
@@ -910,8 +798,6 @@ public class CoverageRunnerTests
     [Test]
     public async Task GenerateReports_OverloadWithPath_GeneratesFromPath()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
         var formatterFactory = new MockCoverageFormatterFactory();
         var htmlFormatter = new MockCoverageFormatter { FileExtension = ".html", FormatName = "html" };
         formatterFactory.AddFormatter("html", htmlFormatter);
@@ -932,8 +818,8 @@ public class CoverageRunnerTests
             using var runner = new CoverageRunner(
                 tempDir,
                 "cobertura",
-                processRunner,
-                fileSystem,
+                _processRunner,
+                _fileSystem,
                 formatterFactory);
 
             // Use the overload that takes a specific path
@@ -951,18 +837,11 @@ public class CoverageRunnerTests
     [Test]
     public async Task GenerateReports_OverloadWithInvalidPath_ReturnsEmpty()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
         var formatterFactory = new MockCoverageFormatterFactory();
 
-        using var runner = new CoverageRunner(
-            "/tmp/coverage",
-            "cobertura",
-            processRunner,
-            fileSystem,
-            formatterFactory);
+        using var runner = CreateRunnerWithFormatter(formatterFactory);
 
-        var reports = runner.GenerateReports("/nonexistent/file.xml", ["html"]);
+        var reports = runner.GenerateReports(TestPaths.Temp("nonexistent/file.xml"), ["html"]);
 
         await Assert.That(reports).IsEmpty();
     }
@@ -970,8 +849,6 @@ public class CoverageRunnerTests
     [Test]
     public async Task GenerateReports_OverloadWithInvalidXml_ReturnsEmpty()
     {
-        var processRunner = new MockProcessRunner();
-        var fileSystem = new MockFileSystem();
         var formatterFactory = new MockCoverageFormatterFactory();
 
         var tempDir = Path.Combine(Path.GetTempPath(), $"coverage_test_{Guid.NewGuid():N}");
@@ -985,8 +862,8 @@ public class CoverageRunnerTests
             using var runner = new CoverageRunner(
                 tempDir,
                 "cobertura",
-                processRunner,
-                fileSystem,
+                _processRunner,
+                _fileSystem,
                 formatterFactory);
 
             var reports = runner.GenerateReports(coverageFile, ["html"]);

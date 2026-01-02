@@ -8,10 +8,22 @@ namespace DraftSpec.Cli.Services;
 public class GitService : IGitService
 {
     private readonly IFileSystem _fileSystem;
+    private readonly TimeSpan _commandTimeout;
+
+    /// <summary>
+    /// Default timeout for git commands (30 seconds).
+    /// </summary>
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
     public GitService(IFileSystem fileSystem)
+        : this(fileSystem, DefaultTimeout)
+    {
+    }
+
+    public GitService(IFileSystem fileSystem, TimeSpan commandTimeout)
     {
         _fileSystem = fileSystem;
+        _commandTimeout = commandTimeout;
     }
 
     /// <inheritdoc />
@@ -61,7 +73,7 @@ public class GitService : IGitService
         }
     }
 
-    private static async Task<string> RunGitAsync(
+    private async Task<string> RunGitAsync(
         string arguments,
         string workingDirectory,
         CancellationToken cancellationToken)
@@ -95,8 +107,8 @@ public class GitService : IGitService
         var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
 
-        // Use a timeout to prevent hanging forever (30 seconds should be plenty for git)
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        // Use a timeout to prevent hanging forever
+        using var timeoutCts = new CancellationTokenSource(_commandTimeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
         try
@@ -107,7 +119,7 @@ public class GitService : IGitService
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
         {
             process.Kill();
-            throw new InvalidOperationException("Git command timed out after 30 seconds");
+            throw new InvalidOperationException($"Git command timed out after {_commandTimeout.TotalSeconds} seconds");
         }
 
         var output = await outputTask;

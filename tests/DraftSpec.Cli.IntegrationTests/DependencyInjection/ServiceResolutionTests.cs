@@ -1,6 +1,7 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
+using DraftSpec.Cli.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DraftSpec.Cli.IntegrationTests.DependencyInjection;
@@ -86,6 +87,7 @@ public class ServiceResolutionTests
             typeof(ICliFormatterRegistry),
             typeof(IInProcessSpecRunnerFactory),
             typeof(IFileWatcherFactory),
+            typeof(IGitService),
         };
 
         foreach (var type in appTypes)
@@ -207,6 +209,7 @@ public class ServiceResolutionTests
             typeof(IPluginScanner),
             typeof(IAssemblyLoader),
             typeof(IPluginLoader),
+            typeof(IGitService),
 
             // Commands
             typeof(RunCommand),

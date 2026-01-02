@@ -40,7 +40,9 @@ public class ValidateCommandTests
     public async Task ExecuteAsync_NonexistentPath_ThrowsArgumentException()
     {
         var command = CreateCommand();
-        var options = new ValidateOptions { Path = "/nonexistent/path" };
+        // Use a cross-platform path that definitely doesn't exist
+        var nonexistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid():N}", "path");
+        var options = new ValidateOptions { Path = nonexistentPath };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));

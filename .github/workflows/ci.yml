@@ -148,3 +148,19 @@ jobs:
             src/*/bin/Release/*.nupkg
             src/*/bin/Release/*.snupkg
           retention-days: 7
+
+  # Summary job for branch protection - provides single "build-summary" status
+  build-summary:
+    if: always()
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build matrix status
+        run: |
+          if [[ "${{ needs.build.result }}" == "success" ]]; then
+            echo "All build jobs passed"
+            exit 0
+          else
+            echo "One or more build jobs failed: ${{ needs.build.result }}"
+            exit 1
+          fi

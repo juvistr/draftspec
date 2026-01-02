@@ -1623,6 +1623,16 @@ public class CliOptionsParserTests
     }
 
     [Test]
+    public async Task Parse_DocsFormatUnknownValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["docs", ".", "--docs-format", "pdf"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("Unknown docs format: 'pdf'");
+        await Assert.That(options.Error).Contains("markdown, html");
+    }
+
+    [Test]
     public async Task Parse_DocsFormatDefaultIsMarkdown()
     {
         var options = CliOptionsParser.Parse(["docs", "."]);

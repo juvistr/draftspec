@@ -33,10 +33,11 @@ jobs:
 
       - name: Determine version
         id: version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
           # Strip 'v' prefix (v0.1.0-alpha.3 -> 0.1.0-alpha.3)
-          VERSION="${TAG#v}"
+          VERSION="${RELEASE_TAG#v}"
 
           # Validate version is not empty
           if [ -z "$VERSION" ]; then
@@ -56,7 +57,9 @@ jobs:
         run: dotnet restore --locked-mode
 
       - name: Build
-        run: dotnet build --no-restore -c Release -p:MinVerVersionOverride=${{ steps.version.outputs.version }}
+        env:
+          MINVER_VERSION: ${{ steps.version.outputs.version }}
+        run: dotnet build --no-restore -c Release -p:MinVerVersionOverride="$MINVER_VERSION"
 
       - name: Run unit tests
         run: dotnet run --project tests/DraftSpec.Tests --no-build -c Release
@@ -65,7 +68,9 @@ jobs:
         run: dotnet run --project tests/DraftSpec.Cli.IntegrationTests --no-build -c Release
 
       - name: Pack
-        run: dotnet pack --no-build -c Release -p:MinVerVersionOverride=${{ steps.version.outputs.version }}
+        env:
+          MINVER_VERSION: ${{ steps.version.outputs.version }}
+        run: dotnet pack --no-build -c Release -p:MinVerVersionOverride="$MINVER_VERSION"
 
       - name: Display packages
         run: |

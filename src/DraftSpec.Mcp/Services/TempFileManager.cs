@@ -8,6 +8,7 @@ namespace DraftSpec.Mcp.Services;
 public class TempFileManager
 {
     private readonly ILogger<TempFileManager> _logger;
+    private readonly IUnixPermissionSetter _permissionSetter;
     private readonly string _tempDirectory;
     private readonly string? _localPackagesPath;
 
@@ -21,9 +22,10 @@ public class TempFileManager
                                                </configuration>
                                                """;
 
-    public TempFileManager(ILogger<TempFileManager> logger)
+    public TempFileManager(ILogger<TempFileManager> logger, IUnixPermissionSetter? permissionSetter = null)
     {
         _logger = logger;
+        _permissionSetter = permissionSetter ?? SystemUnixPermissionSetter.Instance;
         _tempDirectory = Path.Combine(Path.GetTempPath(), "draftspec-mcp");
         Directory.CreateDirectory(_tempDirectory);
 
@@ -46,6 +48,7 @@ public class TempFileManager
         {
             var content = string.Format(NuGetConfigTemplate, _localPackagesPath);
             File.WriteAllText(nugetConfigPath, content);
+            SetRestrictivePermissions(nugetConfigPath);
             _logger.LogDebug("Created NuGet.config at {Path}", nugetConfigPath);
         }
     }
@@ -55,6 +58,7 @@ public class TempFileManager
     /// <summary>
     /// Creates a temporary spec file with the given content.
     /// Uses FileMode.CreateNew for atomic creation (prevents TOCTOU race conditions).
+    /// On Unix systems, sets 0600 permissions (owner read/write only) for security.
     /// </summary>
     public async Task<string> CreateTempSpecFileAsync(string content, CancellationToken cancellationToken)
     {
@@ -70,8 +74,27 @@ public class TempFileManager
         await using var writer = new StreamWriter(fs);
         await writer.WriteAsync(content);
 
+        // Set restrictive permissions on Unix to prevent other users from reading/modifying
+        SetRestrictivePermissions(filePath);
+
         _logger.LogDebug("Created temp spec file: {Path}", filePath);
         return filePath;
+    }
+
+    /// <summary>
+    /// Sets restrictive file permissions (0600) on Unix systems.
+    /// On Windows, this is a no-op as file permissions work differently.
+    /// </summary>
+    private void SetRestrictivePermissions(string filePath)
+    {
+        try
+        {
+            _permissionSetter.SetMode(filePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to set restrictive permissions on {Path}", filePath);
+        }
     }
 
     /// <summary>

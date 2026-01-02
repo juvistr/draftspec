@@ -44,6 +44,7 @@ jobs:
         run: dotnet restore --locked-mode
 
       - name: Audit NuGet dependencies for vulnerabilities
+        if: matrix.os == 'ubuntu-latest'
         run: |
           OUTPUT=$(dotnet list package --vulnerable --include-transitive 2>&1)
           echo "$OUTPUT"

@@ -69,9 +69,10 @@ public static class TestPaths
     /// <summary>
     /// Builds a cross-platform path for a file in the temp root.
     /// </summary>
-    /// <param name="fileName">The file name (e.g., "schema.json")</param>
+    /// <param name="relativePath">Relative path (e.g., "schema.json" or "src/file.cs")</param>
     /// <returns>Full cross-platform path to the file</returns>
-    public static string Temp(string fileName) => Path.Combine(TempRoot, fileName);
+    public static string Temp(string relativePath) =>
+        Path.Combine(TempRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
 
     /// <summary>
     /// Normalizes a path to the current OS format.

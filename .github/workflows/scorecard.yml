@@ -8,7 +8,9 @@ on:
     - cron: '0 2 * * 1' # Weekly on Monday at 2am UTC
   workflow_dispatch:
 
-permissions: read-all
+# Minimal permissions - job-level permissions handle security-events and id-token
+permissions:
+  contents: read
 
 jobs:
   analysis:

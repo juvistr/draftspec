@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
+using Microsoft.Extensions.Logging;
 
 namespace DraftSpec.Scripting;
 
@@ -59,11 +60,13 @@ public sealed partial class CsxScriptHost : IScriptHost
     /// <param name="referenceAssemblies">Additional assemblies to reference in scripts.</param>
     /// <param name="useDiskCache">Whether to use disk-based compilation cache.</param>
     /// <param name="cacheDirectory">Directory for disk cache (defaults to .draftspec in baseDirectory).</param>
+    /// <param name="logger">Optional logger for cache operations.</param>
     public CsxScriptHost(
         string baseDirectory,
         IEnumerable<Assembly>? referenceAssemblies = null,
         bool useDiskCache = true,
-        string? cacheDirectory = null)
+        string? cacheDirectory = null,
+        ILogger? logger = null)
     {
         _baseDirectory = baseDirectory;
         _referenceAssemblies = referenceAssemblies?.ToList() ?? [];
@@ -72,7 +75,7 @@ public sealed partial class CsxScriptHost : IScriptHost
         if (useDiskCache)
         {
             var cacheDir = cacheDirectory ?? FindProjectRoot(baseDirectory) ?? baseDirectory;
-            _diskCache = new ScriptCompilationCache(cacheDir);
+            _diskCache = new ScriptCompilationCache(cacheDir, logger);
         }
     }
 

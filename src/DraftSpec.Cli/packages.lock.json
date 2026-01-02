@@ -75,6 +75,14 @@
         "resolved": "10.0.1",
         "contentHash": "oIy8fQxxbUsSrrOvgBqlVgOeCtDmrcynnTG+FQufcUWBrwyPfwlUkCDB2vaiBeYPyT+20u9/HeuHeBf+H4F/8g=="
       },
+      "Microsoft.Extensions.Logging.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.0",
+        "contentHash": "FU/IfjDfwaMuKr414SSQNTIti/69bHEMb+QKrskRb26oVqpx3lNFXMjs/RC9ZUuhBhcwDM2BwOgoMw+PZ+beqQ==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.0"
+        }
+      },
       "Microsoft.Testing.Extensions.Telemetry": {
         "type": "Transitive",
         "resolved": "2.0.2",
@@ -158,7 +166,8 @@
         "type": "Project",
         "dependencies": {
           "DraftSpec": "[1.0.0, )",
-          "Microsoft.CodeAnalysis.CSharp.Scripting": "[4.14.0, )"
+          "Microsoft.CodeAnalysis.CSharp.Scripting": "[4.14.0, )",
+          "Microsoft.Extensions.Logging.Abstractions": "[10.0.0, )"
         }
       },
       "draftspec.testingplatform": {

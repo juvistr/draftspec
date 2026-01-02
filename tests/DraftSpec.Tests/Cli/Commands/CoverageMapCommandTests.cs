@@ -745,6 +745,126 @@ public class CoverageMapCommandTests
 
     #endregion
 
+    #region Single File Paths
+
+    [Test]
+    public async Task ExecuteAsync_SingleSourceFile_ParsesFile()
+    {
+        var sourceFile = CreateSourceFile("Service.cs", """
+            namespace MyApp;
+
+            public class UserService
+            {
+                public void CreateUser() { }
+            }
+            """);
+        CreateSpecFile("test.spec.csx", """
+            using static DraftSpec.Dsl;
+            using MyApp;
+
+            describe("UserService", () =>
+            {
+                it("creates user", () =>
+                {
+                    new UserService().CreateUser();
+                });
+            });
+            """);
+
+        var command = CreateCommand();
+        var options = new CoverageMapOptions { SourcePath = sourceFile };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(_console.Output).Contains("CreateUser");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SingleSpecFile_ParsesFile()
+    {
+        CreateSourceFile("Service.cs", """
+            namespace MyApp;
+
+            public class UserService
+            {
+                public void CreateUser() { }
+            }
+            """);
+        var specFile = CreateSpecFile("test.spec.csx", """
+            using static DraftSpec.Dsl;
+            using MyApp;
+
+            describe("UserService", () =>
+            {
+                it("creates user", () =>
+                {
+                    new UserService().CreateUser();
+                });
+            });
+            """);
+
+        var command = CreateCommand();
+        var options = new CoverageMapOptions
+        {
+            SourcePath = _tempDir,
+            SpecPath = specFile
+        };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(_console.Output).Contains("CreateUser");
+    }
+
+    #endregion
+
+    #region Project Root Discovery
+
+    [Test]
+    public async Task ExecuteAsync_NoProjectFile_UsesSourceDirectory()
+    {
+        // Create a subdirectory without any .csproj or .sln
+        var subDir = Path.Combine(_tempDir, "nested", "deep");
+        Directory.CreateDirectory(subDir);
+
+        // Remove the project file we created in SetUp to test the fallback
+        File.Delete(Path.Combine(_tempDir, "Test.csproj"));
+
+        var sourceFile = Path.Combine(subDir, "Service.cs");
+        File.WriteAllText(sourceFile, """
+            namespace MyApp;
+
+            public class UserService
+            {
+                public void CreateUser() { }
+            }
+            """);
+        var specFile = Path.Combine(subDir, "test.spec.csx");
+        File.WriteAllText(specFile, """
+            using static DraftSpec.Dsl;
+            using MyApp;
+
+            describe("UserService", () =>
+            {
+                it("creates user", () =>
+                {
+                    new UserService().CreateUser();
+                });
+            });
+            """);
+
+        var command = CreateCommand();
+        var options = new CoverageMapOptions { SourcePath = subDir };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(_console.Output).Contains("CreateUser");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private string CreateSourceFile(string fileName, string content)

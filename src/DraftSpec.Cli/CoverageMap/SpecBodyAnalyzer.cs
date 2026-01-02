@@ -45,7 +45,7 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
 
     public override void VisitInvocationExpression(InvocationExpressionSyntax node)
     {
-        var methodName = GetMethodName(node);
+        var methodName = SyntaxHelpers.GetMethodName(node);
 
         if (methodName is "describe" or "context" or "fdescribe" or "xdescribe")
         {
@@ -78,14 +78,14 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
     {
         if (_insideSpecBody)
         {
-            var typeName = GetSimpleTypeName(node.Type);
+            var typeName = SyntaxHelpers.GetSimpleTypeName(node.Type);
             if (typeName != null)
             {
                 _currentTypeReferences?.Add(new TypeReference
                 {
                     TypeName = typeName,
                     Kind = ReferenceKind.New,
-                    LineNumber = GetLineNumber(node)
+                    LineNumber = SyntaxHelpers.GetLineNumber(node)
                 });
             }
         }
@@ -102,14 +102,14 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
     {
         if (_insideSpecBody)
         {
-            var typeName = GetSimpleTypeName(node.Type);
+            var typeName = SyntaxHelpers.GetSimpleTypeName(node.Type);
             if (typeName != null)
             {
                 _currentTypeReferences?.Add(new TypeReference
                 {
                     TypeName = typeName,
                     Kind = ReferenceKind.TypeOf,
-                    LineNumber = GetLineNumber(node)
+                    LineNumber = SyntaxHelpers.GetLineNumber(node)
                 });
             }
         }
@@ -120,14 +120,14 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
     {
         if (_insideSpecBody)
         {
-            var typeName = GetSimpleTypeName(node.Type);
+            var typeName = SyntaxHelpers.GetSimpleTypeName(node.Type);
             if (typeName != null)
             {
                 _currentTypeReferences?.Add(new TypeReference
                 {
                     TypeName = typeName,
                     Kind = ReferenceKind.Cast,
-                    LineNumber = GetLineNumber(node)
+                    LineNumber = SyntaxHelpers.GetLineNumber(node)
                 });
             }
         }
@@ -138,7 +138,7 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
     {
         if (_insideSpecBody)
         {
-            var typeName = GetSimpleTypeName(node.Type);
+            var typeName = SyntaxHelpers.GetSimpleTypeName(node.Type);
             // Skip var and implicit types
             if (typeName != null && !string.Equals(typeName, "var", StringComparison.Ordinal))
             {
@@ -146,7 +146,7 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
                 {
                     TypeName = typeName,
                     Kind = ReferenceKind.Variable,
-                    LineNumber = GetLineNumber(node)
+                    LineNumber = SyntaxHelpers.GetLineNumber(node)
                 });
             }
         }
@@ -161,10 +161,10 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
             return;
         }
 
-        var description = ExtractStringLiteral(arguments[0].Expression);
+        var description = SyntaxHelpers.ExtractStringLiteral(arguments[0].Expression);
         if (description == null)
         {
-            description = $"<dynamic at line {GetLineNumber(node)}>";
+            description = $"<dynamic at line {SyntaxHelpers.GetLineNumber(node)}>";
         }
 
         _contextStack.Push(description);
@@ -187,7 +187,7 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
             return;
         }
 
-        var description = ExtractStringLiteral(arguments[0].Expression);
+        var description = SyntaxHelpers.ExtractStringLiteral(arguments[0].Expression);
         if (description == null)
         {
             return;
@@ -195,7 +195,7 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
 
         // Set up collection for this spec
         _currentSpecDescription = description;
-        _currentSpecLineNumber = GetLineNumber(node);
+        _currentSpecLineNumber = SyntaxHelpers.GetLineNumber(node);
         _currentMethodCalls = [];
         _currentTypeReferences = [];
         _insideSpecBody = true;
@@ -233,21 +233,16 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
         string? receiverName = null;
 
         // Try to get the receiver (e.g., "service" in "service.CreateAsync()")
-        if (node.Expression is MemberAccessExpressionSyntax memberAccess)
+        if (node.Expression is MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax id })
         {
-            receiverName = memberAccess.Expression switch
-            {
-                IdentifierNameSyntax id => id.Identifier.Text,
-                MemberAccessExpressionSyntax nested => nested.Name.Identifier.Text,
-                _ => null
-            };
+            receiverName = id.Identifier.Text;
         }
 
         _currentMethodCalls?.Add(new MethodCall
         {
             MethodName = methodName,
             ReceiverName = receiverName,
-            LineNumber = GetLineNumber(node)
+            LineNumber = SyntaxHelpers.GetLineNumber(node)
         });
     }
 
@@ -259,48 +254,5 @@ internal sealed class SpecBodyAnalyzer : CSharpSyntaxWalker
         {
             Visit(lambda.Body);
         }
-    }
-
-    private static string? ExtractStringLiteral(ExpressionSyntax expression)
-    {
-        return expression switch
-        {
-            LiteralExpressionSyntax { RawKind: (int)SyntaxKind.StringLiteralExpression } literal
-                => literal.Token.ValueText,
-            LiteralExpressionSyntax { Token.RawKind: (int)SyntaxKind.StringLiteralToken } verbatim
-                => verbatim.Token.ValueText,
-            ParenthesizedExpressionSyntax paren
-                => ExtractStringLiteral(paren.Expression),
-            _ => null
-        };
-    }
-
-    private static string? GetMethodName(InvocationExpressionSyntax node)
-    {
-        return node.Expression switch
-        {
-            IdentifierNameSyntax identifier => identifier.Identifier.Text,
-            MemberAccessExpressionSyntax memberAccess => memberAccess.Name.Identifier.Text,
-            _ => null
-        };
-    }
-
-    private static string? GetSimpleTypeName(TypeSyntax type)
-    {
-        return type switch
-        {
-            IdentifierNameSyntax id => id.Identifier.Text,
-            GenericNameSyntax generic => generic.Identifier.Text,
-            QualifiedNameSyntax qualified => qualified.Right.Identifier.Text,
-            NullableTypeSyntax nullable => GetSimpleTypeName(nullable.ElementType),
-            ArrayTypeSyntax array => GetSimpleTypeName(array.ElementType),
-            PredefinedTypeSyntax predefined => predefined.Keyword.Text,
-            _ => null
-        };
-    }
-
-    private static int GetLineNumber(SyntaxNode node)
-    {
-        return node.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
     }
 }

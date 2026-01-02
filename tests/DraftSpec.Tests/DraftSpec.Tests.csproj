@@ -11,12 +11,12 @@
 
     <ItemGroup>
         <!-- MTP-compatible code coverage (coverlet.collector is VSTest-only) -->
-        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.*" />
+        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="TUnit" Version="1.*" />
-        <PackageReference Include="FsCheck" Version="3.3.2" />
+        <PackageReference Include="TUnit" />
+        <PackageReference Include="FsCheck" />
     </ItemGroup>
 
     <ItemGroup>

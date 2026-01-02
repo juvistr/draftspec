@@ -26,6 +26,6 @@
 
     <ItemGroup>
         <!-- MinVer - build-time only, calculates version from git tags -->
-        <PackageReference Include="MinVer" Version="6.*" PrivateAssets="All"/>
+        <PackageReference Include="MinVer" PrivateAssets="All"/>
     </ItemGroup>
 </Project>

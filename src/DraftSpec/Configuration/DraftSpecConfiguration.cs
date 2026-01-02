@@ -1,6 +1,7 @@
 using DraftSpec.Formatters;
 using DraftSpec.Providers;
 using DraftSpec.Plugins;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DraftSpec.Configuration;
 
@@ -10,7 +11,9 @@ namespace DraftSpec.Configuration;
 /// </summary>
 public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
 {
+    private readonly ServiceCollection _services;
     private readonly PluginContext _pluginContext;
+    private IServiceProvider? _serviceProvider;
     private int _initialized;
     private int _disposed;
 
@@ -19,7 +22,7 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// </summary>
     public DraftSpecConfiguration()
     {
-        Services = new ServiceRegistry();
+        _services = new ServiceCollection();
         Plugins = new PluginManager();
         Formatters = new FormatterRegistry();
         Reporters = new ReporterRegistry();
@@ -27,9 +30,16 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     }
 
     /// <summary>
-    /// Service registry for dependency injection.
+    /// Service collection for dependency injection.
+    /// Use this to register services before calling <see cref="ServiceProvider"/>.
     /// </summary>
-    public ServiceRegistry Services { get; }
+    public IServiceCollection Services => _services;
+
+    /// <summary>
+    /// Service provider for resolving dependencies.
+    /// Built lazily on first access from <see cref="Services"/>.
+    /// </summary>
+    public IServiceProvider ServiceProvider => _serviceProvider ??= _services.BuildServiceProvider();
 
     /// <summary>
     /// Plugin manager for plugin lifecycle.
@@ -118,14 +128,14 @@ public class DraftSpecConfiguration : IDraftSpecConfiguration, IDisposable
     /// <param name="service">The service instance</param>
     public DraftSpecConfiguration AddService<T>(T service) where T : class
     {
-        Services.Register(service);
+        _services.AddSingleton(service);
         return this;
     }
 
     /// <inheritdoc />
     public T? GetService<T>() where T : class
     {
-        return Services.GetService<T>();
+        return ServiceProvider.GetService<T>();
     }
 
     /// <summary>

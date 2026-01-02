@@ -897,33 +897,41 @@ public class ScriptCompilationCacheTests
         var readOnlyDir = Path.Combine(_testDir, "readonly-log-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(readOnlyDir);
 
-        // Create a directory where the cache file should go, making file creation fail
+        // Create the cache directory structure
         var cacheSubDir = Path.Combine(readOnlyDir, ".draftspec", "cache", "scripts");
         Directory.CreateDirectory(cacheSubDir);
 
-        // Create a directory with the same name as where the DLL would be written
-        // This will cause file creation to fail
         var cache = new ScriptCompilationCache(readOnlyDir, logger);
         var sourceFile = Path.Combine(_testDir, "log-write-error.csx");
         await File.WriteAllTextAsync(sourceFile, "var x = 1;");
 
         var script = CreateTestScript("var x = 1;");
 
-        // Create a file where the cache will try to write, then make it read-only
-        // to trigger a write error when trying to overwrite
-        var fakeBlocker = Path.Combine(cacheSubDir, "fake.dll");
-        await File.WriteAllTextAsync(fakeBlocker, "blocker");
-        File.SetAttributes(fakeBlocker, FileAttributes.ReadOnly);
+        // Make the cache directory read-only to prevent file creation
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        }
 
-        // Act - should not throw
-        cache.CacheScript(sourceFile, [sourceFile], "var x = 1;", script);
+        try
+        {
+            // Act - should not throw
+            cache.CacheScript(sourceFile, [sourceFile], "var x = 1;", script);
 
-        // Assert - logged debug message (note: may not log if error happens before reaching cache write)
-        // The important assertion is that no exception was thrown
-        await Assert.That(true).IsTrue(); // Execution reached here = no exception
-
-        // Cleanup
-        File.SetAttributes(fakeBlocker, FileAttributes.Normal);
+            // Assert - debug log should be written about failure
+            await Assert.That(logger.LogEntries.Any(e =>
+                e.Level == LogLevel.Debug &&
+                e.Exception != null &&
+                e.Message.Contains("cache", StringComparison.OrdinalIgnoreCase))).IsTrue();
+        }
+        finally
+        {
+            // Restore permissions for cleanup
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            }
+        }
     }
 
     [Test]
@@ -971,23 +979,37 @@ public class ScriptCompilationCacheTests
         // Cache a script first
         cache.CacheScript(sourceFile, [sourceFile], "var x = 1;", CreateTestScript("var x = 1;"));
 
-        // Get the cache directory and break it
+        // Get the cache directory
         var cacheSubDir = Path.Combine(statsDir, ".draftspec", "cache", "scripts");
         await Assert.That(Directory.Exists(cacheSubDir)).IsTrue();
 
-        // Make the .meta.json files unreadable by corrupting the directory
-        // On some systems, we can't easily simulate permission errors, so we test
-        // that GetStatistics handles missing files gracefully
-        foreach (var dll in Directory.GetFiles(cacheSubDir, "*.dll"))
+        // Make the cache directory unreadable to trigger an exception in Directory.GetFiles
+        if (!OperatingSystem.IsWindows())
         {
-            File.Delete(dll);
+            File.SetUnixFileMode(cacheSubDir, UnixFileMode.None);
         }
 
-        // Act
-        var stats = cache.GetStatistics();
+        try
+        {
+            // Act
+            var stats = cache.GetStatistics();
 
-        // Assert - returns stats (possibly with 0 size since DLLs are deleted)
-        await Assert.That(stats).IsNotNull();
+            // Assert - returns empty stats and logs debug
+            await Assert.That(stats).IsNotNull();
+            await Assert.That(stats.EntryCount).IsEqualTo(0);
+            await Assert.That(logger.LogEntries.Any(e =>
+                e.Level == LogLevel.Debug &&
+                e.Exception != null &&
+                e.Message.Contains("statistics", StringComparison.OrdinalIgnoreCase))).IsTrue();
+        }
+        finally
+        {
+            // Restore permissions for cleanup
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            }
+        }
     }
 
     [Test]

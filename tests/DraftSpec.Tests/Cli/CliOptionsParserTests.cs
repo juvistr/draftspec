@@ -1737,4 +1737,150 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Coverage-Map Command Options
+
+    [Test]
+    public async Task Parse_CoverageMapCommand_SetsCommand()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/"]);
+
+        await Assert.That(options.Command).IsEqualTo("coverage-map");
+        await Assert.That(options.CoverageMapSourcePath).IsEqualTo("src/");
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapWithoutPath_UsesDefaultPath()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map"]);
+
+        await Assert.That(options.Command).IsEqualTo("coverage-map");
+        await Assert.That(options.CoverageMapSourcePath).IsNull();
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapGapsOnly_SetsGapsOnly()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/", "--gaps-only"]);
+
+        await Assert.That(options.GapsOnly).IsTrue();
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.GapsOnly));
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapGapsOnlyDefault_IsFalse()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/"]);
+
+        await Assert.That(options.GapsOnly).IsFalse();
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapSpecs_SetsSpecPath()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/", "--specs", "specs/"]);
+
+        await Assert.That(options.CoverageMapSpecPath).IsEqualTo("specs/");
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.CoverageMapSpecPath));
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapSpecsWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/", "--specs"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--specs requires a path");
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapNamespace_SetsNamespaceFilter()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/", "--namespace", "MyApp.Services"]);
+
+        await Assert.That(options.CoverageMapNamespaceFilter).IsEqualTo("MyApp.Services");
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.CoverageMapNamespaceFilter));
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapNamespaceWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/", "--namespace"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--namespace requires a value");
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapFormatJson_SetsFormat()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/", "--coverage-map-format", "json"]);
+
+        await Assert.That(options.CoverageMapFormat).IsEqualTo(CoverageMapFormat.Json);
+        await Assert.That(options.ExplicitlySet).Contains(nameof(CliOptions.CoverageMapFormat));
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapFormatConsole_SetsFormat()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/", "--coverage-map-format", "console"]);
+
+        await Assert.That(options.CoverageMapFormat).IsEqualTo(CoverageMapFormat.Console);
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapFormatIsCaseInsensitive()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/", "--coverage-map-format", "JSON"]);
+
+        await Assert.That(options.CoverageMapFormat).IsEqualTo(CoverageMapFormat.Json);
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapFormatWithoutValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/", "--coverage-map-format"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("--coverage-map-format requires a value");
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapFormatUnknownValue_SetsError()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/", "--coverage-map-format", "xml"]);
+
+        await Assert.That(options.Error).IsNotNull();
+        await Assert.That(options.Error).Contains("Unknown coverage-map format: 'xml'");
+        await Assert.That(options.Error).Contains("console, json");
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapFormatDefaultIsConsole()
+    {
+        var options = CliOptionsParser.Parse(["coverage-map", "src/"]);
+
+        await Assert.That(options.CoverageMapFormat).IsEqualTo(CoverageMapFormat.Console);
+    }
+
+    [Test]
+    public async Task Parse_CoverageMapAllOptions_SetsAll()
+    {
+        var options = CliOptionsParser.Parse([
+            "coverage-map", "src/Services/",
+            "--specs", "specs/",
+            "--namespace", "MyApp.Services,MyApp.Handlers",
+            "--coverage-map-format", "json",
+            "--gaps-only"
+        ]);
+
+        await Assert.That(options.Command).IsEqualTo("coverage-map");
+        await Assert.That(options.CoverageMapSourcePath).IsEqualTo("src/Services/");
+        await Assert.That(options.CoverageMapSpecPath).IsEqualTo("specs/");
+        await Assert.That(options.CoverageMapNamespaceFilter).IsEqualTo("MyApp.Services,MyApp.Handlers");
+        await Assert.That(options.CoverageMapFormat).IsEqualTo(CoverageMapFormat.Json);
+        await Assert.That(options.GapsOnly).IsTrue();
+    }
+
+    #endregion
 }

@@ -476,6 +476,51 @@ public static class CliOptionsParser
                 options.ResultsFile = args[++i];
                 options.ExplicitlySet.Add(nameof(CliOptions.ResultsFile));
             }
+            // Coverage-map command options
+            else if (arg is "--gaps-only")
+            {
+                options.GapsOnly = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.GapsOnly));
+            }
+            else if (arg is "--specs")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--specs requires a path to spec files";
+                    return options;
+                }
+
+                options.CoverageMapSpecPath = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.CoverageMapSpecPath));
+            }
+            else if (arg is "--namespace")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--namespace requires a value (comma-separated namespaces)";
+                    return options;
+                }
+
+                options.CoverageMapNamespaceFilter = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.CoverageMapNamespaceFilter));
+            }
+            else if (arg is "--coverage-map-format")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--coverage-map-format requires a value (console, json)";
+                    return options;
+                }
+
+                var formatValue = args[++i];
+                if (!formatValue.TryParseCoverageMapFormat(out var cmFormat))
+                {
+                    options.Error = $"Unknown coverage-map format: '{formatValue}'. Valid options: console, json";
+                    return options;
+                }
+                options.CoverageMapFormat = cmFormat;
+                options.ExplicitlySet.Add(nameof(CliOptions.CoverageMapFormat));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);
@@ -497,6 +542,9 @@ public static class CliOptionsParser
             // For 'cache' command, second arg is the subcommand (stats, clear)
             else if (options.Command is "cache")
                 options.CacheSubcommand = positional[1].ToLowerInvariant();
+            // For 'coverage-map' command, second arg is the source path
+            else if (options.Command is "coverage-map")
+                options.CoverageMapSourcePath = positional[1];
             else
                 options.Path = ParsePathWithLineNumbers(positional[1], options);
         }

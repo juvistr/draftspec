@@ -431,6 +431,51 @@ public static class CliOptionsParser
                 options.OutputSeconds = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.OutputSeconds));
             }
+            // Docs command options
+            else if (arg is "--docs-format")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--docs-format requires a value (markdown, html)";
+                    return options;
+                }
+
+                var docsFormatValue = args[++i];
+                if (!docsFormatValue.TryParseDocsFormat(out var docsFormat))
+                {
+                    options.Error = $"Unknown docs format: '{docsFormatValue}'. Valid options: markdown, html";
+                    return options;
+                }
+                options.DocsFormat = docsFormat;
+                options.ExplicitlySet.Add(nameof(CliOptions.DocsFormat));
+            }
+            else if (arg is "--docs-context")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--docs-context requires a value (context filter pattern)";
+                    return options;
+                }
+
+                options.DocsContext = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.DocsContext));
+            }
+            else if (arg is "--with-results")
+            {
+                options.WithResults = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.WithResults));
+            }
+            else if (arg is "--results-file")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    options.Error = "--results-file requires a path to a JSON results file";
+                    return options;
+                }
+
+                options.ResultsFile = args[++i];
+                options.ExplicitlySet.Add(nameof(CliOptions.ResultsFile));
+            }
             else if (!arg.StartsWith('-'))
             {
                 positional.Add(arg);

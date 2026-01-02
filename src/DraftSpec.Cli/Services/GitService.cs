@@ -75,17 +75,43 @@ public class GitService : IGitService
                 WorkingDirectory = workingDirectory,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = true, // Prevent git from waiting for input
                 UseShellExecute = false,
                 CreateNoWindow = true
             }
         };
 
+        // Disable all forms of credential prompting
+        process.StartInfo.EnvironmentVariables["GIT_TERMINAL_PROMPT"] = "0";
+        process.StartInfo.EnvironmentVariables["GIT_ASKPASS"] = "";
+        process.StartInfo.EnvironmentVariables["GCM_INTERACTIVE"] = "never";
+
         process.Start();
 
-        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+        // Close stdin immediately to signal no input will be provided
+        process.StandardInput.Close();
 
-        await process.WaitForExitAsync(cancellationToken);
+        // Read stdout and stderr in parallel to avoid deadlock when buffers fill
+        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+
+        // Use a timeout to prevent hanging forever (30 seconds should be plenty for git)
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+        try
+        {
+            await Task.WhenAll(outputTask, errorTask).WaitAsync(linkedCts.Token);
+            await process.WaitForExitAsync(linkedCts.Token);
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+        {
+            process.Kill();
+            throw new InvalidOperationException("Git command timed out after 30 seconds");
+        }
+
+        var output = await outputTask;
+        var error = await errorTask;
 
         if (process.ExitCode != 0)
         {

@@ -11,20 +11,34 @@ namespace DraftSpec.Tests.Mcp.Tools;
 public class SessionToolsTests : IDisposable
 {
     private readonly SessionManager _sessionManager;
+    private readonly string _tempDirectory;
 
     public SessionToolsTests()
     {
+        // Use unique temp directory per test instance to avoid race conditions in parallel execution
+        _tempDirectory = Path.Combine(Path.GetTempPath(), $"draftspec-sessions-{Guid.NewGuid():N}");
         _sessionManager = new SessionManager(
-            NullLogger<SessionManager>.Instance);
+            NullLogger<SessionManager>.Instance,
+            baseTempDirectory: _tempDirectory);
     }
 
     public void Dispose()
     {
         _sessionManager.Dispose();
+        // Clean up temp directory
+        if (Directory.Exists(_tempDirectory))
+        {
+            try { Directory.Delete(_tempDirectory, recursive: true); }
+            catch { /* Best effort cleanup */ }
+        }
     }
 
-    private static SessionManager CreateFreshManager() =>
-        new(NullLogger<SessionManager>.Instance);
+    private SessionManager CreateFreshManager()
+    {
+        // Create with unique subdirectory under our temp directory
+        var subDir = Path.Combine(_tempDirectory, $"fresh-{Guid.NewGuid():N}");
+        return new(NullLogger<SessionManager>.Instance, baseTempDirectory: subDir);
+    }
 
     #region CreateSession
 

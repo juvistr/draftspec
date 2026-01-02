@@ -1,5 +1,6 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
+using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
@@ -57,24 +58,26 @@ public class SchemaCommandTests
     [Test]
     public async Task ExecuteAsync_WithOutputFile_WritesToFile()
     {
+        var schemaPath = TestPaths.Temp("schema.json");
         var command = CreateCommand();
-        var options = new SchemaOptions { OutputFile = "/tmp/schema.json" };
+        var options = new SchemaOptions { OutputFile = schemaPath };
 
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_fileSystem.WrittenFiles.ContainsKey("/tmp/schema.json")).IsTrue();
+        await Assert.That(_fileSystem.WrittenFiles.ContainsKey(schemaPath)).IsTrue();
     }
 
     [Test]
     public async Task ExecuteAsync_WithOutputFile_FileContainsSchema()
     {
+        var schemaPath = TestPaths.Temp("schema.json");
         var command = CreateCommand();
-        var options = new SchemaOptions { OutputFile = "/tmp/schema.json" };
+        var options = new SchemaOptions { OutputFile = schemaPath };
 
         await command.ExecuteAsync(options);
 
-        var content = _fileSystem.WrittenFiles["/tmp/schema.json"];
+        var content = _fileSystem.WrittenFiles[schemaPath];
         // JSON schema includes type definitions and required properties
         await Assert.That(content).Contains("\"type\"");
         await Assert.That(content).Contains("\"required\"");
@@ -83,12 +86,13 @@ public class SchemaCommandTests
     [Test]
     public async Task ExecuteAsync_WithOutputFile_ShowsSuccessMessage()
     {
+        var schemaPath = TestPaths.Temp("schema.json");
         var command = CreateCommand();
-        var options = new SchemaOptions { OutputFile = "/tmp/schema.json" };
+        var options = new SchemaOptions { OutputFile = schemaPath };
 
         await command.ExecuteAsync(options);
 
-        await Assert.That(_console.Output).Contains("Schema written to /tmp/schema.json");
+        await Assert.That(_console.Output).Contains($"Schema written to {schemaPath}");
     }
 
     #endregion

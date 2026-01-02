@@ -19,6 +19,9 @@
         <!-- Shared build settings -->
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+        <!-- API compatibility validation - prevents accidental breaking changes -->
+        <EnablePackageValidation>true</EnablePackageValidation>
     </PropertyGroup>
 
     <ItemGroup>

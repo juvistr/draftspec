@@ -150,20 +150,20 @@ public class SnapshotTests
     [Test]
     public async Task SnapshotManager_GetSnapshotDir_CreatesCorrectPath()
     {
-        var specPath = "/path/to/specs/test.spec.csx";
+        var specPath = Path.Combine("path", "to", "specs", "test.spec.csx");
         var dir = SnapshotManager.GetSnapshotDir(specPath);
 
-        await Assert.That(dir).IsEqualTo("/path/to/specs/__snapshots__");
+        await Assert.That(dir).IsEqualTo(Path.Combine("path", "to", "specs", "__snapshots__"));
     }
 
     [Test]
     public async Task SnapshotManager_GetSnapshotFilePath_CreatesCorrectPath()
     {
-        var specPath = "/path/to/specs/test.spec.csx";
+        var specPath = Path.Combine("path", "to", "specs", "test.spec.csx");
         var path = SnapshotManager.GetSnapshotFilePath(specPath);
 
         // GetFileNameWithoutExtension removes only .csx, leaving test.spec
-        await Assert.That(path).IsEqualTo("/path/to/specs/__snapshots__/test.spec.snap.json");
+        await Assert.That(path).IsEqualTo(Path.Combine("path", "to", "specs", "__snapshots__", "test.spec.snap.json"));
     }
 
     #endregion

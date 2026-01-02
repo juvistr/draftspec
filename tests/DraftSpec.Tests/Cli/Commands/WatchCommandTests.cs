@@ -12,6 +12,15 @@ namespace DraftSpec.Tests.Cli.Commands;
 /// </summary>
 public class WatchCommandTests
 {
+    // Path constants to avoid repetition
+    private static string SomeSpecPath => TestPaths.SpecsDir;
+    private static string TestSpec => TestPaths.Spec("test.spec.csx");
+    private static string TestSpec1 => TestPaths.Spec("test1.spec.csx");
+    private static string TestSpec2 => TestPaths.Spec("test2.spec.csx");
+    private static string SomeSourceFile => TestPaths.Temp("src/MyClass.cs");
+    private static string SomeOtherFile => TestPaths.Temp("some/file.cs");
+    private static string AnotherFile => TestPaths.Temp("file.cs");
+
     #region Constructor Dependencies
 
     [Test]
@@ -104,11 +113,11 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(100);
 
-        var options = new WatchOptions { Path = "/some/path" };
+        var options = new WatchOptions { Path = SomeSpecPath };
         await command.ExecuteAsync(options, cts.Token);
 
         await Assert.That(watcherFactory.CreateCalled).IsTrue();
-        await Assert.That(watcherFactory.LastPath).IsEqualTo("/some/path");
+        await Assert.That(watcherFactory.LastPath).IsEqualTo(SomeSpecPath);
     }
 
     [Test]
@@ -131,7 +140,7 @@ public class WatchCommandTests
         await Task.Delay(50);
 
         // Simulate file change
-        watcherFactory.TriggerChange(new FileChangeInfo("/some/file.cs", false));
+        watcherFactory.TriggerChange(new FileChangeInfo(SomeOtherFile, false));
 
         // Wait a bit more then cancel
         await Task.Delay(50);
@@ -149,20 +158,20 @@ public class WatchCommandTests
         var runner = new MockRunner();
         var runnerFactory = new MockRunnerFactory(runner);
         var watcherFactory = new MockFileWatcherFactory();
-        var specFiles = new[] { "/specs/test1.spec.csx", "/specs/test2.spec.csx" };
+        var specFiles = new[] { TestSpec1, TestSpec2 };
         var command = CreateCommand(runnerFactory: runnerFactory, watcherFactory: watcherFactory, specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
         cts.CancelAfter(200);
 
-        var options = new WatchOptions { Path = "/specs" };
+        var options = new WatchOptions { Path = SomeSpecPath };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
         await Task.Delay(50);
 
         // Simulate spec file change
-        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test1.spec.csx", true));
+        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec1, true));
 
         await Task.Delay(50);
         await cts.CancelAsync();
@@ -192,7 +201,7 @@ public class WatchCommandTests
         await Task.Delay(50);
 
         // Simulate source file change (not a spec)
-        watcherFactory.TriggerChange(new FileChangeInfo("/src/MyClass.cs", false));
+        watcherFactory.TriggerChange(new FileChangeInfo(SomeSourceFile, false));
 
         await Task.Delay(50);
         await cts.CancelAsync();
@@ -237,7 +246,7 @@ public class WatchCommandTests
         var task = command.ExecuteAsync(options, cts.Token);
 
         await Task.Delay(50);
-        watcherFactory.TriggerChange(new FileChangeInfo("/some/file.cs", false));
+        watcherFactory.TriggerChange(new FileChangeInfo(SomeOtherFile, false));
 
         await Task.Delay(50);
         await cts.CancelAsync();
@@ -264,7 +273,7 @@ public class WatchCommandTests
         var task = command.ExecuteAsync(options, cts.Token);
 
         await Task.Delay(50);
-        watcherFactory.TriggerChange(new FileChangeInfo("/file.cs", false));
+        watcherFactory.TriggerChange(new FileChangeInfo(AnotherFile, false));
 
         await Task.Delay(50);
         await cts.CancelAsync();
@@ -383,7 +392,7 @@ public class WatchCommandTests
         var watcherFactory = new MockFileWatcherFactory();
         var changeTracker = new ConfigurableSpecChangeTracker(hasChanges: false);
 
-        var specFiles = new[] { "/specs/test.spec.csx" };
+        var specFiles = new[] { TestSpec };
         var command = CreateCommandWithChangeTracker(
             console: console,
             runnerFactory: runnerFactory,
@@ -394,14 +403,14 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(300);
 
-        var options = new WatchOptions { Path = "/specs", Incremental = true };
+        var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
         await Task.Delay(50);
 
         // Trigger spec file change - since changeTracker returns no changes, should skip
-        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test.spec.csx", true));
+        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
 
         await Task.Delay(100);
         await cts.CancelAsync();
@@ -427,7 +436,7 @@ public class WatchCommandTests
             hasDynamicSpecs: true,
             changes: changes);
 
-        var specFiles = new[] { "/specs/test.spec.csx" };
+        var specFiles = new[] { TestSpec };
         var command = CreateCommandWithChangeTracker(
             console: console,
             runnerFactory: runnerFactory,
@@ -438,14 +447,14 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(300);
 
-        var options = new WatchOptions { Path = "/specs", Incremental = true };
+        var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
         await Task.Delay(50);
 
         // Trigger spec file change
-        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test.spec.csx", true));
+        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
 
         await Task.Delay(100);
         await cts.CancelAsync();
@@ -477,7 +486,7 @@ public class WatchCommandTests
             hasDynamicSpecs: false,
             changes: changes);
 
-        var specFiles = new[] { "/specs/test.spec.csx" };
+        var specFiles = new[] { TestSpec };
         var command = CreateCommandWithChangeTracker(
             console: console,
             runnerFactory: runnerFactory,
@@ -488,14 +497,14 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(300);
 
-        var options = new WatchOptions { Path = "/specs", Incremental = true };
+        var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
         await Task.Delay(50);
 
         // Trigger spec file change
-        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test.spec.csx", true));
+        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
 
         await Task.Delay(100);
         await cts.CancelAsync();
@@ -524,7 +533,7 @@ public class WatchCommandTests
             hasDynamicSpecs: false,
             changes: changes);
 
-        var specFiles = new[] { "/specs/test.spec.csx" };
+        var specFiles = new[] { TestSpec };
         var command = CreateCommandWithChangeTracker(
             runnerFactory: runnerFactory,
             watcherFactory: watcherFactory,
@@ -534,14 +543,14 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(300);
 
-        var options = new WatchOptions { Path = "/specs", Incremental = true };
+        var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
         await Task.Delay(50);
 
         // Trigger spec file change
-        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test.spec.csx", true));
+        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
 
         await Task.Delay(100);
         await cts.CancelAsync();
@@ -569,7 +578,7 @@ public class WatchCommandTests
             hasDynamicSpecs: false,
             changes: changes);
 
-        var specFiles = new[] { "/specs/test.spec.csx" };
+        var specFiles = new[] { TestSpec };
         var command = CreateCommandWithChangeTracker(
             runnerFactory: runnerFactory,
             watcherFactory: watcherFactory,
@@ -579,14 +588,14 @@ public class WatchCommandTests
         var cts = new CancellationTokenSource();
         cts.CancelAfter(300);
 
-        var options = new WatchOptions { Path = "/specs", Incremental = true };
+        var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
         await Task.Delay(50);
 
         // Trigger spec file change
-        watcherFactory.TriggerChange(new FileChangeInfo("/specs/test.spec.csx", true));
+        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
 
         await Task.Delay(100);
         await cts.CancelAsync();

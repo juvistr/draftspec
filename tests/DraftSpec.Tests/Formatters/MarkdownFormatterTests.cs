@@ -142,8 +142,9 @@ public class MarkdownFormatterTests
         var formatter = new MarkdownFormatter();
         var output = formatter.Format(report);
 
-        // Heading should be followed by a blank line
-        await Assert.That(output).Contains("# Context\n\n");
+        // Heading should be followed by a blank line (normalize line endings for cross-platform)
+        var normalized = output.Replace("\r\n", "\n");
+        await Assert.That(normalized).Contains("# Context\n\n");
     }
 
     #endregion

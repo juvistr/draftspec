@@ -1,4 +1,5 @@
 using DraftSpec.Cli.DependencyGraph;
+using DraftSpec.Tests.Infrastructure;
 using DepGraph = DraftSpec.Cli.DependencyGraph.DependencyGraph;
 
 namespace DraftSpec.Tests.Cli.DependencyGraph;
@@ -8,6 +9,19 @@ namespace DraftSpec.Tests.Cli.DependencyGraph;
 /// </summary>
 public class DependencyGraphTests
 {
+    // Path constants to avoid repetition
+    private static string TestSpec => TestPaths.Spec("test.spec.csx");
+    private static string HelperFile => TestPaths.Spec("helper.csx");
+    private static string SpecA => TestPaths.Spec("a.spec.csx");
+    private static string SpecB => TestPaths.Spec("b.spec.csx");
+    private static string SpecC => TestPaths.Spec("c.spec.csx");
+    private static string Helper1 => TestPaths.Spec("helper1.csx");
+    private static string Helper2 => TestPaths.Spec("helper2.csx");
+    private static string SrcTodoService => TestPaths.Temp("src/TodoService.cs");
+    private static string SrcOtherService => TestPaths.Temp("src/OtherService.cs");
+    private static string SrcServiceA => TestPaths.Temp("src/ServiceA.cs");
+    private static string SrcServiceB => TestPaths.Temp("src/ServiceB.cs");
+
     #region AddSpec and GetDependencies
 
     [Test]
@@ -15,14 +29,14 @@ public class DependencyGraphTests
     {
         var graph = new DepGraph();
         var spec = new SpecDependency(
-            "/specs/test.spec.csx",
-            ["/specs/helper.csx"],
+            TestSpec,
+            [HelperFile],
             ["MyApp.Services"]);
 
         graph.AddSpec(spec);
 
-        var deps = graph.GetDependencies("/specs/test.spec.csx");
-        await Assert.That(deps).Contains("/specs/helper.csx");
+        var deps = graph.GetDependencies(TestSpec);
+        await Assert.That(deps).Contains(HelperFile);
     }
 
     [Test]
@@ -30,13 +44,13 @@ public class DependencyGraphTests
     {
         var graph = new DepGraph();
         var spec = new SpecDependency(
-            "/specs/test.spec.csx",
+            TestSpec,
             [],
             ["MyApp.Services", "MyApp.Models"]);
 
         graph.AddSpec(spec);
 
-        var namespaces = graph.GetNamespaces("/specs/test.spec.csx");
+        var namespaces = graph.GetNamespaces(TestSpec);
         await Assert.That(namespaces).Contains("MyApp.Services");
         await Assert.That(namespaces).Contains("MyApp.Models");
     }
@@ -45,8 +59,8 @@ public class DependencyGraphTests
     public async Task SpecFiles_ReturnsAllRegisteredSpecs()
     {
         var graph = new DepGraph();
-        graph.AddSpec(new SpecDependency("/specs/a.spec.csx", [], []));
-        graph.AddSpec(new SpecDependency("/specs/b.spec.csx", [], []));
+        graph.AddSpec(new SpecDependency(SpecA, [], []));
+        graph.AddSpec(new SpecDependency(SpecB, [], []));
 
         await Assert.That(graph.SpecFiles).Count().IsEqualTo(2);
     }
@@ -59,11 +73,11 @@ public class DependencyGraphTests
     public async Task GetAffectedSpecs_SpecFileChanged_ReturnsItself()
     {
         var graph = new DepGraph();
-        graph.AddSpec(new SpecDependency("/specs/test.spec.csx", [], []));
+        graph.AddSpec(new SpecDependency(TestSpec, [], []));
 
-        var affected = graph.GetAffectedSpecs(["/specs/test.spec.csx"]);
+        var affected = graph.GetAffectedSpecs([TestSpec]);
 
-        await Assert.That(affected).Contains("/specs/test.spec.csx");
+        await Assert.That(affected).Contains(TestSpec);
     }
 
     [Test]
@@ -71,37 +85,37 @@ public class DependencyGraphTests
     {
         var graph = new DepGraph();
         graph.AddSpec(new SpecDependency(
-            "/specs/test.spec.csx",
-            ["/specs/helper.csx"],
+            TestSpec,
+            [HelperFile],
             []));
 
-        var affected = graph.GetAffectedSpecs(["/specs/helper.csx"]);
+        var affected = graph.GetAffectedSpecs([HelperFile]);
 
-        await Assert.That(affected).Contains("/specs/test.spec.csx");
+        await Assert.That(affected).Contains(TestSpec);
     }
 
     [Test]
     public async Task GetAffectedSpecs_MultipleSpecsDependOnSameFile_ReturnsAll()
     {
         var graph = new DepGraph();
-        graph.AddSpec(new SpecDependency("/specs/a.spec.csx", ["/specs/helper.csx"], []));
-        graph.AddSpec(new SpecDependency("/specs/b.spec.csx", ["/specs/helper.csx"], []));
-        graph.AddSpec(new SpecDependency("/specs/c.spec.csx", [], [])); // No dependency
+        graph.AddSpec(new SpecDependency(SpecA, [HelperFile], []));
+        graph.AddSpec(new SpecDependency(SpecB, [HelperFile], []));
+        graph.AddSpec(new SpecDependency(SpecC, [], [])); // No dependency
 
-        var affected = graph.GetAffectedSpecs(["/specs/helper.csx"]);
+        var affected = graph.GetAffectedSpecs([HelperFile]);
 
         await Assert.That(affected).Count().IsEqualTo(2);
-        await Assert.That(affected).Contains("/specs/a.spec.csx");
-        await Assert.That(affected).Contains("/specs/b.spec.csx");
+        await Assert.That(affected).Contains(SpecA);
+        await Assert.That(affected).Contains(SpecB);
     }
 
     [Test]
     public async Task GetAffectedSpecs_UnrelatedFileChanged_ReturnsEmpty()
     {
         var graph = new DepGraph();
-        graph.AddSpec(new SpecDependency("/specs/test.spec.csx", ["/specs/helper.csx"], []));
+        graph.AddSpec(new SpecDependency(TestSpec, [HelperFile], []));
 
-        var affected = graph.GetAffectedSpecs(["/some/other/file.txt"]);
+        var affected = graph.GetAffectedSpecs([TestPaths.Temp("some/other/file.txt")]);
 
         await Assert.That(affected).IsEmpty();
     }
@@ -114,22 +128,22 @@ public class DependencyGraphTests
     public async Task GetAffectedSpecs_SourceFileInUsedNamespace_ReturnsAffectedSpec()
     {
         var graph = new DepGraph();
-        graph.AddSpec(new SpecDependency("/specs/test.spec.csx", [], ["MyApp.Services"]));
-        graph.AddNamespaceMapping("/src/TodoService.cs", "MyApp.Services");
+        graph.AddSpec(new SpecDependency(TestSpec, [], ["MyApp.Services"]));
+        graph.AddNamespaceMapping(SrcTodoService, "MyApp.Services");
 
-        var affected = graph.GetAffectedSpecs(["/src/TodoService.cs"]);
+        var affected = graph.GetAffectedSpecs([SrcTodoService]);
 
-        await Assert.That(affected).Contains("/specs/test.spec.csx");
+        await Assert.That(affected).Contains(TestSpec);
     }
 
     [Test]
     public async Task GetAffectedSpecs_SourceFileInUnusedNamespace_ReturnsEmpty()
     {
         var graph = new DepGraph();
-        graph.AddSpec(new SpecDependency("/specs/test.spec.csx", [], ["MyApp.Services"]));
-        graph.AddNamespaceMapping("/src/OtherService.cs", "MyApp.Other");
+        graph.AddSpec(new SpecDependency(TestSpec, [], ["MyApp.Services"]));
+        graph.AddNamespaceMapping(SrcOtherService, "MyApp.Other");
 
-        var affected = graph.GetAffectedSpecs(["/src/OtherService.cs"]);
+        var affected = graph.GetAffectedSpecs([SrcOtherService]);
 
         await Assert.That(affected).IsEmpty();
     }
@@ -138,15 +152,15 @@ public class DependencyGraphTests
     public async Task GetAffectedSpecs_MultipleFilesInSameNamespace_AllAffectSpec()
     {
         var graph = new DepGraph();
-        graph.AddSpec(new SpecDependency("/specs/test.spec.csx", [], ["MyApp.Services"]));
-        graph.AddNamespaceMapping("/src/ServiceA.cs", "MyApp.Services");
-        graph.AddNamespaceMapping("/src/ServiceB.cs", "MyApp.Services");
+        graph.AddSpec(new SpecDependency(TestSpec, [], ["MyApp.Services"]));
+        graph.AddNamespaceMapping(SrcServiceA, "MyApp.Services");
+        graph.AddNamespaceMapping(SrcServiceB, "MyApp.Services");
 
-        var affected1 = graph.GetAffectedSpecs(["/src/ServiceA.cs"]);
-        var affected2 = graph.GetAffectedSpecs(["/src/ServiceB.cs"]);
+        var affected1 = graph.GetAffectedSpecs([SrcServiceA]);
+        var affected2 = graph.GetAffectedSpecs([SrcServiceB]);
 
-        await Assert.That(affected1).Contains("/specs/test.spec.csx");
-        await Assert.That(affected2).Contains("/specs/test.spec.csx");
+        await Assert.That(affected1).Contains(TestSpec);
+        await Assert.That(affected2).Contains(TestSpec);
     }
 
     #endregion
@@ -157,14 +171,14 @@ public class DependencyGraphTests
     public async Task GetAffectedSpecs_MultipleChanges_ReturnsCombinedResults()
     {
         var graph = new DepGraph();
-        graph.AddSpec(new SpecDependency("/specs/a.spec.csx", ["/specs/helper1.csx"], []));
-        graph.AddSpec(new SpecDependency("/specs/b.spec.csx", ["/specs/helper2.csx"], []));
+        graph.AddSpec(new SpecDependency(SpecA, [Helper1], []));
+        graph.AddSpec(new SpecDependency(SpecB, [Helper2], []));
 
-        var affected = graph.GetAffectedSpecs(["/specs/helper1.csx", "/specs/helper2.csx"]);
+        var affected = graph.GetAffectedSpecs([Helper1, Helper2]);
 
         await Assert.That(affected).Count().IsEqualTo(2);
-        await Assert.That(affected).Contains("/specs/a.spec.csx");
-        await Assert.That(affected).Contains("/specs/b.spec.csx");
+        await Assert.That(affected).Contains(SpecA);
+        await Assert.That(affected).Contains(SpecB);
     }
 
     #endregion

@@ -436,7 +436,9 @@ public class ScriptCompilationCacheTests
         var metaFiles = Directory.GetFiles(cacheDir, "*.meta.json");
         var metaContent = await File.ReadAllTextAsync(metaFiles[0]);
         // Replace the source file path to simulate file mismatch
-        metaContent = metaContent.Replace(sourceFile1, sourceFile1 + "-nonexistent");
+        // On Windows, paths in JSON are escaped (C:\\Users\\...), so escape for replacement
+        var jsonEscapedPath = sourceFile1.Replace("\\", "\\\\");
+        metaContent = metaContent.Replace(jsonEscapedPath, jsonEscapedPath + "-nonexistent");
         await File.WriteAllTextAsync(metaFiles[0], metaContent);
 
         var globals = new ScriptGlobals();
@@ -892,6 +894,9 @@ public class ScriptCompilationCacheTests
     [Test]
     public async Task CacheScript_WhenWriteFails_LogsDebugAndDoesNotThrow()
     {
+        // This test uses Unix file permissions - skip on Windows
+        if (OperatingSystem.IsWindows()) return;
+
         // Arrange - create cache with logger, then make caching fail
         var logger = new CapturingLogger();
         var readOnlyDir = Path.Combine(_testDir, "readonly-log-" + Guid.NewGuid().ToString("N"));
@@ -908,10 +913,7 @@ public class ScriptCompilationCacheTests
         var script = CreateTestScript("var x = 1;");
 
         // Make the cache directory read-only to prevent file creation
-        if (!OperatingSystem.IsWindows())
-        {
-            File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
-        }
+        File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
 
         try
         {
@@ -927,10 +929,7 @@ public class ScriptCompilationCacheTests
         finally
         {
             // Restore permissions for cleanup
-            if (!OperatingSystem.IsWindows())
-            {
-                File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-            }
+            File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
     }
 
@@ -967,6 +966,9 @@ public class ScriptCompilationCacheTests
     [Test]
     public async Task GetStatistics_WhenAccessFails_LogsDebugAndReturnsEmptyStats()
     {
+        // This test uses Unix file permissions - skip on Windows
+        if (OperatingSystem.IsWindows()) return;
+
         // Arrange
         var logger = new CapturingLogger();
         var statsDir = Path.Combine(_testDir, "stats-fail-" + Guid.NewGuid().ToString("N"));
@@ -984,10 +986,7 @@ public class ScriptCompilationCacheTests
         await Assert.That(Directory.Exists(cacheSubDir)).IsTrue();
 
         // Make the cache directory unreadable to trigger an exception in Directory.GetFiles
-        if (!OperatingSystem.IsWindows())
-        {
-            File.SetUnixFileMode(cacheSubDir, UnixFileMode.None);
-        }
+        File.SetUnixFileMode(cacheSubDir, UnixFileMode.None);
 
         try
         {
@@ -1005,10 +1004,7 @@ public class ScriptCompilationCacheTests
         finally
         {
             // Restore permissions for cleanup
-            if (!OperatingSystem.IsWindows())
-            {
-                File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-            }
+            File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
     }
 
@@ -1123,6 +1119,9 @@ public class ScriptCompilationCacheTests
     [Test]
     public async Task DeleteCacheEntry_WhenFileLocked_LogsDebugAndContinues()
     {
+        // This test uses Unix file permissions - skip on Windows
+        if (OperatingSystem.IsWindows()) return;
+
         // Arrange
         var logger = new CapturingLogger();
         var deleteDir = Path.Combine(_testDir, "delete-fail-" + Guid.NewGuid().ToString("N"));
@@ -1140,14 +1139,8 @@ public class ScriptCompilationCacheTests
         var dllFiles = Directory.GetFiles(cacheSubDir, "*.dll");
         await Assert.That(dllFiles.Length).IsGreaterThan(0);
 
-        // Make the cache directory read-only to prevent file deletion (works on macOS/Linux)
-        var dirInfo = new DirectoryInfo(cacheSubDir);
-        var originalAttributes = dirInfo.Attributes;
-        if (!OperatingSystem.IsWindows())
-        {
-            // On Unix, remove write permission from directory to prevent file deletion
-            File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
-        }
+        // On Unix, remove write permission from directory to prevent file deletion
+        File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
 
         try
         {
@@ -1158,15 +1151,9 @@ public class ScriptCompilationCacheTests
             metaContent = metaContent.Replace("\"draftSpecVersion\":", "\"draftSpecVersion\": \"0.0.0-fake\", \"_old\":");
 
             // Temporarily restore write permission to update metadata
-            if (!OperatingSystem.IsWindows())
-            {
-                File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-            }
+            File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
             await File.WriteAllTextAsync(metaFiles[0], metaContent);
-            if (!OperatingSystem.IsWindows())
-            {
-                File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
-            }
+            File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
 
             var globals = new ScriptGlobals();
 
@@ -1186,10 +1173,7 @@ public class ScriptCompilationCacheTests
         finally
         {
             // Restore permissions for cleanup
-            if (!OperatingSystem.IsWindows())
-            {
-                File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-            }
+            File.SetUnixFileMode(cacheSubDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
     }
 
@@ -1228,6 +1212,9 @@ public class ScriptCompilationCacheTests
     [Test]
     public async Task Clear_WhenDirectoryAccessDenied_LogsDebugAndContinues()
     {
+        // This test uses Unix file permissions - skip on Windows
+        if (OperatingSystem.IsWindows()) return;
+
         // Arrange
         var logger = new CapturingLogger();
         var accessDir = Path.Combine(_testDir, "access-fail-" + Guid.NewGuid().ToString("N"));
@@ -1245,10 +1232,7 @@ public class ScriptCompilationCacheTests
 
         // Make the parent directory read-only to prevent deletion
         var parentDir = Path.GetDirectoryName(cacheSubDir)!;
-        if (!OperatingSystem.IsWindows())
-        {
-            File.SetUnixFileMode(parentDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
-        }
+        File.SetUnixFileMode(parentDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
 
         try
         {
@@ -1263,10 +1247,7 @@ public class ScriptCompilationCacheTests
         finally
         {
             // Restore permissions for cleanup
-            if (!OperatingSystem.IsWindows())
-            {
-                File.SetUnixFileMode(parentDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-            }
+            File.SetUnixFileMode(parentDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
     }
 

@@ -766,9 +766,9 @@ public class SpecDiscovererTests
     [Test]
     public async Task DiscoverFileAsync_WithMockFileProvider_UsesProviderForAbsolutePath()
     {
-        // Arrange
-        var relativePath = "specs/test.spec.csx";
-        var absolutePath = Path.Combine(_tempDir, relativePath);
+        // Arrange - use cross-platform path construction
+        var relativePath = Path.Combine("specs", "test.spec.csx");
+        var absolutePath = Path.GetFullPath(Path.Combine(_tempDir, relativePath));
 
         // Create the file so static parser can read it if needed
         var specsDir = Path.Combine(_tempDir, "specs");

@@ -634,19 +634,23 @@ public class PluginLoaderTests
         private readonly Dictionary<string, string?> _publicKeyTokens = [];
         private readonly Dictionary<string, string?> _certificateThumbprints = [];
 
+        // Normalize paths for cross-platform dictionary lookups
+        private static string NormalizePath(string path) => path.Replace('\\', '/');
+
         /// <summary>
         /// Add a real type to be "discovered" from an assembly path.
         /// </summary>
         public void AddRealType(string path, Type type)
         {
-            if (!_realTypes.ContainsKey(path))
-                _realTypes[path] = [];
-            _realTypes[path].Add(type);
+            var normalizedPath = NormalizePath(path);
+            if (!_realTypes.ContainsKey(normalizedPath))
+                _realTypes[normalizedPath] = [];
+            _realTypes[normalizedPath].Add(type);
         }
 
         public void SetLoadException(string path, Exception exception)
         {
-            _loadExceptions[path] = exception;
+            _loadExceptions[NormalizePath(path)] = exception;
         }
 
         /// <summary>
@@ -655,7 +659,7 @@ public class PluginLoaderTests
         /// </summary>
         public void SetPublicKeyToken(string path, string? token)
         {
-            _publicKeyTokens[path] = token;
+            _publicKeyTokens[NormalizePath(path)] = token;
         }
 
         /// <summary>
@@ -664,16 +668,17 @@ public class PluginLoaderTests
         /// </summary>
         public void SetCertificateThumbprint(string path, string? thumbprint)
         {
-            _certificateThumbprints[path] = thumbprint;
+            _certificateThumbprints[NormalizePath(path)] = thumbprint;
         }
 
         public Assembly? LoadAssembly(string path)
         {
-            if (_loadExceptions.TryGetValue(path, out var exception))
+            var normalizedPath = NormalizePath(path);
+            if (_loadExceptions.TryGetValue(normalizedPath, out var exception))
                 throw exception;
 
             // Return the assembly of the first real type, or null
-            if (_realTypes.TryGetValue(path, out var types) && types.Count > 0)
+            if (_realTypes.TryGetValue(normalizedPath, out var types) && types.Count > 0)
                 return types[0].Assembly;
 
             return null;
@@ -699,12 +704,12 @@ public class PluginLoaderTests
 
         public string? GetPublicKeyToken(string path)
         {
-            return _publicKeyTokens.TryGetValue(path, out var token) ? token : null;
+            return _publicKeyTokens.TryGetValue(NormalizePath(path), out var token) ? token : null;
         }
 
         public string? GetCertificateThumbprint(string path)
         {
-            return _certificateThumbprints.TryGetValue(path, out var thumbprint) ? thumbprint : null;
+            return _certificateThumbprints.TryGetValue(NormalizePath(path), out var thumbprint) ? thumbprint : null;
         }
     }
 

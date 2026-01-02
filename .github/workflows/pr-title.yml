@@ -1,0 +1,53 @@
+name: PR Title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate PR title follows conventional commits
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Types based on CLAUDE.md PR title format
+          types: |
+            feat
+            fix
+            perf
+            security
+            docs
+            test
+            refactor
+            chore
+            ci
+          # Scopes based on CLAUDE.md common scopes
+          scopes: |
+            cli
+            runner
+            dsl
+            mtp
+            mcp
+            scripting
+            formatters
+            deps
+          # Require scope to be one of the listed values (if provided)
+          requireScope: false
+          # Allow breaking change indicator (!)
+          subjectPattern: ^.+$
+          subjectPatternError: |
+            The subject "{subject}" doesn't match the expected pattern.
+
+            Expected format: <type>(<scope>): <description>
+
+            Examples:
+              feat(cli): add watch mode for continuous testing
+              fix(runner): handle async disposal correctly
+              docs: update README with new examples

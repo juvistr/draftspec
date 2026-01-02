@@ -40,7 +40,9 @@ public class ListCommandTests
     public async Task ExecuteAsync_NonexistentPath_ThrowsArgumentException()
     {
         var command = CreateCommand();
-        var options = new ListOptions { Path = "/nonexistent/path" };
+        // Use a cross-platform path that definitely doesn't exist
+        var nonexistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid():N}", "path");
+        var options = new ListOptions { Path = nonexistentPath };
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await command.ExecuteAsync(options));

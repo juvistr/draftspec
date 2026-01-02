@@ -15,7 +15,12 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
@@ -27,10 +32,19 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
         run: dotnet restore --locked-mode
 
       - name: Audit NuGet dependencies for vulnerabilities
+        if: matrix.os == 'ubuntu-latest'
         run: |
           OUTPUT=$(dotnet list package --vulnerable --include-transitive 2>&1)
           echo "$OUTPUT"
@@ -39,6 +53,15 @@ jobs:
             exit 1
           fi
           echo "::notice::No known vulnerabilities found in NuGet dependencies"
+
+      - name: Scan for secrets
+        if: matrix.os == 'ubuntu-latest'
+        uses: trufflesecurity/trufflehog@ef6e76c3c4023279497fab4721ffa071a722fd05 # v3.92.4
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
 
       - name: Build
         run: dotnet build --no-restore -c Release
@@ -51,7 +74,7 @@ jobs:
           dotnet run --project tests/DraftSpec.Tests -c Release -- --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml --report-trx --report-trx-filename test-results.trx
 
       - name: Convert TRX to JUnit
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.os == 'ubuntu-latest' }}
         run: |
           dotnet tool install -g trx2junit --version 2.1.0
           trx2junit tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/test-results.trx --output tests/DraftSpec.Tests/bin/Release/net10.0/TestResults
@@ -61,11 +84,13 @@ jobs:
           dotnet run --project tests/DraftSpec.Cli.IntegrationTests -c Release
 
       - name: Generate coverage report
+        if: matrix.os == 'ubuntu-latest'
         run: |
           dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.5.1
           reportgenerator -reports:tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml -targetdir:./coverage-report -reporttypes:Html
 
       - name: Enforce coverage threshold
+        if: matrix.os == 'ubuntu-latest'
         run: |
           COVERAGE_FILE="tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml"
           THRESHOLD=85
@@ -86,6 +111,7 @@ jobs:
           echo "::notice::Coverage ${COVERAGE}% meets threshold ${THRESHOLD}%"
 
       - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -94,7 +120,7 @@ jobs:
           verbose: true
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.os == 'ubuntu-latest' }}
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -102,6 +128,7 @@ jobs:
           report_type: test_results
 
       - name: Upload coverage report artifact
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: coverage-report
@@ -109,9 +136,11 @@ jobs:
           retention-days: 7
 
       - name: Pack
+        if: matrix.os == 'ubuntu-latest'
         run: dotnet pack --no-build -c Release
 
       - name: Upload packages
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: nuget-packages
@@ -119,3 +148,19 @@ jobs:
             src/*/bin/Release/*.nupkg
             src/*/bin/Release/*.snupkg
           retention-days: 7
+
+  # Summary job for branch protection - provides single "build-summary" status
+  build-summary:
+    if: always()
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build matrix status
+        run: |
+          if [[ "${{ needs.build.result }}" == "success" ]]; then
+            echo "All build jobs passed"
+            exit 0
+          else
+            echo "One or more build jobs failed: ${{ needs.build.result }}"
+            exit 1
+          fi

@@ -8,10 +8,22 @@ namespace DraftSpec.Cli.Services;
 public class GitService : IGitService
 {
     private readonly IFileSystem _fileSystem;
+    private readonly TimeSpan _commandTimeout;
+
+    /// <summary>
+    /// Default timeout for git commands (30 seconds).
+    /// </summary>
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
     public GitService(IFileSystem fileSystem)
+        : this(fileSystem, DefaultTimeout)
+    {
+    }
+
+    public GitService(IFileSystem fileSystem, TimeSpan commandTimeout)
     {
         _fileSystem = fileSystem;
+        _commandTimeout = commandTimeout;
     }
 
     /// <inheritdoc />
@@ -61,7 +73,7 @@ public class GitService : IGitService
         }
     }
 
-    private static async Task<string> RunGitAsync(
+    private async Task<string> RunGitAsync(
         string arguments,
         string workingDirectory,
         CancellationToken cancellationToken)
@@ -75,17 +87,43 @@ public class GitService : IGitService
                 WorkingDirectory = workingDirectory,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = true, // Prevent git from waiting for input
                 UseShellExecute = false,
                 CreateNoWindow = true
             }
         };
 
+        // Disable all forms of credential prompting
+        process.StartInfo.EnvironmentVariables["GIT_TERMINAL_PROMPT"] = "0";
+        process.StartInfo.EnvironmentVariables["GIT_ASKPASS"] = "";
+        process.StartInfo.EnvironmentVariables["GCM_INTERACTIVE"] = "never";
+
         process.Start();
 
-        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+        // Close stdin immediately to signal no input will be provided
+        process.StandardInput.Close();
 
-        await process.WaitForExitAsync(cancellationToken);
+        // Read stdout and stderr in parallel to avoid deadlock when buffers fill
+        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+
+        // Use a timeout to prevent hanging forever
+        using var timeoutCts = new CancellationTokenSource(_commandTimeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+        try
+        {
+            await Task.WhenAll(outputTask, errorTask).WaitAsync(linkedCts.Token);
+            await process.WaitForExitAsync(linkedCts.Token);
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+        {
+            process.Kill();
+            throw new InvalidOperationException($"Git command timed out after {_commandTimeout.TotalSeconds} seconds");
+        }
+
+        var output = await outputTask;
+        var error = await errorTask;
 
         if (process.ExitCode != 0)
         {

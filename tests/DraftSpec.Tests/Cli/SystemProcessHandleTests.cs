@@ -56,7 +56,12 @@ public class SystemProcessHandleTests
 
         using var handle = new SystemProcessHandle(process);
 
-        var completed = handle.WaitForExit(50); // Very short timeout
+        // Give the process time to actually start on slower CI machines
+        await Task.Delay(100);
+
+        // Use a longer timeout to avoid race conditions, but still short enough
+        // that a 30-second sleep won't complete
+        var completed = handle.WaitForExit(200);
 
         await Assert.That(completed).IsFalse();
 
@@ -134,13 +139,15 @@ public class SystemProcessHandleTests
 
     private static Process CreateSleepProcess()
     {
+        // On Windows, use PowerShell's Start-Sleep which works reliably with redirected IO
+        // The cmd.exe 'timeout' command doesn't work properly when console is hidden
         return new Process
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = OperatingSystem.IsWindows() ? "cmd.exe" : "/bin/sh",
+                FileName = OperatingSystem.IsWindows() ? "powershell.exe" : "/bin/sh",
                 Arguments = OperatingSystem.IsWindows()
-                    ? "/c timeout /t 30 /nobreak"
+                    ? "-Command \"Start-Sleep -Seconds 30\""
                     : "-c \"sleep 30\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,

@@ -263,6 +263,25 @@ public class GitServiceTests
 
     #endregion
 
+    #region Timeout Tests
+
+    [Test]
+    public async Task GetChangedFilesAsync_WithVeryShortTimeout_ThrowsTimeoutException()
+    {
+        // Arrange - Use a timeout so short that git can't possibly complete in time
+        var repoDir = GetRepositoryRoot();
+        var fileSystem = new RealFileSystem();
+        var service = new GitService(fileSystem, TimeSpan.FromMilliseconds(1));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await service.GetChangedFilesAsync("HEAD", repoDir));
+
+        await Assert.That(exception!.Message).Contains("timed out");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static string GetRepositoryRoot()

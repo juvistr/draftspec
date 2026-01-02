@@ -123,6 +123,82 @@ dotnet test -- --parallel-mode none
 4. DraftSpec specs appear with their context hierarchy
 5. Double-click to navigate to source
 
+## Tags and Test Explorer Traits
+
+DraftSpec exposes tags as Test Explorer traits, enabling filtering and categorization in IDEs.
+
+### Defining Tags
+
+Use `tag()` or `tags()` to categorize specs:
+
+```csharp
+// Single tag
+tag("slow", () =>
+{
+    it("takes a while", async () =>
+    {
+        await Task.Delay(5000);
+        expect(true).toBeTrue();
+    });
+});
+
+// Multiple tags
+tags(["integration", "database"], () =>
+{
+    it("connects to database", () =>
+    {
+        // ...
+    });
+});
+
+// Nested tags accumulate
+tag("slow", () =>
+{
+    tag("network", () =>
+    {
+        it("calls API", () => { }); // has both "slow" and "network" tags
+    });
+});
+```
+
+### Filtering by Category
+
+Tags appear as "Category" traits in Test Explorer:
+
+```bash
+# Run only slow tests
+dotnet test --filter "Category=slow"
+
+# Run integration tests
+dotnet test --filter "Category=integration"
+
+# Exclude slow tests
+dotnet test --filter "Category!=slow"
+
+# Combine filters
+dotnet test --filter "Category=unit&Category!=slow"
+```
+
+### Status Traits
+
+DraftSpec also exposes spec status as traits:
+
+| Status | When Applied |
+|--------|-------------|
+| `Focused` | Spec defined with `fit()` |
+| `Skipped` | Spec defined with `xit()` |
+| `Pending` | Spec has no body (`it("todo")`) |
+
+Filter by status:
+
+```bash
+# Find all pending specs
+dotnet test --filter "Status=Pending"
+
+# Find focused specs (useful for CI to detect forgotten fit() calls)
+dotnet test --filter "Status=Focused"
+```
+
 ## Project Structure
 
 Recommended structure for MTP-based specs:

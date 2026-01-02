@@ -39,6 +39,12 @@ internal static class TestNodeMapper
         // Add TestMethodIdentifierProperty for IDE integration (Rider requires this)
         propertyList.Add(CreateTestMethodIdentifier(spec));
 
+        // Add tag metadata for Test Explorer filtering
+        propertyList.AddRange(CreateTagProperties(spec.Tags));
+
+        // Add status metadata for focused/skipped/pending visibility
+        propertyList.AddRange(CreateStatusProperties(spec));
+
         return new TestNode
         {
             Uid = new TestNodeUid(spec.Id),
@@ -69,6 +75,12 @@ internal static class TestNodeMapper
         {
             propertyList.Add(CreateFileLocationProperty(spec.SourceFile, spec.LineNumber));
         }
+
+        // Add tag metadata for Test Explorer filtering
+        propertyList.AddRange(CreateTagProperties(spec.Tags));
+
+        // Add status metadata for focused/skipped/pending visibility
+        propertyList.AddRange(CreateStatusProperties(spec));
 
         return new TestNode
         {
@@ -137,6 +149,12 @@ internal static class TestNodeMapper
 
         // Add TestMethodIdentifierProperty for IDE integration
         propertyList.Add(CreateTestMethodIdentifier(spec));
+
+        // Add tag metadata for Test Explorer filtering
+        propertyList.AddRange(CreateTagProperties(spec.Tags));
+
+        // Add status metadata for focused/skipped/pending visibility
+        propertyList.AddRange(CreateStatusProperties(spec));
 
         return new TestNode
         {
@@ -216,6 +234,32 @@ internal static class TestNodeMapper
         // Just return the spec description - the IDE tree view shows the hierarchy
         // via TestMethodIdentifierProperty (TypeName = context path, MethodName = description)
         return specDescription;
+    }
+
+    /// <summary>
+    /// Creates TestMetadataProperty instances for spec tags.
+    /// Tags are exposed as "Category" traits for IDE compatibility.
+    /// </summary>
+    private static IEnumerable<TestMetadataProperty> CreateTagProperties(IReadOnlyList<string> tags)
+    {
+        foreach (var tag in tags)
+        {
+            yield return new TestMetadataProperty("Category", tag);
+        }
+    }
+
+    /// <summary>
+    /// Creates TestMetadataProperty instances for spec status.
+    /// Exposes focused/skipped/pending status as filterable traits.
+    /// </summary>
+    private static IEnumerable<TestMetadataProperty> CreateStatusProperties(DiscoveredSpec spec)
+    {
+        if (spec.IsFocused)
+            yield return new TestMetadataProperty("Status", "Focused");
+        if (spec.IsSkipped)
+            yield return new TestMetadataProperty("Status", "Skipped");
+        if (spec.IsPending)
+            yield return new TestMetadataProperty("Status", "Pending");
     }
 
     /// <summary>

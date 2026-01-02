@@ -710,4 +710,241 @@ public class TestNodeMapperTests
     }
 
     #endregion
+
+    #region Metadata Property Tests
+
+    [Test]
+    public async Task CreateDiscoveryNode_WithTags_IncludesTestMetadataProperties()
+    {
+        // Arrange
+        var spec = new DiscoveredSpec
+        {
+            Id = "test.spec.csx:Context/spec",
+            Description = "spec",
+            DisplayName = "spec",
+            ContextPath = new[] { "Context" },
+            SourceFile = "/project/test.spec.csx",
+            RelativeSourceFile = "test.spec.csx",
+            LineNumber = 10,
+            Tags = new[] { "slow", "integration" }
+        };
+
+        // Act
+        var node = TestNodeMapper.CreateDiscoveryNode(spec);
+
+        // Assert
+        var categories = node.Properties.AsEnumerable()
+            .OfType<TestMetadataProperty>()
+            .Where(p => p.Key == "Category")
+            .Select(p => p.Value)
+            .ToList();
+
+        await Assert.That(categories).Contains("slow");
+        await Assert.That(categories).Contains("integration");
+    }
+
+    [Test]
+    public async Task CreateDiscoveryNode_NoTags_OmitsTagMetadata()
+    {
+        // Arrange
+        var spec = new DiscoveredSpec
+        {
+            Id = "test.spec.csx:Context/spec",
+            Description = "spec",
+            DisplayName = "spec",
+            ContextPath = new[] { "Context" },
+            SourceFile = "/project/test.spec.csx",
+            RelativeSourceFile = "test.spec.csx",
+            LineNumber = 10,
+            Tags = Array.Empty<string>()
+        };
+
+        // Act
+        var node = TestNodeMapper.CreateDiscoveryNode(spec);
+
+        // Assert
+        var categories = node.Properties.AsEnumerable()
+            .OfType<TestMetadataProperty>()
+            .Where(p => p.Key == "Category")
+            .ToList();
+
+        await Assert.That(categories).IsEmpty();
+    }
+
+    [Test]
+    public async Task CreateDiscoveryNode_FocusedSpec_IncludesStatusMetadata()
+    {
+        // Arrange
+        var spec = new DiscoveredSpec
+        {
+            Id = "test.spec.csx:Context/spec",
+            Description = "spec",
+            DisplayName = "spec",
+            ContextPath = new[] { "Context" },
+            SourceFile = "/project/test.spec.csx",
+            RelativeSourceFile = "test.spec.csx",
+            LineNumber = 10,
+            IsFocused = true
+        };
+
+        // Act
+        var node = TestNodeMapper.CreateDiscoveryNode(spec);
+
+        // Assert
+        var status = node.Properties.AsEnumerable()
+            .OfType<TestMetadataProperty>()
+            .FirstOrDefault(p => p.Key == "Status");
+
+        await Assert.That(status).IsNotNull();
+        await Assert.That(status!.Value).IsEqualTo("Focused");
+    }
+
+    [Test]
+    public async Task CreateDiscoveryNode_SkippedSpec_IncludesStatusMetadata()
+    {
+        // Arrange
+        var spec = new DiscoveredSpec
+        {
+            Id = "test.spec.csx:Context/spec",
+            Description = "spec",
+            DisplayName = "spec",
+            ContextPath = new[] { "Context" },
+            SourceFile = "/project/test.spec.csx",
+            RelativeSourceFile = "test.spec.csx",
+            LineNumber = 10,
+            IsSkipped = true
+        };
+
+        // Act
+        var node = TestNodeMapper.CreateDiscoveryNode(spec);
+
+        // Assert
+        var status = node.Properties.AsEnumerable()
+            .OfType<TestMetadataProperty>()
+            .FirstOrDefault(p => p.Key == "Status");
+
+        await Assert.That(status).IsNotNull();
+        await Assert.That(status!.Value).IsEqualTo("Skipped");
+    }
+
+    [Test]
+    public async Task CreateDiscoveryNode_PendingSpec_IncludesStatusMetadata()
+    {
+        // Arrange
+        var spec = new DiscoveredSpec
+        {
+            Id = "test.spec.csx:Context/spec",
+            Description = "spec",
+            DisplayName = "spec",
+            ContextPath = new[] { "Context" },
+            SourceFile = "/project/test.spec.csx",
+            RelativeSourceFile = "test.spec.csx",
+            LineNumber = 10,
+            IsPending = true
+        };
+
+        // Act
+        var node = TestNodeMapper.CreateDiscoveryNode(spec);
+
+        // Assert
+        var status = node.Properties.AsEnumerable()
+            .OfType<TestMetadataProperty>()
+            .FirstOrDefault(p => p.Key == "Status");
+
+        await Assert.That(status).IsNotNull();
+        await Assert.That(status!.Value).IsEqualTo("Pending");
+    }
+
+    [Test]
+    public async Task CreateDiscoveryNode_NoSpecialStatus_OmitsStatusMetadata()
+    {
+        // Arrange
+        var spec = new DiscoveredSpec
+        {
+            Id = "test.spec.csx:Context/spec",
+            Description = "spec",
+            DisplayName = "spec",
+            ContextPath = new[] { "Context" },
+            SourceFile = "/project/test.spec.csx",
+            RelativeSourceFile = "test.spec.csx",
+            LineNumber = 10
+            // IsFocused, IsSkipped, IsPending all default to false
+        };
+
+        // Act
+        var node = TestNodeMapper.CreateDiscoveryNode(spec);
+
+        // Assert
+        var statuses = node.Properties.AsEnumerable()
+            .OfType<TestMetadataProperty>()
+            .Where(p => p.Key == "Status")
+            .ToList();
+
+        await Assert.That(statuses).IsEmpty();
+    }
+
+    [Test]
+    public async Task CreateResultNode_WithTags_IncludesTestMetadataProperties()
+    {
+        // Arrange
+        var spec = new DiscoveredSpec
+        {
+            Id = "test.spec.csx:Context/spec",
+            Description = "spec",
+            DisplayName = "spec",
+            ContextPath = new[] { "Context" },
+            SourceFile = "/project/test.spec.csx",
+            RelativeSourceFile = "test.spec.csx",
+            LineNumber = 10,
+            Tags = new[] { "unit" }
+        };
+        var result = new SpecResult(
+            new SpecDefinition("spec", () => { }),
+            SpecStatus.Passed,
+            new[] { "Context" });
+
+        // Act
+        var node = TestNodeMapper.CreateResultNode(spec, result);
+
+        // Assert
+        var categories = node.Properties.AsEnumerable()
+            .OfType<TestMetadataProperty>()
+            .Where(p => p.Key == "Category")
+            .Select(p => p.Value)
+            .ToList();
+
+        await Assert.That(categories).Contains("unit");
+    }
+
+    [Test]
+    public async Task CreateCompilationErrorResultNode_WithTags_IncludesTestMetadataProperties()
+    {
+        // Arrange
+        var spec = new DiscoveredSpec
+        {
+            Id = "test.spec.csx:Context/spec",
+            Description = "spec",
+            DisplayName = "spec",
+            ContextPath = new[] { "Context" },
+            SourceFile = "/project/test.spec.csx",
+            RelativeSourceFile = "test.spec.csx",
+            LineNumber = 10,
+            CompilationError = "CS0103: undefined",
+            Tags = new[] { "slow" }
+        };
+
+        // Act
+        var node = TestNodeMapper.CreateCompilationErrorResultNode(spec);
+
+        // Assert
+        var categories = node.Properties.AsEnumerable()
+            .OfType<TestMetadataProperty>()
+            .Where(p => p.Key == "Category")
+            .Select(p => p.Value)
+            .ToList();
+
+        await Assert.That(categories).Contains("slow");
+    }
+
+    #endregion
 }

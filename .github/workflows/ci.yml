@@ -55,7 +55,8 @@ jobs:
           echo "::notice::No known vulnerabilities found in NuGet dependencies"
 
       - name: Scan for secrets
-        if: matrix.os == 'ubuntu-latest'
+        # Only scan on PRs - on pushes to main, base and HEAD are the same commit
+        if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
         uses: trufflesecurity/trufflehog@ef6e76c3c4023279497fab4721ffa071a722fd05 # v3.92.4
         with:
           path: ./

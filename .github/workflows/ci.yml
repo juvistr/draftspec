@@ -43,6 +43,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore --locked-mode
 
+      - name: Restore local tools
+        run: dotnet tool restore
+
       - name: Audit NuGet dependencies for vulnerabilities
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -78,13 +81,12 @@ jobs:
       - name: Convert TRX to JUnit
         if: ${{ !cancelled() && matrix.os == 'ubuntu-latest' }}
         run: |
-          dotnet tool install -g trx2junit --version 2.1.0
-          trx2junit tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/test-results.trx --output tests/DraftSpec.Tests/bin/Release/net10.0/TestResults
+          dotnet tool run trx2junit tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/test-results.trx --output tests/DraftSpec.Tests/bin/Release/net10.0/TestResults
 
       - name: Run CLI integration tests
         timeout-minutes: 10
         run: |
-          dotnet run --project tests/DraftSpec.Cli.IntegrationTests -c Release
+          dotnet run --project tests/DraftSpec.Cli.IntegrationTests -c Release -- --coverage --coverage-output-format cobertura --coverage-output integration-coverage.cobertura.xml
 
       - name: Upload test results on failure
         if: always()
@@ -100,14 +102,13 @@ jobs:
       - name: Generate coverage report
         if: matrix.os == 'ubuntu-latest'
         run: |
-          dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.5.1
-          reportgenerator -reports:tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml -targetdir:./coverage-report -reporttypes:Html
+          dotnet tool run reportgenerator -reports:"tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml;tests/DraftSpec.Cli.IntegrationTests/bin/Release/net10.0/TestResults/integration-coverage.cobertura.xml" -targetdir:./coverage-report -reporttypes:Html
 
       - name: Enforce coverage threshold
         if: matrix.os == 'ubuntu-latest'
         run: |
           COVERAGE_FILE="tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml"
-          THRESHOLD=85
+          THRESHOLD=88
 
           # Extract line-rate from Cobertura XML (value between 0 and 1)
           LINE_RATE=$(grep -oP 'line-rate="\K[0-9.]+' "$COVERAGE_FILE" | head -1)
@@ -129,7 +130,7 @@ jobs:
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml
+          files: tests/DraftSpec.Tests/bin/Release/net10.0/TestResults/coverage.cobertura.xml,tests/DraftSpec.Cli.IntegrationTests/bin/Release/net10.0/TestResults/integration-coverage.cobertura.xml
           fail_ci_if_error: true
           verbose: true
 

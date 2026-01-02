@@ -3,11 +3,22 @@
   "isRoot": true,
   "tools": {
     "husky": {
-      "version": "0.8.0",
+      "version": "0.7.1",
       "commands": [
         "husky"
-      ],
-      "rollForward": false
+      ]
+    },
+    "trx2junit": {
+      "version": "2.1.0",
+      "commands": [
+        "trx2junit"
+      ]
+    },
+    "dotnet-reportgenerator-globaltool": {
+      "version": "5.5.1",
+      "commands": [
+        "reportgenerator"
+      ]
     }
   }
 }

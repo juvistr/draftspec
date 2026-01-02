@@ -332,6 +332,90 @@ public class SyntaxHelpersTests
 
     #endregion
 
+    #region SimplifyTypeName Tests
+
+    [Test]
+    public async Task SimplifyTypeName_SystemString_ReturnsString()
+    {
+        var result = SyntaxHelpers.SimplifyTypeName("System.String");
+
+        await Assert.That(result).IsEqualTo("string");
+    }
+
+    [Test]
+    public async Task SimplifyTypeName_SystemInt32_ReturnsInt()
+    {
+        var result = SyntaxHelpers.SimplifyTypeName("System.Int32");
+
+        await Assert.That(result).IsEqualTo("int");
+    }
+
+    [Test]
+    public async Task SimplifyTypeName_SystemInt64_ReturnsLong()
+    {
+        var result = SyntaxHelpers.SimplifyTypeName("System.Int64");
+
+        await Assert.That(result).IsEqualTo("long");
+    }
+
+    [Test]
+    public async Task SimplifyTypeName_SystemBoolean_ReturnsBool()
+    {
+        var result = SyntaxHelpers.SimplifyTypeName("System.Boolean");
+
+        await Assert.That(result).IsEqualTo("bool");
+    }
+
+    [Test]
+    public async Task SimplifyTypeName_SystemObject_ReturnsObject()
+    {
+        var result = SyntaxHelpers.SimplifyTypeName("System.Object");
+
+        await Assert.That(result).IsEqualTo("object");
+    }
+
+    [Test]
+    public async Task SimplifyTypeName_SystemVoid_ReturnsVoid()
+    {
+        var result = SyntaxHelpers.SimplifyTypeName("System.Void");
+
+        await Assert.That(result).IsEqualTo("void");
+    }
+
+    [Test]
+    public async Task SimplifyTypeName_NullableType_StripsQuestionMark()
+    {
+        var result = SyntaxHelpers.SimplifyTypeName("int?");
+
+        await Assert.That(result).IsEqualTo("int");
+    }
+
+    [Test]
+    public async Task SimplifyTypeName_NullableSystemType_SimplifiesAndStrips()
+    {
+        var result = SyntaxHelpers.SimplifyTypeName("System.Int32?");
+
+        await Assert.That(result).IsEqualTo("int");
+    }
+
+    [Test]
+    public async Task SimplifyTypeName_CustomType_ReturnsUnchanged()
+    {
+        var result = SyntaxHelpers.SimplifyTypeName("MyApp.UserService");
+
+        await Assert.That(result).IsEqualTo("MyApp.UserService");
+    }
+
+    [Test]
+    public async Task SimplifyTypeName_ShortKeyword_ReturnsUnchanged()
+    {
+        var result = SyntaxHelpers.SimplifyTypeName("string");
+
+        await Assert.That(result).IsEqualTo("string");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static ExpressionSyntax ParseExpression(string expression)

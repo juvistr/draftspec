@@ -635,6 +635,27 @@ public class SourceMethodWalkerTests
         await Assert.That(methods[0].IsAsync).IsFalse();
     }
 
+    [Test]
+    public async Task IgnoresTopLevelMethods()
+    {
+        // Arrange - C# 9+ top-level statements with local function
+        var source = """
+            using System;
+
+            Console.WriteLine("Hello");
+
+            void LocalMethod() { }
+
+            public void TopLevelPublic() { }
+            """;
+
+        // Act
+        var methods = ParseMethods(source);
+
+        // Assert - top-level methods have no enclosing type, should be skipped
+        await Assert.That(methods).Count().IsEqualTo(0);
+    }
+
     #endregion
 
     private static List<SourceMethod> ParseMethods(string source)

@@ -154,34 +154,13 @@ internal sealed class SourceMethodWalker : CSharpSyntaxWalker
         var typeName = parameter.Type?.ToString() ?? "object";
 
         // Simplify common generic types for readability
-        return SimplifyTypeName(typeName);
-    }
-
-    private static string SimplifyTypeName(string typeName)
-    {
-        // Remove nullable annotation for display
-        if (typeName.EndsWith('?'))
-        {
-            typeName = typeName[..^1];
-        }
-
-        // Common simplifications
-        return typeName switch
-        {
-            "System.String" => "string",
-            "System.Int32" => "int",
-            "System.Int64" => "long",
-            "System.Boolean" => "bool",
-            "System.Object" => "object",
-            "System.Void" => "void",
-            _ => typeName
-        };
+        return SyntaxHelpers.SimplifyTypeName(typeName);
     }
 
     private static List<string> GetParameterTypes(MethodDeclarationSyntax node)
     {
         return node.ParameterList.Parameters
-            .Select(p => SimplifyTypeName(p.Type?.ToString() ?? "object"))
+            .Select(p => SyntaxHelpers.SimplifyTypeName(p.Type?.ToString() ?? "object"))
             .ToList();
     }
 

@@ -63,4 +63,29 @@ internal static class SyntaxHelpers
     {
         return node.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
     }
+
+    /// <summary>
+    /// Simplifies fully-qualified type names to their C# keyword equivalents.
+    /// Also strips nullable annotations for display.
+    /// </summary>
+    public static string SimplifyTypeName(string typeName)
+    {
+        // Remove nullable annotation for display
+        if (typeName.EndsWith('?'))
+        {
+            typeName = typeName[..^1];
+        }
+
+        // Common simplifications
+        return typeName switch
+        {
+            "System.String" => "string",
+            "System.Int32" => "int",
+            "System.Int64" => "long",
+            "System.Boolean" => "bool",
+            "System.Object" => "object",
+            "System.Void" => "void",
+            _ => typeName
+        };
+    }
 }

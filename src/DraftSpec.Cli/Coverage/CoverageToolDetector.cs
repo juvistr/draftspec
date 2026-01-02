@@ -3,15 +3,25 @@ namespace DraftSpec.Cli.Coverage;
 /// <summary>
 /// Detects if dotnet-coverage tool is available.
 /// </summary>
-public static class CoverageToolDetector
+public class CoverageToolDetector
 {
-    private static bool? _isAvailable;
-    private static string? _version;
+    private readonly IProcessRunner _processRunner;
+    private bool? _isAvailable;
+    private string? _version;
+
+    /// <summary>
+    /// Creates a new CoverageToolDetector with an optional process runner.
+    /// </summary>
+    /// <param name="processRunner">Process runner for executing commands. Defaults to SystemProcessRunner.</param>
+    public CoverageToolDetector(IProcessRunner? processRunner = null)
+    {
+        _processRunner = processRunner ?? new SystemProcessRunner();
+    }
 
     /// <summary>
     /// Check if dotnet-coverage is installed and accessible.
     /// </summary>
-    public static bool IsAvailable
+    public bool IsAvailable
     {
         get
         {
@@ -26,7 +36,7 @@ public static class CoverageToolDetector
     /// <summary>
     /// Get the installed dotnet-coverage version, or null if not installed.
     /// </summary>
-    public static string? Version
+    public string? Version
     {
         get
         {
@@ -37,11 +47,11 @@ public static class CoverageToolDetector
         }
     }
 
-    private static void CheckAvailability()
+    private void CheckAvailability()
     {
         try
         {
-            var result = ProcessHelper.Run("dotnet-coverage", ["--version"]);
+            var result = _processRunner.Run("dotnet-coverage", ["--version"]);
             _isAvailable = result.Success;
             _version = result.Success ? result.Output.Trim() : null;
         }
@@ -50,14 +60,5 @@ public static class CoverageToolDetector
             _isAvailable = false;
             _version = null;
         }
-    }
-
-    /// <summary>
-    /// Reset the cached detection state. Used for testing.
-    /// </summary>
-    internal static void Reset()
-    {
-        _isAvailable = null;
-        _version = null;
     }
 }

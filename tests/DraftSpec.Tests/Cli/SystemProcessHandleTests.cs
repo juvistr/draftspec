@@ -139,13 +139,15 @@ public class SystemProcessHandleTests
 
     private static Process CreateSleepProcess()
     {
+        // On Windows, use PowerShell's Start-Sleep which works reliably with redirected IO
+        // The cmd.exe 'timeout' command doesn't work properly when console is hidden
         return new Process
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = OperatingSystem.IsWindows() ? "cmd.exe" : "/bin/sh",
+                FileName = OperatingSystem.IsWindows() ? "powershell.exe" : "/bin/sh",
                 Arguments = OperatingSystem.IsWindows()
-                    ? "/c timeout /t 30 /nobreak"
+                    ? "-Command \"Start-Sleep -Seconds 30\""
                     : "-c \"sleep 30\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,

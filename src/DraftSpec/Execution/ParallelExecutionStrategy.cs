@@ -57,7 +57,7 @@ public sealed class ParallelExecutionStrategy : ISpecExecutionStrategy
                     return;
                 }
 
-                var result = await context.RunSpec(spec, context.Context, context.ContextPath, context.HasFocused);
+                var result = await context.RunSpec(spec, context.Context, context.ContextPath, context.HasFocused).ConfigureAwait(false);
                 resultArray[index] = result;
                 processedFlags[index] = true;
 
@@ -67,7 +67,7 @@ public sealed class ParallelExecutionStrategy : ISpecExecutionStrategy
                     context.SignalBail();
                     cts.Cancel();
                 }
-            });
+            }).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (context.IsBailTriggered() || cancellationToken.IsCancellationRequested)
         {
@@ -87,9 +87,9 @@ public sealed class ParallelExecutionStrategy : ISpecExecutionStrategy
         }
 
         // Add results in original order
-        context.Results.AddRange(resultArray);
+        foreach (var result in resultArray) context.Results.Add(result);
 
         // Notify reporters in batch (parallel notification to multiple reporters)
-        await context.NotifyBatchCompleted(resultArray);
+        await context.NotifyBatchCompleted(resultArray).ConfigureAwait(false);
     }
 }

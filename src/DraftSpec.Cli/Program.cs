@@ -3,7 +3,7 @@ using DraftSpec.Cli;
 using DraftSpec.Cli.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 
-return await Run(args);
+return await Run(args).ConfigureAwait(false);
 
 static async Task<int> Run(string[] args)
 {
@@ -46,7 +46,7 @@ static async Task<int> Run(string[] args)
 
     try
     {
-        return await executor(options, CancellationToken.None);
+        return await executor(options, CancellationToken.None).ConfigureAwait(false);
     }
     catch (ArgumentException ex)
     {

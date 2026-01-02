@@ -178,8 +178,8 @@ public class HtmlFormatter : IFormatter
     /// Matches &lt;/ followed by style, script, link, or import (with optional whitespace).
     /// </summary>
     private static readonly Regex HtmlTagPattern = new(
-        @"<\s*/?\s*(style|script|link|import)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        @"<\s*/?\s*(?:style|script|link|import)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture,
         RegexTimeout);
 
     /// <summary>
@@ -196,8 +196,8 @@ public class HtmlFormatter : IFormatter
     /// Matches url( followed by optional quotes/whitespace then javascript:, data:, or vbscript:.
     /// </summary>
     private static readonly Regex DangerousUrlPattern = new(
-        @"url\s*\(\s*['""]?\s*(javascript|data|vbscript)\s*:",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        @"url\s*\(\s*['""]?\s*(?:javascript|data|vbscript)\s*:",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture,
         RegexTimeout);
 
     /// <summary>

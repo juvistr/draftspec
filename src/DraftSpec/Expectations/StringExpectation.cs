@@ -66,13 +66,13 @@ public readonly struct StringExpectation
     {
         if (_isNegated)
         {
-            if (Actual == expected)
+            if (string.Equals(Actual, expected, StringComparison.Ordinal))
                 throw new AssertionException(
                     $"Expected {Expression} to not be \"{expected}\"");
         }
         else
         {
-            if (Actual != expected)
+            if (!string.Equals(Actual, expected, StringComparison.Ordinal))
                 throw new AssertionException(
                     $"Expected {Expression} to be \"{expected}\", but was \"{Actual}\"");
         }
@@ -181,15 +181,18 @@ public readonly struct StringExpectation
     {
         ArgumentNullException.ThrowIfNull(pattern);
 
+        // Use 1 second timeout to prevent ReDoS attacks
+        var timeout = TimeSpan.FromSeconds(1);
+
         if (_isNegated)
         {
-            if (Actual is not null && System.Text.RegularExpressions.Regex.IsMatch(Actual, pattern))
+            if (Actual is not null && System.Text.RegularExpressions.Regex.IsMatch(Actual, pattern, System.Text.RegularExpressions.RegexOptions.None, timeout))
                 throw new AssertionException(
                     $"Expected {Expression} to not match pattern \"{pattern}\", but it did");
         }
         else
         {
-            if (Actual is null || !System.Text.RegularExpressions.Regex.IsMatch(Actual, pattern))
+            if (Actual is null || !System.Text.RegularExpressions.Regex.IsMatch(Actual, pattern, System.Text.RegularExpressions.RegexOptions.None, timeout))
                 throw new AssertionException(
                     $"Expected {Expression} to match pattern \"{pattern}\", but was \"{Actual}\"");
         }

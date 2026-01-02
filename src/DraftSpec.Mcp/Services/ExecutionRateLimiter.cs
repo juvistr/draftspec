@@ -12,7 +12,7 @@ public sealed class ExecutionRateLimiter : IDisposable
     private readonly int _maxConcurrency;
     private readonly int _maxPerMinute;
     private readonly TimeProvider _timeProvider;
-    private readonly object _cleanupLock = new();
+    private readonly Lock _cleanupLock = new();
     private bool _disposed;
 
     public ExecutionRateLimiter(McpOptions options)
@@ -43,7 +43,7 @@ public sealed class ExecutionRateLimiter : IDisposable
     public async Task<bool> TryAcquireAsync(CancellationToken cancellationToken = default)
     {
         // Acquire concurrency semaphore first (non-blocking)
-        if (!await _concurrencySemaphore.WaitAsync(0, cancellationToken))
+        if (!await _concurrencySemaphore.WaitAsync(0, cancellationToken).ConfigureAwait(false))
             return false;
 
         // Check per-minute limit while holding semaphore to prevent TOCTOU

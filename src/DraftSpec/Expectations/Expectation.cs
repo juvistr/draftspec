@@ -172,7 +172,7 @@ public readonly struct Expectation<T>
             var actualJson = System.Text.Json.JsonSerializer.Serialize(Actual);
             var expectedJson = System.Text.Json.JsonSerializer.Serialize(expected);
 
-            if (actualJson == expectedJson)
+            if (string.Equals(actualJson, expectedJson, StringComparison.Ordinal))
                 throw new AssertionException(
                     $"Expected {Expression} to not be equivalent to {ExpectationHelpers.Format(expected)}, but it was");
         }
@@ -192,7 +192,7 @@ public readonly struct Expectation<T>
             var actualJson = System.Text.Json.JsonSerializer.Serialize(Actual);
             var expectedJson = System.Text.Json.JsonSerializer.Serialize(expected);
 
-            if (actualJson != expectedJson)
+            if (!string.Equals(actualJson, expectedJson, StringComparison.Ordinal))
                 throw new AssertionException(
                     $"Expected {Expression} to be equivalent to {ExpectationHelpers.Format(expected)}, but was {ExpectationHelpers.Format(Actual)}");
         }

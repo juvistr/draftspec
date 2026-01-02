@@ -351,7 +351,10 @@ public class RunCommand : ICommand<RunOptions>
         // Merge all contexts from all reports
         foreach (var result in results)
         {
-            combined.Contexts.AddRange(result.Report.Contexts);
+            foreach (var context in result.Report.Contexts)
+            {
+                combined.Contexts.Add(context);
+            }
         }
 
         return combined;

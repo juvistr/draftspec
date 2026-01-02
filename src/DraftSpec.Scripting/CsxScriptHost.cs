@@ -36,21 +36,21 @@ public sealed partial class CsxScriptHost : IScriptHost
     /// Regex to match #r directives (assembly references).
     /// Captures the path/name in group 1.
     /// </summary>
-    [GeneratedRegex(@"^\s*#r\s+""([^""]+)""\s*$", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^\s*#r\s+""(?<path>[^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex AssemblyReferenceRegex();
 
     /// <summary>
     /// Regex to match #load directives (file includes).
     /// Captures the path in group 1.
     /// </summary>
-    [GeneratedRegex(@"^\s*#load\s+""([^""]+)""\s*$", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^\s*#load\s+""(?<path>[^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex LoadDirectiveRegex();
 
     /// <summary>
     /// Regex to match using directives.
     /// Matches both 'using X;' and 'using static X;' forms.
     /// </summary>
-    [GeneratedRegex(@"^\s*using\s+(static\s+)?[^;]+;\s*$", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^\s*using\s+(?:static\s+)?[^;]+;\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
     private static partial Regex UsingDirectiveRegex();
 
     /// <summary>
@@ -94,7 +94,7 @@ public sealed partial class CsxScriptHost : IScriptHost
             }
 
             var parent = Directory.GetParent(current)?.FullName;
-            if (parent == current)
+            if (string.Equals(parent, current, StringComparison.Ordinal))
                 break;
             current = parent;
         }
@@ -133,7 +133,7 @@ public sealed partial class CsxScriptHost : IScriptHost
             var currentMaxModified = GetMaxModificationTime(cached.SourceFiles);
             if (currentMaxModified == cached.MaxModifiedTimeUtc)
             {
-                await cached.Script.RunAsync(globals, cancellationToken: cancellationToken);
+                await cached.Script.RunAsync(globals, cancellationToken: cancellationToken).ConfigureAwait(false);
                 return capturedContext;
             }
 
@@ -143,13 +143,13 @@ public sealed partial class CsxScriptHost : IScriptHost
 
         // 2. Preprocess once (needed for both disk cache check and compilation)
         var (code, additionalReferences, sourceFiles, maxModifiedTimeUtc) =
-            await PreprocessScriptAsync(absolutePath, cancellationToken);
+            await PreprocessScriptAsync(absolutePath, cancellationToken).ConfigureAwait(false);
 
         // 3. Try disk cache with preprocessed data
         if (_useDiskCache && _diskCache != null)
         {
             var (success, _) = await _diskCache.TryExecuteCachedAsync(
-                absolutePath, sourceFiles, code, globals, cancellationToken);
+                absolutePath, sourceFiles, code, globals, cancellationToken).ConfigureAwait(false);
 
             if (success)
             {
@@ -165,7 +165,7 @@ public sealed partial class CsxScriptHost : IScriptHost
         var entry = new CacheEntry(script, sourceFiles, maxModifiedTimeUtc);
         _scriptCache.TryAdd(absolutePath, entry);
 
-        await script.RunAsync(globals, cancellationToken: cancellationToken);
+        await script.RunAsync(globals, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Cache to disk for future cold starts
         if (_useDiskCache && _diskCache != null)
@@ -205,7 +205,7 @@ public sealed partial class CsxScriptHost : IScriptHost
         var usings = new HashSet<string>(StringComparer.Ordinal);
         var codeBuilder = new StringBuilder();
 
-        await ProcessFileAsync(absolutePath, processedFiles, additionalReferences, usings, codeBuilder, cancellationToken);
+        await ProcessFileAsync(absolutePath, processedFiles, additionalReferences, usings, codeBuilder, cancellationToken).ConfigureAwait(false);
 
         // Convert to list and compute max modification time from all processed files
         var sourceFiles = processedFiles.ToList();
@@ -257,25 +257,25 @@ public sealed partial class CsxScriptHost : IScriptHost
             return;
         }
 
-        var content = await File.ReadAllTextAsync(absolutePath, cancellationToken);
+        var content = await File.ReadAllTextAsync(absolutePath, cancellationToken).ConfigureAwait(false);
         var fileDirectory = Path.GetDirectoryName(absolutePath)!;
 
         // Process #load directives first (inline the loaded files)
         var loadMatches = LoadDirectiveRegex().Matches(content);
         foreach (Match match in loadMatches)
         {
-            var loadPath = match.Groups[1].Value;
+            var loadPath = match.Groups["path"].Value;
             var loadAbsolutePath = Path.GetFullPath(loadPath, fileDirectory);
 
             // Recursively process the loaded file
-            await ProcessFileAsync(loadAbsolutePath, processedFiles, additionalReferences, usings, codeBuilder, cancellationToken);
+            await ProcessFileAsync(loadAbsolutePath, processedFiles, additionalReferences, usings, codeBuilder, cancellationToken).ConfigureAwait(false);
         }
 
         // Extract #r directives (but skip nuget references - those need special handling)
         var refMatches = AssemblyReferenceRegex().Matches(content);
         foreach (Match match in refMatches)
         {
-            var reference = match.Groups[1].Value;
+            var reference = match.Groups["path"].Value;
 
             // Skip NuGet references - DraftSpec is available via project reference
             if (reference.StartsWith("nuget:", StringComparison.OrdinalIgnoreCase))

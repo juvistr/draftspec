@@ -266,12 +266,12 @@ public class GitServiceTests
     #region Timeout Tests
 
     [Test]
-    public async Task GetChangedFilesAsync_WithVeryShortTimeout_ThrowsTimeoutException()
+    public async Task GetChangedFilesAsync_WithZeroTimeout_ThrowsTimeoutException()
     {
-        // Arrange - Use a timeout so short that git can't possibly complete in time
+        // Arrange - Use zero timeout to guarantee immediate cancellation
         var repoDir = GetRepositoryRoot();
         var fileSystem = new RealFileSystem();
-        var service = new GitService(fileSystem, TimeSpan.FromMilliseconds(1));
+        var service = new GitService(fileSystem, TimeSpan.Zero);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(

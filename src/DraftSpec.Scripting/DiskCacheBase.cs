@@ -132,7 +132,7 @@ public abstract class DiskCacheBase
     protected bool ValidateHashesMatch(ICacheMetadata metadata, Dictionary<string, string> currentFileHashes)
     {
         // Check DraftSpec version
-        if (metadata.DraftSpecVersion != Version)
+        if (!string.Equals(metadata.DraftSpecVersion, Version, StringComparison.Ordinal))
             return false;
 
         // Check that all source files match
@@ -144,7 +144,7 @@ public abstract class DiskCacheBase
             if (!metadata.SourceFileHashes.TryGetValue(file, out var cachedHash))
                 return false;
 
-            if (currentHash != cachedHash)
+            if (!string.Equals(currentHash, cachedHash, StringComparison.Ordinal))
                 return false;
         }
 
@@ -157,7 +157,7 @@ public abstract class DiskCacheBase
     protected bool ValidateFilesUnchanged(ICacheMetadata metadata, IReadOnlyList<string> currentSourceFiles)
     {
         // Check DraftSpec version
-        if (metadata.DraftSpecVersion != Version)
+        if (!string.Equals(metadata.DraftSpecVersion, Version, StringComparison.Ordinal))
             return false;
 
         // Check that all source files still exist and haven't changed
@@ -173,7 +173,7 @@ public abstract class DiskCacheBase
                 return false;
 
             var currentHash = ComputeFileHash(file);
-            if (currentHash != cachedHash)
+            if (!string.Equals(currentHash, cachedHash, StringComparison.Ordinal))
                 return false;
         }
 
@@ -250,8 +250,11 @@ public abstract class DiskCacheBase
     {
         try
         {
-            await using var stream = File.OpenRead(path);
-            return await JsonSerializer.DeserializeAsync<T>(stream, options, ct);
+            var stream = File.OpenRead(path);
+            await using (stream.ConfigureAwait(false))
+            {
+                return await JsonSerializer.DeserializeAsync<T>(stream, options, ct).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
@@ -281,9 +284,10 @@ public abstract class DiskCacheBase
         CancellationToken ct)
     {
         var tempPath = path + ".tmp";
-        await using (var stream = new FileStream(tempPath, FileMode.Create))
+        var stream = new FileStream(tempPath, FileMode.Create);
+        await using (stream.ConfigureAwait(false))
         {
-            await JsonSerializer.SerializeAsync(stream, data, options, ct);
+            await JsonSerializer.SerializeAsync(stream, data, options, ct).ConfigureAwait(false);
         }
         File.Move(tempPath, path, overwrite: true);
     }

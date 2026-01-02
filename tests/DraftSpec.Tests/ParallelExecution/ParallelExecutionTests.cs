@@ -146,7 +146,7 @@ public class ParallelExecutionTests
     public async Task ParallelExecution_WithMaxDegree1_RunsSequentially()
     {
         var order = new List<int>();
-        var lockObj = new object();
+        var lockObj = new Lock();
         var context = new SpecContext("degree1");
 
         for (var i = 0; i < 5; i++)

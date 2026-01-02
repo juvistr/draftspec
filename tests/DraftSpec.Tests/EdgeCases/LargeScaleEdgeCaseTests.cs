@@ -308,7 +308,7 @@ public class LargeScaleEdgeCaseTests
     public async Task DeepNesting_20Levels_WithHooksAtEachLevel_ExecutesCorrectly()
     {
         var hookOrder = new List<string>();
-        var lockObj = new object();
+        var lockObj = new Lock();
 
         var root = new SpecContext("level-0");
         root.BeforeEach = () =>

@@ -34,7 +34,7 @@ internal static class SnapshotDiff
             var exp = i < expectedLines.Length ? expectedLines[i].TrimEnd('\r') : "";
             var act = i < actualLines.Length ? actualLines[i].TrimEnd('\r') : "";
 
-            if (exp != act)
+            if (!string.Equals(exp, act, StringComparison.Ordinal))
             {
                 if (!string.IsNullOrEmpty(exp))
                 {

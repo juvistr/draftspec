@@ -35,14 +35,14 @@ public class CoverageMiddleware : ISpecMiddleware
     {
         if (!_tracker.IsActive)
         {
-            return await pipeline(context);
+            return await pipeline(context).ConfigureAwait(false);
         }
 
         // Take snapshot before spec execution
         var snapshot = _tracker.TakeSnapshot();
 
         // Execute the spec (and any downstream middleware)
-        var result = await pipeline(context);
+        var result = await pipeline(context).ConfigureAwait(false);
 
         // Calculate coverage delta
         var specId = string.Join(" ", context.ContextPath.Append(context.Spec.Description));

@@ -85,7 +85,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             _dslManager.Reset();
 
             // Execute script via script executor
-            var rootContext = await _scriptExecutor.ExecuteAsync(fullPath, outputDir, ct);
+            var rootContext = await _scriptExecutor.ExecuteAsync(fullPath, outputDir, ct).ConfigureAwait(false);
 
             if (rootContext == null)
             {
@@ -125,7 +125,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
 
             // Use static parsing to discover specs despite the compilation error
             var parser = new StaticSpecParser(workingDir, useCache: true);
-            var parseResult = await parser.ParseFileAsync(fullPath, ct);
+            var parseResult = await parser.ParseFileAsync(fullPath, ct).ConfigureAwait(false);
 
             // Create enhanced exception with discovered specs
             var enhancedException = new CompilationDiagnosticException(
@@ -193,7 +193,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         if (parallel && specFiles.Count > 1)
         {
             var tasks = specFiles.Select(f => RunFileAsync(f, ct));
-            results = (await Task.WhenAll(tasks)).ToList();
+            results = (await Task.WhenAll(tasks).ConfigureAwait(false)).ToList();
         }
         else
         {
@@ -201,7 +201,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             foreach (var specFile in specFiles)
             {
                 ct.ThrowIfCancellationRequested();
-                results.Add(await RunFileAsync(specFile, ct));
+                results.Add(await RunFileAsync(specFile, ct).ConfigureAwait(false));
             }
         }
 

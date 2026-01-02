@@ -32,6 +32,6 @@ public class FilterMiddleware : ISpecMiddleware
                 SpecStatus.Skipped,
                 context.ContextPath);
 
-        return await pipeline(context);
+        return await pipeline(context).ConfigureAwait(false);
     }
 }

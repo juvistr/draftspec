@@ -39,13 +39,13 @@ public class TimeoutMiddleware : ISpecMiddleware
         var specTask = pipeline(context);
         var timeoutTask = Task.Delay(_timeout, cts.Token);
 
-        var completedTask = await Task.WhenAny(specTask, timeoutTask);
+        var completedTask = await Task.WhenAny(specTask, timeoutTask).ConfigureAwait(false);
 
         if (completedTask == specTask)
         {
             // Spec completed before timeout
             cts.Cancel(); // Cancel the timeout task
-            return await specTask;
+            return await specTask.ConfigureAwait(false);
         }
 
         // Timeout exceeded

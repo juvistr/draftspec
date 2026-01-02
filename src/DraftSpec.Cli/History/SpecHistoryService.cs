@@ -143,8 +143,8 @@ public sealed class SpecHistoryService : ISpecHistoryService
                 var curr = recentRuns[i].Status;
 
                 // Only count transitions between passed and failed
-                if ((prev == "passed" && curr == "failed") ||
-                    (prev == "failed" && curr == "passed"))
+                if ((prev is "passed" && curr is "failed") ||
+                    (prev is "failed" && curr is "passed"))
                 {
                     statusChanges++;
                 }
@@ -152,7 +152,7 @@ public sealed class SpecHistoryService : ISpecHistoryService
 
             if (statusChanges >= minStatusChanges)
             {
-                var passedCount = recentRuns.Count(r => r.Status == "passed");
+                var passedCount = recentRuns.Count(r => r.Status is "passed");
                 flakySpecs.Add(new FlakySpec
                 {
                     SpecId = specId,

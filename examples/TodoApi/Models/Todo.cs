@@ -10,5 +10,5 @@ public record Todo
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime? DueDate { get; init; }
     public int? AssignedUserId { get; init; }
-    public List<string> Tags { get; init; } = [];
+    public IList<string> Tags { get; init; } = [];
 }

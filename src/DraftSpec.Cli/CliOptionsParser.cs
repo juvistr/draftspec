@@ -50,7 +50,7 @@ public static class CliOptionsParser
                 options.OutputFile = args[++i];
                 options.ExplicitlySet.Add(nameof(CliOptions.OutputFile));
             }
-            else if (arg == "--css-url")
+            else if (arg is "--css-url")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -60,7 +60,7 @@ public static class CliOptionsParser
 
                 options.CssUrl = args[++i];
             }
-            else if (arg == "--force")
+            else if (arg is "--force")
             {
                 options.Force = true;
             }
@@ -69,7 +69,7 @@ public static class CliOptionsParser
                 options.Parallel = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.Parallel));
             }
-            else if (arg == "--no-cache")
+            else if (arg is "--no-cache")
             {
                 options.NoCache = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.NoCache));
@@ -112,7 +112,7 @@ public static class CliOptionsParser
                 options.FilterName = args[++i];
                 options.ExplicitlySet.Add(nameof(CliOptions.FilterName));
             }
-            else if (arg == "--exclude-name")
+            else if (arg is "--exclude-name")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -135,7 +135,7 @@ public static class CliOptionsParser
                 options.FilterContext.Add(args[++i]);
                 options.ExplicitlySet.Add(nameof(CliOptions.FilterContext));
             }
-            else if (arg == "--exclude-context")
+            else if (arg is "--exclude-context")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -147,12 +147,12 @@ public static class CliOptionsParser
                 options.ExcludeContext.Add(args[++i]);
                 options.ExplicitlySet.Add(nameof(CliOptions.ExcludeContext));
             }
-            else if (arg == "--coverage")
+            else if (arg is "--coverage")
             {
                 options.Coverage = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.Coverage));
             }
-            else if (arg == "--coverage-output")
+            else if (arg is "--coverage-output")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -163,7 +163,7 @@ public static class CliOptionsParser
                 options.CoverageOutput = args[++i];
                 options.ExplicitlySet.Add(nameof(CliOptions.CoverageOutput));
             }
-            else if (arg == "--coverage-format")
+            else if (arg is "--coverage-format")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -180,7 +180,7 @@ public static class CliOptionsParser
                 options.CoverageFormat = coverageFormat;
                 options.ExplicitlySet.Add(nameof(CliOptions.CoverageFormat));
             }
-            else if (arg == "--coverage-report-formats")
+            else if (arg is "--coverage-report-formats")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -192,7 +192,7 @@ public static class CliOptionsParser
                 options.ExplicitlySet.Add(nameof(CliOptions.CoverageReportFormats));
             }
             // List command options
-            else if (arg == "--list-format")
+            else if (arg is "--list-format")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -209,38 +209,38 @@ public static class CliOptionsParser
                 options.ListFormat = listFormat;
                 options.ExplicitlySet.Add(nameof(CliOptions.ListFormat));
             }
-            else if (arg == "--show-line-numbers")
+            else if (arg is "--show-line-numbers")
             {
                 options.ShowLineNumbers = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.ShowLineNumbers));
             }
-            else if (arg == "--no-line-numbers")
+            else if (arg is "--no-line-numbers")
             {
                 options.ShowLineNumbers = false;
                 options.ExplicitlySet.Add(nameof(CliOptions.ShowLineNumbers));
             }
-            else if (arg == "--focused-only")
+            else if (arg is "--focused-only")
             {
                 options.FocusedOnly = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.FocusedOnly));
             }
-            else if (arg == "--pending-only")
+            else if (arg is "--pending-only")
             {
                 options.PendingOnly = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.PendingOnly));
             }
-            else if (arg == "--skipped-only")
+            else if (arg is "--skipped-only")
             {
                 options.SkippedOnly = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.SkippedOnly));
             }
             // Validate command options
-            else if (arg == "--static")
+            else if (arg is "--static")
             {
                 options.Static = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.Static));
             }
-            else if (arg == "--strict")
+            else if (arg is "--strict")
             {
                 options.Strict = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.Strict));
@@ -250,7 +250,7 @@ public static class CliOptionsParser
                 options.Quiet = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.Quiet));
             }
-            else if (arg == "--files")
+            else if (arg is "--files")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -265,18 +265,18 @@ public static class CliOptionsParser
                 options.ExplicitlySet.Add(nameof(CliOptions.Files));
             }
             // Run command statistics options
-            else if (arg == "--no-stats")
+            else if (arg is "--no-stats")
             {
                 options.NoStats = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.NoStats));
             }
-            else if (arg == "--stats-only")
+            else if (arg is "--stats-only")
             {
                 options.StatsOnly = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.StatsOnly));
             }
             // Partitioning options for CI parallelism
-            else if (arg == "--partition")
+            else if (arg is "--partition")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -293,7 +293,7 @@ public static class CliOptionsParser
                 options.Partition = partition;
                 options.ExplicitlySet.Add(nameof(CliOptions.Partition));
             }
-            else if (arg == "--partition-index")
+            else if (arg is "--partition-index")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -310,7 +310,7 @@ public static class CliOptionsParser
                 options.PartitionIndex = index;
                 options.ExplicitlySet.Add(nameof(CliOptions.PartitionIndex));
             }
-            else if (arg == "--partition-strategy")
+            else if (arg is "--partition-strategy")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -335,7 +335,7 @@ public static class CliOptionsParser
                 options.ExplicitlySet.Add(nameof(CliOptions.Incremental));
             }
             // Test impact analysis options
-            else if (arg == "--affected-by")
+            else if (arg is "--affected-by")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -346,24 +346,24 @@ public static class CliOptionsParser
                 options.AffectedBy = args[++i];
                 options.ExplicitlySet.Add(nameof(CliOptions.AffectedBy));
             }
-            else if (arg == "--dry-run")
+            else if (arg is "--dry-run")
             {
                 options.DryRun = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.DryRun));
             }
             // Flaky test detection options
-            else if (arg == "--quarantine")
+            else if (arg is "--quarantine")
             {
                 options.Quarantine = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.Quarantine));
             }
-            else if (arg == "--no-history")
+            else if (arg is "--no-history")
             {
                 options.NoHistory = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.NoHistory));
             }
             // Flaky command options
-            else if (arg == "--min-changes")
+            else if (arg is "--min-changes")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -380,7 +380,7 @@ public static class CliOptionsParser
                 options.MinStatusChanges = minChanges;
                 options.ExplicitlySet.Add(nameof(CliOptions.MinStatusChanges));
             }
-            else if (arg == "--window-size")
+            else if (arg is "--window-size")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -397,7 +397,7 @@ public static class CliOptionsParser
                 options.WindowSize = windowSize;
                 options.ExplicitlySet.Add(nameof(CliOptions.WindowSize));
             }
-            else if (arg == "--clear")
+            else if (arg is "--clear")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -409,7 +409,7 @@ public static class CliOptionsParser
                 options.ExplicitlySet.Add(nameof(CliOptions.Clear));
             }
             // Estimate command options
-            else if (arg == "--percentile")
+            else if (arg is "--percentile")
             {
                 if (i + 1 >= args.Length)
                 {
@@ -426,7 +426,7 @@ public static class CliOptionsParser
                 options.Percentile = percentile;
                 options.ExplicitlySet.Add(nameof(CliOptions.Percentile));
             }
-            else if (arg == "--output-seconds")
+            else if (arg is "--output-seconds")
             {
                 options.OutputSeconds = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.OutputSeconds));
@@ -447,18 +447,18 @@ public static class CliOptionsParser
         if (positional.Count > 1)
         {
             // For 'new' command, second arg is the spec name
-            if (options.Command == "new")
+            if (options.Command is "new")
                 options.SpecName = positional[1];
             // For 'cache' command, second arg is the subcommand (stats, clear)
-            else if (options.Command == "cache")
+            else if (options.Command is "cache")
                 options.CacheSubcommand = positional[1].ToLowerInvariant();
             else
                 options.Path = ParsePathWithLineNumbers(positional[1], options);
         }
 
-        if (positional.Count > 2 && options.Command == "new")
+        if (positional.Count > 2 && options.Command is "new")
             options.Path = positional[2];
-        if (positional.Count > 2 && options.Command == "cache")
+        if (positional.Count > 2 && options.Command is "cache")
             options.Path = positional[2];
 
         // Cross-validate partition options: both must be specified together

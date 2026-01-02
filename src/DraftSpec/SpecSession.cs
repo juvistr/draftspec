@@ -30,7 +30,7 @@ public class SpecSession
     /// Gets or sets the current tags in scope.
     /// Specs created within tag() blocks inherit these tags.
     /// </summary>
-    public List<string>? CurrentTags { get; set; }
+    public IReadOnlyList<string>? CurrentTags { get; set; }
 
     /// <summary>
     /// Resets all session state for a clean execution context.

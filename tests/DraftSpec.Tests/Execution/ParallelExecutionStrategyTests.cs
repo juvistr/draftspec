@@ -88,7 +88,7 @@ public class ParallelExecutionStrategyTests
 
         var concurrentCount = 0;
         var maxConcurrent = 0;
-        var lockObj = new object();
+        var lockObj = new Lock();
         var results = new List<SpecResult>();
 
         var strategyContext = CreateContext(

@@ -39,7 +39,7 @@ public interface IReporter
     /// <param name="results">The results of specs that completed</param>
     async Task OnSpecsBatchCompletedAsync(IReadOnlyList<SpecResult> results)
     {
-        foreach (var result in results) await OnSpecCompletedAsync(result);
+        foreach (var result in results) await OnSpecCompletedAsync(result).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -102,7 +102,7 @@ public partial class SpecExecutionService : ISpecExecutionService
         }
 
         // Check rate limiting before execution
-        var rateLimitAcquired = await _rateLimiter.TryAcquireAsync(cancellationToken);
+        var rateLimitAcquired = await _rateLimiter.TryAcquireAsync(cancellationToken).ConfigureAwait(false);
         if (!rateLimitAcquired)
         {
             _logger.LogWarning("Spec execution rejected due to rate limiting");
@@ -126,7 +126,7 @@ public partial class SpecExecutionService : ISpecExecutionService
         try
         {
             var wrappedContent = WrapSpecContent(specContent);
-            specFilePath = await _tempFileManager.CreateTempSpecFileAsync(wrappedContent, cancellationToken);
+            specFilePath = await _tempFileManager.CreateTempSpecFileAsync(wrappedContent, cancellationToken).ConfigureAwait(false);
             jsonOutputPath = _tempFileManager.CreateTempJsonOutputPath();
 
             _logger.LogDebug("Executing spec at {Path}", specFilePath);
@@ -136,7 +136,7 @@ public partial class SpecExecutionService : ISpecExecutionService
                 jsonOutputPath,
                 timeout,
                 onProgress,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             stopwatch.Stop();
 
@@ -144,7 +144,7 @@ public partial class SpecExecutionService : ISpecExecutionService
             if (File.Exists(jsonOutputPath))
                 try
                 {
-                    var json = await File.ReadAllTextAsync(jsonOutputPath, cancellationToken);
+                    var json = await File.ReadAllTextAsync(jsonOutputPath, cancellationToken).ConfigureAwait(false);
                     report = SpecReport.FromJson(json);
                 }
                 catch (Exception ex)
@@ -221,7 +221,7 @@ public partial class SpecExecutionService : ISpecExecutionService
         }
     }
 
-    [GeneratedRegex(@"run\s*\([^)]*\)\s*;")]
+    [GeneratedRegex(@"run\s*\([^)]*\)\s*;", RegexOptions.NonBacktracking)]
     internal static partial Regex RunCallPattern();
 
     /// <summary>
@@ -272,35 +272,38 @@ public partial class SpecExecutionService : ISpecExecutionService
             psi.EnvironmentVariables["DRAFTSPEC_PROGRESS_STREAM"] = "true";
         }
 
-        await using var process = await _processRunner.StartAsync(psi, cancellationToken);
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(timeout);
-
-        // Read stdout with progress line handling
-        var stdoutTask = onProgress != null
-            ? ReadStdoutWithProgressAsync(process.StandardOutput, onProgress, cts.Token)
-            : process.StandardOutput.ReadToEndAsync(cts.Token);
-        var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
-
-        try
+        var process = await _processRunner.StartAsync(psi, cancellationToken).ConfigureAwait(false);
+        await using (process.ConfigureAwait(false))
         {
-            await process.WaitForExitAsync(cts.Token);
-            var stdout = await stdoutTask;
-            var stderr = await stderrTask;
-            return (process.ExitCode, stdout, stderr);
-        }
-        catch (OperationCanceledException) when (cts.IsCancellationRequested &&
-                                                 !cancellationToken.IsCancellationRequested)
-        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(timeout);
+
+            // Read stdout with progress line handling
+            var stdoutTask = onProgress != null
+                ? ReadStdoutWithProgressAsync(process.StandardOutput, onProgress, cts.Token)
+                : process.StandardOutput.ReadToEndAsync(cts.Token);
+            var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
+
             try
             {
-                process.Kill(true);
+                await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+                var stdout = await stdoutTask.ConfigureAwait(false);
+                var stderr = await stderrTask.ConfigureAwait(false);
+                return (process.ExitCode, stdout, stderr);
             }
-            catch
+            catch (OperationCanceledException) when (cts.IsCancellationRequested &&
+                                                     !cancellationToken.IsCancellationRequested)
             {
-            }
+                try
+                {
+                    process.Kill(true);
+                }
+                catch
+                {
+                }
 
-            throw new TimeoutException($"Process timed out after {timeout.TotalSeconds}s");
+                throw new TimeoutException($"Process timed out after {timeout.TotalSeconds}s");
+            }
         }
     }
 
@@ -315,7 +318,7 @@ public partial class SpecExecutionService : ISpecExecutionService
     {
         var outputLines = new List<string>();
 
-        while (await reader.ReadLineAsync(cancellationToken) is { } line)
+        while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
         {
             if (line.StartsWith(ProgressLinePrefix, StringComparison.Ordinal))
             {
@@ -326,7 +329,7 @@ public partial class SpecExecutionService : ISpecExecutionService
                     var notification = JsonSerializer.Deserialize<SpecProgressNotification>(json, JsonOptionsProvider.Default);
                     if (notification != null)
                     {
-                        await onProgress(notification);
+                        await onProgress(notification).ConfigureAwait(false);
                     }
                 }
                 catch (JsonException ex)

@@ -23,7 +23,7 @@ public sealed class SpecExecutionStrategyContext
     /// <summary>
     /// The list to add results to (in order).
     /// </summary>
-    public required List<SpecResult> Results { get; init; }
+    public required IList<SpecResult> Results { get; init; }
 
     /// <summary>
     /// Whether any spec in the tree is focused.

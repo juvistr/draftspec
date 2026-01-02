@@ -62,7 +62,7 @@ public sealed class StaticParseResultCache : DiskCacheBase
             if (!File.Exists(metadataPath))
                 return (false, null);
 
-            var metadata = await LoadMetadataAsync(metadataPath, cancellationToken);
+            var metadata = await LoadMetadataAsync(metadataPath, cancellationToken).ConfigureAwait(false);
             if (metadata == null)
                 return (false, null);
 
@@ -79,7 +79,7 @@ public sealed class StaticParseResultCache : DiskCacheBase
                 return (false, null);
 
             // Load and return the cached result
-            var result = await LoadResultAsync(resultPath, cancellationToken);
+            var result = await LoadResultAsync(resultPath, cancellationToken).ConfigureAwait(false);
             if (result == null)
                 return (false, null);
 
@@ -123,7 +123,7 @@ public sealed class StaticParseResultCache : DiskCacheBase
                 CachedAtUtc = DateTime.UtcNow
             };
 
-            await SaveMetadataAsync(GetMetadataPath(cacheKey), metadata, cancellationToken);
+            await SaveMetadataAsync(GetMetadataPath(cacheKey), metadata, cancellationToken).ConfigureAwait(false);
 
             // Save result
             var resultData = new CachedResult
@@ -140,7 +140,7 @@ public sealed class StaticParseResultCache : DiskCacheBase
                 IsComplete = result.IsComplete
             };
 
-            await SaveResultAsync(GetResultPath(cacheKey), resultData, cancellationToken);
+            await SaveResultAsync(GetResultPath(cacheKey), resultData, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -191,36 +191,39 @@ public sealed class StaticParseResultCache : DiskCacheBase
 
     private async Task<CacheMetadata?> LoadMetadataAsync(string path, CancellationToken ct)
     {
-        return await LoadJsonAsync<CacheMetadata>(path, JsonOptions, ct);
+        return await LoadJsonAsync<CacheMetadata>(path, JsonOptions, ct).ConfigureAwait(false);
     }
 
     private static async Task SaveMetadataAsync(string path, CacheMetadata metadata, CancellationToken ct)
     {
-        await AtomicWriteJsonAsync(path, metadata, JsonOptions, ct);
+        await AtomicWriteJsonAsync(path, metadata, JsonOptions, ct).ConfigureAwait(false);
     }
 
     private async Task<StaticParseResult?> LoadResultAsync(string path, CancellationToken ct)
     {
         try
         {
-            await using var stream = File.OpenRead(path);
-            var cached = await JsonSerializer.DeserializeAsync<CachedResult>(stream, JsonOptions, ct);
-            if (cached == null)
-                return null;
-
-            return new StaticParseResult
+            var stream = File.OpenRead(path);
+            await using (stream.ConfigureAwait(false))
             {
-                Specs = cached.Specs.Select(s => new StaticSpec
+                var cached = await JsonSerializer.DeserializeAsync<CachedResult>(stream, JsonOptions, ct).ConfigureAwait(false);
+                if (cached == null)
+                    return null;
+
+                return new StaticParseResult
                 {
-                    Description = s.Description,
-                    ContextPath = s.ContextPath,
-                    LineNumber = s.LineNumber,
-                    Type = s.Type,
-                    IsPending = s.IsPending
-                }).ToList(),
-                Warnings = cached.Warnings,
-                IsComplete = cached.IsComplete
-            };
+                    Specs = cached.Specs.Select(s => new StaticSpec
+                    {
+                        Description = s.Description,
+                        ContextPath = s.ContextPath,
+                        LineNumber = s.LineNumber,
+                        Type = s.Type,
+                        IsPending = s.IsPending
+                    }).ToList(),
+                    Warnings = cached.Warnings,
+                    IsComplete = cached.IsComplete
+                };
+            }
         }
         catch (Exception ex)
         {
@@ -231,7 +234,7 @@ public sealed class StaticParseResultCache : DiskCacheBase
 
     private static async Task SaveResultAsync(string path, CachedResult result, CancellationToken ct)
     {
-        await AtomicWriteJsonAsync(path, result, JsonOptions, ct);
+        await AtomicWriteJsonAsync(path, result, JsonOptions, ct).ConfigureAwait(false);
     }
 
     /// <summary>

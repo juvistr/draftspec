@@ -61,7 +61,7 @@ public class SpecRunOrchestrator
         var result = await executor.ExecuteAsync(
             effectiveContent,
             TimeSpan.FromSeconds(timeoutSeconds),
-            ct);
+            ct).ConfigureAwait(false);
 
         // 4. Accumulate on success
         if (session != null && result.Success)

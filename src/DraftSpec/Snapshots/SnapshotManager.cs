@@ -18,7 +18,7 @@ public class SnapshotManager
 
     private readonly IEnvironmentProvider _env;
     private readonly Dictionary<string, Dictionary<string, string>> _snapshotCache = new();
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     /// <summary>
     /// Creates a new snapshot manager.
@@ -95,7 +95,7 @@ public class SnapshotManager
             }
 
             // Compare
-            if (NormalizeJson(actualJson) == NormalizeJson(expectedJson))
+            if (string.Equals(NormalizeJson(actualJson), NormalizeJson(expectedJson), StringComparison.Ordinal))
                 return SnapshotResult.Matched(key);
 
             var diff = SnapshotDiff.Generate(expectedJson, actualJson);
@@ -126,7 +126,7 @@ public class SnapshotManager
         {
             var json = File.ReadAllText(path);
             var snapshots = SnapshotSerializer.DeserializeSnapshots(json)
-                ?? new Dictionary<string, string>();
+                            ?? new Dictionary<string, string>();
             return _snapshotCache[path] = snapshots;
         }
         catch (Exception)

@@ -98,7 +98,7 @@ public class DotnetProjectBuilder : IProjectBuilder
             if (projects.Length > 0) return (projects, currentDir);
 
             var parentDir = Directory.GetParent(currentDir)?.FullName;
-            if (parentDir == null || parentDir == currentDir) break;
+            if (parentDir == null || string.Equals(parentDir, currentDir, StringComparison.Ordinal)) break;
 
             currentDir = parentDir;
         }

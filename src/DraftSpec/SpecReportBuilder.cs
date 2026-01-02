@@ -11,7 +11,7 @@ public static class SpecReportBuilder
     /// <summary>
     /// Build a SpecReport from a root context and its execution results.
     /// </summary>
-    public static SpecReport Build(SpecContext rootContext, IReadOnlyList<SpecResult> results)
+    public static SpecReport Build(SpecContext rootContext, IList<SpecResult> results)
     {
         // Build O(1) lookup dictionary for results
         var resultLookup = results.ToDictionary(
@@ -50,7 +50,7 @@ public static class SpecReportBuilder
     private static void BuildContextTreeRecursive(
         SpecContext context,
         Dictionary<(SpecDefinition Spec, string Path), SpecResult> resultLookup,
-        List<SpecContextReport> targetList,
+        IList<SpecContextReport> targetList,
         List<string> currentPath)
     {
         var reportContext = new SpecContextReport { Description = context.Description };

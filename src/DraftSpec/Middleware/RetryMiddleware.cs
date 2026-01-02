@@ -34,13 +34,13 @@ public class RetryMiddleware : ISpecMiddleware
         do
         {
             attempts++;
-            result = await pipeline(context);
+            result = await pipeline(context).ConfigureAwait(false);
 
             if (result.Status != SpecStatus.Failed || attempts > _maxRetries)
                 break;
 
             if (_delay > TimeSpan.Zero)
-                await Task.Delay(_delay);
+                await Task.Delay(_delay).ConfigureAwait(false);
         } while (true);
 
         // Attach retry info if we had retries configured

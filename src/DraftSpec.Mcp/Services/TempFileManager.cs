@@ -65,14 +65,19 @@ public class TempFileManager
         var fileName = $"spec-{Guid.NewGuid():N}.cs";
         var filePath = Path.Combine(_tempDirectory, fileName);
 
-        await using var fs = new FileStream(
+        var fs = new FileStream(
             filePath,
             FileMode.CreateNew,
             FileAccess.Write,
             FileShare.None);
-
-        await using var writer = new StreamWriter(fs);
-        await writer.WriteAsync(content);
+        await using (fs.ConfigureAwait(false))
+        {
+            var writer = new StreamWriter(fs);
+            await using (writer.ConfigureAwait(false))
+            {
+                await writer.WriteAsync(content).ConfigureAwait(false);
+            }
+        }
 
         // Set restrictive permissions on Unix to prevent other users from reading/modifying
         SetRestrictivePermissions(filePath);

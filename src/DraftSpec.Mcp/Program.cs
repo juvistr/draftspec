@@ -27,7 +27,7 @@ logger.LogWarning("  Only connect from trusted AI assistants in trusted environm
 logger.LogWarning("  Do NOT expose this server to untrusted networks or users.");
 logger.LogWarning("  See SECURITY.md for deployment guidance.");
 
-await host.RunAsync();
+await host.RunAsync().ConfigureAwait(false);
 
 /// <summary>Marker class for logging.</summary>
 internal partial class Program

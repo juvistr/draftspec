@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
 namespace DraftSpec.Mcp.Resources;
@@ -9,7 +10,7 @@ namespace DraftSpec.Mcp.Resources;
 /// Enables IDE integrations and spec browsing without separate file system access.
 /// </summary>
 [McpServerResourceType]
-public static class SpecResources
+public static partial class SpecResources
 {
     /// <summary>
     /// Validates that a path is within the specified base directory.
@@ -231,8 +232,8 @@ public static class SpecResources
 
             // Count describe/it blocks for a quick overview
             var content = File.ReadAllText(fullPath);
-            var describeCount = System.Text.RegularExpressions.Regex.Matches(content, @"\bdescribe\s*\(").Count;
-            var itCount = System.Text.RegularExpressions.Regex.Matches(content, @"\bit\s*\(").Count;
+            var describeCount = DescribeBlockRegex().Matches(content).Count;
+            var itCount = ItBlockRegex().Matches(content).Count;
 
             return JsonSerializer.Serialize(new
             {
@@ -261,4 +262,16 @@ public static class SpecResources
             });
         }
     }
+
+    /// <summary>
+    /// Matches describe block declarations.
+    /// </summary>
+    [GeneratedRegex(@"\bdescribe\s*\(", RegexOptions.NonBacktracking)]
+    private static partial Regex DescribeBlockRegex();
+
+    /// <summary>
+    /// Matches it block declarations.
+    /// </summary>
+    [GeneratedRegex(@"\bit\s*\(", RegexOptions.NonBacktracking)]
+    private static partial Regex ItBlockRegex();
 }

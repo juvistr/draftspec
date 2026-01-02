@@ -38,7 +38,7 @@ internal sealed class MtpSpecExecutor : IMtpSpecExecutor
         string csxFilePath,
         CancellationToken cancellationToken = default)
     {
-        return await ExecuteFileAsync(csxFilePath, requestedIds: null, cancellationToken);
+        return await ExecuteFileAsync(csxFilePath, requestedIds: null, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -62,7 +62,7 @@ internal sealed class MtpSpecExecutor : IMtpSpecExecutor
         try
         {
             // Execute script to build spec tree
-            var rootContext = await _scriptHost.ExecuteAsync(absolutePath, cancellationToken);
+            var rootContext = await _scriptHost.ExecuteAsync(absolutePath, cancellationToken).ConfigureAwait(false);
 
             if (rootContext == null)
             {
@@ -98,7 +98,7 @@ internal sealed class MtpSpecExecutor : IMtpSpecExecutor
 
             // Notify reporter of completion
             var report = SpecReportBuilder.Build(rootContext, results);
-            await captureReporter.OnRunCompletedAsync(report);
+            await captureReporter.OnRunCompletedAsync(report).ConfigureAwait(false);
 
             // When filtering, only return results for requested specs
             // (filtered-out specs get Skipped status but shouldn't be reported to IDE)
@@ -164,7 +164,7 @@ internal sealed class MtpSpecExecutor : IMtpSpecExecutor
 
             try
             {
-                var result = await ExecuteFileAsync(absolutePath, fileIds, cancellationToken);
+                var result = await ExecuteFileAsync(absolutePath, fileIds, cancellationToken).ConfigureAwait(false);
                 results.Add(result);
             }
             catch (Exception)

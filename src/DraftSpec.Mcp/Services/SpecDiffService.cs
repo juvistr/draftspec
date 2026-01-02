@@ -41,15 +41,15 @@ public static class SpecDiffService
                 var baselineStatus = NormalizeStatus(baselineSpec.Status);
                 var currentStatus = NormalizeStatus(currentSpec.Status);
 
-                if (baselineStatus == currentStatus)
+                if (string.Equals(baselineStatus, currentStatus, StringComparison.Ordinal))
                 {
                     // No change
-                    if (currentStatus == "passed")
+                    if (string.Equals(currentStatus, "passed", StringComparison.Ordinal))
                         stillPassing++;
-                    else if (currentStatus == "failed")
+                    else if (string.Equals(currentStatus, "failed", StringComparison.Ordinal))
                         stillFailing++;
                 }
-                else if (baselineStatus == "passed" && currentStatus == "failed")
+                else if (string.Equals(baselineStatus, "passed", StringComparison.Ordinal) && string.Equals(currentStatus, "failed", StringComparison.Ordinal))
                 {
                     // Regression!
                     newFailing++;
@@ -62,7 +62,7 @@ public static class SpecDiffService
                         ErrorMessage = currentSpec.Error
                     });
                 }
-                else if (baselineStatus == "failed" && currentStatus == "passed")
+                else if (string.Equals(baselineStatus, "failed", StringComparison.Ordinal) && string.Equals(currentStatus, "passed", StringComparison.Ordinal))
                 {
                     // Fix!
                     newPassing++;
@@ -139,7 +139,7 @@ public static class SpecDiffService
     }
 
     private static void FlattenContext(
-        List<SpecContextReport> contexts,
+        IList<SpecContextReport> contexts,
         List<string> parentPath,
         Dictionary<string, SpecResultReport> result)
     {

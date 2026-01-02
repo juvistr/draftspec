@@ -6,7 +6,7 @@ namespace DraftSpec.Mcp.Services;
 /// </summary>
 public class Session : IDisposable
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private bool _disposed;
 
     /// <summary>

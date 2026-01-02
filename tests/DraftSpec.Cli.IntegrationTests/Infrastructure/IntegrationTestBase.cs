@@ -9,7 +9,7 @@ public abstract class IntegrationTestBase
     protected string _tempDir = null!;
     private static string? _cliDllPath;
     private static string? _solutionDir;
-    private static readonly object _buildLock = new();
+    private static readonly Lock _buildLock = new();
     private static bool _cliBuilt;
 
     [Before(Test)]

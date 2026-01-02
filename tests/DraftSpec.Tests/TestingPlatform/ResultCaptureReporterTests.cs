@@ -158,23 +158,24 @@ public class ResultCaptureReporterTests
     {
         var reporter = new ResultCaptureReporter();
         var spec = new SpecDefinition("test", () => { });
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
+        // No timeout - let the tasks complete naturally
+        // The test is about thread safety, not timing
         var addTask = Task.Run(async () =>
         {
-            for (var i = 0; i < 100 && !cts.Token.IsCancellationRequested; i++)
+            for (var i = 0; i < 100; i++)
             {
                 await reporter.OnSpecCompletedAsync(new SpecResult(spec, SpecStatus.Passed, [], TimeSpan.Zero, null));
             }
-        }, cts.Token);
+        });
 
         var readTask = Task.Run(() =>
         {
-            for (var i = 0; i < 100 && !cts.Token.IsCancellationRequested; i++)
+            for (var i = 0; i < 100; i++)
             {
                 _ = reporter.Results;
             }
-        }, cts.Token);
+        });
 
         // Should not throw
         await Task.WhenAll(addTask, readTask);

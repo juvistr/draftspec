@@ -33,6 +33,6 @@ internal class MessageBusPublisher : ITestNodePublisher
     {
         await _messageBus.PublishAsync(
             _dataProducer,
-            new TestNodeUpdateMessage(_sessionUid, node));
+            new TestNodeUpdateMessage(_sessionUid, node)).ConfigureAwait(false);
     }
 }

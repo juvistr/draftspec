@@ -85,7 +85,7 @@ public static class SpecTools
                     "notifications/progress",
                     progressData,
                     JsonOptionsProvider.Default,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
             };
         }
 
@@ -96,7 +96,7 @@ public static class SpecTools
             specContent,
             sessionId,
             timeoutSeconds,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         return JsonSerializer.Serialize(result.ToResponse(), JsonOptionsProvider.Default);
     }
@@ -179,7 +179,7 @@ public static class SpecTools
                 "notifications/progress",
                 progressData,
                 JsonOptionsProvider.Default,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
         }
 
         List<NamedSpecResult> results;
@@ -189,9 +189,9 @@ public static class SpecTools
             // Execute all specs in parallel
             var tasks = specs.Select(async spec =>
             {
-                var result = await executionService.ExecuteSpecAsync(spec.Content, timeout, cancellationToken);
+                var result = await executionService.ExecuteSpecAsync(spec.Content, timeout, cancellationToken).ConfigureAwait(false);
 
-                await ReportBatchProgress(spec.Name);
+                await ReportBatchProgress(spec.Name).ConfigureAwait(false);
 
                 return new NamedSpecResult
                 {
@@ -204,7 +204,7 @@ public static class SpecTools
                 };
             });
 
-            results = (await Task.WhenAll(tasks)).ToList();
+            results = (await Task.WhenAll(tasks).ConfigureAwait(false)).ToList();
         }
         else
         {
@@ -212,9 +212,9 @@ public static class SpecTools
             results = [];
             foreach (var spec in specs)
             {
-                var result = await executionService.ExecuteSpecAsync(spec.Content, timeout, cancellationToken);
+                var result = await executionService.ExecuteSpecAsync(spec.Content, timeout, cancellationToken).ConfigureAwait(false);
 
-                await ReportBatchProgress(spec.Name);
+                await ReportBatchProgress(spec.Name).ConfigureAwait(false);
 
                 results.Add(new NamedSpecResult
                 {

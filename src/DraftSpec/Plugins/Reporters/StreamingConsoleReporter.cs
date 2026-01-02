@@ -18,7 +18,7 @@ public class StreamingConsoleReporter : IReporter
     private readonly StreamingStats _stats = new();
     private readonly List<SpecResult> _failures = [];
     private readonly bool _useColors;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private int _totalSpecs;
 
     /// <summary>

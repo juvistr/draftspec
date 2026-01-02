@@ -36,12 +36,12 @@ public class SubprocessSpecExecutor : ISpecExecutor
                 content,
                 timeout,
                 _onProgress,
-                effectiveCt);
+                effectiveCt).ConfigureAwait(false);
         }
 
         return await _executionService.ExecuteSpecAsync(
             content,
             timeout,
-            effectiveCt);
+            effectiveCt).ConfigureAwait(false);
     }
 }

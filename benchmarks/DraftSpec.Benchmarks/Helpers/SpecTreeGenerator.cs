@@ -16,7 +16,7 @@ public static class SpecTreeGenerator
         for (var i = 0; i < specCount; i++)
             root.AddSpec(new SpecDefinition(
                 $"async spec {i}",
-                async () => await Task.Delay(delayMs)));
+                async () => await Task.Delay(delayMs).ConfigureAwait(false)));
         return root;
     }
 

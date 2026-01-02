@@ -49,7 +49,8 @@ public static partial class Dsl
     /// </summary>
     public static AsyncActionExpectation expect(
         Func<Task> asyncAction,
-        [CallerArgumentExpression("asyncAction")] string? expr = null)
+        [CallerArgumentExpression("asyncAction")]
+        string? expr = null)
     {
         return new AsyncActionExpectation(asyncAction, expr);
     }
@@ -68,7 +69,9 @@ public static partial class Dsl
     /// Create an expectation for a list.
     /// </summary>
     public static CollectionExpectation<T> expect<T>(
+#pragma warning disable MA0016
         List<T> actual,
+#pragma warning restore MA0016
         [CallerArgumentExpression("actual")] string? expr = null)
     {
         return new CollectionExpectation<T>(actual, expr);
@@ -88,7 +91,9 @@ public static partial class Dsl
     /// Create an expectation for a hash set.
     /// </summary>
     public static CollectionExpectation<T> expect<T>(
+#pragma warning disable MA0016
         HashSet<T> actual,
+#pragma warning restore MA0016
         [CallerArgumentExpression("actual")] string? expr = null)
     {
         return new CollectionExpectation<T>(actual, expr);

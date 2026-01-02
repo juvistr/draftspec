@@ -87,7 +87,7 @@ public sealed class ScriptCompilationCache : DiskCacheBase
                 return (false, null);
 
             // Load and execute the cached assembly
-            var result = await ExecuteCachedAssemblyAsync(assemblyPath, globals, cancellationToken);
+            var result = await ExecuteCachedAssemblyAsync(assemblyPath, globals, cancellationToken).ConfigureAwait(false);
             return (true, result);
         }
         catch (Exception ex)
@@ -128,7 +128,7 @@ public sealed class ScriptCompilationCache : DiskCacheBase
             var task = (Task<object>)factoryMethod.Invoke(null, parameters)!;
 
             cancellationToken.ThrowIfCancellationRequested();
-            return await task;
+            return await task.ConfigureAwait(false);
         }
         finally
         {

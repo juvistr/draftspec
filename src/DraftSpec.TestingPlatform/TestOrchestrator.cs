@@ -27,20 +27,20 @@ internal class TestOrchestrator : ITestOrchestrator
     {
         ArgumentNullException.ThrowIfNull(publisher);
 
-        var result = await _discoverer.DiscoverAsync(cancellationToken);
+        var result = await _discoverer.DiscoverAsync(cancellationToken).ConfigureAwait(false);
 
         // Publish discovered specs
         foreach (var spec in result.Specs)
         {
             var testNode = TestNodeMapper.CreateDiscoveryNode(spec);
-            await publisher.PublishAsync(testNode, cancellationToken);
+            await publisher.PublishAsync(testNode, cancellationToken).ConfigureAwait(false);
         }
 
         // Publish discovery errors as error nodes
         foreach (var error in result.Errors)
         {
             var testNode = TestNodeMapper.CreateErrorNode(error);
-            await publisher.PublishAsync(testNode, cancellationToken);
+            await publisher.PublishAsync(testNode, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -60,7 +60,7 @@ internal class TestOrchestrator : ITestOrchestrator
         {
             // Run specific tests by ID - discover to identify compilation errors,
             // but only report results for requested specs
-            var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken);
+            var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken).ConfigureAwait(false);
 
             // Filter to only requested IDs
             var requestedSpecs = discoveryResult.Specs
@@ -76,13 +76,13 @@ internal class TestOrchestrator : ITestOrchestrator
 
             // Execute only executable specs (results are filtered to requested IDs in executor)
             executionResults = executableIds.Count > 0
-                ? await _executor.ExecuteByIdsAsync(executableIds, cancellationToken)
+                ? await _executor.ExecuteByIdsAsync(executableIds, cancellationToken).ConfigureAwait(false)
                 : [];
         }
         else
         {
             // Run all tests - discover and execute all files
-            var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken);
+            var discoveryResult = await _discoverer.DiscoverAsync(cancellationToken).ConfigureAwait(false);
             discoveryErrors = discoveryResult.Errors;
 
             // Separate specs with compilation errors from executable specs
@@ -95,7 +95,7 @@ internal class TestOrchestrator : ITestOrchestrator
 
             foreach (var group in fileGroups)
             {
-                var result = await _executor.ExecuteFileAsync(group.Key, cancellationToken);
+                var result = await _executor.ExecuteFileAsync(group.Key, cancellationToken).ConfigureAwait(false);
                 results.Add(result);
             }
 
@@ -106,14 +106,14 @@ internal class TestOrchestrator : ITestOrchestrator
         foreach (var error in discoveryErrors)
         {
             var testNode = TestNodeMapper.CreateErrorNode(error);
-            await publisher.PublishAsync(testNode, cancellationToken);
+            await publisher.PublishAsync(testNode, cancellationToken).ConfigureAwait(false);
         }
 
         // Publish specs with compilation errors as failed test nodes
         foreach (var spec in compilationErrorSpecs)
         {
             var testNode = TestNodeMapper.CreateCompilationErrorResultNode(spec);
-            await publisher.PublishAsync(testNode, cancellationToken);
+            await publisher.PublishAsync(testNode, cancellationToken).ConfigureAwait(false);
         }
 
         // Publish results
@@ -126,7 +126,7 @@ internal class TestOrchestrator : ITestOrchestrator
                     execResult.AbsoluteSourceFile,
                     specResult);
 
-                await publisher.PublishAsync(testNode, cancellationToken);
+                await publisher.PublishAsync(testNode, cancellationToken).ConfigureAwait(false);
             }
         }
     }

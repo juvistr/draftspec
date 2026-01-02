@@ -69,7 +69,7 @@ public readonly struct AsyncActionExpectation
         {
             try
             {
-                await AsyncAction();
+                await AsyncAction().ConfigureAwait(false);
             }
             catch (TException)
             {
@@ -86,7 +86,7 @@ public readonly struct AsyncActionExpectation
         {
             try
             {
-                await AsyncAction();
+                await AsyncAction().ConfigureAwait(false);
             }
             catch (TException ex)
             {
@@ -113,7 +113,7 @@ public readonly struct AsyncActionExpectation
         {
             try
             {
-                await AsyncAction();
+                await AsyncAction().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -126,7 +126,7 @@ public readonly struct AsyncActionExpectation
         {
             try
             {
-                await AsyncAction();
+                await AsyncAction().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -145,7 +145,7 @@ public readonly struct AsyncActionExpectation
     {
         try
         {
-            await AsyncAction();
+            await AsyncAction().ConfigureAwait(false);
         }
         catch (Exception ex)
         {

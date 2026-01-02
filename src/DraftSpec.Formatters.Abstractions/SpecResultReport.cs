@@ -12,11 +12,11 @@ public class SpecResultReport
     public double? DurationMs { get; set; }
     public string? Error { get; set; }
 
-    [JsonIgnore] public bool Passed => Status == SpecStatusNames.Passed;
+    [JsonIgnore] public bool Passed => string.Equals(Status, SpecStatusNames.Passed, StringComparison.Ordinal);
 
-    [JsonIgnore] public bool Failed => Status == SpecStatusNames.Failed;
+    [JsonIgnore] public bool Failed => string.Equals(Status, SpecStatusNames.Failed, StringComparison.Ordinal);
 
-    [JsonIgnore] public bool Pending => Status == SpecStatusNames.Pending;
+    [JsonIgnore] public bool Pending => string.Equals(Status, SpecStatusNames.Pending, StringComparison.Ordinal);
 
-    [JsonIgnore] public bool Skipped => Status == SpecStatusNames.Skipped;
+    [JsonIgnore] public bool Skipped => string.Equals(Status, SpecStatusNames.Skipped, StringComparison.Ordinal);
 }

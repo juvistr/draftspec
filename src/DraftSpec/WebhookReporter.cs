@@ -75,7 +75,7 @@ public class WebhookReporter : IReporter, IDisposable
             return;
 
         var payload = FormatPayload(report);
-        await SendWithRetryAsync(payload);
+        await SendWithRetryAsync(payload).ConfigureAwait(false);
     }
 
     private async Task SendWithRetryAsync(string payload)
@@ -104,16 +104,17 @@ public class WebhookReporter : IReporter, IDisposable
 
                 // Use per-request timeout via CancellationToken
                 using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(_options.TimeoutMs));
-                var response = await _httpClient.SendAsync(request, cts.Token);
+                var response = await _httpClient.SendAsync(request, cts.Token).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
                 return; // Success
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+            catch (Exception ex) when
+                (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
             {
                 lastException = ex;
 
                 if (attempt < _options.MaxRetries)
-                    await Task.Delay(_options.RetryDelayMs);
+                    await Task.Delay(_options.RetryDelayMs).ConfigureAwait(false);
             }
         }
 
@@ -237,7 +238,8 @@ public class WebhookReporter : IReporter, IDisposable
         if (!Uri.TryCreate(options.Url, UriKind.Absolute, out var uri))
             throw new ArgumentException("Webhook URL must be a valid absolute URI", nameof(options));
 
-        if (uri.Scheme != "http" && uri.Scheme != "https")
+        if (!string.Equals(uri.Scheme, "http", StringComparison.Ordinal) &&
+            !string.Equals(uri.Scheme, "https", StringComparison.Ordinal))
             throw new ArgumentException("Webhook URL must use HTTP or HTTPS", nameof(options));
 
         if (options.TimeoutMs <= 0)

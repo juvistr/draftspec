@@ -48,5 +48,5 @@ public class WebhookReporterOptions
     /// <summary>
     /// Custom headers to include in the request.
     /// </summary>
-    public Dictionary<string, string>? CustomHeaders { get; init; }
+    public IReadOnlyDictionary<string, string>? CustomHeaders { get; init; }
 }

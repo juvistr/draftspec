@@ -100,7 +100,7 @@ public class ConcurrentSafetyTests
         // Arrange
         var context = new SpecContext("parallel");
         var sharedCounter = 0;
-        var lockObj = new object();
+        var lockObj = new Lock();
         var specResults = new int[10];
 
         // Add specs that increment a counter

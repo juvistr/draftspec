@@ -8,7 +8,7 @@ public class FileWatcher : IFileWatcher
     private readonly Action<FileChangeInfo> _onChange;
     private readonly int _debounceMs;
     private Timer? _debounceTimer;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private FileChangeInfo? _pendingChange;
 
     public FileWatcher(string path, Action<FileChangeInfo> onChange, int debounceMs = 200)

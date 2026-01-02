@@ -13,14 +13,14 @@ public sealed partial class DependencyGraphBuilder
     /// Regex to match #load directives in CSX files.
     /// Captures the file path in group 1.
     /// </summary>
-    [GeneratedRegex(@"^\s*#load\s+""([^""]+)""\s*$", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^\s*#load\s+""([^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
     private static partial Regex LoadDirectiveRegex();
 
     /// <summary>
     /// Regex to match using directives.
     /// Captures the namespace in group 1 (after optional 'static' keyword).
     /// </summary>
-    [GeneratedRegex(@"^\s*using\s+(?:static\s+)?([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*;", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^\s*using\s+(?:static\s+)?([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*;", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
     private static partial Regex UsingDirectiveRegex();
 
     /// <summary>
@@ -28,7 +28,7 @@ public sealed partial class DependencyGraphBuilder
     /// Supports both traditional and file-scoped namespace syntax.
     /// Captures the namespace in group 1.
     /// </summary>
-    [GeneratedRegex(@"^\s*namespace\s+([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*[;{]", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^\s*namespace\s+([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*[;{]", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
     private static partial Regex NamespaceDeclarationRegex();
 
     /// <summary>

@@ -23,13 +23,13 @@ public sealed class SequentialExecutionStrategy : ISpecExecutionStrategy
             {
                 var skippedResult = new SpecResult(spec, SpecStatus.Skipped, context.ContextPath);
                 context.Results.Add(skippedResult);
-                await context.NotifyCompleted(skippedResult);
+                await context.NotifyCompleted(skippedResult).ConfigureAwait(false);
                 continue;
             }
 
-            var result = await context.RunSpec(spec, context.Context, context.ContextPath, context.HasFocused);
+            var result = await context.RunSpec(spec, context.Context, context.ContextPath, context.HasFocused).ConfigureAwait(false);
             context.Results.Add(result);
-            await context.NotifyCompleted(result);
+            await context.NotifyCompleted(result).ConfigureAwait(false);
 
             // Check if we should bail
             if (context.BailEnabled && result.Status == SpecStatus.Failed)

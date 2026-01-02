@@ -192,7 +192,7 @@ public class ReporterFailureTests
             .Build();
 
         // Act - The spec runs successfully, but reporter throws during notification
-        List<SpecResult>? results = null;
+        IList<SpecResult>? results = null;
         try
         {
             results = await runner.RunAsync(context);

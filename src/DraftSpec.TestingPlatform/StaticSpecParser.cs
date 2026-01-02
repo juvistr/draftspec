@@ -19,8 +19,14 @@ public sealed partial class StaticSpecParser
     /// <summary>
     /// Regex to match #load directives for file includes.
     /// </summary>
-    [GeneratedRegex(@"^\s*#load\s+""([^""]+)""\s*$", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^\s*#load\s+""([^""]+)""\s*$", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
     private static partial Regex LoadDirectiveRegex();
+
+    /// <summary>
+    /// Regex to match #r directives (assembly references).
+    /// </summary>
+    [GeneratedRegex(@"^\s*#r\s+""[^""]+"".*$", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex AssemblyReferenceRegex();
 
     /// <summary>
     /// Creates a new static spec parser.
@@ -61,13 +67,13 @@ public sealed partial class StaticSpecParser
             var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var sourceFiles = new List<string>();
             var codeBuilder = new StringBuilder();
-            await ProcessFileAsync(absolutePath, processedFiles, sourceFiles, codeBuilder, cancellationToken);
+            await ProcessFileAsync(absolutePath, processedFiles, sourceFiles, codeBuilder, cancellationToken).ConfigureAwait(false);
             var combinedSource = codeBuilder.ToString();
 
             // Try cache first
             if (_cache != null)
             {
-                var (hit, cached) = await _cache.TryGetCachedAsync(absolutePath, sourceFiles, cancellationToken);
+                var (hit, cached) = await _cache.TryGetCachedAsync(absolutePath, sourceFiles, cancellationToken).ConfigureAwait(false);
                 if (hit && cached != null)
                 {
                     return cached;
@@ -94,7 +100,7 @@ public sealed partial class StaticSpecParser
             // Cache the result
             if (_cache != null)
             {
-                await _cache.CacheAsync(absolutePath, sourceFiles, result, cancellationToken);
+                await _cache.CacheAsync(absolutePath, sourceFiles, result, cancellationToken).ConfigureAwait(false);
             }
 
             return result;
@@ -139,7 +145,7 @@ public sealed partial class StaticSpecParser
         string content;
         try
         {
-            content = await File.ReadAllTextAsync(absolutePath, cancellationToken);
+            content = await File.ReadAllTextAsync(absolutePath, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
@@ -157,12 +163,12 @@ public sealed partial class StaticSpecParser
             var loadAbsolutePath = Path.GetFullPath(loadPath, fileDirectory);
 
             // Recursively process the loaded file
-            await ProcessFileAsync(loadAbsolutePath, processedFiles, sourceFiles, codeBuilder, cancellationToken);
+            await ProcessFileAsync(loadAbsolutePath, processedFiles, sourceFiles, codeBuilder, cancellationToken).ConfigureAwait(false);
         }
 
         // Remove #load and #r directives from code (they're not valid in parsed source)
         var cleanedCode = LoadDirectiveRegex().Replace(content, "");
-        cleanedCode = Regex.Replace(cleanedCode, @"^\s*#r\s+""[^""]+"".*$", "", RegexOptions.Multiline);
+        cleanedCode = AssemblyReferenceRegex().Replace(cleanedCode, "");
 
         // Append the code (keep usings and other directives for proper parsing)
         codeBuilder.AppendLine(cleanedCode);

@@ -10,7 +10,7 @@ namespace DraftSpec.TestingPlatform;
 internal sealed class ResultCaptureReporter : IReporter
 {
     private readonly List<SpecResult> _results = [];
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     /// <summary>
     /// Reporter name for identification.

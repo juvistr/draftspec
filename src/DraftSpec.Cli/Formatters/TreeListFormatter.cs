@@ -64,7 +64,7 @@ public sealed class TreeListFormatter : IListFormatter
             // Navigate/create context nodes
             foreach (var context in spec.ContextPath)
             {
-                var existing = current.Children.Find(c => c.Description == context);
+                var existing = current.Children.Find(c => string.Equals(c.Description, context, StringComparison.Ordinal));
                 if (existing == null)
                 {
                     existing = new TreeNode { Description = context };

@@ -6,6 +6,6 @@ namespace DraftSpec.Formatters.Abstractions;
 public class SpecContextReport
 {
     public string Description { get; set; } = "";
-    public List<SpecResultReport> Specs { get; set; } = [];
-    public List<SpecContextReport> Contexts { get; set; } = [];
+    public IList<SpecResultReport> Specs { get; set; } = [];
+    public IList<SpecContextReport> Contexts { get; set; } = [];
 }

@@ -90,11 +90,11 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
         switch (request)
         {
             case DiscoverTestExecutionRequest discoverRequest:
-                await DiscoverTestsInternalAsync(discoverRequest, messageBus, cancellationToken);
+                await DiscoverTestsInternalAsync(discoverRequest, messageBus, cancellationToken).ConfigureAwait(false);
                 break;
 
             case RunTestExecutionRequest runRequest:
-                await RunTestsInternalAsync(runRequest, messageBus, cancellationToken);
+                await RunTestsInternalAsync(runRequest, messageBus, cancellationToken).ConfigureAwait(false);
                 break;
         }
     }
@@ -122,7 +122,7 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
             return;
 
         var publisher = new MessageBusPublisher(messageBus, this, request.Session.SessionUid);
-        await _orchestrator.DiscoverTestsAsync(publisher, cancellationToken);
+        await _orchestrator.DiscoverTestsAsync(publisher, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
             return;
 
         var publisher = new MessageBusPublisher(messageBus, this, request.Session.SessionUid);
-        await _orchestrator.RunTestsAsync(requestedTestIds: null, publisher, cancellationToken);
+        await _orchestrator.RunTestsAsync(requestedTestIds: null, publisher, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -183,7 +183,7 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
             return;
 
         var publisher = new MessageBusPublisher(messageBus, this, request.Session.SessionUid);
-        await _orchestrator.DiscoverTestsAsync(publisher, cancellationToken);
+        await _orchestrator.DiscoverTestsAsync(publisher, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -199,7 +199,7 @@ internal class DraftSpecTestFramework : VSTestBridgedTestFrameworkBase
 
         var requestedTestIds = ExtractTestIds(request.Filter);
         var publisher = new MessageBusPublisher(messageBus, this, request.Session.SessionUid);
-        await _orchestrator.RunTestsAsync(requestedTestIds, publisher, cancellationToken);
+        await _orchestrator.RunTestsAsync(requestedTestIds, publisher, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

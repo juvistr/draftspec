@@ -5,7 +5,7 @@ public static partial class Dsl
     /// <summary>
     /// Current tags in scope. Specs created within a tag() block inherit these tags.
     /// </summary>
-    internal static List<string>? CurrentTags
+    internal static IReadOnlyList<string>? CurrentTags
     {
         get => Session.CurrentTags;
         set => Session.CurrentTags = value;

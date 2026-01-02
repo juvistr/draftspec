@@ -10,6 +10,6 @@ public class RoslynSpecScriptExecutor : ISpecScriptExecutor
     public async Task<SpecContext?> ExecuteAsync(string specFile, string outputDirectory, CancellationToken ct = default)
     {
         var scriptHost = new CsxScriptHost(outputDirectory);
-        return await scriptHost.ExecuteAsync(specFile, ct);
+        return await scriptHost.ExecuteAsync(specFile, ct).ConfigureAwait(false);
     }
 }

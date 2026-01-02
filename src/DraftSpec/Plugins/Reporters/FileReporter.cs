@@ -57,7 +57,7 @@ public class FileReporter : IReporter
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory)) Directory.CreateDirectory(directory);
 
         var content = _formatter.Format(report);
-        await File.WriteAllTextAsync(_filePath, content);
+        await File.WriteAllTextAsync(_filePath, content).ConfigureAwait(false);
     }
 
     /// <summary>

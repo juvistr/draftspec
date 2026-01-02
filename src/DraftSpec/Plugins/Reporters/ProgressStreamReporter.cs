@@ -18,7 +18,7 @@ public class ProgressStreamReporter : IReporter
     /// </summary>
     public const string ProgressLinePrefix = "DRAFTSPEC_PROGRESS:";
 
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private int _completed;
     private int _totalSpecs;
 
@@ -64,14 +64,12 @@ public class ProgressStreamReporter : IReporter
     }
 
     /// <inheritdoc />
-    public Task OnSpecsBatchCompletedAsync(IReadOnlyList<SpecResult> results)
+    public async Task OnSpecsBatchCompletedAsync(IReadOnlyList<SpecResult> results)
     {
         foreach (var result in results)
         {
-            OnSpecCompletedAsync(result);
+            await OnSpecCompletedAsync(result).ConfigureAwait(false);
         }
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc />

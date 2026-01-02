@@ -11,7 +11,7 @@ public class SpecReport
     public DateTime Timestamp { get; set; }
     public string? Source { get; set; }
     public SpecSummary Summary { get; set; } = new();
-    public List<SpecContextReport> Contexts { get; set; } = [];
+    public IList<SpecContextReport> Contexts { get; set; } = [];
 
     /// <summary>
     /// Maximum allowed JSON payload size (10MB).

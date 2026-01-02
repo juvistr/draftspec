@@ -20,7 +20,7 @@ public class InProcessCoverageTracker : ICoverageTracker
 {
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, int>> _coverage = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, (int covered, int total)>> _branchCoverage = new();
-    private readonly object _snapshotLock = new();
+    private readonly Lock _snapshotLock = new();
     private long _snapshotCounter;
     private bool _isActive;
     private bool _isDisposed;

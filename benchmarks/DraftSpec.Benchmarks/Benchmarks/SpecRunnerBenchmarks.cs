@@ -27,25 +27,25 @@ public class SpecRunnerBenchmarks
     }
 
     [Benchmark(Baseline = true)]
-    public List<SpecResult> SmallTree_10Specs()
+    public IList<SpecResult> SmallTree_10Specs()
     {
         return _runner.Run(_smallTree);
     }
 
     [Benchmark]
-    public List<SpecResult> MediumTree_100Specs()
+    public IList<SpecResult> MediumTree_100Specs()
     {
         return _runner.Run(_mediumTree);
     }
 
     [Benchmark]
-    public List<SpecResult> LargeTree_1000Specs()
+    public IList<SpecResult> LargeTree_1000Specs()
     {
         return _runner.Run(_largeTree);
     }
 
     [Benchmark]
-    public List<SpecResult> DeepTree_50Levels()
+    public IList<SpecResult> DeepTree_50Levels()
     {
         return _runner.Run(_deepTree);
     }
@@ -53,7 +53,7 @@ public class SpecRunnerBenchmarks
     [Benchmark]
     [Arguments(2)]
     [Arguments(4)]
-    public List<SpecResult> LargeTree_Parallel(int parallelism)
+    public IList<SpecResult> LargeTree_Parallel(int parallelism)
     {
         var runner = new SpecRunner([], null, parallelism);
         return runner.Run(_largeTree);
@@ -77,7 +77,7 @@ public class SpecRunnerBenchmarks
     }
 
     [Benchmark]
-    public List<SpecResult> AsyncSpecs_Sequential()
+    public IList<SpecResult> AsyncSpecs_Sequential()
     {
         var runner = new SpecRunner([], null, 1);
         return runner.Run(_asyncTree);
@@ -87,7 +87,7 @@ public class SpecRunnerBenchmarks
     [Arguments(2)]
     [Arguments(4)]
     [Arguments(8)]
-    public List<SpecResult> AsyncSpecs_Parallel(int parallelism)
+    public IList<SpecResult> AsyncSpecs_Parallel(int parallelism)
     {
         var runner = new SpecRunner([], null, parallelism);
         return runner.Run(_asyncTree);

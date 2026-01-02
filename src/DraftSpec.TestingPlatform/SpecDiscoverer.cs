@@ -58,7 +58,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
 
             try
             {
-                var rootContext = await _scriptHost.ExecuteAsync(csxFile, cancellationToken);
+                var rootContext = await _scriptHost.ExecuteAsync(csxFile, cancellationToken).ConfigureAwait(false);
 
                 if (rootContext != null)
                 {
@@ -71,7 +71,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
             {
                 // Execution failed - try static parsing to discover spec structure
                 var relativePath = GetRelativePath(csxFile);
-                var staticResult = await _staticParser.ParseFileAsync(csxFile, cancellationToken);
+                var staticResult = await _staticParser.ParseFileAsync(csxFile, cancellationToken).ConfigureAwait(false);
 
                 if (staticResult.Specs.Count > 0)
                 {
@@ -126,7 +126,7 @@ public sealed class SpecDiscoverer : ISpecDiscoverer
 
         try
         {
-            var rootContext = await _scriptHost.ExecuteAsync(absolutePath, cancellationToken);
+            var rootContext = await _scriptHost.ExecuteAsync(absolutePath, cancellationToken).ConfigureAwait(false);
 
             if (rootContext == null)
             {

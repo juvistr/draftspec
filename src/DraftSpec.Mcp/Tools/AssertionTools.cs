@@ -229,71 +229,74 @@ public static partial class AssertionTools
         return name;
     }
 
-    // Regex patterns using source generators with case-insensitive matching
-    [GeneratedRegex(@"^(?:should\s+)?not\s+be\s+null$", RegexOptions.IgnoreCase)]
+    // Regex patterns using source generators with case-insensitive matching and NonBacktracking for ReDoS protection
+    [GeneratedRegex(@"^(?:should\s+)?not\s+be\s+null$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex NotBeNullRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?be\s+null$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?be\s+null$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex BeNullRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?be\s+true$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?be\s+true$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex BeTrueRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?be\s+false$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?be\s+false$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex BeFalseRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?be\s+greater\s+than\s+(?<value>-?\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?be\s+greater\s+than\s+(?<value>-?\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex BeGreaterThanRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?be\s+less\s+than\s+(?<value>-?\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?be\s+less\s+than\s+(?<value>-?\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex BeLessThanRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?(?:be\s+(?:at\s+least|>=)|>=)\s*(?<value>-?\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?(?:be\s+(?:at\s+least|>=)|>=)\s*(?<value>-?\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex BeAtLeastRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?(?:be\s+(?:at\s+most|<=)|<=)\s*(?<value>-?\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?(?:be\s+(?:at\s+most|<=)|<=)\s*(?<value>-?\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex BeAtMostRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?have\s+(?:a\s+)?count\s+(?:of\s+)?(?<count>\d+)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?have\s+(?:a\s+)?count\s+(?:of\s+)?(?<count>\d+)$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex HaveCountRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?have\s+(?<count>\d+)\s+items?$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?have\s+(?<count>\d+)\s+items?$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex HaveItemsRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?not\s+be\s+empty$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?not\s+be\s+empty$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex NotBeEmptyRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?be\s+empty$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?be\s+empty$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex BeEmptyRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?contain\s+['""]?(?<text>[^'""]+)['""]?$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?contain\s+['""]?(?<text>[^'""]+)['""]?$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex ContainStringRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?start\s+with\s+['""]?(?<text>[^'""]+)['""]?$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?start\s+with\s+['""]?(?<text>[^'""]+)['""]?$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex StartWithRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?end\s+with\s+['""]?(?<text>[^'""]+)['""]?$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?end\s+with\s+['""]?(?<text>[^'""]+)['""]?$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex EndWithRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?match\s+(?:pattern\s+)?['""]?(?<pattern>[^'""]+)['""]?$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?match\s+(?:pattern\s+)?['""]?(?<pattern>[^'""]+)['""]?$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex MatchPatternRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?not\s+throw(?:\s+(?:any\s+)?(?:exception|error))?$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?not\s+throw(?:\s+(?:any\s+)?(?:exception|error))?$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex NotThrowRegex();
 
     // Matches "throw", "throw exception", "throw an exception", "throw a exception"
-    [GeneratedRegex(@"^(?:should\s+)?throw(?:\s+(?:an?\s+)?exception)?$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?throw(?:\s+(?:an?\s+)?exception)?$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex ThrowGenericRegex();
 
     // Matches "throw <ExceptionType>" where type is NOT just "exception"
     // Excludes: "an exception", "a exception", just "exception"
+    // Uses negative lookahead which is not compatible with NonBacktracking but safe (no nested quantifiers)
+#pragma warning disable MA0009 // Pattern uses lookahead which is not compatible with NonBacktracking
     [GeneratedRegex(@"^(?:should\s+)?throw\s+(?<exception>(?!an?\s+exception$|exception$)[A-Za-z]+(?:\s+[A-Za-z]+)*(?:Exception)?)$", RegexOptions.IgnoreCase)]
     private static partial Regex ThrowExceptionRegex();
+#pragma warning restore MA0009
 
-    [GeneratedRegex(@"^(?:should\s+)?(?:not\s+(?:be\s+)?equal(?:\s+to)?|not\s+equal)\s+(?<value>.+)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?(?:not\s+(?:be\s+)?equal(?:\s+to)?|not\s+equal)\s+(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex NotEqualRegex();
 
-    [GeneratedRegex(@"^(?:should\s+)?(?:(?:be\s+)?equal(?:\s+to)?|be)\s+(?<value>.+)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:should\s+)?(?:(?:be\s+)?equal(?:\s+to)?|be)\s+(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex EqualRegex();
 
     private record AssertionPattern(

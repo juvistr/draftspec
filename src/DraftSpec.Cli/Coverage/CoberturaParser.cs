@@ -57,7 +57,7 @@ public static partial class CoberturaParser
                     {
                         LineNumber = ParseInt(line.Attribute("number")?.Value, 0),
                         Hits = ParseInt(line.Attribute("hits")?.Value, 0),
-                        IsBranchPoint = line.Attribute("branch")?.Value == "true"
+                        IsBranchPoint = string.Equals(line.Attribute("branch")?.Value, "true", StringComparison.Ordinal)
                     };
 
                     if (lineCov.IsBranchPoint)
@@ -127,6 +127,6 @@ public static partial class CoberturaParser
     /// <summary>
     /// Regex to match condition-coverage like "75% (3/4)".
     /// </summary>
-    [GeneratedRegex(@"\((\d+)/(\d+)\)")]
+    [GeneratedRegex(@"\((\d+)/(\d+)\)", RegexOptions.NonBacktracking)]
     private static partial Regex ConditionCoveragePattern();
 }

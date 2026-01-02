@@ -55,7 +55,7 @@ public static class PathValidator
         }
 
         // Check for parent directory traversal
-        if (name == ".." || name == "." || name.StartsWith("..", StringComparison.Ordinal))
+        if (name is ".." or "." || name.StartsWith("..", StringComparison.Ordinal))
         {
             throw new ArgumentException(
                 "Name cannot be a relative path reference",

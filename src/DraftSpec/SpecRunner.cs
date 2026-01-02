@@ -97,7 +97,7 @@ public class SpecRunner : ISpecRunner
     /// <summary>
     /// Execute specs synchronously from a Spec entry point.
     /// </summary>
-    public List<SpecResult> Run(Spec spec)
+    public IList<SpecResult> Run(Spec spec)
     {
         return Run(spec.RootContext);
     }
@@ -105,7 +105,7 @@ public class SpecRunner : ISpecRunner
     /// <summary>
     /// Execute specs synchronously from a root context.
     /// </summary>
-    public List<SpecResult> Run(SpecContext rootContext)
+    public IList<SpecResult> Run(SpecContext rootContext)
     {
         return RunAsync(rootContext).GetAwaiter().GetResult();
     }
@@ -113,7 +113,7 @@ public class SpecRunner : ISpecRunner
     /// <summary>
     /// Execute specs asynchronously from a Spec entry point.
     /// </summary>
-    public Task<List<SpecResult>> RunAsync(Spec spec, CancellationToken cancellationToken = default)
+    public Task<IList<SpecResult>> RunAsync(Spec spec, CancellationToken cancellationToken = default)
     {
         return RunAsync(spec.RootContext, cancellationToken);
     }
@@ -122,7 +122,7 @@ public class SpecRunner : ISpecRunner
     /// Execute specs asynchronously from a root context.
     /// Walks the context tree, executing specs through the middleware pipeline.
     /// </summary>
-    public async Task<List<SpecResult>> RunAsync(SpecContext rootContext, CancellationToken cancellationToken = default)
+    public async Task<IList<SpecResult>> RunAsync(SpecContext rootContext, CancellationToken cancellationToken = default)
     {
         var results = new List<SpecResult>();
 
@@ -135,12 +135,12 @@ public class SpecRunner : ISpecRunner
         // Notify reporters that run is starting (use cached spec count)
         var totalSpecs = rootContext.TotalSpecCount;
         var startTime = DateTime.UtcNow;
-        await NotifyRunStartingAsync(totalSpecs, startTime);
+        await NotifyRunStartingAsync(totalSpecs, startTime).ConfigureAwait(false);
 
         // Use a mutable list for context path - push/pop as we traverse
         // This avoids ImmutableList allocations on every context entry
         var contextPath = new List<string>();
-        await RunContextAsync(rootContext, contextPath, results, hasFocused, cancellationToken);
+        await RunContextAsync(rootContext, contextPath, results, hasFocused, cancellationToken).ConfigureAwait(false);
 
         return results;
     }
@@ -150,7 +150,7 @@ public class SpecRunner : ISpecRunner
         if (_reporters.Count == 0) return;
 
         var startContext = new RunStartingContext(totalSpecs, startTime);
-        foreach (var reporter in _reporters) await reporter.OnRunStartingAsync(startContext);
+        foreach (var reporter in _reporters) await reporter.OnRunStartingAsync(startContext).ConfigureAwait(false);
     }
 
     private async Task NotifySpecCompletedAsync(SpecResult result)
@@ -160,12 +160,12 @@ public class SpecRunner : ISpecRunner
         if (_reporters.Count == 1)
         {
             // Single reporter - no parallelism overhead
-            await _reporters[0].OnSpecCompletedAsync(result);
+            await _reporters[0].OnSpecCompletedAsync(result).ConfigureAwait(false);
         }
         else
         {
             // Multiple reporters - notify in parallel
-            await Task.WhenAll(_reporters.Select(r => r.OnSpecCompletedAsync(result)));
+            await Task.WhenAll(_reporters.Select(r => r.OnSpecCompletedAsync(result))).ConfigureAwait(false);
         }
     }
 
@@ -176,12 +176,12 @@ public class SpecRunner : ISpecRunner
         if (_reporters.Count == 1)
         {
             // Single reporter - call batch method directly
-            await _reporters[0].OnSpecsBatchCompletedAsync(results);
+            await _reporters[0].OnSpecsBatchCompletedAsync(results).ConfigureAwait(false);
         }
         else
         {
             // Multiple reporters - notify in parallel
-            await Task.WhenAll(_reporters.Select(r => r.OnSpecsBatchCompletedAsync(results)));
+            await Task.WhenAll(_reporters.Select(r => r.OnSpecsBatchCompletedAsync(results))).ConfigureAwait(false);
         }
     }
 
@@ -198,7 +198,7 @@ public class SpecRunner : ISpecRunner
         // If bail was triggered, skip remaining specs in this context
         if (_bailTriggered)
         {
-            await SkipRemainingSpecsInContext(context, contextPath, results, hasFocused);
+            await SkipRemainingSpecsInContext(context, contextPath, results, hasFocused).ConfigureAwait(false);
             return;
         }
 
@@ -212,7 +212,7 @@ public class SpecRunner : ISpecRunner
 
         // Run beforeAll (always sequential)
         if (context.BeforeAll != null)
-            await context.BeforeAll();
+            await context.BeforeAll().ConfigureAwait(false);
 
         try
         {
@@ -234,7 +234,7 @@ public class SpecRunner : ISpecRunner
                 SignalBail = () => _bailTriggered = true,
                 BailEnabled = _bail
             };
-            await _executionStrategy.ExecuteAsync(strategyContext, cancellationToken);
+            await _executionStrategy.ExecuteAsync(strategyContext, cancellationToken).ConfigureAwait(false);
 
             // Recurse into children (always sequential to maintain context isolation)
             foreach (var child in context.Children)
@@ -244,11 +244,11 @@ public class SpecRunner : ISpecRunner
                 if (_bailTriggered)
                 {
                     // Skip remaining children
-                    await SkipRemainingSpecsInContext(child, contextPath, results, hasFocused);
+                    await SkipRemainingSpecsInContext(child, contextPath, results, hasFocused).ConfigureAwait(false);
                 }
                 else
                 {
-                    await RunContextAsync(child, contextPath, results, hasFocused, cancellationToken);
+                    await RunContextAsync(child, contextPath, results, hasFocused, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
@@ -260,7 +260,7 @@ public class SpecRunner : ISpecRunner
 
             // Run afterAll (always sequential)
             if (context.AfterAll != null)
-                await context.AfterAll();
+                await context.AfterAll().ConfigureAwait(false);
         }
     }
 
@@ -289,7 +289,7 @@ public class SpecRunner : ISpecRunner
             HasFocused = hasFocused
         };
 
-        return await _pipeline(executionContext);
+        return await _pipeline(executionContext).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -319,13 +319,13 @@ public class SpecRunner : ISpecRunner
             {
                 var skippedResult = new SpecResult(spec, SpecStatus.Skipped, pathSnapshot);
                 results.Add(skippedResult);
-                await NotifySpecCompletedAsync(skippedResult);
+                await NotifySpecCompletedAsync(skippedResult).ConfigureAwait(false);
             }
 
             // Recursively skip children
             foreach (var child in context.Children)
             {
-                await SkipRemainingSpecsInContext(child, contextPath, results, hasFocused);
+                await SkipRemainingSpecsInContext(child, contextPath, results, hasFocused).ConfigureAwait(false);
             }
         }
         finally
@@ -344,7 +344,7 @@ public class SpecRunner : ISpecRunner
     {
         // Time beforeEach hooks
         var beforeSw = Stopwatch.StartNew();
-        await RunBeforeEachHooksAsync(ctx.Context);
+        await RunBeforeEachHooksAsync(ctx.Context).ConfigureAwait(false);
         beforeSw.Stop();
         var beforeEachDuration = beforeSw.Elapsed;
 
@@ -364,7 +364,7 @@ public class SpecRunner : ISpecRunner
 
         try
         {
-            await ctx.Spec.Body!.Invoke();
+            await ctx.Spec.Body!.Invoke().ConfigureAwait(false);
             specSw.Stop();
             status = SpecStatus.Passed;
         }
@@ -384,7 +384,7 @@ public class SpecRunner : ISpecRunner
 
         // Time afterEach hooks (always run, even on failure)
         var afterSw = Stopwatch.StartNew();
-        await RunAfterEachHooksAsync(ctx.Context);
+        await RunAfterEachHooksAsync(ctx.Context).ConfigureAwait(false);
         afterSw.Stop();
         var afterEachDuration = afterSw.Elapsed;
 
@@ -398,12 +398,12 @@ public class SpecRunner : ISpecRunner
     private static async Task RunBeforeEachHooksAsync(SpecContext context)
     {
         // Use cached hook chain for better performance
-        foreach (var hook in context.GetBeforeEachChain()) await hook();
+        foreach (var hook in context.GetBeforeEachChain()) await hook().ConfigureAwait(false);
     }
 
     private static async Task RunAfterEachHooksAsync(SpecContext context)
     {
         // Use cached hook chain for better performance
-        foreach (var hook in context.GetAfterEachChain()) await hook();
+        foreach (var hook in context.GetAfterEachChain()) await hook().ConfigureAwait(false);
     }
 }

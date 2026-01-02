@@ -1,0 +1,6 @@
+# EditorConfig for examples
+# Examples are application code, not library code
+
+[*.cs]
+# MA0004: ConfigureAwait(false) is not needed in application code
+dotnet_diagnostic.MA0004.severity = none

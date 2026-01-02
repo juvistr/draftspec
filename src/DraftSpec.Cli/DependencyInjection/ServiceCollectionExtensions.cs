@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<EstimateCommand>();
         services.AddTransient<CacheCommand>();
         services.AddTransient<DocsCommand>();
+        services.AddTransient<CoverageMapCommand>();
 
         // Pipeline
         services.AddSingleton<IConfigApplier, ConfigApplier>();
@@ -124,6 +125,11 @@ public static class ServiceCollectionExtensions
                 "docs",
                 () => sp.GetRequiredService<DocsCommand>(),
                 o => o.ToDocsOptions());
+
+            registry.Register<CoverageMapCommand, CoverageMapOptions>(
+                "coverage-map",
+                () => sp.GetRequiredService<CoverageMapCommand>(),
+                o => o.ToCoverageMapOptions());
 
             return registry;
         });

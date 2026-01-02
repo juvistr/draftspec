@@ -302,6 +302,34 @@ public class CliOptions
     /// </summary>
     public string? ResultsFile { get; set; }
 
+    // Coverage-map command options
+
+    /// <summary>
+    /// Path to source files to analyze for coverage mapping.
+    /// </summary>
+    public string? CoverageMapSourcePath { get; set; }
+
+    /// <summary>
+    /// Path to spec files for coverage mapping.
+    /// </summary>
+    public string? CoverageMapSpecPath { get; set; }
+
+    /// <summary>
+    /// Output format for the coverage-map command: console or json.
+    /// Default: console
+    /// </summary>
+    public CoverageMapFormat CoverageMapFormat { get; set; } = CoverageMapFormat.Console;
+
+    /// <summary>
+    /// Show only uncovered methods (gaps) in coverage-map output.
+    /// </summary>
+    public bool GapsOnly { get; set; }
+
+    /// <summary>
+    /// Filter coverage-map to specific namespaces (comma-separated).
+    /// </summary>
+    public string? CoverageMapNamespaceFilter { get; set; }
+
 
     /// <summary>
     /// Apply default values from a project configuration file.
@@ -500,6 +528,15 @@ public class CliOptions
         WithResults = WithResults,
         ResultsFile = ResultsFile,
         Filter = ToFilterOptions()
+    };
+
+    public CoverageMapOptions ToCoverageMapOptions() => new()
+    {
+        SourcePath = CoverageMapSourcePath ?? Path,
+        SpecPath = CoverageMapSpecPath,
+        Format = CoverageMapFormat,
+        GapsOnly = GapsOnly,
+        NamespaceFilter = CoverageMapNamespaceFilter
     };
 
     #endregion

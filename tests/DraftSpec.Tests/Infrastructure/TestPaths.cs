@@ -40,6 +40,19 @@ public static class TestPaths
     public static string SchemaDir => TempRoot;
 
     /// <summary>
+    /// Gets a cross-platform path for a fake project directory (for tests using /project paths).
+    /// </summary>
+    public static string ProjectDir => Path.Combine(TempRoot, "project");
+
+    /// <summary>
+    /// Builds a cross-platform path within the fake project directory.
+    /// </summary>
+    /// <param name="relativePath">Relative path within project dir (e.g., "bin/Debug/net10.0")</param>
+    /// <returns>Full cross-platform path</returns>
+    public static string Project(string relativePath) =>
+        Path.Combine(ProjectDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
+
+    /// <summary>
     /// Builds a cross-platform path for a coverage file.
     /// </summary>
     /// <param name="fileName">The file name (e.g., "coverage.xml" or "coverage.cobertura.xml")</param>

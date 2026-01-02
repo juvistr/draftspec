@@ -62,14 +62,29 @@ public class ProcessHelperTests
     [Test]
     public async Task Run_WithWorkingDirectory_UsesSpecifiedDirectory()
     {
-        var tempDir = Path.GetTempPath().TrimEnd('/');
+        var tempDir = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-        var result = ProcessHelper.Run("pwd", [], workingDirectory: tempDir);
+        ProcessResult result;
+        if (OperatingSystem.IsWindows())
+        {
+            // On Windows, use 'cd' command in cmd.exe
+            result = ProcessHelper.Run("cmd", ["/c", "cd"], workingDirectory: tempDir);
+        }
+        else
+        {
+            result = ProcessHelper.Run("pwd", [], workingDirectory: tempDir);
+        }
 
         await Assert.That(result.Success).IsTrue();
         var actualPath = result.Output.Trim();
+
+        // Normalize paths for comparison
+        var normalizedActual = Path.GetFullPath(actualPath);
+        var normalizedExpected = Path.GetFullPath(tempDir);
+
         // On macOS, /var is a symlink to /private/var, so either form is valid
-        var matchesExpected = actualPath == tempDir ||
+        var matchesExpected = string.Equals(normalizedActual, normalizedExpected, StringComparison.OrdinalIgnoreCase) ||
+                              string.Equals(actualPath, tempDir, StringComparison.OrdinalIgnoreCase) ||
                               actualPath == $"/private{tempDir}" ||
                               $"/private{actualPath}" == tempDir;
         await Assert.That(matchesExpected).IsTrue();

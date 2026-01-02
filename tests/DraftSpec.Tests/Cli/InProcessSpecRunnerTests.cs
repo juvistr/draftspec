@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using DraftSpec.Cli;
 using DraftSpec.Formatters;
+using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -36,11 +37,12 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        var result = await runner.RunFileAsync("/project/Specs/test.spec.csx");
+        var specPath = TestPaths.Project("Specs/test.spec.csx");
+        var result = await runner.RunFileAsync(specPath);
 
         // Assert
         await Assert.That(result.Success).IsTrue();
-        await Assert.That(result.SpecFile).IsEqualTo("/project/Specs/test.spec.csx");
+        await Assert.That(result.SpecFile).IsEqualTo(specPath);
         await Assert.That(result.Report.Summary.Total).IsEqualTo(3);
         await Assert.That(result.Error).IsNull();
     }
@@ -63,7 +65,7 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        var result = await runner.RunFileAsync("/project/test.spec.csx");
+        var result = await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert
         await Assert.That(result.Success).IsTrue();
@@ -90,7 +92,7 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        var result = await runner.RunFileAsync("/project/test.spec.csx");
+        var result = await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert
         await Assert.That(result.Success).IsFalse();
@@ -122,7 +124,7 @@ public class InProcessSpecRunnerTests
             fileSystem: fileSystem);
 
         // Act
-        var result = await runner.RunFileAsync("/project/test.spec.csx");
+        var result = await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert
         await Assert.That(result.Success).IsFalse();
@@ -183,7 +185,7 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        await runner.RunFileAsync("/project/test.spec.csx");
+        await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert - DSL should be reset at least once (before execution)
         await Assert.That(dslManager.ResetCalls).IsGreaterThanOrEqualTo(1);
@@ -208,7 +210,7 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        await runner.RunFileAsync("/project/test.spec.csx");
+        await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert - DSL should be reset twice (before and after)
         await Assert.That(dslManager.ResetCalls).IsEqualTo(2);
@@ -232,7 +234,7 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        await runner.RunFileAsync("/project/test.spec.csx");
+        await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert - DSL should be reset in finally block even on exception
         await Assert.That(dslManager.ResetCalls).IsGreaterThanOrEqualTo(1);
@@ -256,12 +258,14 @@ public class InProcessSpecRunnerTests
             scriptExecutor: scriptExecutor,
             dslManager: dslManager);
 
+        var specPath = TestPaths.Project("Specs/test.spec.csx");
+
         // Act
-        await runner.RunFileAsync("/project/Specs/test.spec.csx");
+        await runner.RunFileAsync(specPath);
 
         // Assert
         await Assert.That(projectBuilder.BuildProjectsCalls).Count().IsEqualTo(1);
-        await Assert.That(projectBuilder.BuildProjectsCalls[0]).Contains("/project/Specs");
+        await Assert.That(projectBuilder.BuildProjectsCalls[0]).Contains(TestPaths.Project("Specs"));
     }
 
     #endregion
@@ -287,9 +291,9 @@ public class InProcessSpecRunnerTests
 
         var files = new List<string>
         {
-            "/project/test1.spec.csx",
-            "/project/test2.spec.csx",
-            "/project/test3.spec.csx"
+            TestPaths.Project("test1.spec.csx"),
+            TestPaths.Project("test2.spec.csx"),
+            TestPaths.Project("test3.spec.csx")
         };
 
         // Act
@@ -320,8 +324,8 @@ public class InProcessSpecRunnerTests
 
         var files = new List<string>
         {
-            "/project/a.spec.csx",
-            "/project/b.spec.csx"
+            TestPaths.Project("a.spec.csx"),
+            TestPaths.Project("b.spec.csx")
         };
 
         // Act
@@ -351,9 +355,9 @@ public class InProcessSpecRunnerTests
 
         var files = new List<string>
         {
-            "/project/specs/a.spec.csx",
-            "/project/specs/b.spec.csx",
-            "/other/c.spec.csx"
+            TestPaths.Project("specs/a.spec.csx"),
+            TestPaths.Project("specs/b.spec.csx"),
+            TestPaths.Temp("other/c.spec.csx")
         };
 
         // Act
@@ -384,8 +388,8 @@ public class InProcessSpecRunnerTests
 
         var files = new List<string>
         {
-            "/project/a.spec.csx",
-            "/project/b.spec.csx"
+            TestPaths.Project("a.spec.csx"),
+            TestPaths.Project("b.spec.csx")
         };
 
         // Act
@@ -414,9 +418,9 @@ public class InProcessSpecRunnerTests
 
         var files = new List<string>
         {
-            "/project/a.spec.csx",
-            "/project/b.spec.csx",
-            "/project/c.spec.csx"
+            TestPaths.Project("a.spec.csx"),
+            TestPaths.Project("b.spec.csx"),
+            TestPaths.Project("c.spec.csx")
         };
 
         var cts = new CancellationTokenSource();
@@ -451,7 +455,7 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        var result = await runner.RunFileAsync("/project/test.spec.csx");
+        var result = await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert - Should run successfully with filters applied
         await Assert.That(result.Success).IsTrue();
@@ -477,7 +481,7 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        var result = await runner.RunFileAsync("/project/test.spec.csx");
+        var result = await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert
         await Assert.That(result.Success).IsTrue();
@@ -503,7 +507,7 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        var result = await runner.RunFileAsync("/project/test.spec.csx");
+        var result = await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert
         await Assert.That(result.Success).IsTrue();
@@ -529,7 +533,7 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        var result = await runner.RunFileAsync("/project/test.spec.csx");
+        var result = await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert
         await Assert.That(result.Success).IsTrue();
@@ -558,7 +562,7 @@ public class InProcessSpecRunnerTests
             dslManager: dslManager);
 
         // Act
-        var result = await runner.RunFileAsync("/project/test.spec.csx");
+        var result = await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert - All specs should run
         await Assert.That(result.Report.Summary.Total).IsEqualTo(3);
@@ -589,8 +593,8 @@ public class InProcessSpecRunnerTests
         runner.OnBuildStarted += project => capturedProject = project;
 
         // Act
-        projectBuilder.TriggerBuildStarted("/project/test.csproj");
-        await runner.RunFileAsync("/project/test.spec.csx");
+        projectBuilder.TriggerBuildStarted(TestPaths.Project("test.csproj"));
+        await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert
         await Assert.That(capturedProject).IsNotNull();
@@ -619,7 +623,7 @@ public class InProcessSpecRunnerTests
         // Act
         var buildResult = new BuildResult(true, "", "");
         projectBuilder.TriggerBuildCompleted(buildResult);
-        await runner.RunFileAsync("/project/test.spec.csx");
+        await runner.RunFileAsync(TestPaths.Project("test.spec.csx"));
 
         // Assert
         await Assert.That(capturedResult).IsNotNull();

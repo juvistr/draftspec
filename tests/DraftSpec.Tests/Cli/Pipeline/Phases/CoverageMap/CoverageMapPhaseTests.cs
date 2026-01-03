@@ -73,6 +73,28 @@ public class CoverageMapPhaseTests
         await Assert.That(result).IsEqualTo(42);
     }
 
+    [Test]
+    public async Task ExecuteAsync_SourcePathNull_PassesNullToService()
+    {
+        var coverageService = new MockCoverageMapService()
+            .WithMethods(CreateMethodCoverage("Test", CoverageConfidence.High));
+        var specFinder = new MockSpecFinder(TestPaths.Project("test.spec.csx"));
+        var phase = new CoverageMapPhase(coverageService, specFinder);
+        var context = CreateContext();
+        context.Set(ContextKeys.ProjectPath, TestPaths.ProjectDir);
+        // Don't set SourcePath - should pass null to service
+        context.Set<IReadOnlyList<string>>(ContextKeys.SourceFiles, [TestPaths.Project("Service.cs")]);
+
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        await Assert.That(coverageService.ComputeCoverageAsyncCalls).Count().IsEqualTo(1);
+        var call = coverageService.ComputeCoverageAsyncCalls[0];
+        await Assert.That(call.SourcePath).IsNull();
+    }
+
     #endregion
 
     #region No Spec Files Tests

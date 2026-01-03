@@ -103,14 +103,10 @@ public class PathTraversalSecurityTests
         var finder = new SpecFinder(mockFs);
 
         // On Windows, different case should still be within base directory
-        // Should get "No specs found" not SecurityException
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-        {
-            finder.FindSpecs(upperCasePath, baseDir);
-            return Task.CompletedTask;
-        });
+        // Should return empty list (no specs), not throw SecurityException
+        var result = finder.FindSpecs(upperCasePath, baseDir);
 
-        await Assert.That(exception!.Message).Contains("No");
+        await Assert.That(result).IsEmpty();
     }
 
     #endregion

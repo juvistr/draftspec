@@ -76,14 +76,24 @@ public class ServiceCollectionExtensionsTests
 
         // Execute to cover the options converter lambda (e.g., o => o.ToRunOptions())
         // Commands may throw validation errors with default options - that's fine,
-        // we're just verifying the DI wiring invokes the options converter
+        // we're just verifying the DI wiring invokes the options converter.
+        // Use a short timeout to cancel long-running commands (e.g., watch).
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
         try
         {
-            await executor!(new CliOptions { Path = "." }, CancellationToken.None);
+            await executor!(new CliOptions { Path = "." }, cts.Token);
         }
         catch (ArgumentException)
         {
             // Expected for commands that require specific inputs (run, watch, new, etc.)
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected for long-running commands (watch) that get cancelled by timeout
+        }
+        catch (IOException)
+        {
+            // Expected on Windows CI where Console.Clear() fails (no console attached)
         }
 
         // If we get here without a DI resolution error, the wiring is correct

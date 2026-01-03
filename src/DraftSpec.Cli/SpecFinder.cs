@@ -51,14 +51,9 @@ public class SpecFinder : ISpecFinder
 
         if (_fileSystem.DirectoryExists(fullPath))
         {
-            var specs = _fileSystem.GetFiles(fullPath, "*.spec.csx", SearchOption.AllDirectories)
+            return _fileSystem.GetFiles(fullPath, "*.spec.csx", SearchOption.AllDirectories)
                 .OrderBy(f => f)
                 .ToList();
-
-            if (specs.Count == 0)
-                throw new ArgumentException($"No *.spec.csx files found in: {path}");
-
-            return specs;
         }
 
         throw new ArgumentException($"Path not found: {path}");

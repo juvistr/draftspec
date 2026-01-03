@@ -311,12 +311,13 @@ public class CliIntegrationTests
     }
 
     [Test]
-    public async Task SpecFinder_EmptyDirectory_ThrowsArgumentException()
+    public async Task SpecFinder_EmptyDirectory_ReturnsEmptyList()
     {
         var finder = new SpecFinder(new FileSystem());
 
-        await Assert.That(() => finder.FindSpecs(_testDirectory, _testDirectory))
-            .Throws<ArgumentException>();
+        var result = finder.FindSpecs(_testDirectory, _testDirectory);
+
+        await Assert.That(result).IsEmpty();
     }
 
     #endregion

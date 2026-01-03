@@ -1,13 +1,18 @@
+using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
+using DraftSpec.Cli.Pipeline;
+using DraftSpec.Cli.Pipeline.Phases.Common;
+using DraftSpec.Cli.Pipeline.Phases.List;
+using DraftSpec.Cli.Services;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
 /// Tests for ListCommand.
-/// These tests use the real file system for spec discovery.
+/// These are integration tests that verify the full pipeline works correctly.
 /// </summary>
 [NotInParallel]
 public class ListCommandTests
@@ -32,20 +37,37 @@ public class ListCommandTests
             Directory.Delete(_tempDir, recursive: true);
     }
 
-    private ListCommand CreateCommand() => new(_console, _fileSystem);
+    private ListCommand CreateCommand()
+    {
+        // Build the pipeline with real phases
+        var specFinder = new SpecFinder(_fileSystem);
+        var parserFactory = new StaticSpecParserFactory();
+
+        var pipeline = new CommandPipelineBuilder()
+            .Use(new PathResolutionPhase())
+            .Use(new SpecDiscoveryPhase(specFinder))
+            .Use(new SpecParsingPhase(parserFactory))
+            .Use(new FilterApplyPhase())
+            .Use(new ListOutputPhase())
+            .Build();
+
+        return new ListCommand(pipeline, _console, _fileSystem);
+    }
 
     #region Path Validation
 
     [Test]
-    public async Task ExecuteAsync_NonexistentPath_ThrowsArgumentException()
+    public async Task ExecuteAsync_NonexistentPath_ReturnsErrorExitCode()
     {
         var command = CreateCommand();
         // Use a cross-platform path that definitely doesn't exist
         var nonexistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid():N}", "path");
         var options = new ListOptions { Path = nonexistentPath };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("Path not found");
     }
 
     [Test]

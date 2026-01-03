@@ -445,6 +445,353 @@ Files: 4 | Specs: 20 | Errors: 1 | Warnings: 1
 
 ---
 
+### draftspec flaky
+
+Manage flaky test detection and history.
+
+```bash
+draftspec flaky <path> [options]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<path>` | File or directory to analyze. Defaults to current directory (`.`) |
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--show-history` | Show historical pass/fail patterns for specs |
+| `--threshold <n>` | Minimum failures to flag as flaky (default: 2) |
+| `--window <n>` | Number of recent runs to analyze (default: 10) |
+
+**Examples:**
+
+```bash
+# Show flaky specs
+draftspec flaky .
+
+# Show detailed history
+draftspec flaky . --show-history
+
+# Customize detection threshold
+draftspec flaky . --threshold 3 --window 20
+```
+
+---
+
+### draftspec estimate
+
+Estimate test run duration based on historical data.
+
+```bash
+draftspec estimate <path> [options]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<path>` | File or directory to estimate. Defaults to current directory (`.`) |
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--percentile <n>` | Duration percentile to use (default: 95) |
+| `--format <format>` | Output format: `human` (default), `json` |
+
+**Examples:**
+
+```bash
+# Estimate run time
+draftspec estimate .
+
+# Use median (50th percentile)
+draftspec estimate . --percentile 50
+
+# JSON output for tooling
+draftspec estimate . --format json
+```
+
+---
+
+### draftspec cache
+
+Manage the spec compilation and results cache.
+
+```bash
+draftspec cache <subcommand> [options]
+```
+
+**Subcommands:**
+
+| Subcommand | Description |
+|------------|-------------|
+| `clear` | Remove all cached data |
+| `stats` | Show cache statistics |
+| `prune` | Remove stale entries |
+
+**Examples:**
+
+```bash
+# Clear all cached data
+draftspec cache clear
+
+# Show cache statistics
+draftspec cache stats
+
+# Remove stale entries
+draftspec cache prune
+```
+
+---
+
+### draftspec docs
+
+Generate living documentation from spec structure. Uses static parsing to discover specs without executing them.
+
+```bash
+draftspec docs <path> [options]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<path>` | File or directory containing specs. Defaults to current directory (`.`) |
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--format, -f <format>` | Output format: `markdown` (default), `html` |
+| `--context <pattern>` | Filter to specific describe/context blocks |
+| `--with-results` | Include test results from a previous run |
+| `--results-file <file>` | Path to JSON results file (requires `--with-results`) |
+| `--filter-name <pattern>` | Filter specs by name pattern |
+
+**Examples:**
+
+```bash
+# Generate markdown documentation
+draftspec docs .
+
+# Generate HTML documentation
+draftspec docs . --format html
+
+# Filter to specific context
+draftspec docs . --context "UserService"
+
+# Include results from previous run
+draftspec docs . --with-results --results-file results.json
+
+# Filter by spec name
+draftspec docs . --filter-name "should.*create"
+```
+
+**Output:**
+
+The `docs` command produces structured documentation showing your spec hierarchy:
+
+**Markdown format:**
+```markdown
+# Spec Documentation
+
+Generated: 2026-01-03
+
+## UserService
+
+### Authentication
+
+- [✓] validates user credentials
+- [✓] handles invalid passwords
+- [?] supports two-factor auth (pending)
+
+### Authorization
+
+- [✓] checks user permissions
+- [-] enforces rate limits (skipped)
+```
+
+**Use Cases:**
+
+- **Living Documentation**: Keep documentation in sync with tests
+- **Review**: Generate readable spec summaries for non-technical stakeholders
+- **Audit**: Track which specs are pending or skipped
+- **CI/CD**: Generate documentation artifacts alongside test reports
+
+---
+
+### draftspec coverage-map
+
+Analyze spec coverage of source code methods. Uses static parsing to map specs to the source methods they reference.
+
+```bash
+draftspec coverage-map <source-path> [options]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<source-path>` | Path to source files or directory to analyze |
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--spec-path <path>` | Path to spec files (defaults to project root) |
+| `--format, -f <format>` | Output format: `console` (default), `json` |
+| `--gaps-only` | Show only uncovered methods |
+| `--namespace-filter <ns>` | Filter to specific namespaces (comma-separated) |
+
+**Examples:**
+
+```bash
+# Analyze source coverage
+draftspec coverage-map ./src
+
+# Specify spec location
+draftspec coverage-map ./src --spec-path ./specs
+
+# Show only uncovered methods
+draftspec coverage-map ./src --gaps-only
+
+# Filter by namespace
+draftspec coverage-map ./src --namespace-filter "MyApp.Services,MyApp.Models"
+
+# JSON output for tooling
+draftspec coverage-map ./src --format json
+```
+
+**Output:**
+
+**Console format:**
+```
+Coverage Map: src/ → specs/
+
+UserService.cs
+  ✓ CreateUser (3 specs)
+  ✓ UpdateUser (2 specs)
+  ✗ DeleteUser (0 specs) <- UNCOVERED
+  ✓ GetUserById (1 spec)
+
+OrderService.cs
+  ✓ CreateOrder (4 specs)
+  ✗ CancelOrder (0 specs) <- UNCOVERED
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Coverage: 8/10 methods (80%)
+Uncovered: DeleteUser, CancelOrder
+```
+
+**JSON format:**
+```json
+{
+  "sourcePath": "src/",
+  "specPath": "specs/",
+  "methods": [
+    {
+      "name": "CreateUser",
+      "file": "UserService.cs",
+      "namespace": "MyApp.Services",
+      "coveredBy": ["UserService.spec.csx:15", "UserService.spec.csx:23"]
+    }
+  ],
+  "uncoveredMethods": [
+    {"name": "DeleteUser", "file": "UserService.cs", "namespace": "MyApp.Services"}
+  ],
+  "summary": {
+    "totalMethods": 10,
+    "coveredMethods": 8,
+    "coveragePercent": 80
+  }
+}
+```
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success (or no uncovered methods in `--gaps-only` mode) |
+| `1` | Uncovered methods found (in `--gaps-only` mode) |
+
+**Use Cases:**
+
+- **Coverage Gaps**: Identify which methods lack test coverage
+- **CI/CD Enforcement**: Fail builds when coverage drops below threshold
+- **Documentation**: Generate coverage reports for code review
+- **Planning**: Prioritize which code needs more testing
+
+---
+
+### draftspec schema
+
+Output the JSON schema for DraftSpec configuration and output formats.
+
+```bash
+draftspec schema [options]
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `-o, --output <file>` | Write schema to file instead of stdout |
+
+**Examples:**
+
+```bash
+# Output schema to stdout
+draftspec schema
+
+# Write schema to file
+draftspec schema -o list-schema.json
+```
+
+**Output:**
+
+The schema describes the structure of `draftspec list --format json` output:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "specs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "displayName": { "type": "string" },
+          "contextPath": { "type": "array", "items": { "type": "string" } },
+          "relativeSourceFile": { "type": "string" },
+          "lineNumber": { "type": "integer" },
+          "isPending": { "type": "boolean" },
+          "isSkipped": { "type": "boolean" },
+          "isFocused": { "type": "boolean" }
+        }
+      }
+    },
+    "summary": { ... },
+    "errors": { ... }
+  }
+}
+```
+
+**Use Cases:**
+
+- **IDE Integration**: Validate JSON output from `draftspec list`
+- **Tooling**: Build tools that consume DraftSpec output
+- **Documentation**: Reference for JSON output structure
+
+---
+
 ## Output Formats
 
 ### Console (default)

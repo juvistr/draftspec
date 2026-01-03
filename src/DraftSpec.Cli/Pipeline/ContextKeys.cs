@@ -45,4 +45,46 @@ public static class ContextKeys
     /// Type: <c>IReadOnlyList&lt;SpecResult&gt;</c>
     /// </summary>
     public const string RunResults = nameof(RunResults);
+
+    /// <summary>
+    /// Discovered specs after filtering.
+    /// Type: <c>IReadOnlyList&lt;DiscoveredSpec&gt;</c>
+    /// </summary>
+    public const string FilteredSpecs = nameof(FilteredSpecs);
+
+    /// <summary>
+    /// Errors encountered during spec discovery/parsing.
+    /// Type: <c>IReadOnlyList&lt;DiscoveryError&gt;</c>
+    /// </summary>
+    public const string DiscoveryErrors = nameof(DiscoveryErrors);
+
+    /// <summary>
+    /// List command output format.
+    /// Type: <c>ListFormat</c>
+    /// </summary>
+    public const string ListFormat = nameof(ListFormat);
+
+    /// <summary>
+    /// Whether to show line numbers in list output.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string ShowLineNumbers = nameof(ShowLineNumbers);
+
+    /// <summary>
+    /// Show only focused specs filter.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string FocusedOnly = nameof(FocusedOnly);
+
+    /// <summary>
+    /// Show only pending specs filter.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string PendingOnly = nameof(PendingOnly);
+
+    /// <summary>
+    /// Show only skipped specs filter.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string SkippedOnly = nameof(SkippedOnly);
 }

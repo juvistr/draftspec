@@ -5,6 +5,7 @@ using DraftSpec.Cli.Interactive;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Pipeline.Phases.Common;
+using DraftSpec.Cli.Pipeline.Phases.List;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,6 +58,21 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PathResolutionPhase>();
         services.AddSingleton<SpecDiscoveryPhase>();
         services.AddSingleton<SpecParsingPhase>();
+
+        // Pipeline Phases - List
+        services.AddSingleton<FilterApplyPhase>();
+        services.AddSingleton<ListOutputPhase>();
+
+        // Keyed Pipelines - Singleton since phases are singletons and the delegate is stateless
+        services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
+            "list",
+            (sp, _) => new CommandPipelineBuilder()
+                .Use(sp.GetRequiredService<PathResolutionPhase>())
+                .Use(sp.GetRequiredService<SpecDiscoveryPhase>())
+                .Use(sp.GetRequiredService<SpecParsingPhase>())
+                .Use(sp.GetRequiredService<FilterApplyPhase>())
+                .Use(sp.GetRequiredService<ListOutputPhase>())
+                .Build());
 
         // Commands
         services.AddTransient<RunCommand>();

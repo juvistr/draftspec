@@ -44,23 +44,23 @@ public class InitNewRunWorkflowTests : IntegrationTestBase
     }
 
     /// <summary>
-    /// Tests that init followed by run returns error when no specs exist.
-    /// This is the expected behavior - running without specs is an error.
+    /// Tests that init followed by run succeeds with message when no specs exist.
+    /// Having no specs is not an error - just nothing to run.
     /// </summary>
     [Test]
-    public async Task InitThenRun_WithoutNewSpec_ReturnsError()
+    public async Task InitThenRun_WithoutNewSpec_ReturnsSuccessWithMessage()
     {
         // Initialize
         var initResult = await RunCliInDirectoryAsync(_tempDir, "init", ".");
         await Assert.That(initResult.ExitCode).IsEqualTo(0);
 
-        // Run immediately - should report no specs found
+        // Run immediately - should report no specs found but succeed
         var runResult = await RunCliInDirectoryAsync(_tempDir, "run", ".");
 
-        // No specs to run is an error condition
-        await Assert.That(runResult.ExitCode).IsNotEqualTo(0)
-            .Because("running without any specs should return an error");
-        await Assert.That(runResult.Output).Contains("No")
+        // No specs to run is not an error - just exit cleanly with a message
+        await Assert.That(runResult.ExitCode).IsEqualTo(0)
+            .Because("running without specs should succeed with a message");
+        await Assert.That(runResult.Output).Contains("No spec files found")
             .Because("should indicate no specs were found");
     }
 

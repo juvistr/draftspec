@@ -5,6 +5,7 @@ namespace DraftSpec.Cli.Pipeline.Phases.Common;
 /// </summary>
 /// <remarks>
 /// <para><b>Requires:</b> <c>Items[ProjectPath]</c> is set</para>
+/// <para><b>Optional:</b> <c>Items[ExplicitFiles]</c> - if set, uses these files instead of discovering</para>
 /// <para><b>Produces:</b> <c>Items[SpecFiles]</c> - list of spec file paths</para>
 /// <para><b>Short-circuits:</b> If no spec files found (returns 0)</para>
 /// </remarks>
@@ -34,6 +35,27 @@ public class SpecDiscoveryPhase : ICommandPhase
             return Task.FromResult(1);
         }
 
+        // Check for explicit files first (e.g., from validate --files option)
+        var explicitFiles = context.Get<IReadOnlyList<string>>(ContextKeys.ExplicitFiles);
+        if (explicitFiles is { Count: > 0 })
+        {
+            // Resolve and filter explicit files
+            var resolvedFiles = explicitFiles
+                .Select(f => Path.IsPathRooted(f) ? f : Path.Combine(projectPath, f))
+                .Where(f => context.FileSystem.FileExists(f))
+                .ToList();
+
+            if (resolvedFiles.Count == 0)
+            {
+                context.Console.WriteLine("No spec files found.");
+                return Task.FromResult(0);
+            }
+
+            context.Set<IReadOnlyList<string>>(ContextKeys.SpecFiles, resolvedFiles);
+            return pipeline(context, ct);
+        }
+
+        // Otherwise, discover spec files
         IReadOnlyList<string> specFiles;
         try
         {

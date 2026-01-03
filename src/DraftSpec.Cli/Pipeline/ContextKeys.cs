@@ -87,4 +87,60 @@ public static class ContextKeys
     /// Type: <see cref="bool"/>
     /// </summary>
     public const string SkippedOnly = nameof(SkippedOnly);
+
+    #region Docs Command Keys
+
+    /// <summary>
+    /// Docs command output format.
+    /// Type: <c>DocsFormat</c>
+    /// </summary>
+    public const string DocsFormat = nameof(DocsFormat);
+
+    /// <summary>
+    /// Context filter pattern for docs command.
+    /// Type: <see cref="string"/>
+    /// </summary>
+    public const string ContextFilter = nameof(ContextFilter);
+
+    /// <summary>
+    /// Whether to include results in docs output.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string WithResults = nameof(WithResults);
+
+    /// <summary>
+    /// Path to results file for docs command.
+    /// Type: <see cref="string"/>
+    /// </summary>
+    public const string ResultsFile = nameof(ResultsFile);
+
+    #endregion
+
+    #region Validate Command Keys
+
+    /// <summary>
+    /// Explicit list of spec files to validate.
+    /// Type: <c>IReadOnlyList&lt;string&gt;</c>
+    /// </summary>
+    public const string ExplicitFiles = nameof(ExplicitFiles);
+
+    /// <summary>
+    /// Whether to treat warnings as errors.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string Strict = nameof(Strict);
+
+    /// <summary>
+    /// Whether to suppress non-error output.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string Quiet = nameof(Quiet);
+
+    /// <summary>
+    /// Validation results from ValidationPhase.
+    /// Type: <c>IReadOnlyList&lt;FileValidationResult&gt;</c>
+    /// </summary>
+    public const string ValidationResults = nameof(ValidationResults);
+
+    #endregion
 }

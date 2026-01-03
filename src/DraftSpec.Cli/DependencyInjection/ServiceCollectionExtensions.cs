@@ -5,7 +5,9 @@ using DraftSpec.Cli.Interactive;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Pipeline.Phases.Common;
+using DraftSpec.Cli.Pipeline.Phases.Docs;
 using DraftSpec.Cli.Pipeline.Phases.List;
+using DraftSpec.Cli.Pipeline.Phases.Validate;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,6 +65,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<FilterApplyPhase>();
         services.AddSingleton<ListOutputPhase>();
 
+        // Pipeline Phases - Docs
+        services.AddSingleton<DocsOutputPhase>();
+
+        // Pipeline Phases - Validate
+        services.AddSingleton<ValidationPhase>();
+        services.AddSingleton<ValidateOutputPhase>();
+
         // Keyed Pipelines - Singleton since phases are singletons and the delegate is stateless
         services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
             "list",
@@ -72,6 +81,25 @@ public static class ServiceCollectionExtensions
                 .Use(sp.GetRequiredService<SpecParsingPhase>())
                 .Use(sp.GetRequiredService<FilterApplyPhase>())
                 .Use(sp.GetRequiredService<ListOutputPhase>())
+                .Build());
+
+        services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
+            "docs",
+            (sp, _) => new CommandPipelineBuilder()
+                .Use(sp.GetRequiredService<PathResolutionPhase>())
+                .Use(sp.GetRequiredService<SpecDiscoveryPhase>())
+                .Use(sp.GetRequiredService<SpecParsingPhase>())
+                .Use(sp.GetRequiredService<FilterApplyPhase>())
+                .Use(sp.GetRequiredService<DocsOutputPhase>())
+                .Build());
+
+        services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
+            "validate",
+            (sp, _) => new CommandPipelineBuilder()
+                .Use(sp.GetRequiredService<PathResolutionPhase>())
+                .Use(sp.GetRequiredService<SpecDiscoveryPhase>())
+                .Use(sp.GetRequiredService<ValidationPhase>())
+                .Use(sp.GetRequiredService<ValidateOutputPhase>())
                 .Build());
 
         // Commands

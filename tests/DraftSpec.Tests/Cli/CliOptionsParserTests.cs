@@ -1883,4 +1883,50 @@ public class CliOptionsParserTests
     }
 
     #endregion
+
+    #region Interactive Flag
+
+    [Test]
+    public async Task Parse_InteractiveFlag_SetsInteractive()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--interactive"]);
+
+        await Assert.That(options.Interactive).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_InteractiveShortFlag_SetsInteractive()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "-I"]);
+
+        await Assert.That(options.Interactive).IsTrue();
+    }
+
+    [Test]
+    public async Task Parse_InteractiveFlag_AddsToExplicitlySet()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--interactive"]);
+
+        await Assert.That(options.ExplicitlySet).Contains(nameof(options.Interactive));
+    }
+
+    [Test]
+    public async Task Parse_WithoutInteractiveFlag_InteractiveIsFalse()
+    {
+        var options = CliOptionsParser.Parse(["run", "."]);
+
+        await Assert.That(options.Interactive).IsFalse();
+    }
+
+    [Test]
+    public async Task Parse_InteractiveWithOtherFlags_AllFlagsSet()
+    {
+        var options = CliOptionsParser.Parse(["run", ".", "--interactive", "--parallel", "--bail"]);
+
+        await Assert.That(options.Interactive).IsTrue();
+        await Assert.That(options.Parallel).IsTrue();
+        await Assert.That(options.Bail).IsTrue();
+    }
+
+    #endregion
 }

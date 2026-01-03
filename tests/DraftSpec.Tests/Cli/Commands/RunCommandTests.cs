@@ -1070,6 +1070,45 @@ public class RunCommandTests
 
     #endregion
 
+    #region Interactive Mode
+
+    // Note: Tests for interactive selection with actual spec parsing
+    // are in DraftSpec.Cli.IntegrationTests since they require real files.
+
+    [Test]
+    public async Task ExecuteAsync_InteractiveWithoutFlag_DoesNotCallSelector()
+    {
+        var specSelector = new MockSpecSelector().WithSelection("test");
+        var command = CreateCommand(
+            specFiles: ["test.spec.csx"],
+            specSelector: specSelector);
+
+        var options = new RunOptions { Path = ".", Interactive = false };
+        await command.ExecuteAsync(options);
+
+        await Assert.That(specSelector.SelectAsyncCalls).IsEmpty();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_InteractiveNoSpecFiles_ReturnsZeroWithoutCallingSelector()
+    {
+        var console = new MockConsole();
+        var specSelector = new MockSpecSelector().WithSelection("test");
+        var command = CreateCommand(
+            console: console,
+            specFiles: [], // No spec files
+            specSelector: specSelector);
+
+        var options = new RunOptions { Path = ".", Interactive = true };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(specSelector.SelectAsyncCalls).IsEmpty();
+        await Assert.That(console.Output).Contains("No spec files found");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static RunCommand CreateCommand(
@@ -1080,7 +1119,8 @@ public class RunCommandTests
         IEnvironment? environment = null,
         ISpecPartitioner? partitioner = null,
         IGitService? gitService = null,
-        MockSpecHistoryService? historyService = null)
+        MockSpecHistoryService? historyService = null,
+        MockSpecSelector? specSelector = null)
     {
         var specs = specFiles ?? [];
         return new RunCommand(
@@ -1094,7 +1134,7 @@ public class RunCommandTests
             partitioner ?? NullObjects.Partitioner,
             gitService ?? NullObjects.GitService,
             historyService ?? new MockSpecHistoryService(),
-            NullObjects.SpecSelector);
+            specSelector ?? new MockSpecSelector());
     }
 
     #endregion

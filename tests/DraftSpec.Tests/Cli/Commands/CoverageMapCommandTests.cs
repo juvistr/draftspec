@@ -1,890 +1,247 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
+using DraftSpec.Cli.Pipeline;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
-/// Tests for CoverageMapCommand.
-/// These tests use the real file system for source and spec discovery.
+/// Tests for CoverageMapCommand option-to-context wiring.
+/// Phase logic is tested in CoverageMapPhaseTests, SourceDiscoveryPhaseTests, etc.
+/// Service logic is tested in CoverageMapServiceTests.
 /// </summary>
-[NotInParallel]
 public class CoverageMapCommandTests
 {
-    private string _tempDir = null!;
     private MockConsole _console = null!;
-    private RealFileSystem _fileSystem = null!;
+    private MockFileSystem _fileSystem = null!;
+    private CommandContext? _capturedContext;
 
     [Before(Test)]
     public void SetUp()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_coverage_test_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-        // Create a fake project file to stop FindProjectRoot from walking up to protected directories
-        File.WriteAllText(Path.Combine(_tempDir, "Test.csproj"), "<Project/>");
         _console = new MockConsole();
-        _fileSystem = new RealFileSystem();
+        _fileSystem = new MockFileSystem();
+        _capturedContext = null;
     }
 
-    [After(Test)]
-    public void TearDown()
+    private CoverageMapCommand CreateCommand(int pipelineReturnValue = 0)
     {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, recursive: true);
+        return new CoverageMapCommand(MockPipeline, _console, _fileSystem);
+
+        Task<int> MockPipeline(CommandContext context, CancellationToken ct)
+        {
+            _capturedContext = context;
+            return Task.FromResult(pipelineReturnValue);
+        }
     }
 
-    private CoverageMapCommand CreateCommand() => new(_console, _fileSystem);
-
-    #region Path Validation
+    #region Context Wiring Tests
 
     [Test]
-    public async Task ExecuteAsync_NonexistentPath_ReturnsError()
-    {
-        // The command's FindProjectRoot is called before checking path existence.
-        // Create the parent directory but not the child to properly test.
-        var parentDir = Path.Combine(_tempDir, "parent");
-        Directory.CreateDirectory(parentDir);
-        File.WriteAllText(Path.Combine(parentDir, "Parent.csproj"), "<Project/>");
-
-        var command = CreateCommand();
-        var nonexistentPath = Path.Combine(parentDir, "nonexistent");
-        var options = new CoverageMapOptions { SourcePath = nonexistentPath };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Errors).Contains("Source path not found");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_NoCsFiles_ReturnsError()
+    public async Task ExecuteAsync_SetsPathInContext()
     {
         var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = _tempDir };
+        var options = new CoverageMapOptions { SourcePath = "/test/source" };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Errors).Contains("No C# source files found");
+        await Assert.That(_capturedContext!.Path).IsEqualTo("/test/source");
     }
 
     [Test]
-    public async Task ExecuteAsync_NonCsFile_ReturnsError()
+    public async Task ExecuteAsync_SetsSourcePathInContext()
     {
-        // Create a file that's not a .cs file
-        var txtFile = Path.Combine(_tempDir, "readme.txt");
-        File.WriteAllText(txtFile, "This is not a C# file");
-
         var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = txtFile };
+        var options = new CoverageMapOptions { SourcePath = "/test/source" };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Errors).Contains("No C# source files found");
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.SourcePath))
+            .IsEqualTo("/test/source");
     }
 
     [Test]
-    public async Task ExecuteAsync_NonSpecFile_ReturnsError()
+    public async Task ExecuteAsync_SetsSpecPathInContext()
     {
-        // Create source file but point spec path to a non-.spec.csx file
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        var txtFile = Path.Combine(_tempDir, "readme.txt");
-        File.WriteAllText(txtFile, "This is not a spec file");
-
         var command = CreateCommand();
         var options = new CoverageMapOptions
         {
-            SourcePath = _tempDir,
-            SpecPath = txtFile
+            SourcePath = "/test",
+            SpecPath = "/test/specs"
         };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        // Returns error because no spec files found
-        await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Errors).Contains("No spec files found");
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.SpecPath))
+            .IsEqualTo("/test/specs");
     }
 
     [Test]
-    public async Task ExecuteAsync_EmptySpecDirectory_ReturnsError()
+    public async Task ExecuteAsync_SpecPathNull_SetsNullInContext()
     {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        // Create empty spec directory
-        var specDir = Path.Combine(_tempDir, "specs");
-        Directory.CreateDirectory(specDir);
-
         var command = CreateCommand();
         var options = new CoverageMapOptions
         {
-            SourcePath = _tempDir,
-            SpecPath = specDir
+            SourcePath = "/test",
+            SpecPath = null
         };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        // Returns error because no spec files found
-        await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Errors).Contains("No spec files found");
-    }
-
-    #endregion
-
-    #region Source File Discovery
-
-    [Test]
-    public async Task ExecuteAsync_SingleSourceFile_ParsesMethods()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        CreateSpecFile("test.spec.csx", """
-            using static DraftSpec.Dsl;
-            using MyApp;
-
-            describe("UserService", () =>
-            {
-                it("creates user", () =>
-                {
-                    var service = new UserService();
-                    service.CreateUser();
-                });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("CreateUser");
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.SpecPath)).IsNull();
     }
 
     [Test]
-    public async Task ExecuteAsync_NoPublicMethods_ReturnsZeroWithMessage()
+    public async Task ExecuteAsync_SetsFormatInContext_Console()
     {
-        CreateSourceFile("Internal.cs", """
-            namespace MyApp;
-
-            internal class InternalService
-            {
-                private void PrivateMethod() { }
-            }
-            """);
-        CreateSpecFile("test.spec.csx", """
-            using static DraftSpec.Dsl;
-
-            describe("Test", () =>
-            {
-                it("test", () => { });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("No public methods found");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_SkipsGeneratedFiles()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class RealService
-            {
-                public void RealMethod() { }
-            }
-            """);
-        CreateSourceFile("Service.g.cs", """
-            namespace MyApp;
-
-            public class GeneratedService
-            {
-                public void GeneratedMethod() { }
-            }
-            """);
-        CreateSpecFile("test.spec.csx", """
-            using static DraftSpec.Dsl;
-
-            describe("Test", () =>
-            {
-                it("test", () => { });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("RealMethod");
-        await Assert.That(_console.Output).DoesNotContain("GeneratedMethod");
-    }
-
-    #endregion
-
-    #region Spec File Discovery
-
-    [Test]
-    public async Task ExecuteAsync_NoSpecFiles_ReturnsError()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Errors).Contains("No spec files found");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_ExplicitSpecPath_UsesSpecPath()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-
-        var specsDir = Path.Combine(_tempDir, "specs");
-        Directory.CreateDirectory(specsDir);
-        CreateSpecFile("specs/user.spec.csx", """
-            using static DraftSpec.Dsl;
-            using MyApp;
-
-            describe("UserService", () =>
-            {
-                it("creates user", () =>
-                {
-                    new UserService().CreateUser();
-                });
-            });
-            """);
-
         var command = CreateCommand();
         var options = new CoverageMapOptions
         {
-            SourcePath = _tempDir,
-            SpecPath = specsDir
+            SourcePath = "/test",
+            Format = CoverageMapFormat.Console
         };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("CreateUser");
+        await Assert.That(_capturedContext!.Get<CoverageMapFormat>(ContextKeys.CoverageMapFormat))
+            .IsEqualTo(CoverageMapFormat.Console);
     }
 
-    #endregion
-
-    #region Namespace Filter
-
     [Test]
-    public async Task ExecuteAsync_NamespaceFilter_FiltersMethods()
+    public async Task ExecuteAsync_SetsFormatInContext_Json()
     {
-        CreateSourceFile("Services.cs", """
-            namespace MyApp.Services
-            {
-                public class UserService
-                {
-                    public void CreateUser() { }
-                }
-            }
-
-            namespace MyApp.Controllers
-            {
-                public class UserController
-                {
-                    public void Get() { }
-                }
-            }
-            """);
-        CreateSpecFile("test.spec.csx", """
-            using static DraftSpec.Dsl;
-
-            describe("Test", () =>
-            {
-                it("test", () => { });
-            });
-            """);
-
         var command = CreateCommand();
         var options = new CoverageMapOptions
         {
-            SourcePath = _tempDir,
-            NamespaceFilter = "MyApp.Services"
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("CreateUser");
-        await Assert.That(_console.Output).DoesNotContain("UserController");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_NamespaceFilter_NoMatch_ReturnsZeroWithMessage()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp.Services;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        CreateSpecFile("test.spec.csx", """
-            using static DraftSpec.Dsl;
-
-            describe("Test", () =>
-            {
-                it("test", () => { });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions
-        {
-            SourcePath = _tempDir,
-            NamespaceFilter = "Other.Namespace"
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("No methods found matching namespace filter");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_NamespaceFilter_MultipleFilters()
-    {
-        CreateSourceFile("Services.cs", """
-            namespace MyApp.Services
-            {
-                public class UserService { public void CreateUser() { } }
-            }
-            namespace MyApp.Controllers
-            {
-                public class UserController { public void Get() { } }
-            }
-            namespace MyApp.Models
-            {
-                public class User { public void Validate() { } }
-            }
-            """);
-        CreateSpecFile("test.spec.csx", """
-            using static DraftSpec.Dsl;
-
-            describe("Test", () =>
-            {
-                it("test", () => { });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions
-        {
-            SourcePath = _tempDir,
-            NamespaceFilter = "MyApp.Services, MyApp.Controllers"
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("CreateUser");
-        await Assert.That(_console.Output).Contains("Get");
-        await Assert.That(_console.Output).DoesNotContain("Validate");
-    }
-
-    #endregion
-
-    #region Coverage Confidence
-
-    [Test]
-    public async Task ExecuteAsync_DirectMethodCall_ShowsHighConfidence()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        CreateSpecFile("user.spec.csx", """
-            using static DraftSpec.Dsl;
-            using MyApp;
-
-            describe("UserService", () =>
-            {
-                it("creates user", () =>
-                {
-                    var service = new UserService();
-                    service.CreateUser();
-                });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("[HIGH]");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_TypeInstantiation_ShowsMediumConfidence()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        CreateSpecFile("user.spec.csx", """
-            using static DraftSpec.Dsl;
-            using MyApp;
-
-            describe("UserService", () =>
-            {
-                it("has service", () =>
-                {
-                    var service = new UserService();
-                });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("[MEDIUM]");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_NamespaceMatch_ShowsLowConfidence()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp.Services;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        CreateSpecFile("user.spec.csx", """
-            using static DraftSpec.Dsl;
-            using MyApp.Services;
-
-            describe("UserService", () =>
-            {
-                it("does something", () =>
-                {
-                    var x = 1;
-                });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("[LOW]");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_NoMatch_ShowsNoneConfidence()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        CreateSpecFile("unrelated.spec.csx", """
-            using static DraftSpec.Dsl;
-
-            describe("OtherService", () =>
-            {
-                it("does other things", () =>
-                {
-                    var x = 42;
-                });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("[NONE]");
-    }
-
-    #endregion
-
-    #region GapsOnly Mode
-
-    [Test]
-    public async Task ExecuteAsync_GapsOnly_ShowsOnlyUncovered()
-    {
-        // Use completely different namespaces so namespace match doesn't give both LOW confidence
-        CreateSourceFile("CoveredService.cs", """
-            namespace Covered.Namespace;
-
-            public class CoveredService
-            {
-                public void DoWork() { }
-            }
-            """);
-        CreateSourceFile("UncoveredService.cs", """
-            namespace Uncovered.Other.Namespace;
-
-            public class UncoveredService
-            {
-                public void DoSomething() { }
-            }
-            """);
-        CreateSpecFile("covered.spec.csx", """
-            using static DraftSpec.Dsl;
-            using Covered.Namespace;
-
-            describe("CoveredService", () =>
-            {
-                it("does work", () =>
-                {
-                    new CoveredService().DoWork();
-                });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions
-        {
-            SourcePath = _tempDir,
-            GapsOnly = true
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        // Returns 1 because uncovered methods exist in UncoveredService
-        await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Output).Contains("UncoveredService");
-        await Assert.That(_console.Output).Contains("DoSomething");
-        await Assert.That(_console.Output).DoesNotContain("CoveredService");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_GapsOnly_NoGaps_ReturnsZero()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        CreateSpecFile("user.spec.csx", """
-            using static DraftSpec.Dsl;
-            using MyApp;
-
-            describe("UserService", () =>
-            {
-                it("creates user", () =>
-                {
-                    new UserService().CreateUser();
-                });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions
-        {
-            SourcePath = _tempDir,
-            GapsOnly = true
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("No uncovered methods found");
-    }
-
-    #endregion
-
-    #region JSON Format
-
-    [Test]
-    public async Task ExecuteAsync_JsonFormat_ProducesValidJson()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        CreateSpecFile("user.spec.csx", """
-            using static DraftSpec.Dsl;
-            using MyApp;
-
-            describe("UserService", () =>
-            {
-                it("creates user", () =>
-                {
-                    new UserService().CreateUser();
-                });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions
-        {
-            SourcePath = _tempDir,
+            SourcePath = "/test",
             Format = CoverageMapFormat.Json
         };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(0);
-        // JSON output should contain JSON structure
-        await Assert.That(_console.Output).Contains("\"summary\"");
-        await Assert.That(_console.Output).Contains("\"methods\"");
-        await Assert.That(_console.Output).Contains("\"totalMethods\"");
-    }
-
-    #endregion
-
-    #region Summary Display
-
-    [Test]
-    public async Task ExecuteAsync_ShowsCoveragePercentage()
-    {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CoveredMethod() { }
-                public void UncoveredMethod() { }
-            }
-            """);
-        CreateSpecFile("user.spec.csx", """
-            using static DraftSpec.Dsl;
-            using MyApp;
-
-            describe("UserService", () =>
-            {
-                it("calls covered method", () =>
-                {
-                    new UserService().CoveredMethod();
-                });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("Coverage Map:");
-        await Assert.That(_console.Output).Contains("%");
-    }
-
-    #endregion
-
-    #region Single File Paths
-
-    [Test]
-    public async Task ExecuteAsync_SingleSourceFile_ParsesFile()
-    {
-        var sourceFile = CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        CreateSpecFile("test.spec.csx", """
-            using static DraftSpec.Dsl;
-            using MyApp;
-
-            describe("UserService", () =>
-            {
-                it("creates user", () =>
-                {
-                    new UserService().CreateUser();
-                });
-            });
-            """);
-
-        var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = sourceFile };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("CreateUser");
+        await Assert.That(_capturedContext!.Get<CoverageMapFormat>(ContextKeys.CoverageMapFormat))
+            .IsEqualTo(CoverageMapFormat.Json);
     }
 
     [Test]
-    public async Task ExecuteAsync_SingleSpecFile_ParsesFile()
+    public async Task ExecuteAsync_SetsGapsOnlyInContext_True()
     {
-        CreateSourceFile("Service.cs", """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        var specFile = CreateSpecFile("test.spec.csx", """
-            using static DraftSpec.Dsl;
-            using MyApp;
-
-            describe("UserService", () =>
-            {
-                it("creates user", () =>
-                {
-                    new UserService().CreateUser();
-                });
-            });
-            """);
-
         var command = CreateCommand();
         var options = new CoverageMapOptions
         {
-            SourcePath = _tempDir,
-            SpecPath = specFile
+            SourcePath = "/test",
+            GapsOnly = true
         };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("CreateUser");
+        await Assert.That(_capturedContext!.Get<bool>(ContextKeys.GapsOnly)).IsTrue();
     }
-
-    #endregion
-
-    #region Project Root Discovery
 
     [Test]
-    public async Task ExecuteAsync_NoProjectFile_UsesSourceDirectory()
+    public async Task ExecuteAsync_SetsGapsOnlyInContext_False()
     {
-        // Create a subdirectory without any .csproj or .sln
-        var subDir = Path.Combine(_tempDir, "nested", "deep");
-        Directory.CreateDirectory(subDir);
-
-        // Remove the project file we created in SetUp to test the fallback
-        File.Delete(Path.Combine(_tempDir, "Test.csproj"));
-
-        var sourceFile = Path.Combine(subDir, "Service.cs");
-        File.WriteAllText(sourceFile, """
-            namespace MyApp;
-
-            public class UserService
-            {
-                public void CreateUser() { }
-            }
-            """);
-        var specFile = Path.Combine(subDir, "test.spec.csx");
-        File.WriteAllText(specFile, """
-            using static DraftSpec.Dsl;
-            using MyApp;
-
-            describe("UserService", () =>
-            {
-                it("creates user", () =>
-                {
-                    new UserService().CreateUser();
-                });
-            });
-            """);
-
         var command = CreateCommand();
-        var options = new CoverageMapOptions { SourcePath = subDir };
+        var options = new CoverageMapOptions
+        {
+            SourcePath = "/test",
+            GapsOnly = false
+        };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("CreateUser");
+        await Assert.That(_capturedContext!.Get<bool>(ContextKeys.GapsOnly)).IsFalse();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsNamespaceFilterInContext()
+    {
+        var command = CreateCommand();
+        var options = new CoverageMapOptions
+        {
+            SourcePath = "/test",
+            NamespaceFilter = "MyApp.Services"
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.NamespaceFilter))
+            .IsEqualTo("MyApp.Services");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_NamespaceFilterNull_SetsNullInContext()
+    {
+        var command = CreateCommand();
+        var options = new CoverageMapOptions
+        {
+            SourcePath = "/test",
+            NamespaceFilter = null
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.NamespaceFilter)).IsNull();
     }
 
     #endregion
 
-    #region Helper Methods
+    #region Pipeline Execution Tests
 
-    private string CreateSourceFile(string fileName, string content)
+    [Test]
+    public async Task ExecuteAsync_CallsPipeline()
     {
-        var filePath = Path.Combine(_tempDir, fileName);
-        var dir = Path.GetDirectoryName(filePath);
-        if (dir != null && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
-        File.WriteAllText(filePath, content);
-        return filePath;
+        var command = CreateCommand();
+        var options = new CoverageMapOptions { SourcePath = "/test" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext).IsNotNull();
     }
 
-    private string CreateSpecFile(string fileName, string content)
+    [Test]
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_Zero()
     {
-        var filePath = Path.Combine(_tempDir, fileName);
-        var dir = Path.GetDirectoryName(filePath);
-        if (dir != null && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
-        File.WriteAllText(filePath, content);
-        return filePath;
+        var command = CreateCommand(pipelineReturnValue: 0);
+        var options = new CoverageMapOptions { SourcePath = "/test" };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_NonZero()
+    {
+        var command = CreateCommand(pipelineReturnValue: 42);
+        var options = new CoverageMapOptions { SourcePath = "/test" };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(42);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsConsoleInContext()
+    {
+        var command = CreateCommand();
+        var options = new CoverageMapOptions { SourcePath = "/test" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Console).IsSameReferenceAs(_console);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsFileSystemInContext()
+    {
+        var command = CreateCommand();
+        var options = new CoverageMapOptions { SourcePath = "/test" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.FileSystem).IsSameReferenceAs(_fileSystem);
     }
 
     #endregion

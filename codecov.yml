@@ -10,11 +10,20 @@ coverage:
         if_ci_failed: error
         # Post success if no base report exists (new repo/branch)
         if_not_found: success
+        # Post success if no coverage uploads (docs-only PRs skip build)
+        if_no_uploads: success
     patch:
       default:
         target: 90%
         threshold: 2%
         if_not_found: success
+        # Post success if no coverage uploads (docs-only PRs skip build)
+        if_no_uploads: success
+
+# Only track coverage for source code files
+paths:
+  - "src/**"
+  - "tests/**"
 
 # Explicitly enable GitHub Checks (default, but being explicit)
 github_checks: true

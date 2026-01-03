@@ -54,6 +54,31 @@ public class SourceDiscoveryPhaseTests
         await Assert.That(result).IsEqualTo(42);
     }
 
+    [Test]
+    public async Task ExecuteAsync_SourcePathNotSet_DefaultsToProjectPath()
+    {
+        var fileSystem = new MockFileSystem()
+            .AddFile(TestPaths.Project("Service.cs"))
+            .AddDirectory(TestPaths.ProjectDir);
+        var phase = new SourceDiscoveryPhase(fileSystem);
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, fileSystem);
+        // Don't set SourcePath - should default to ProjectPath
+
+        IReadOnlyList<string>? sourceFiles = null;
+
+        await phase.ExecuteAsync(
+            context,
+            (ctx, _) =>
+            {
+                sourceFiles = ctx.Get<IReadOnlyList<string>>(ContextKeys.SourceFiles);
+                return Task.FromResult(0);
+            },
+            CancellationToken.None);
+
+        await Assert.That(sourceFiles).IsNotNull();
+        await Assert.That(sourceFiles!.Count).IsEqualTo(1);
+    }
+
     #endregion
 
     #region No Source Files Tests

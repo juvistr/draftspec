@@ -42,13 +42,6 @@ public sealed class CoverageMapPhase : ICommandPhase
             return 1;
         }
 
-        // If no methods after filtering, report it
-        if (sourceFiles.Count == 0)
-        {
-            context.Console.WriteLine("No public methods found in source files.");
-            return 0;
-        }
-
         // Determine spec path
         var sourcePath = context.Get<string>(ContextKeys.SourcePath);
         var specPath = context.Get<string>(ContextKeys.SpecPath);

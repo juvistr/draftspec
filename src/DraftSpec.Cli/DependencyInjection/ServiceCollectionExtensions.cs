@@ -1,6 +1,7 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.History;
+using DraftSpec.Cli.Interactive;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Services;
@@ -48,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<ISpecHistoryService, SpecHistoryService>();
         services.AddSingleton<IRuntimeEstimator, RuntimeEstimator>();
+        services.AddSingleton<ISpecSelector, InteractiveSpecSelector>();
 
         // Commands
         services.AddTransient<RunCommand>();

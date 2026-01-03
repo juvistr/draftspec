@@ -17,14 +17,14 @@
       "TUnit": {
         "type": "Direct",
         "requested": "[1.*, )",
-        "resolved": "1.7.20",
-        "contentHash": "9+KN/ml22eu2NdhCjiV2MELBfOs1kuEWWHfjO079F2hBXevQ/d0wIrP7Ud3bxwB7YS3HM2V15TKnemjOjDJ8MA==",
+        "resolved": "1.8.1",
+        "contentHash": "rp2tJNgbAFhzUG+iEbJ/Cld8dL/y3UdaDI/E0yuWiOeiWpgVXyFObphv0gCZMM193ggMSFY5of1HMaps0x2yHA==",
         "dependencies": {
           "Microsoft.Testing.Extensions.CodeCoverage": "18.1.0",
           "Microsoft.Testing.Extensions.Telemetry": "2.0.2",
           "Microsoft.Testing.Extensions.TrxReport": "2.0.2",
-          "TUnit.Assertions": "1.7.20",
-          "TUnit.Engine": "1.7.20"
+          "TUnit.Assertions": "1.8.1",
+          "TUnit.Engine": "1.8.1"
         }
       },
       "EnumerableAsyncProcessor": {
@@ -121,24 +121,24 @@
       },
       "TUnit.Assertions": {
         "type": "Transitive",
-        "resolved": "1.7.20",
-        "contentHash": "9kj5RCb033GuUrHUXAaVKsaB7OTH7KPY5mCnBCuj5UjT0AnVvZ19UHeKo39Ybh9ANg3VO9cxzK7dhQpMUKJXYw=="
+        "resolved": "1.8.1",
+        "contentHash": "QbvrVbIGrdezBJGXGs4OrD7SNAHoGEa7/bNkpmm3wY9JmqSVPIFiijjqXv8S/FlgXkaQUXqd4ZAPUSaT2qA6eQ=="
       },
       "TUnit.Core": {
         "type": "Transitive",
-        "resolved": "1.7.20",
-        "contentHash": "5GPWw+vWKL/w/6gMoSUm6n4QfjYW3Yx3HpQOKNlSRwNsHz62i/lChcCa/zcUuReHoE28P2EHEm3Slh0ZaKSt8g=="
+        "resolved": "1.8.1",
+        "contentHash": "KGc/Gz7rEVyeZnrt2bAPvV5TL/BHnJdbIhyWbdNbOzaYnQLbyOfKNS76NdBEz667yTA9CGxK/uYvH9nxmzTbvg=="
       },
       "TUnit.Engine": {
         "type": "Transitive",
-        "resolved": "1.7.20",
-        "contentHash": "9JL60edaLk+H+fvR0WByYgKPywB40zlW2ij9q2bvY79alUbf/5Bza8rat+bwK0Nxve1K+sj7qLbhB/FthPxOJQ==",
+        "resolved": "1.8.1",
+        "contentHash": "DO8oA2cfZmRNWC6UhOHX0YKUN/Oz2l1iH3x2rcwhisV5g9tgtjaNsPa5Ytv51Afnvkw15Y4lXYZVUdKfKleijA==",
         "dependencies": {
           "EnumerableAsyncProcessor": "3.8.4",
           "Microsoft.Testing.Extensions.TrxReport.Abstractions": "2.0.2",
           "Microsoft.Testing.Platform": "2.0.2",
           "Microsoft.Testing.Platform.MSBuild": "2.0.2",
-          "TUnit.Core": "1.7.20"
+          "TUnit.Core": "1.8.1"
         }
       },
       "draftspec": {
@@ -157,7 +157,8 @@
           "DraftSpec.Formatters.Markdown": "[1.0.0, )",
           "DraftSpec.Scripting": "[1.0.0, )",
           "DraftSpec.TestingPlatform": "[1.0.0, )",
-          "Microsoft.Extensions.DependencyInjection": "[10.0.1, )"
+          "Microsoft.Extensions.DependencyInjection": "[10.0.1, )",
+          "Spectre.Console": "[0.54.0, )"
         }
       },
       "draftspec.formatters.abstractions": {
@@ -266,6 +267,12 @@
         "dependencies": {
           "Microsoft.Testing.Platform": "2.0.2"
         }
+      },
+      "Spectre.Console": {
+        "type": "CentralTransitive",
+        "requested": "[0.54.0, )",
+        "resolved": "0.54.0",
+        "contentHash": "StDXCFayfy0yB1xzUHT2tgEpV1/HFTiS4JgsAQS49EYTfMixSwwucaQs/bIOCwXjWwIQTMuxjUIxcB5XsJkFJA=="
       }
     }
   }

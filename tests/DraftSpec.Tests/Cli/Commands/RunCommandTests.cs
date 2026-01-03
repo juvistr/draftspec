@@ -1093,7 +1093,8 @@ public class RunCommandTests
             NullObjects.StatsCollector,
             partitioner ?? NullObjects.Partitioner,
             gitService ?? NullObjects.GitService,
-            historyService ?? new MockSpecHistoryService());
+            historyService ?? new MockSpecHistoryService(),
+            NullObjects.SpecSelector);
     }
 
     #endregion

@@ -362,6 +362,12 @@ public static class CliOptionsParser
                 options.NoHistory = true;
                 options.ExplicitlySet.Add(nameof(CliOptions.NoHistory));
             }
+            // Interactive spec selection
+            else if (arg is "--interactive" or "-I")
+            {
+                options.Interactive = true;
+                options.ExplicitlySet.Add(nameof(CliOptions.Interactive));
+            }
             // Flaky command options
             else if (arg is "--min-changes")
             {

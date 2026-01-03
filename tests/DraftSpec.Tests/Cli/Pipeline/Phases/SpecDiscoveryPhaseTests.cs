@@ -1,6 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Pipeline.Phases.Common;
+using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Pipeline.Phases;
@@ -148,9 +149,9 @@ public class SpecDiscoveryPhaseTests
         var phase = new SpecDiscoveryPhase(specFinder);
         var console = new MockConsole();
         var fileSystem = new MockFileSystem()
-            .AddFile("/project/a.spec.csx")
-            .AddFile("/project/b.spec.csx");
-        var context = CreateContextWithProjectPath("/project", console, fileSystem);
+            .AddFile(TestPaths.Project("a.spec.csx"))
+            .AddFile(TestPaths.Project("b.spec.csx"));
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console, fileSystem);
         context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { "a.spec.csx", "b.spec.csx" });
 
         IReadOnlyList<string>? specFiles = null;
@@ -166,7 +167,7 @@ public class SpecDiscoveryPhaseTests
 
         await Assert.That(specFiles).IsNotNull();
         await Assert.That(specFiles!.Count).IsEqualTo(2);
-        await Assert.That(specFiles).Contains("/project/a.spec.csx");
+        await Assert.That(specFiles).Contains(TestPaths.Project("a.spec.csx"));
     }
 
     [Test]
@@ -176,8 +177,8 @@ public class SpecDiscoveryPhaseTests
         var phase = new SpecDiscoveryPhase(specFinder);
         var console = new MockConsole();
         var fileSystem = new MockFileSystem()
-            .AddFile("/project/specs/test.spec.csx");
-        var context = CreateContextWithProjectPath("/project", console, fileSystem);
+            .AddFile(TestPaths.Project("specs/test.spec.csx"));
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console, fileSystem);
         context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { "specs/test.spec.csx" });
 
         IReadOnlyList<string>? specFiles = null;
@@ -192,19 +193,20 @@ public class SpecDiscoveryPhaseTests
             CancellationToken.None);
 
         await Assert.That(specFiles).IsNotNull();
-        await Assert.That(specFiles![0]).IsEqualTo("/project/specs/test.spec.csx");
+        await Assert.That(specFiles![0]).IsEqualTo(TestPaths.Project("specs/test.spec.csx"));
     }
 
     [Test]
     public async Task ExecuteAsync_ExplicitFiles_AbsolutePath_UsesAsIs()
     {
+        var absolutePath = TestPaths.Temp("absolute/path/test.spec.csx");
         var specFinder = new MockSpecFinder();
         var phase = new SpecDiscoveryPhase(specFinder);
         var console = new MockConsole();
         var fileSystem = new MockFileSystem()
-            .AddFile("/absolute/path/test.spec.csx");
-        var context = CreateContextWithProjectPath("/project", console, fileSystem);
-        context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { "/absolute/path/test.spec.csx" });
+            .AddFile(absolutePath);
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console, fileSystem);
+        context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { absolutePath });
 
         IReadOnlyList<string>? specFiles = null;
 
@@ -218,7 +220,7 @@ public class SpecDiscoveryPhaseTests
             CancellationToken.None);
 
         await Assert.That(specFiles).IsNotNull();
-        await Assert.That(specFiles![0]).IsEqualTo("/absolute/path/test.spec.csx");
+        await Assert.That(specFiles![0]).IsEqualTo(absolutePath);
     }
 
     [Test]
@@ -228,7 +230,7 @@ public class SpecDiscoveryPhaseTests
         var phase = new SpecDiscoveryPhase(specFinder);
         var console = new MockConsole();
         var fileSystem = new MockFileSystem(); // No files exist
-        var context = CreateContextWithProjectPath("/project", console, fileSystem);
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console, fileSystem);
         context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { "nonexistent.spec.csx" });
 
         var result = await phase.ExecuteAsync(
@@ -247,8 +249,8 @@ public class SpecDiscoveryPhaseTests
         var phase = new SpecDiscoveryPhase(specFinder);
         var console = new MockConsole();
         var fileSystem = new MockFileSystem()
-            .AddFile("/project/exists.spec.csx");
-        var context = CreateContextWithProjectPath("/project", console, fileSystem);
+            .AddFile(TestPaths.Project("exists.spec.csx"));
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console, fileSystem);
         context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { "exists.spec.csx", "missing.spec.csx" });
 
         IReadOnlyList<string>? specFiles = null;
@@ -264,16 +266,16 @@ public class SpecDiscoveryPhaseTests
 
         await Assert.That(specFiles).IsNotNull();
         await Assert.That(specFiles!.Count).IsEqualTo(1);
-        await Assert.That(specFiles[0]).IsEqualTo("/project/exists.spec.csx");
+        await Assert.That(specFiles[0]).IsEqualTo(TestPaths.Project("exists.spec.csx"));
     }
 
     [Test]
     public async Task ExecuteAsync_EmptyExplicitFiles_FallsBackToFinder()
     {
-        var specFinder = new MockSpecFinder("/project/discovered.spec.csx");
+        var specFinder = new MockSpecFinder(TestPaths.Project("discovered.spec.csx"));
         var phase = new SpecDiscoveryPhase(specFinder);
         var console = new MockConsole();
-        var context = CreateContextWithProjectPath("/project", console);
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console);
         context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, Array.Empty<string>());
 
         IReadOnlyList<string>? specFiles = null;
@@ -288,7 +290,7 @@ public class SpecDiscoveryPhaseTests
             CancellationToken.None);
 
         await Assert.That(specFiles).IsNotNull();
-        await Assert.That(specFiles![0]).IsEqualTo("/project/discovered.spec.csx");
+        await Assert.That(specFiles![0]).IsEqualTo(TestPaths.Project("discovered.spec.csx"));
     }
 
     #endregion

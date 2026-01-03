@@ -100,14 +100,7 @@ public class RunCommand : ICommand<RunOptions>
             }
         }
 
-        var runner = _runnerFactory.Create(
-            options.Filter.FilterTags,
-            options.Filter.ExcludeTags,
-            filterName,
-            excludeName,
-            options.Filter.FilterContext,
-            options.Filter.ExcludeContext);
-
+        // Find spec files
         var specFiles = _specFinder.FindSpecs(options.Path);
         if (specFiles.Count == 0)
         {
@@ -136,6 +129,15 @@ public class RunCommand : ICommand<RunOptions>
                 ? interactiveResult.FilterPattern
                 : $"({filterName})|({interactiveResult.FilterPattern})";
         }
+
+        // Create runner with final filter values
+        var runner = _runnerFactory.Create(
+            options.Filter.FilterTags,
+            options.Filter.ExcludeTags,
+            filterName,
+            excludeName,
+            options.Filter.FilterContext,
+            options.Filter.ExcludeContext);
 
         // Set up presenter for console output
         var presenter = new ConsolePresenter(_console, watchMode: false);

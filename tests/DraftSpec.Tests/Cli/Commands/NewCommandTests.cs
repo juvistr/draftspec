@@ -1,206 +1,131 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
+using DraftSpec.Cli.Pipeline;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
-/// Tests for NewCommand.
-/// Uses mocked file system for isolation.
+/// Tests for NewCommand option-to-context wiring.
+/// Phase logic is tested in NewSpecOutputPhaseTests.
 /// </summary>
 public class NewCommandTests
 {
-    private string _tempDir = null!;
     private MockConsole _console = null!;
     private MockFileSystem _fileSystem = null!;
+    private CommandContext? _capturedContext;
 
     [Before(Test)]
     public void SetUp()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_test_{Guid.NewGuid():N}");
         _console = new MockConsole();
         _fileSystem = new MockFileSystem();
+        _capturedContext = null;
     }
 
-    private NewCommand CreateCommand() => new(_console, _fileSystem);
-
-    #region Parameter Validation
-
-    [Test]
-    public async Task ExecuteAsync_MissingName_ThrowsArgumentException()
+    private NewCommand CreateCommand(int pipelineReturnValue = 0)
     {
-        _fileSystem.AddDirectory(_tempDir);
-        var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = null };
+        return new NewCommand(MockPipeline, _console, _fileSystem);
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        Task<int> MockPipeline(CommandContext context, CancellationToken ct)
+        {
+            _capturedContext = context;
+            return Task.FromResult(pipelineReturnValue);
+        }
     }
 
-    [Test]
-    public async Task ExecuteAsync_EmptyName_ThrowsArgumentException()
-    {
-        _fileSystem.AddDirectory(_tempDir);
-        var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = "" };
-
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
-    }
+    #region Context Wiring Tests
 
     [Test]
-    public async Task ExecuteAsync_NameWithPathSeparator_ThrowsArgumentException()
+    public async Task ExecuteAsync_SetsPathInContext()
     {
-        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = "foo/bar" };
+        var options = new NewOptions { Path = "/test/path", SpecName = "Test" };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Path).IsEqualTo("/test/path");
     }
 
     [Test]
-    public async Task ExecuteAsync_NameWithBackslash_ThrowsArgumentException()
+    public async Task ExecuteAsync_SetsSpecNameInContext()
     {
-        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = "foo\\bar" };
+        var options = new NewOptions { Path = "/test", SpecName = "MyFeature" };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.SpecName)).IsEqualTo("MyFeature");
     }
 
-    #endregion
-
-    #region Directory Validation
-
     [Test]
-    public async Task ExecuteAsync_NonexistentDirectory_ThrowsArgumentException()
+    public async Task ExecuteAsync_NullSpecName_SetsNullInContext()
     {
-        // Don't add the directory - it won't exist
         var command = CreateCommand();
-        var options = new NewOptions { Path = "/nonexistent/directory", SpecName = "MySpec" };
+        var options = new NewOptions { Path = "/test", SpecName = null };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.SpecName)).IsNull();
     }
 
     #endregion
 
-    #region File Creation
+    #region Pipeline Execution Tests
 
     [Test]
-    public async Task ExecuteAsync_ValidName_CreatesSpecFile()
+    public async Task ExecuteAsync_CallsPipeline()
     {
-        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = "MyFeature" };
+        var options = new NewOptions { Path = "/test", SpecName = "Test" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext).IsNotNull();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_Zero()
+    {
+        var command = CreateCommand(pipelineReturnValue: 0);
+        var options = new NewOptions { Path = "/test", SpecName = "Test" };
 
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        var expectedPath = Path.Combine(_tempDir, "MyFeature.spec.csx");
-        await Assert.That(_fileSystem.WrittenFiles.ContainsKey(expectedPath)).IsTrue();
     }
 
     [Test]
-    public async Task ExecuteAsync_ValidName_SpecFileHasCorrectContent()
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_NonZero()
     {
-        _fileSystem.AddDirectory(_tempDir);
+        var command = CreateCommand(pipelineReturnValue: 1);
+        var options = new NewOptions { Path = "/test", SpecName = "Test" };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsConsoleInContext()
+    {
         var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = "UserService" };
+        var options = new NewOptions { Path = "/test", SpecName = "Test" };
 
         await command.ExecuteAsync(options);
 
-        var specPath = Path.Combine(_tempDir, "UserService.spec.csx");
-        var content = _fileSystem.WrittenFiles[specPath];
-        await Assert.That(content).Contains("#load \"spec_helper.csx\"");
-        await Assert.That(content).Contains("using static DraftSpec.Dsl;");
-        await Assert.That(content).Contains("describe(\"UserService\"");
+        await Assert.That(_capturedContext!.Console).IsSameReferenceAs(_console);
     }
 
     [Test]
-    public async Task ExecuteAsync_ExistingSpec_ThrowsArgumentException()
+    public async Task ExecuteAsync_SetsFileSystemInContext()
     {
-        var specPath = Path.Combine(_tempDir, "Existing.spec.csx");
-        _fileSystem.AddDirectory(_tempDir);
-        _fileSystem.AddFile(specPath, "// existing");
         var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = "Existing" };
-
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
-    }
-
-    [Test]
-    public async Task ExecuteAsync_ExistingSpec_DoesNotOverwrite()
-    {
-        var specPath = Path.Combine(_tempDir, "Existing.spec.csx");
-        _fileSystem.AddDirectory(_tempDir);
-        _fileSystem.AddFile(specPath, "// original content");
-        var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = "Existing" };
-
-        try
-        {
-            await command.ExecuteAsync(options);
-        }
-        catch (ArgumentException)
-        {
-            // Expected
-        }
-
-        // File should still have original content, not overwritten
-        await Assert.That(_fileSystem.WrittenFiles[specPath]).IsEqualTo("// original content");
-    }
-
-    #endregion
-
-    #region Warnings
-
-    [Test]
-    public async Task ExecuteAsync_NoSpecHelper_ShowsWarning()
-    {
-        _fileSystem.AddDirectory(_tempDir);
-        var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = "MySpec" };
+        var options = new NewOptions { Path = "/test", SpecName = "Test" };
 
         await command.ExecuteAsync(options);
 
-        var output = _console.Output;
-        await Assert.That(output).Contains("spec_helper.csx not found");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_WithSpecHelper_NoWarning()
-    {
-        var specHelperPath = Path.Combine(_tempDir, "spec_helper.csx");
-        _fileSystem.AddDirectory(_tempDir);
-        _fileSystem.AddFile(specHelperPath, "// helper");
-        var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = "MySpec" };
-
-        await command.ExecuteAsync(options);
-
-        var output = _console.Output;
-        await Assert.That(output).DoesNotContain("spec_helper.csx not found");
-    }
-
-    #endregion
-
-    #region Console Output
-
-    [Test]
-    public async Task ExecuteAsync_Success_ShowsCreatedMessage()
-    {
-        _fileSystem.AddDirectory(_tempDir);
-        var command = CreateCommand();
-        var options = new NewOptions { Path = _tempDir, SpecName = "MySpec" };
-
-        await command.ExecuteAsync(options);
-
-        var output = _console.Output;
-        await Assert.That(output).Contains("Created MySpec.spec.csx");
+        await Assert.That(_capturedContext!.FileSystem).IsSameReferenceAs(_fileSystem);
     }
 
     #endregion

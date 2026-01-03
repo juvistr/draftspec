@@ -189,4 +189,50 @@ public static class ContextKeys
     public const string CoverageMapResult = nameof(CoverageMapResult);
 
     #endregion
+
+    #region New Command Keys
+
+    /// <summary>
+    /// Name for the new spec file (without extension).
+    /// Type: <see cref="string"/>
+    /// </summary>
+    public const string SpecName = nameof(SpecName);
+
+    #endregion
+
+    #region Init Command Keys
+
+    /// <summary>
+    /// Whether to overwrite existing files.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string Force = nameof(Force);
+
+    /// <summary>
+    /// Discovered project information from .csproj.
+    /// Type: <c>ProjectInfo?</c> (nullable - may not find project)
+    /// </summary>
+    public const string ProjectInfo = nameof(ProjectInfo);
+
+    #endregion
+
+    #region Schema Command Keys
+
+    /// <summary>
+    /// Output file path for schema command.
+    /// Type: <see cref="string"/> (nullable - writes to stdout if null)
+    /// </summary>
+    public const string OutputFile = nameof(OutputFile);
+
+    #endregion
+
+    #region Cache Command Keys
+
+    /// <summary>
+    /// Cache subcommand to execute (stats, clear).
+    /// Type: <see cref="string"/>
+    /// </summary>
+    public const string CacheSubcommand = nameof(CacheSubcommand);
+
+    #endregion
 }

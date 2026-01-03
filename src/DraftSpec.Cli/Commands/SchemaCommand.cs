@@ -1,8 +1,6 @@
-using System.Text.Json;
-using System.Text.Json.Schema;
-using System.Text.Json.Serialization.Metadata;
-using DraftSpec.Cli.Formatters;
 using DraftSpec.Cli.Options;
+using DraftSpec.Cli.Pipeline;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DraftSpec.Cli.Commands;
 
@@ -12,47 +10,31 @@ namespace DraftSpec.Cli.Commands;
 /// </summary>
 public class SchemaCommand : ICommand<SchemaOptions>
 {
+    private readonly Func<CommandContext, CancellationToken, Task<int>> _pipeline;
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
 
-    public SchemaCommand(IConsole console, IFileSystem fileSystem)
+    public SchemaCommand(
+        [FromKeyedServices("schema")] Func<CommandContext, CancellationToken, Task<int>> pipeline,
+        IConsole console,
+        IFileSystem fileSystem)
     {
+        _pipeline = pipeline;
         _console = console;
         _fileSystem = fileSystem;
     }
 
-    public async Task<int> ExecuteAsync(SchemaOptions options, CancellationToken ct = default)
+    public Task<int> ExecuteAsync(SchemaOptions options, CancellationToken ct = default)
     {
-        // Use the same JSON options as JsonListFormatter for consistency
-        var serializerOptions = new JsonSerializerOptions
+        var context = new CommandContext
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+            Path = ".", // Schema command doesn't use path, but required by CommandContext
+            Console = _console,
+            FileSystem = _fileSystem
         };
 
-        var exporterOptions = new JsonSchemaExporterOptions
-        {
-            TreatNullObliviousAsNonNullable = true
-        };
+        context.Set(ContextKeys.OutputFile, options.OutputFile);
 
-        // Generate schema from the root DTO type
-        var schemaNode = serializerOptions.GetJsonSchemaAsNode(typeof(ListOutputDto), exporterOptions);
-
-        // Pretty-print the schema
-        var outputOptions = new JsonSerializerOptions { WriteIndented = true };
-        var schema = schemaNode.ToJsonString(outputOptions);
-
-        // Write to file or stdout
-        if (!string.IsNullOrEmpty(options.OutputFile))
-        {
-            await _fileSystem.WriteAllTextAsync(options.OutputFile, schema, ct);
-            _console.WriteLine($"Schema written to {options.OutputFile}");
-        }
-        else
-        {
-            _console.WriteLine(schema);
-        }
-
-        return 0;
+        return _pipeline(context, ct);
     }
 }

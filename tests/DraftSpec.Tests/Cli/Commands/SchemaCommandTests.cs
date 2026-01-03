@@ -1,151 +1,120 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
-using DraftSpec.Tests.Infrastructure;
+using DraftSpec.Cli.Pipeline;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
-/// Tests for SchemaCommand.
+/// Tests for SchemaCommand option-to-context wiring.
+/// Phase logic is tested in SchemaOutputPhaseTests.
 /// </summary>
 public class SchemaCommandTests
 {
     private MockConsole _console = null!;
     private MockFileSystem _fileSystem = null!;
+    private CommandContext? _capturedContext;
 
     [Before(Test)]
     public void SetUp()
     {
         _console = new MockConsole();
         _fileSystem = new MockFileSystem();
+        _capturedContext = null;
     }
 
-    private SchemaCommand CreateCommand() => new(_console, _fileSystem);
+    private SchemaCommand CreateCommand(int pipelineReturnValue = 0)
+    {
+        return new SchemaCommand(MockPipeline, _console, _fileSystem);
 
-    #region Basic Execution
+        Task<int> MockPipeline(CommandContext context, CancellationToken ct)
+        {
+            _capturedContext = context;
+            return Task.FromResult(pipelineReturnValue);
+        }
+    }
+
+    #region Context Wiring Tests
 
     [Test]
-    public async Task ExecuteAsync_NoOutputFile_WritesToConsole()
+    public async Task ExecuteAsync_SetsOutputFileInContext()
     {
         var command = CreateCommand();
+        var options = new SchemaOptions { OutputFile = "/output/schema.json" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.OutputFile)).IsEqualTo("/output/schema.json");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_NullOutputFile_SetsNullInContext()
+    {
+        var command = CreateCommand();
+        var options = new SchemaOptions { OutputFile = null };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.OutputFile)).IsNull();
+    }
+
+    #endregion
+
+    #region Pipeline Execution Tests
+
+    [Test]
+    public async Task ExecuteAsync_CallsPipeline()
+    {
+        var command = CreateCommand();
+        var options = new SchemaOptions();
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext).IsNotNull();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_Zero()
+    {
+        var command = CreateCommand(pipelineReturnValue: 0);
         var options = new SchemaOptions();
 
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        // JSON schema includes type definitions
-        await Assert.That(_console.Output).Contains("\"type\"");
     }
 
     [Test]
-    public async Task ExecuteAsync_NoOutputFile_OutputsValidJson()
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_NonZero()
     {
-        var command = CreateCommand();
+        var command = CreateCommand(pipelineReturnValue: 1);
         var options = new SchemaOptions();
-
-        await command.ExecuteAsync(options);
-
-        // Should be valid JSON with schema structure
-        await Assert.That(_console.Output).Contains("{");
-        await Assert.That(_console.Output).Contains("}");
-        await Assert.That(_console.Output).Contains("type");
-    }
-
-    #endregion
-
-    #region Output to File
-
-    [Test]
-    public async Task ExecuteAsync_WithOutputFile_WritesToFile()
-    {
-        var schemaPath = TestPaths.Temp("schema.json");
-        var command = CreateCommand();
-        var options = new SchemaOptions { OutputFile = schemaPath };
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_fileSystem.WrittenFiles.ContainsKey(schemaPath)).IsTrue();
+        await Assert.That(result).IsEqualTo(1);
     }
 
     [Test]
-    public async Task ExecuteAsync_WithOutputFile_FileContainsSchema()
-    {
-        var schemaPath = TestPaths.Temp("schema.json");
-        var command = CreateCommand();
-        var options = new SchemaOptions { OutputFile = schemaPath };
-
-        await command.ExecuteAsync(options);
-
-        var content = _fileSystem.WrittenFiles[schemaPath];
-        // JSON schema includes type definitions and required properties
-        await Assert.That(content).Contains("\"type\"");
-        await Assert.That(content).Contains("\"required\"");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_WithOutputFile_ShowsSuccessMessage()
-    {
-        var schemaPath = TestPaths.Temp("schema.json");
-        var command = CreateCommand();
-        var options = new SchemaOptions { OutputFile = schemaPath };
-
-        await command.ExecuteAsync(options);
-
-        await Assert.That(_console.Output).Contains($"Schema written to {schemaPath}");
-    }
-
-    #endregion
-
-    #region Schema Content
-
-    [Test]
-    public async Task ExecuteAsync_SchemaIncludesSpecsProperty()
+    public async Task ExecuteAsync_SetsConsoleInContext()
     {
         var command = CreateCommand();
         var options = new SchemaOptions();
 
         await command.ExecuteAsync(options);
 
-        // ListOutputDto has a 'specs' array property
-        await Assert.That(_console.Output).Contains("specs");
+        await Assert.That(_capturedContext!.Console).IsSameReferenceAs(_console);
     }
 
     [Test]
-    public async Task ExecuteAsync_SchemaIncludesSummaryProperty()
+    public async Task ExecuteAsync_SetsFileSystemInContext()
     {
         var command = CreateCommand();
         var options = new SchemaOptions();
 
         await command.ExecuteAsync(options);
 
-        // ListOutputDto has a 'summary' property
-        await Assert.That(_console.Output).Contains("summary");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_SchemaIsPrettyPrinted()
-    {
-        var command = CreateCommand();
-        var options = new SchemaOptions();
-
-        await command.ExecuteAsync(options);
-
-        // Pretty-printed JSON has indentation (newlines with spaces)
-        await Assert.That(_console.Output).Contains("\n  ");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_SchemaUsesCamelCase()
-    {
-        var command = CreateCommand();
-        var options = new SchemaOptions();
-
-        await command.ExecuteAsync(options);
-
-        // Properties should be camelCase, not PascalCase
-        await Assert.That(_console.Output).Contains("\"specs\"");
-        await Assert.That(_console.Output).DoesNotContain("\"Specs\"");
+        await Assert.That(_capturedContext!.FileSystem).IsSameReferenceAs(_fileSystem);
     }
 
     #endregion

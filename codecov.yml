@@ -5,8 +5,7 @@ coverage:
   status:
     project:
       default:
-        target: 90%
-        threshold: 1%
+        target: 95%
         if_ci_failed: error
         # Post success if no base report exists (new repo/branch)
         if_not_found: success
@@ -14,8 +13,7 @@ coverage:
         if_no_uploads: success
     patch:
       default:
-        target: 90%
-        threshold: 2%
+        target: 95%
         if_not_found: success
         # Post success if no coverage uploads (docs-only PRs skip build)
         if_no_uploads: success

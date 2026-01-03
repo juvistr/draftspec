@@ -1,6 +1,10 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
+using DraftSpec.Cli.Pipeline;
+using DraftSpec.Cli.Pipeline.Phases.Common;
+using DraftSpec.Cli.Pipeline.Phases.Validate;
+using DraftSpec.Cli.Services;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
@@ -32,20 +36,36 @@ public class ValidateCommandTests
             Directory.Delete(_tempDir, recursive: true);
     }
 
-    private ValidateCommand CreateCommand() => new(_console, _fileSystem);
+    private ValidateCommand CreateCommand()
+    {
+        // Build the pipeline with real phases
+        var specFinder = new SpecFinder(_fileSystem);
+        var parserFactory = new StaticSpecParserFactory();
+
+        var pipeline = new CommandPipelineBuilder()
+            .Use(new PathResolutionPhase())
+            .Use(new SpecDiscoveryPhase(specFinder))
+            .Use(new ValidationPhase(parserFactory))
+            .Use(new ValidateOutputPhase())
+            .Build();
+
+        return new ValidateCommand(pipeline, _console, _fileSystem);
+    }
 
     #region Path Validation
 
     [Test]
-    public async Task ExecuteAsync_NonexistentPath_ThrowsArgumentException()
+    public async Task ExecuteAsync_NonexistentPath_ReturnsError()
     {
         var command = CreateCommand();
         // Use a cross-platform path that definitely doesn't exist
         var nonexistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid():N}", "path");
         var options = new ValidateOptions { Path = nonexistentPath };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("Path not found");
     }
 
     [Test]
@@ -56,7 +76,7 @@ public class ValidateCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitSuccess);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
         await Assert.That(_console.Output).Contains("No spec files found");
     }
 
@@ -78,7 +98,7 @@ public class ValidateCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitSuccess);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
         await Assert.That(_console.Output).Contains("\u2713"); // checkmark
         await Assert.That(_console.Output).Contains("valid.spec.csx");
     }
@@ -101,7 +121,7 @@ public class ValidateCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitSuccess);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
         await Assert.That(_console.Output).Contains("math.spec.csx");
         await Assert.That(_console.Output).Contains("string.spec.csx");
     }
@@ -126,7 +146,7 @@ public class ValidateCommandTests
         var result = await command.ExecuteAsync(options);
 
         // Warnings don't cause failure by default
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitSuccess);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
     }
 
     [Test]
@@ -143,7 +163,7 @@ public class ValidateCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitWarnings);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitWarnings);
     }
 
     #endregion
@@ -164,7 +184,7 @@ public class ValidateCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitErrors);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitErrors);
         await Assert.That(_console.Errors).Contains("missing description");
     }
 
@@ -185,7 +205,7 @@ public class ValidateCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitSuccess);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
         // In quiet mode, valid files shouldn't produce output
         await Assert.That(_console.Output).DoesNotContain("\u2713");
     }
@@ -204,7 +224,7 @@ public class ValidateCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitErrors);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitErrors);
         // Errors should still be shown even in quiet mode
         await Assert.That(_console.Errors).Contains("missing.spec.csx");
     }
@@ -236,7 +256,7 @@ public class ValidateCommandTests
         var result = await command.ExecuteAsync(options);
 
         // Only good.spec.csx is validated, bad.spec.csx is ignored
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitSuccess);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
         await Assert.That(_console.Output).Contains("good.spec.csx");
         await Assert.That(_console.Output).DoesNotContain("bad.spec.csx");
     }
@@ -268,7 +288,7 @@ public class ValidateCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitSuccess);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
         await Assert.That(_console.Output).Contains("a.spec.csx");
         await Assert.That(_console.Output).Contains("b.spec.csx");
         await Assert.That(_console.Output).DoesNotContain("c.spec.csx");
@@ -291,7 +311,7 @@ public class ValidateCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitSuccess);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
         await Assert.That(_console.Output).Contains("exists.spec.csx");
     }
 
@@ -313,7 +333,7 @@ public class ValidateCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateCommand.ExitSuccess);
+        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
         await Assert.That(_console.Output).Contains("Files:");
         await Assert.That(_console.Output).Contains("Specs:");
     }

@@ -1,6 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Pipeline.Phases.Common;
+using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Pipeline.Phases;
@@ -139,21 +140,179 @@ public class SpecDiscoveryPhaseTests
 
     #endregion
 
+    #region ExplicitFiles Tests
+
+    [Test]
+    public async Task ExecuteAsync_ExplicitFiles_UsesExplicitFilesInsteadOfFinder()
+    {
+        var specFinder = new MockSpecFinder("/other/should-not-be-called.spec.csx");
+        var phase = new SpecDiscoveryPhase(specFinder);
+        var console = new MockConsole();
+        var fileSystem = new MockFileSystem()
+            .AddFile(TestPaths.Project("a.spec.csx"))
+            .AddFile(TestPaths.Project("b.spec.csx"));
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console, fileSystem);
+        context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { "a.spec.csx", "b.spec.csx" });
+
+        IReadOnlyList<string>? specFiles = null;
+
+        await phase.ExecuteAsync(
+            context,
+            (ctx, _) =>
+            {
+                specFiles = ctx.Get<IReadOnlyList<string>>(ContextKeys.SpecFiles);
+                return Task.FromResult(0);
+            },
+            CancellationToken.None);
+
+        await Assert.That(specFiles).IsNotNull();
+        await Assert.That(specFiles!.Count).IsEqualTo(2);
+        await Assert.That(specFiles).Contains(TestPaths.Project("a.spec.csx"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ExplicitFiles_RelativePath_CombinesWithProjectPath()
+    {
+        var specFinder = new MockSpecFinder();
+        var phase = new SpecDiscoveryPhase(specFinder);
+        var console = new MockConsole();
+        var fileSystem = new MockFileSystem()
+            .AddFile(TestPaths.Project("specs/test.spec.csx"));
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console, fileSystem);
+        context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { "specs/test.spec.csx" });
+
+        IReadOnlyList<string>? specFiles = null;
+
+        await phase.ExecuteAsync(
+            context,
+            (ctx, _) =>
+            {
+                specFiles = ctx.Get<IReadOnlyList<string>>(ContextKeys.SpecFiles);
+                return Task.FromResult(0);
+            },
+            CancellationToken.None);
+
+        await Assert.That(specFiles).IsNotNull();
+        await Assert.That(specFiles![0]).IsEqualTo(TestPaths.Project("specs/test.spec.csx"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ExplicitFiles_AbsolutePath_UsesAsIs()
+    {
+        var absolutePath = TestPaths.Temp("absolute/path/test.spec.csx");
+        var specFinder = new MockSpecFinder();
+        var phase = new SpecDiscoveryPhase(specFinder);
+        var console = new MockConsole();
+        var fileSystem = new MockFileSystem()
+            .AddFile(absolutePath);
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console, fileSystem);
+        context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { absolutePath });
+
+        IReadOnlyList<string>? specFiles = null;
+
+        await phase.ExecuteAsync(
+            context,
+            (ctx, _) =>
+            {
+                specFiles = ctx.Get<IReadOnlyList<string>>(ContextKeys.SpecFiles);
+                return Task.FromResult(0);
+            },
+            CancellationToken.None);
+
+        await Assert.That(specFiles).IsNotNull();
+        await Assert.That(specFiles![0]).IsEqualTo(absolutePath);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ExplicitFiles_AllNonexistent_ReturnsZero()
+    {
+        var specFinder = new MockSpecFinder();
+        var phase = new SpecDiscoveryPhase(specFinder);
+        var console = new MockConsole();
+        var fileSystem = new MockFileSystem(); // No files exist
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console, fileSystem);
+        context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { "nonexistent.spec.csx" });
+
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(99), // Should not be called
+            CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("No spec files found");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ExplicitFiles_FiltersMissing_IncludesExisting()
+    {
+        var specFinder = new MockSpecFinder();
+        var phase = new SpecDiscoveryPhase(specFinder);
+        var console = new MockConsole();
+        var fileSystem = new MockFileSystem()
+            .AddFile(TestPaths.Project("exists.spec.csx"));
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console, fileSystem);
+        context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, new[] { "exists.spec.csx", "missing.spec.csx" });
+
+        IReadOnlyList<string>? specFiles = null;
+
+        await phase.ExecuteAsync(
+            context,
+            (ctx, _) =>
+            {
+                specFiles = ctx.Get<IReadOnlyList<string>>(ContextKeys.SpecFiles);
+                return Task.FromResult(0);
+            },
+            CancellationToken.None);
+
+        await Assert.That(specFiles).IsNotNull();
+        await Assert.That(specFiles!.Count).IsEqualTo(1);
+        await Assert.That(specFiles[0]).IsEqualTo(TestPaths.Project("exists.spec.csx"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_EmptyExplicitFiles_FallsBackToFinder()
+    {
+        var specFinder = new MockSpecFinder(TestPaths.Project("discovered.spec.csx"));
+        var phase = new SpecDiscoveryPhase(specFinder);
+        var console = new MockConsole();
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, console);
+        context.Set<IReadOnlyList<string>>(ContextKeys.ExplicitFiles, Array.Empty<string>());
+
+        IReadOnlyList<string>? specFiles = null;
+
+        await phase.ExecuteAsync(
+            context,
+            (ctx, _) =>
+            {
+                specFiles = ctx.Get<IReadOnlyList<string>>(ContextKeys.SpecFiles);
+                return Task.FromResult(0);
+            },
+            CancellationToken.None);
+
+        await Assert.That(specFiles).IsNotNull();
+        await Assert.That(specFiles![0]).IsEqualTo(TestPaths.Project("discovered.spec.csx"));
+    }
+
+    #endregion
+
     #region Helper Methods
 
-    private static CommandContext CreateContext(MockConsole? console = null)
+    private static CommandContext CreateContext(MockConsole? console = null, MockFileSystem? fileSystem = null)
     {
         return new CommandContext
         {
             Path = "/test",
             Console = console ?? new MockConsole(),
-            FileSystem = new MockFileSystem()
+            FileSystem = fileSystem ?? new MockFileSystem()
         };
     }
 
-    private static CommandContext CreateContextWithProjectPath(string projectPath, MockConsole? console = null)
+    private static CommandContext CreateContextWithProjectPath(
+        string projectPath,
+        MockConsole? console = null,
+        MockFileSystem? fileSystem = null)
     {
-        var context = CreateContext(console);
+        var context = CreateContext(console, fileSystem);
         context.Set<string>(ContextKeys.ProjectPath, projectPath);
         return context;
     }

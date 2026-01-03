@@ -10,6 +10,9 @@ public class MockStaticSpecParserFactory : IStaticSpecParserFactory
 {
     private readonly MockStaticSpecParser _mockParser;
     private Exception? _createException;
+    private int _specCount;
+    private string[]? _defaultWarnings;
+    private Exception? _parseException;
 
     /// <summary>
     /// Tracks calls to <see cref="Create"/>.
@@ -46,6 +49,33 @@ public class MockStaticSpecParserFactory : IStaticSpecParserFactory
         return this;
     }
 
+    /// <summary>
+    /// Configure the default number of specs to return for any file.
+    /// </summary>
+    public MockStaticSpecParserFactory WithSpecCount(int count)
+    {
+        _specCount = count;
+        return this;
+    }
+
+    /// <summary>
+    /// Configure default warnings to return for any file.
+    /// </summary>
+    public MockStaticSpecParserFactory WithWarnings(params string[] warnings)
+    {
+        _defaultWarnings = warnings;
+        return this;
+    }
+
+    /// <summary>
+    /// Configure the parser to throw on any parse.
+    /// </summary>
+    public MockStaticSpecParserFactory ThrowsOnParse(Exception exception)
+    {
+        _parseException = exception;
+        return this;
+    }
+
     /// <inheritdoc />
     public IStaticSpecParser Create(string baseDirectory, bool useCache = true)
     {
@@ -56,6 +86,53 @@ public class MockStaticSpecParserFactory : IStaticSpecParserFactory
             throw _createException;
         }
 
+        // Configure the mock parser with defaults if set
+        if (_specCount > 0 || _defaultWarnings != null || _parseException != null)
+        {
+            return new ConfiguredMockParser(_specCount, _defaultWarnings, _parseException);
+        }
+
         return _mockParser;
+    }
+
+    /// <summary>
+    /// A mock parser that returns configured defaults for any file.
+    /// </summary>
+    private class ConfiguredMockParser : IStaticSpecParser
+    {
+        private readonly int _specCount;
+        private readonly string[]? _warnings;
+        private readonly Exception? _exception;
+
+        public ConfiguredMockParser(int specCount, string[]? warnings, Exception? exception)
+        {
+            _specCount = specCount;
+            _warnings = warnings;
+            _exception = exception;
+        }
+
+        public Task<StaticParseResult> ParseFileAsync(string csxFilePath, CancellationToken cancellationToken = default)
+        {
+            if (_exception != null)
+            {
+                throw _exception;
+            }
+
+            var specs = Enumerable.Range(1, _specCount)
+                .Select(i => new StaticSpec
+                {
+                    Description = $"spec{i}",
+                    ContextPath = ["Context"],
+                    LineNumber = i,
+                    Type = StaticSpecType.Regular
+                })
+                .ToList();
+
+            return Task.FromResult(new StaticParseResult
+            {
+                Specs = specs,
+                Warnings = _warnings ?? []
+            });
+        }
     }
 }

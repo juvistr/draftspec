@@ -209,6 +209,26 @@ await Assert.That(discoverer.DiscoverAsyncCalls).HasCount().EqualTo(1);
 
 Before creating a new mock, check `Infrastructure/Mocks/` for existing implementations.
 
+### Cross-Platform Paths in Tests
+
+**IMPORTANT**: Use `TestPaths` helper for file paths in tests to ensure they work on Windows, macOS, and Linux.
+
+```csharp
+using DraftSpec.Tests.Infrastructure;
+
+// Instead of: "/project/specs/test.spec.csx" (fails on Windows)
+var path = TestPaths.Project("specs/test.spec.csx");
+
+// Available helpers:
+TestPaths.ProjectDir          // Cross-platform fake project directory
+TestPaths.Project("file.csx") // Path within project dir
+TestPaths.Spec("test.csx")    // Path within specs dir
+TestPaths.Temp("file.txt")    // Path within temp dir
+TestPaths.Coverage("cov.xml") // Path within coverage dir
+```
+
+The helper lives in `tests/DraftSpec.Tests/Infrastructure/TestPaths.cs`.
+
 ### Code Coverage
 
 **Target near-100% coverage on new code.** Before opening a PR:

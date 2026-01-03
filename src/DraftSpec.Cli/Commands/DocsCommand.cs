@@ -1,215 +1,45 @@
-using System.Text.Json;
-using DraftSpec.Cli.Formatters;
 using DraftSpec.Cli.Options;
-using DraftSpec.Cli.Options.Enums;
-using DraftSpec.Cli.Services;
-using DraftSpec.Formatters;
-using DraftSpec.Formatters.Abstractions;
-using DraftSpec.TestingPlatform;
+using DraftSpec.Cli.Pipeline;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DraftSpec.Cli.Commands;
 
 /// <summary>
 /// Generates living documentation from spec structure.
-/// Uses static parsing to discover spec structure from CSX files.
+/// Uses the pipeline pattern for consistent behavior with other commands.
 /// </summary>
 public class DocsCommand : ICommand<DocsOptions>
 {
+    private readonly Func<CommandContext, CancellationToken, Task<int>> _pipeline;
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
 
-    public DocsCommand(IConsole console, IFileSystem fileSystem)
+    public DocsCommand(
+        [FromKeyedServices("docs")] Func<CommandContext, CancellationToken, Task<int>> pipeline,
+        IConsole console,
+        IFileSystem fileSystem)
     {
+        _pipeline = pipeline;
         _console = console;
         _fileSystem = fileSystem;
     }
 
-    public async Task<int> ExecuteAsync(DocsOptions options, CancellationToken ct = default)
+    public Task<int> ExecuteAsync(DocsOptions options, CancellationToken ct = default)
     {
-        // 1. Resolve path
-        var projectPath = Path.GetFullPath(options.Path);
-
-        if (!_fileSystem.DirectoryExists(projectPath) && !_fileSystem.FileExists(projectPath))
-            throw new ArgumentException($"Path not found: {projectPath}");
-
-        // 2. Find spec files
-        var specFiles = GetSpecFiles(projectPath);
-
-        if (specFiles.Count == 0)
+        var context = new CommandContext
         {
-            _console.WriteLine("No spec files found.");
-            return 0;
-        }
-
-        // 3. Use static parser to discover specs (no execution)
-        var parser = new StaticSpecParser(projectPath, useCache: true);
-        var allSpecs = new List<DiscoveredSpec>();
-
-        foreach (var specFile in specFiles)
-        {
-            var result = await parser.ParseFileAsync(specFile, ct);
-            var relativePath = Path.GetRelativePath(projectPath, specFile);
-
-            foreach (var staticSpec in result.Specs)
-            {
-                var id = GenerateId(relativePath, staticSpec.ContextPath, staticSpec.Description);
-                var displayName = GenerateDisplayName(staticSpec.ContextPath, staticSpec.Description);
-
-                allSpecs.Add(new DiscoveredSpec
-                {
-                    Id = id,
-                    Description = staticSpec.Description,
-                    DisplayName = displayName,
-                    ContextPath = staticSpec.ContextPath,
-                    SourceFile = specFile,
-                    RelativeSourceFile = relativePath,
-                    LineNumber = staticSpec.LineNumber,
-                    IsPending = staticSpec.IsPending,
-                    IsSkipped = staticSpec.Type == StaticSpecType.Skipped,
-                    IsFocused = staticSpec.Type == StaticSpecType.Focused,
-                    Tags = []
-                });
-            }
-        }
-
-        // 4. Apply filters
-        var filteredSpecs = ApplyFilters(allSpecs, options);
-
-        // 5. Load results if --with-results
-        IReadOnlyDictionary<string, string>? results = null;
-        if (options.WithResults)
-        {
-            results = await LoadResultsAsync(options.ResultsFile, ct);
-        }
-
-        // 6. Format output
-        var formatter = CreateFormatter(options.Format);
-        var metadata = new DocsMetadata(
-            DateTime.UtcNow,
-            Path.GetRelativePath(Environment.CurrentDirectory, projectPath),
-            results);
-        var output = formatter.Format(filteredSpecs, metadata);
-
-        // 7. Write output
-        _console.WriteLine(output);
-
-        return 0;
-    }
-
-    private List<string> GetSpecFiles(string path)
-    {
-        if (_fileSystem.FileExists(path) && path.EndsWith(".spec.csx", StringComparison.OrdinalIgnoreCase))
-        {
-            return [path];
-        }
-
-        if (_fileSystem.DirectoryExists(path))
-        {
-            return _fileSystem.EnumerateFiles(path, "*.spec.csx", SearchOption.AllDirectories).ToList();
-        }
-
-        return [];
-    }
-
-    private static string GenerateId(string relativePath, IReadOnlyList<string> contextPath, string description)
-    {
-        var path = string.Join("/", contextPath);
-        return $"{relativePath}:{path}/{description}";
-    }
-
-    private static string GenerateDisplayName(IReadOnlyList<string> contextPath, string description)
-    {
-        if (contextPath.Count == 0)
-            return description;
-
-        return string.Join(" > ", contextPath) + " > " + description;
-    }
-
-    private static IReadOnlyList<DiscoveredSpec> ApplyFilters(
-        IReadOnlyList<DiscoveredSpec> specs,
-        DocsOptions options)
-    {
-        var filtered = specs.AsEnumerable();
-
-        // Context filter
-        if (!string.IsNullOrEmpty(options.Context))
-        {
-            var matcher = PatternMatcher.Create(options.Context);
-            filtered = filtered.Where(s =>
-                s.ContextPath.Any(c => matcher.Matches(c)) ||
-                matcher.Matches(s.DisplayName));
-        }
-
-        // Pattern filter on name
-        if (!string.IsNullOrEmpty(options.Filter.FilterName))
-        {
-            var matcher = PatternMatcher.Create(options.Filter.FilterName);
-            filtered = filtered.Where(s => matcher.Matches(s.DisplayName));
-        }
-
-        return filtered.ToList();
-    }
-
-    private async Task<IReadOnlyDictionary<string, string>?> LoadResultsAsync(string? resultsFile, CancellationToken ct)
-    {
-        if (string.IsNullOrEmpty(resultsFile))
-        {
-            _console.WriteError("--with-results requires --results-file to specify the JSON results file.");
-            return null;
-        }
-
-        if (!_fileSystem.FileExists(resultsFile))
-        {
-            _console.WriteError($"Results file not found: {resultsFile}");
-            return null;
-        }
-
-        try
-        {
-            var json = await File.ReadAllTextAsync(resultsFile, ct);
-            var report = SpecReport.FromJson(json);
-
-            // Flatten results to dictionary of ID -> status
-            var results = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            FlattenResults(report.Contexts, [], results);
-            return results;
-        }
-        catch (Exception ex)
-        {
-            _console.WriteError($"Failed to parse results file: {ex.Message}");
-            return null;
-        }
-    }
-
-    private static void FlattenResults(
-        IList<SpecContextReport> contexts,
-        List<string> path,
-        Dictionary<string, string> results)
-    {
-        foreach (var context in contexts)
-        {
-            path.Add(context.Description);
-
-            foreach (var spec in context.Specs)
-            {
-                // Generate ID matching the format used in discovery
-                var contextPath = string.Join("/", path);
-                var id = $":{contextPath}/{spec.Description}";
-                results[id] = spec.Status;
-            }
-
-            FlattenResults(context.Contexts, path, results);
-            path.RemoveAt(path.Count - 1);
-        }
-    }
-
-    private static IDocsFormatter CreateFormatter(DocsFormat format)
-    {
-        return format switch
-        {
-            DocsFormat.Markdown => new MarkdownDocsFormatter(),
-            DocsFormat.Html => new HtmlDocsFormatter(),
-            _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown docs format")
+            Path = options.Path,
+            Console = _console,
+            FileSystem = _fileSystem
         };
+
+        // Set docs-specific options in context
+        context.Set(ContextKeys.DocsFormat, options.Format);
+        context.Set(ContextKeys.ContextFilter, options.Context);
+        context.Set(ContextKeys.WithResults, options.WithResults);
+        context.Set(ContextKeys.ResultsFile, options.ResultsFile);
+        context.Set(ContextKeys.Filter, options.Filter);
+
+        return _pipeline(context, ct);
     }
 }

@@ -112,7 +112,36 @@ public class MockFileSystem : IFileSystem
 
     public IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption)
     {
-        return GetFiles(path, searchPattern, searchOption);
+        var fullPath = Path.GetFullPath(path);
+
+        // First check if we have files registered via AddFilesInDirectory
+        if (_directoryFiles.TryGetValue(fullPath, out var dirFiles))
+        {
+            foreach (var file in FilterByPattern(dirFiles, searchPattern))
+                yield return file;
+        }
+
+        // Also check files added via AddFile that are in this directory
+        var filesToCheck = searchOption == SearchOption.AllDirectories
+            ? _files.Where(f => f.StartsWith(fullPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            : _files.Where(f => Path.GetDirectoryName(f)?.Equals(fullPath, StringComparison.OrdinalIgnoreCase) == true);
+
+        foreach (var file in FilterByPattern(filesToCheck.Except(dirFiles ?? []), searchPattern))
+            yield return file;
+    }
+
+    private static IEnumerable<string> FilterByPattern(IEnumerable<string> files, string searchPattern)
+    {
+        if (searchPattern == "*" || searchPattern == "*.*")
+            return files;
+
+        if (searchPattern.StartsWith("*"))
+        {
+            var extension = searchPattern[1..];
+            return files.Where(f => f.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return files.Where(f => Path.GetFileName(f).Equals(searchPattern, StringComparison.OrdinalIgnoreCase));
     }
 
     public IEnumerable<string> EnumerateDirectories(string path, string searchPattern)

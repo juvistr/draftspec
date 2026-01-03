@@ -143,4 +143,50 @@ public static class ContextKeys
     public const string ValidationResults = nameof(ValidationResults);
 
     #endregion
+
+    #region CoverageMap Command Keys
+
+    /// <summary>
+    /// Path to source files or directory to analyze.
+    /// Type: <see cref="string"/>
+    /// </summary>
+    public const string SourcePath = nameof(SourcePath);
+
+    /// <summary>
+    /// Path to spec files or directory.
+    /// Type: <see cref="string"/>
+    /// </summary>
+    public const string SpecPath = nameof(SpecPath);
+
+    /// <summary>
+    /// List of discovered C# source files.
+    /// Type: <c>IReadOnlyList&lt;string&gt;</c>
+    /// </summary>
+    public const string SourceFiles = nameof(SourceFiles);
+
+    /// <summary>
+    /// Coverage map output format.
+    /// Type: <c>CoverageMapFormat</c>
+    /// </summary>
+    public const string CoverageMapFormat = nameof(CoverageMapFormat);
+
+    /// <summary>
+    /// Whether to show only uncovered methods.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string GapsOnly = nameof(GapsOnly);
+
+    /// <summary>
+    /// Namespace filter pattern (comma-separated).
+    /// Type: <see cref="string"/>
+    /// </summary>
+    public const string NamespaceFilter = nameof(NamespaceFilter);
+
+    /// <summary>
+    /// Coverage mapping results.
+    /// Type: <c>CoverageMapResult</c>
+    /// </summary>
+    public const string CoverageMapResult = nameof(CoverageMapResult);
+
+    #endregion
 }

@@ -1,6 +1,11 @@
+using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
+using DraftSpec.Cli.Pipeline;
+using DraftSpec.Cli.Pipeline.Phases.Common;
+using DraftSpec.Cli.Pipeline.Phases.CoverageMap;
+using DraftSpec.Cli.Services;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
@@ -34,7 +39,21 @@ public class CoverageMapCommandTests
             Directory.Delete(_tempDir, recursive: true);
     }
 
-    private CoverageMapCommand CreateCommand() => new(_console, _fileSystem);
+    private CoverageMapCommand CreateCommand()
+    {
+        // Build the pipeline with real phases
+        var specFinder = new SpecFinder(_fileSystem);
+        var coverageMapService = new CoverageMapService();
+
+        var pipeline = new CommandPipelineBuilder()
+            .Use(new PathResolutionPhase())
+            .Use(new SourceDiscoveryPhase(_fileSystem))
+            .Use(new CoverageMapPhase(coverageMapService, specFinder))
+            .Use(new CoverageMapOutputPhase())
+            .Build();
+
+        return new CoverageMapCommand(pipeline, _console, _fileSystem);
+    }
 
     #region Path Validation
 
@@ -54,7 +73,7 @@ public class CoverageMapCommandTests
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Errors).Contains("Source path not found");
+        await Assert.That(_console.Errors).Contains("Path not found");
     }
 
     [Test]
@@ -109,9 +128,9 @@ public class CoverageMapCommandTests
 
         var result = await command.ExecuteAsync(options);
 
-        // Returns error because no spec files found
+        // Returns error because file is not a spec file
         await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Errors).Contains("No spec files found");
+        await Assert.That(_console.Errors).Contains("must end with .spec.csx");
     }
 
     [Test]

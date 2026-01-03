@@ -1,8 +1,9 @@
 name: Publish NuGet
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'  # Matches v1.0.0, v1.0.0-alpha.1, etc.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -17,8 +18,6 @@ permissions:
 jobs:
   build-test-pack:
     runs-on: ubuntu-latest
-    # Only run for releases targeting main (or manual dispatch)
-    if: github.event_name == 'workflow_dispatch' || github.event.release.target_commitish == 'main'
 
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -31,15 +30,15 @@ jobs:
 
       - name: Determine version
         id: version
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
+          # Get tag name from ref (refs/tags/v0.1.0-alpha.3 -> v0.1.0-alpha.3)
+          TAG="${GITHUB_REF#refs/tags/}"
           # Strip 'v' prefix (v0.1.0-alpha.3 -> 0.1.0-alpha.3)
-          VERSION="${RELEASE_TAG#v}"
+          VERSION="${TAG#v}"
 
           # Validate version is not empty
           if [ -z "$VERSION" ]; then
-            echo "::error::No version tag found. Ensure this workflow was triggered by a release."
+            echo "::error::No version tag found. Ensure this workflow was triggered by a tag push."
             exit 1
           fi
 
@@ -105,7 +104,7 @@ jobs:
           find packages -name "*.nupkg" -type f
 
       - name: Generate provenance attestation
-        if: github.event_name == 'release' && !inputs.dry_run
+        if: github.event_name == 'push' && !inputs.dry_run
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-path: 'packages/*.nupkg'
@@ -122,9 +121,9 @@ jobs:
           done
 
       - name: Upload packages to Release
-        if: github.event_name == 'release' && !inputs.dry_run
+        if: github.event_name == 'push' && !inputs.dry_run
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
-          tag_name: ${{ github.event.release.tag_name }}
+          tag_name: ${{ github.ref_name }}
           files: |
             packages/*.nupkg

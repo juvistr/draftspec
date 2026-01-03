@@ -1,352 +1,202 @@
-using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Pipeline;
-using DraftSpec.Cli.Pipeline.Phases.Common;
-using DraftSpec.Cli.Pipeline.Phases.Validate;
-using DraftSpec.Cli.Services;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
-/// Tests for ValidateCommand.
-/// These tests use the real file system for spec validation.
+/// Tests for ValidateCommand option-to-context wiring.
+/// Phase logic is tested in ValidationPhaseTests, ValidateOutputPhaseTests, etc.
 /// </summary>
-[NotInParallel]
 public class ValidateCommandTests
 {
-    private string _tempDir = null!;
     private MockConsole _console = null!;
-    private RealFileSystem _fileSystem = null!;
+    private MockFileSystem _fileSystem = null!;
+    private CommandContext? _capturedContext;
 
     [Before(Test)]
     public void SetUp()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_validate_test_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
         _console = new MockConsole();
-        _fileSystem = new RealFileSystem();
+        _fileSystem = new MockFileSystem();
+        _capturedContext = null;
     }
 
-    [After(Test)]
-    public void TearDown()
+    private ValidateCommand CreateCommand(int pipelineReturnValue = 0)
     {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, recursive: true);
+        return new ValidateCommand(MockPipeline, _console, _fileSystem);
+
+        Task<int> MockPipeline(CommandContext context, CancellationToken ct)
+        {
+            _capturedContext = context;
+            return Task.FromResult(pipelineReturnValue);
+        }
     }
 
-    private ValidateCommand CreateCommand()
-    {
-        // Build the pipeline with real phases
-        var specFinder = new SpecFinder(_fileSystem);
-        var parserFactory = new StaticSpecParserFactory();
-
-        var pipeline = new CommandPipelineBuilder()
-            .Use(new PathResolutionPhase())
-            .Use(new SpecDiscoveryPhase(specFinder))
-            .Use(new ValidationPhase(parserFactory))
-            .Use(new ValidateOutputPhase())
-            .Build();
-
-        return new ValidateCommand(pipeline, _console, _fileSystem);
-    }
-
-    #region Path Validation
+    #region Context Wiring Tests
 
     [Test]
-    public async Task ExecuteAsync_NonexistentPath_ReturnsError()
+    public async Task ExecuteAsync_SetsPathInContext()
     {
         var command = CreateCommand();
-        // Use a cross-platform path that definitely doesn't exist
-        var nonexistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid():N}", "path");
-        var options = new ValidateOptions { Path = nonexistentPath };
+        var options = new ValidateOptions { Path = "/test/path" };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Errors).Contains("Path not found");
+        await Assert.That(_capturedContext!.Path).IsEqualTo("/test/path");
     }
 
     [Test]
-    public async Task ExecuteAsync_EmptyDirectory_ReturnsSuccess()
+    public async Task ExecuteAsync_SetsExplicitFilesInContext()
     {
-        var command = CreateCommand();
-        var options = new ValidateOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
-        await Assert.That(_console.Output).Contains("No spec files found");
-    }
-
-    #endregion
-
-    #region Valid Specs
-
-    [Test]
-    public async Task ExecuteAsync_ValidSpecs_ReturnsSuccess()
-    {
-        CreateSpecFile("valid.spec.csx", """
-            describe("Calculator", () => {
-                it("adds numbers", () => { });
-                it("subtracts numbers", () => { });
-            });
-            """);
-        var command = CreateCommand();
-        var options = new ValidateOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
-        await Assert.That(_console.Output).Contains("\u2713"); // checkmark
-        await Assert.That(_console.Output).Contains("valid.spec.csx");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_MultipleValidFiles_ReturnsSuccess()
-    {
-        CreateSpecFile("math.spec.csx", """
-            describe("Math", () => {
-                it("adds", () => { });
-            });
-            """);
-        CreateSpecFile("string.spec.csx", """
-            describe("String", () => {
-                it("concatenates", () => { });
-            });
-            """);
-        var command = CreateCommand();
-        var options = new ValidateOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
-        await Assert.That(_console.Output).Contains("math.spec.csx");
-        await Assert.That(_console.Output).Contains("string.spec.csx");
-    }
-
-    #endregion
-
-    #region Warnings
-
-    [Test]
-    public async Task ExecuteAsync_DynamicDescription_ReturnsSuccessWithWarnings()
-    {
-        // Dynamic descriptions generate warnings, not errors
-        CreateSpecFile("dynamic.spec.csx", """
-            var name = "test";
-            describe("Feature", () => {
-                it($"dynamic {name}", () => { });
-            });
-            """);
-        var command = CreateCommand();
-        var options = new ValidateOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        // Warnings don't cause failure by default
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
-    }
-
-    [Test]
-    public async Task ExecuteAsync_WarningsWithStrict_ReturnsExitWarnings()
-    {
-        CreateSpecFile("dynamic.spec.csx", """
-            var name = "test";
-            describe("Feature", () => {
-                it($"dynamic {name}", () => { });
-            });
-            """);
-        var command = CreateCommand();
-        var options = new ValidateOptions { Path = _tempDir, Strict = true };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitWarnings);
-    }
-
-    #endregion
-
-    #region Errors
-
-    [Test]
-    public async Task ExecuteAsync_MissingDescription_ReturnsExitErrors()
-    {
-        // it() with no arguments triggers "missing description argument" error
-        CreateSpecFile("missing.spec.csx", """
-            describe("Feature", () => {
-                it();
-            });
-            """);
-        var command = CreateCommand();
-        var options = new ValidateOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitErrors);
-        await Assert.That(_console.Errors).Contains("missing description");
-    }
-
-    #endregion
-
-    #region Quiet Mode
-
-    [Test]
-    public async Task ExecuteAsync_Quiet_SuppressesNonErrors()
-    {
-        CreateSpecFile("valid.spec.csx", """
-            describe("Feature", () => {
-                it("spec", () => { });
-            });
-            """);
-        var command = CreateCommand();
-        var options = new ValidateOptions { Path = _tempDir, Quiet = true };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
-        // In quiet mode, valid files shouldn't produce output
-        await Assert.That(_console.Output).DoesNotContain("\u2713");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_QuietWithErrors_ShowsErrors()
-    {
-        // it() with no arguments triggers "missing description argument" error
-        CreateSpecFile("missing.spec.csx", """
-            describe("Feature", () => {
-                it();
-            });
-            """);
-        var command = CreateCommand();
-        var options = new ValidateOptions { Path = _tempDir, Quiet = true };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitErrors);
-        // Errors should still be shown even in quiet mode
-        await Assert.That(_console.Errors).Contains("missing.spec.csx");
-    }
-
-    #endregion
-
-    #region Files Flag
-
-    [Test]
-    public async Task ExecuteAsync_FilesFlag_ValidatesOnlySpecifiedFiles()
-    {
-        CreateSpecFile("good.spec.csx", """
-            describe("Good", () => {
-                it("valid", () => { });
-            });
-            """);
-        CreateSpecFile("bad.spec.csx", """
-            describe("Bad", () => {
-                it(() => { });
-            });
-            """);
         var command = CreateCommand();
         var options = new ValidateOptions
         {
-            Path = _tempDir,
-            Files = ["good.spec.csx"]
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        // Only good.spec.csx is validated, bad.spec.csx is ignored
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
-        await Assert.That(_console.Output).Contains("good.spec.csx");
-        await Assert.That(_console.Output).DoesNotContain("bad.spec.csx");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_FilesFlag_MultipleFiles()
-    {
-        CreateSpecFile("a.spec.csx", """
-            describe("A", () => {
-                it("spec a", () => { });
-            });
-            """);
-        CreateSpecFile("b.spec.csx", """
-            describe("B", () => {
-                it("spec b", () => { });
-            });
-            """);
-        CreateSpecFile("c.spec.csx", """
-            describe("C", () => {
-                it("spec c", () => { });
-            });
-            """);
-        var command = CreateCommand();
-        var options = new ValidateOptions
-        {
-            Path = _tempDir,
+            Path = "/test",
             Files = ["a.spec.csx", "b.spec.csx"]
         };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
-        await Assert.That(_console.Output).Contains("a.spec.csx");
-        await Assert.That(_console.Output).Contains("b.spec.csx");
-        await Assert.That(_console.Output).DoesNotContain("c.spec.csx");
+        var files = _capturedContext!.Get<List<string>>(ContextKeys.ExplicitFiles);
+        await Assert.That(files).IsNotNull();
+        await Assert.That(files!).Contains("a.spec.csx");
+        await Assert.That(files).Contains("b.spec.csx");
     }
 
     [Test]
-    public async Task ExecuteAsync_FilesFlag_NonexistentFile_IgnoresIt()
+    public async Task ExecuteAsync_ExplicitFilesNull_SetsNullInContext()
     {
-        CreateSpecFile("exists.spec.csx", """
-            describe("Exists", () => {
-                it("spec", () => { });
-            });
-            """);
         var command = CreateCommand();
         var options = new ValidateOptions
         {
-            Path = _tempDir,
-            Files = ["exists.spec.csx", "nonexistent.spec.csx"]
+            Path = "/test",
+            Files = null
         };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
-        await Assert.That(_console.Output).Contains("exists.spec.csx");
+        await Assert.That(_capturedContext!.Get<List<string>>(ContextKeys.ExplicitFiles)).IsNull();
     }
-
-    #endregion
-
-    #region Summary Output
 
     [Test]
-    public async Task ExecuteAsync_ShowsSummary()
+    public async Task ExecuteAsync_SetsStrictInContext_True()
     {
-        CreateSpecFile("summary.spec.csx", """
-            describe("Summary", () => {
-                it("spec1", () => { });
-                it("spec2", () => { });
-            });
-            """);
         var command = CreateCommand();
-        var options = new ValidateOptions { Path = _tempDir };
+        var options = new ValidateOptions
+        {
+            Path = "/test",
+            Strict = true
+        };
 
-        var result = await command.ExecuteAsync(options);
+        await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(ValidateOutputPhase.ExitSuccess);
-        await Assert.That(_console.Output).Contains("Files:");
-        await Assert.That(_console.Output).Contains("Specs:");
+        await Assert.That(_capturedContext!.Get<bool>(ContextKeys.Strict)).IsTrue();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsStrictInContext_False()
+    {
+        var command = CreateCommand();
+        var options = new ValidateOptions
+        {
+            Path = "/test",
+            Strict = false
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<bool>(ContextKeys.Strict)).IsFalse();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsQuietInContext_True()
+    {
+        var command = CreateCommand();
+        var options = new ValidateOptions
+        {
+            Path = "/test",
+            Quiet = true
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<bool>(ContextKeys.Quiet)).IsTrue();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsQuietInContext_False()
+    {
+        var command = CreateCommand();
+        var options = new ValidateOptions
+        {
+            Path = "/test",
+            Quiet = false
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<bool>(ContextKeys.Quiet)).IsFalse();
     }
 
     #endregion
 
-    #region Helper Methods
+    #region Pipeline Execution Tests
 
-    private string CreateSpecFile(string fileName, string content)
+    [Test]
+    public async Task ExecuteAsync_CallsPipeline()
     {
-        var filePath = Path.Combine(_tempDir, fileName);
-        File.WriteAllText(filePath, content);
-        return filePath;
+        var command = CreateCommand();
+        var options = new ValidateOptions { Path = "/test" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext).IsNotNull();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_Zero()
+    {
+        var command = CreateCommand(pipelineReturnValue: 0);
+        var options = new ValidateOptions { Path = "/test" };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_NonZero()
+    {
+        var command = CreateCommand(pipelineReturnValue: 2);
+        var options = new ValidateOptions { Path = "/test" };
+
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsConsoleInContext()
+    {
+        var command = CreateCommand();
+        var options = new ValidateOptions { Path = "/test" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Console).IsSameReferenceAs(_console);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsFileSystemInContext()
+    {
+        var command = CreateCommand();
+        var options = new ValidateOptions { Path = "/test" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.FileSystem).IsSameReferenceAs(_fileSystem);
     }
 
     #endregion

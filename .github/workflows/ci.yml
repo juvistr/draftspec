@@ -14,7 +14,29 @@ permissions:
   contents: read
 
 jobs:
+  # Detect what files changed to skip unnecessary CI for docs-only PRs
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'tests/**'
+              - '*.sln'
+              - 'Directory.*.props'
+              - 'Directory.Packages.props'
+              - '.github/workflows/**'
+
   build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -167,11 +189,18 @@ jobs:
   # Summary job for branch protection - provides single "build-summary" status
   build-summary:
     if: always()
-    needs: build
+    needs: [changes, build]
     runs-on: ubuntu-latest
     steps:
       - name: Check build matrix status
         run: |
+          # If no code changes, build was skipped - that's OK
+          if [[ "${{ needs.changes.outputs.code }}" != "true" ]]; then
+            echo "No code changes detected - build skipped (docs-only PR)"
+            exit 0
+          fi
+
+          # Otherwise, build must have succeeded
           if [[ "${{ needs.build.result }}" == "success" ]]; then
             echo "All build jobs passed"
             exit 0

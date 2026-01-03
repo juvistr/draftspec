@@ -152,6 +152,54 @@ public class ValidationPhaseTests
     }
 
     [Test]
+    public async Task ExecuteAsync_ParseError_CategorizedAsError()
+    {
+        var console = new MockConsole();
+        var parserFactory = new MockStaticSpecParserFactory()
+            .WithWarnings("Line 3: parse error: unexpected token");
+        var phase = new ValidationPhase(parserFactory);
+        var context = CreateContextWithSpecFiles(console, "/test/project", "/test/project/test.spec.csx");
+
+        IReadOnlyList<FileValidationResult>? results = null;
+
+        await phase.ExecuteAsync(
+            context,
+            (ctx, _) =>
+            {
+                results = ctx.Get<IReadOnlyList<FileValidationResult>>(ContextKeys.ValidationResults);
+                return Task.FromResult(0);
+            },
+            CancellationToken.None);
+
+        await Assert.That(results![0].Errors.Count).IsEqualTo(1);
+        await Assert.That(results[0].Warnings.Count).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SyntaxError_CategorizedAsError()
+    {
+        var console = new MockConsole();
+        var parserFactory = new MockStaticSpecParserFactory()
+            .WithWarnings("Line 7: syntax error in expression");
+        var phase = new ValidationPhase(parserFactory);
+        var context = CreateContextWithSpecFiles(console, "/test/project", "/test/project/test.spec.csx");
+
+        IReadOnlyList<FileValidationResult>? results = null;
+
+        await phase.ExecuteAsync(
+            context,
+            (ctx, _) =>
+            {
+                results = ctx.Get<IReadOnlyList<FileValidationResult>>(ContextKeys.ValidationResults);
+                return Task.FromResult(0);
+            },
+            CancellationToken.None);
+
+        await Assert.That(results![0].Errors.Count).IsEqualTo(1);
+        await Assert.That(results[0].Warnings.Count).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task ExecuteAsync_ParsesLineNumber()
     {
         var console = new MockConsole();

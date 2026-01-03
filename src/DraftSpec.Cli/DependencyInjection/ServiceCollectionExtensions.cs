@@ -4,6 +4,7 @@ using DraftSpec.Cli.History;
 using DraftSpec.Cli.Interactive;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Pipeline;
+using DraftSpec.Cli.Pipeline.Phases.Common;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,6 +51,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISpecHistoryService, SpecHistoryService>();
         services.AddSingleton<IRuntimeEstimator, RuntimeEstimator>();
         services.AddSingleton<ISpecSelector, InteractiveSpecSelector>();
+        services.AddSingleton<IStaticSpecParserFactory, StaticSpecParserFactory>();
+
+        // Pipeline Phases - Common
+        services.AddSingleton<PathResolutionPhase>();
+        services.AddSingleton<SpecDiscoveryPhase>();
+        services.AddSingleton<SpecParsingPhase>();
 
         // Commands
         services.AddTransient<RunCommand>();

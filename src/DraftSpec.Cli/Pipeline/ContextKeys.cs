@@ -23,8 +23,8 @@ public static class ContextKeys
     public const string SpecFiles = nameof(SpecFiles);
 
     /// <summary>
-    /// Parsed spec definitions from spec files.
-    /// Type: <c>IReadOnlyList&lt;ParsedSpec&gt;</c>
+    /// Parsed spec results from spec files.
+    /// Type: <c>IReadOnlyDictionary&lt;string, StaticParseResult&gt;</c>
     /// </summary>
     public const string ParsedSpecs = nameof(ParsedSpecs);
 

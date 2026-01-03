@@ -39,9 +39,9 @@ public class SpecDiscoveryPhase : ICommandPhase
         var explicitFiles = context.Get<IReadOnlyList<string>>(ContextKeys.ExplicitFiles);
         if (explicitFiles is { Count: > 0 })
         {
-            // Resolve and filter explicit files
+            // Resolve and filter explicit files (normalize separators for cross-platform)
             var resolvedFiles = explicitFiles
-                .Select(f => Path.IsPathRooted(f) ? f : Path.Combine(projectPath, f))
+                .Select(f => Path.GetFullPath(Path.IsPathRooted(f) ? f : Path.Combine(projectPath, f)))
                 .Where(f => context.FileSystem.FileExists(f))
                 .ToList();
 

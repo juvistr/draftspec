@@ -91,6 +91,10 @@ public class ServiceCollectionExtensionsTests
         {
             // Expected for long-running commands (watch) that get cancelled by timeout
         }
+        catch (IOException)
+        {
+            // Expected on Windows CI where Console.Clear() fails (no console attached)
+        }
 
         // If we get here without a DI resolution error, the wiring is correct
         await Assert.That(true).IsTrue();

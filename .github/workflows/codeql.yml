@@ -12,7 +12,38 @@ permissions:
   contents: read
 
 jobs:
+  # Detect what files changed to skip CodeQL for docs-only PRs
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: filter
+        # Always run on push to main and scheduled runs
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'tests/**'
+              - 'examples/**'
+              - 'benchmarks/**'
+              - '*.sln'
+              - 'Directory.*.props'
+              - 'Directory.Packages.props'
+
+      - name: Set output for non-PR events
+        id: non-pr
+        if: github.event_name != 'pull_request'
+        run: echo "code=true" >> $GITHUB_OUTPUT
+
   analyze:
+    needs: changes
+    # Run on: push to main, scheduled, or PRs with code changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
     name: Analyze
     runs-on: ubuntu-latest
     permissions:

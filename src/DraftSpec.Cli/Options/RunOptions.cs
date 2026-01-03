@@ -96,4 +96,10 @@ public class RunOptions
     /// By default, results are saved to .draftspec/history.json.
     /// </summary>
     public bool NoHistory { get; set; }
+
+    /// <summary>
+    /// Enable interactive spec selection before running.
+    /// When enabled, displays a multi-select UI for choosing specs.
+    /// </summary>
+    public bool Interactive { get; set; }
 }

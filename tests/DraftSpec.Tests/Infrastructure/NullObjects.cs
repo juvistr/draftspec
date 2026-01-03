@@ -2,6 +2,7 @@ using DraftSpec.Cli;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Cli.History;
+using DraftSpec.Cli.Interactive;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Pipeline;
@@ -103,6 +104,11 @@ public static class NullObjects
     /// A no-op runtime estimator.
     /// </summary>
     public static IRuntimeEstimator RuntimeEstimator { get; } = new NullRuntimeEstimator();
+
+    /// <summary>
+    /// A no-op spec selector.
+    /// </summary>
+    public static ISpecSelector SpecSelector { get; } = new NullSpecSelector();
 
     #region Null Object Implementations
 
@@ -315,6 +321,14 @@ public static class NullObjects
 
         public double CalculatePercentile(IReadOnlyList<double> values, int percentile)
             => 0;
+    }
+
+    private class NullSpecSelector : ISpecSelector
+    {
+        public Task<SpecSelectionResult> SelectAsync(
+            IReadOnlyList<DiscoveredSpec> specs,
+            CancellationToken ct = default)
+            => Task.FromResult(SpecSelectionResult.Success([], [], 0));
     }
 
     #endregion

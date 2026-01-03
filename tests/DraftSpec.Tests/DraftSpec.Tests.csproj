@@ -17,6 +17,7 @@
     <ItemGroup>
         <PackageReference Include="TUnit" />
         <PackageReference Include="FsCheck" />
+        <PackageReference Include="Spectre.Console.Testing" />
     </ItemGroup>
 
     <ItemGroup>

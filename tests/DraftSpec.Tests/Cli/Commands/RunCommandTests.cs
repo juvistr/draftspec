@@ -1070,6 +1070,152 @@ public class RunCommandTests
 
     #endregion
 
+    #region Interactive Mode
+
+    [Test]
+    public async Task ExecuteAsync_InteractiveWithoutFlag_DoesNotCallSelector()
+    {
+        var specSelector = new MockSpecSelector().WithSelection("test");
+        var command = CreateCommand(
+            specFiles: ["test.spec.csx"],
+            specSelector: specSelector);
+
+        var options = new RunOptions { Path = ".", Interactive = false };
+        await command.ExecuteAsync(options);
+
+        await Assert.That(specSelector.SelectAsyncCalls).IsEmpty();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_InteractiveNoSpecFiles_ReturnsZeroWithoutCallingSelector()
+    {
+        var console = new MockConsole();
+        var specSelector = new MockSpecSelector().WithSelection("test");
+        var command = CreateCommand(
+            console: console,
+            specFiles: [], // No spec files
+            specSelector: specSelector);
+
+        var options = new RunOptions { Path = ".", Interactive = true };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(specSelector.SelectAsyncCalls).IsEmpty();
+        await Assert.That(console.Output).Contains("No spec files found");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Interactive_CallsSelectorAndAppliesFilter()
+    {
+        // Create a real spec file (uses _tempDir from Line Filter Tests setup)
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Calculator", () =>
+            {
+                it("adds numbers", () => { });
+                it("subtracts numbers", () => { });
+            });
+            """);
+
+        var console = new MockConsole();
+        var runnerFactory = new MockRunnerFactory();
+        var specSelector = new MockSpecSelector().WithSelection("Calculator > adds numbers");
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem(),
+            specSelector: specSelector);
+
+        var options = new RunOptions { Path = _tempDir, Interactive = true };
+        var result = await command.ExecuteAsync(options);
+
+        // Verify selector was called with discovered specs
+        await Assert.That(specSelector.SelectAsyncCalls).Count().IsEqualTo(1);
+        await Assert.That(specSelector.SelectAsyncCalls[0]).Count().IsEqualTo(2); // 2 specs discovered
+
+        // Verify filter was applied
+        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
+        await Assert.That(runnerFactory.LastFilterName!).Contains("Calculator");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Interactive_SelectorCancelled_ReturnsZero()
+    {
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Test", () => { it("spec", () => { }); });
+            """);
+
+        var console = new MockConsole();
+        var specSelector = new MockSpecSelector().Cancelled();
+        var command = CreateCommand(
+            console: console,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem(),
+            specSelector: specSelector);
+
+        var options = new RunOptions { Path = _tempDir, Interactive = true };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("Selection cancelled");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Interactive_NoSpecsSelected_ReturnsZero()
+    {
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Test", () => { it("spec", () => { }); });
+            """);
+
+        var console = new MockConsole();
+        // MockSpecSelector returns empty selection by default
+        var specSelector = new MockSpecSelector();
+        var command = CreateCommand(
+            console: console,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem(),
+            specSelector: specSelector);
+
+        var options = new RunOptions { Path = _tempDir, Interactive = true };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("No specs selected");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Interactive_SelectorThrows_ReturnsOne()
+    {
+        var specPath = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specPath, """
+            using static DraftSpec.Dsl;
+            describe("Test", () => { it("spec", () => { }); });
+            """);
+
+        var console = new MockConsole();
+        var specSelector = new MockSpecSelector()
+            .Throws(new InvalidOperationException("Interactive mode requires an interactive terminal."));
+        var command = CreateCommand(
+            console: console,
+            specFiles: [specPath],
+            fileSystem: new RealFileSystem(),
+            specSelector: specSelector);
+
+        var options = new RunOptions { Path = _tempDir, Interactive = true };
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(console.Errors).Contains("interactive terminal");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static RunCommand CreateCommand(
@@ -1080,7 +1226,8 @@ public class RunCommandTests
         IEnvironment? environment = null,
         ISpecPartitioner? partitioner = null,
         IGitService? gitService = null,
-        MockSpecHistoryService? historyService = null)
+        MockSpecHistoryService? historyService = null,
+        MockSpecSelector? specSelector = null)
     {
         var specs = specFiles ?? [];
         return new RunCommand(
@@ -1093,7 +1240,8 @@ public class RunCommandTests
             NullObjects.StatsCollector,
             partitioner ?? NullObjects.Partitioner,
             gitService ?? NullObjects.GitService,
-            historyService ?? new MockSpecHistoryService());
+            historyService ?? new MockSpecHistoryService(),
+            specSelector ?? new MockSpecSelector());
     }
 
     #endregion

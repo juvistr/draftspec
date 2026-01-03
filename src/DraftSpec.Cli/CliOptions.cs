@@ -237,6 +237,12 @@ public class CliOptions
     /// </summary>
     public bool NoHistory { get; set; }
 
+    /// <summary>
+    /// Enable interactive spec selection before running.
+    /// When enabled, displays a multi-select UI for choosing specs.
+    /// </summary>
+    public bool Interactive { get; set; }
+
     // Flaky command options
 
     /// <summary>
@@ -382,7 +388,8 @@ public class CliOptions
         AffectedBy = AffectedBy,
         DryRun = DryRun,
         Quarantine = Quarantine,
-        NoHistory = NoHistory
+        NoHistory = NoHistory,
+        Interactive = Interactive
     };
 
     /// <summary>

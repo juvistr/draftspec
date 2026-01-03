@@ -4,6 +4,7 @@ using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.DependencyGraph;
 using DraftSpec.Cli.DependencyInjection;
 using DraftSpec.Cli.History;
+using DraftSpec.Cli.Interactive;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
 using DraftSpec.Cli.Services;
@@ -25,6 +26,7 @@ public class RunCommand : ICommand<RunOptions>
     private readonly ISpecPartitioner _partitioner;
     private readonly IGitService _gitService;
     private readonly ISpecHistoryService _historyService;
+    private readonly ISpecSelector _specSelector;
 
     public RunCommand(
         ISpecFinder specFinder,
@@ -36,7 +38,8 @@ public class RunCommand : ICommand<RunOptions>
         ISpecStatsCollector statsCollector,
         ISpecPartitioner partitioner,
         IGitService gitService,
-        ISpecHistoryService historyService)
+        ISpecHistoryService historyService,
+        ISpecSelector specSelector)
     {
         _specFinder = specFinder;
         _runnerFactory = runnerFactory;
@@ -48,6 +51,7 @@ public class RunCommand : ICommand<RunOptions>
         _partitioner = partitioner;
         _gitService = gitService;
         _historyService = historyService;
+        _specSelector = specSelector;
     }
 
     public async Task<int> ExecuteAsync(RunOptions options, CancellationToken ct = default)
@@ -96,14 +100,7 @@ public class RunCommand : ICommand<RunOptions>
             }
         }
 
-        var runner = _runnerFactory.Create(
-            options.Filter.FilterTags,
-            options.Filter.ExcludeTags,
-            filterName,
-            excludeName,
-            options.Filter.FilterContext,
-            options.Filter.ExcludeContext);
-
+        // Find spec files
         var specFiles = _specFinder.FindSpecs(options.Path);
         if (specFiles.Count == 0)
         {
@@ -119,6 +116,28 @@ public class RunCommand : ICommand<RunOptions>
                 return impactResult.ExitCode;
             specFiles = impactResult.FilteredFiles;
         }
+
+        // Apply interactive selection if enabled
+        if (options.Interactive)
+        {
+            var interactiveResult = await ApplyInteractiveSelectionAsync(specFiles, options, ct);
+            if (interactiveResult.ShouldExit)
+                return interactiveResult.ExitCode;
+
+            // Apply selected filter pattern
+            filterName = string.IsNullOrEmpty(filterName)
+                ? interactiveResult.FilterPattern
+                : $"({filterName})|({interactiveResult.FilterPattern})";
+        }
+
+        // Create runner with final filter values
+        var runner = _runnerFactory.Create(
+            options.Filter.FilterTags,
+            options.Filter.ExcludeTags,
+            filterName,
+            excludeName,
+            options.Filter.FilterContext,
+            options.Filter.ExcludeContext);
 
         // Set up presenter for console output
         var presenter = new ConsolePresenter(_console, watchMode: false);
@@ -538,4 +557,101 @@ public class RunCommand : ICommand<RunOptions>
         IReadOnlyList<string> FilteredFiles,
         bool ShouldExit,
         int ExitCode);
+
+    /// <summary>
+    /// Applies interactive spec selection, allowing the user to choose which specs to run.
+    /// </summary>
+    private async Task<InteractiveSelectionResult> ApplyInteractiveSelectionAsync(
+        IReadOnlyList<string> specFiles,
+        RunOptions options,
+        CancellationToken ct)
+    {
+        var projectPath = Path.GetFullPath(options.Path);
+        if (_fileSystem.FileExists(projectPath))
+            projectPath = Path.GetDirectoryName(projectPath)!;
+
+        // Discover all specs using static parser (fast, no execution)
+        var parser = new StaticSpecParser(projectPath, useCache: !options.NoCache);
+        var allSpecs = new List<DiscoveredSpec>();
+
+        foreach (var specFile in specFiles)
+        {
+            try
+            {
+                var result = await parser.ParseFileAsync(specFile, ct);
+                var relativePath = Path.GetRelativePath(projectPath, specFile);
+
+                foreach (var staticSpec in result.Specs)
+                {
+                    var id = GenerateSpecId(relativePath, staticSpec.ContextPath, staticSpec.Description);
+                    var displayName = GenerateDisplayName(staticSpec.ContextPath, staticSpec.Description);
+
+                    allSpecs.Add(new DiscoveredSpec
+                    {
+                        Id = id,
+                        Description = staticSpec.Description,
+                        DisplayName = displayName,
+                        ContextPath = staticSpec.ContextPath,
+                        SourceFile = specFile,
+                        RelativeSourceFile = relativePath,
+                        LineNumber = staticSpec.LineNumber,
+                        IsPending = staticSpec.IsPending,
+                        IsSkipped = staticSpec.Type == StaticSpecType.Skipped,
+                        IsFocused = staticSpec.Type == StaticSpecType.Focused,
+                        Tags = []
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _console.WriteWarning($"Failed to parse {Path.GetFileName(specFile)}: {ex.Message}");
+            }
+        }
+
+        if (allSpecs.Count == 0)
+        {
+            _console.WriteLine("No specs found for interactive selection.");
+            return new InteractiveSelectionResult(ShouldExit: true, ExitCode: 0, FilterPattern: null);
+        }
+
+        // Show interactive selector
+        SpecSelectionResult selectionResult;
+        try
+        {
+            selectionResult = await _specSelector.SelectAsync(allSpecs, ct);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Non-interactive terminal or other error
+            _console.WriteError(ex.Message);
+            return new InteractiveSelectionResult(ShouldExit: true, ExitCode: 1, FilterPattern: null);
+        }
+
+        if (selectionResult.Cancelled)
+        {
+            _console.WriteLine("Selection cancelled.");
+            return new InteractiveSelectionResult(ShouldExit: true, ExitCode: 0, FilterPattern: null);
+        }
+
+        if (selectionResult.SelectedSpecIds.Count == 0)
+        {
+            _console.WriteLine("No specs selected.");
+            return new InteractiveSelectionResult(ShouldExit: true, ExitCode: 0, FilterPattern: null);
+        }
+
+        // Show selection summary
+        _console.ForegroundColor = ConsoleColor.DarkGray;
+        _console.WriteLine($"Selected {selectionResult.SelectedSpecIds.Count} of {selectionResult.TotalCount} specs");
+        _console.ResetColor();
+        _console.WriteLine();
+
+        // Build filter pattern from selected display names
+        var escapedNames = selectionResult.SelectedDisplayNames
+            .Select(Regex.Escape);
+        var filterPattern = $"^({string.Join("|", escapedNames)})$";
+
+        return new InteractiveSelectionResult(ShouldExit: false, ExitCode: 0, FilterPattern: filterPattern);
+    }
+
+    private record InteractiveSelectionResult(bool ShouldExit, int ExitCode, string? FilterPattern);
 }

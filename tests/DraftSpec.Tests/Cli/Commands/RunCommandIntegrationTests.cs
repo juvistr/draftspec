@@ -386,7 +386,8 @@ public class RunCommandIntegrationTests
             NullObjects.StatsCollector,
             NullObjects.Partitioner,
             NullObjects.GitService,
-            NullObjects.HistoryService);
+            NullObjects.HistoryService,
+            NullObjects.SpecSelector);
     }
 
     #endregion

@@ -222,6 +222,26 @@ public class SourceDiscoveryPhaseTests
         await Assert.That(sourceFiles[0]).IsEqualTo(filePath);
     }
 
+    [Test]
+    public async Task ExecuteAsync_NonCsFile_ReturnsError()
+    {
+        var filePath = TestPaths.Project("readme.txt");
+        var fileSystem = new MockFileSystem()
+            .AddFile(filePath);
+        var phase = new SourceDiscoveryPhase(fileSystem);
+        var console = new MockConsole();
+        var context = CreateContextWithProjectPath(TestPaths.ProjectDir, fileSystem, console);
+        context.Set(ContextKeys.SourcePath, filePath);
+
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(console.Errors).Contains("No C# source files found");
+    }
+
     #endregion
 
     #region Helper Methods

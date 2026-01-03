@@ -110,6 +110,70 @@ describe(""Foo"", () => { it(""works"", () => { }); });");
 
     #endregion
 
+    #region Namespace Filter Tests
+
+    [Test]
+    public async Task ComputeCoverageAsync_WithNamespaceFilter_FiltersToMatchingMethods()
+    {
+        // Arrange
+        var service = new CoverageMapService();
+        var sourceFile = CreateSourceFile(@"
+namespace MyApp.Services {
+    public class UserService { public void CreateUser() { } }
+}
+namespace MyApp.Controllers {
+    public class UserController { public void Index() { } }
+}
+namespace OtherApp {
+    public class OtherService { public void DoSomething() { } }
+}");
+        var specFile = CreateSpecFile(@"describe(""Test"", () => { it(""works"", () => { }); });");
+
+        // Act
+        var result = await service.ComputeCoverageAsync(
+            [sourceFile],
+            [specFile],
+            _tempDir,
+            namespaceFilter: "MyApp.Services");
+
+        // Assert - only MyApp.Services methods should be included
+        await Assert.That(result.AllMethods.Count).IsEqualTo(1);
+        await Assert.That(result.AllMethods[0].Method.Namespace).IsEqualTo("MyApp.Services");
+    }
+
+    [Test]
+    public async Task ComputeCoverageAsync_WithMultipleNamespaceFilters_FiltersToAllMatching()
+    {
+        // Arrange
+        var service = new CoverageMapService();
+        var sourceFile = CreateSourceFile(@"
+namespace MyApp.Services {
+    public class UserService { public void CreateUser() { } }
+}
+namespace MyApp.Controllers {
+    public class UserController { public void Index() { } }
+}
+namespace OtherApp {
+    public class OtherService { public void DoSomething() { } }
+}");
+        var specFile = CreateSpecFile(@"describe(""Test"", () => { it(""works"", () => { }); });");
+
+        // Act - filter by two namespaces (comma-separated)
+        var result = await service.ComputeCoverageAsync(
+            [sourceFile],
+            [specFile],
+            _tempDir,
+            namespaceFilter: "MyApp.Services, MyApp.Controllers");
+
+        // Assert - both MyApp.Services and MyApp.Controllers methods should be included
+        await Assert.That(result.AllMethods.Count).IsEqualTo(2);
+        var namespaces = result.AllMethods.Select(m => m.Method.Namespace).ToList();
+        await Assert.That(namespaces).Contains("MyApp.Services");
+        await Assert.That(namespaces).Contains("MyApp.Controllers");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private string CreateSourceFile(string content, string? fileName = null)

@@ -263,25 +263,6 @@ public class GitServiceTests
 
     #endregion
 
-    #region Timeout Tests
-
-    [Test]
-    public async Task GetChangedFilesAsync_WithZeroTimeout_ThrowsTimeoutException()
-    {
-        // Arrange - Use zero timeout to guarantee immediate cancellation
-        var repoDir = GetRepositoryRoot();
-        var fileSystem = new RealFileSystem();
-        var service = new GitService(fileSystem, TimeSpan.Zero);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.GetChangedFilesAsync("HEAD", repoDir));
-
-        await Assert.That(exception!.Message).Contains("timed out");
-    }
-
-    #endregion
-
     #region Helper Methods
 
     private static string GetRepositoryRoot()

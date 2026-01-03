@@ -11,7 +11,7 @@ namespace DraftSpec.TestingPlatform;
 /// This parser discovers spec structure by analyzing Roslyn syntax trees,
 /// allowing discovery even when files have compilation errors.
 /// </remarks>
-public sealed partial class StaticSpecParser
+public sealed partial class StaticSpecParser : IStaticSpecParser
 {
     private readonly string _baseDirectory;
     private readonly StaticParseResultCache? _cache;

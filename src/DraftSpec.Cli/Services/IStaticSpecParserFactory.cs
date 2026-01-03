@@ -1,3 +1,5 @@
+using DraftSpec.TestingPlatform;
+
 namespace DraftSpec.Cli.Services;
 
 /// <summary>

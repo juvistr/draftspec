@@ -1,12 +1,10 @@
-using DraftSpec.TestingPlatform;
-
-namespace DraftSpec.Cli.Services;
+namespace DraftSpec.TestingPlatform;
 
 /// <summary>
 /// Interface for static spec parsing operations.
 /// </summary>
 /// <remarks>
-/// Wraps <see cref="StaticSpecParser"/> to enable testing.
+/// Enables testing by allowing mock implementations to be injected.
 /// </remarks>
 public interface IStaticSpecParser
 {

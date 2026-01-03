@@ -17,6 +17,11 @@ dotnet run --project tests/DraftSpec.Cli.IntegrationTests  # Run CLI integration
 # Run specs via CLI
 draftspec run examples/TodoApi/Specs                  # Run all specs in directory
 draftspec run examples/TodoApi/Specs/TodoService.spec.csx  # Run single file
+draftspec run . --interactive                         # Interactive spec selection
+draftspec list .                                      # List specs without running
+draftspec validate .                                  # Validate spec files
+draftspec docs . --output docs/specs                  # Generate living documentation
+draftspec coverage-map .                              # Map specs to source methods
 ```
 
 ## Project Structure
@@ -32,7 +37,7 @@ src/
     SpecDefinition.cs             # Single spec: description, body, flags
     SpecResult.cs                 # Execution result with ContextPath
     SpecRunner.cs                 # Tree walker, executes specs
-  DraftSpec.Cli/                  # CLI tool: draftspec run/watch/list
+  DraftSpec.Cli/                  # CLI tool (12 commands)
   DraftSpec.Scripting/            # Roslyn-based CSX script compilation
   DraftSpec.TestingPlatform/      # MTP adapter for dotnet test integration
   DraftSpec.Mcp/                  # MCP server for AI-assisted testing

@@ -1,5 +1,6 @@
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Pipeline.Phases.Common;
+using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Pipeline.Phases;
@@ -15,8 +16,9 @@ public class PathResolutionPhaseTests
     public async Task ExecuteAsync_DirectoryExists_SetsProjectPath()
     {
         var phase = new PathResolutionPhase();
-        var fs = new MockFileSystem().AddDirectory("/specs");
-        var context = CreateContext("/specs", fs);
+        var specsDir = TestPaths.SpecsDir;
+        var fs = new MockFileSystem().AddDirectory(specsDir);
+        var context = CreateContext(specsDir, fs);
         var pipelineCalled = false;
 
         var result = await phase.ExecuteAsync(
@@ -26,22 +28,23 @@ public class PathResolutionPhaseTests
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(pipelineCalled).IsTrue();
-        await Assert.That(context.Get<string>(ContextKeys.ProjectPath)).IsEqualTo("/specs");
+        await Assert.That(context.Get<string>(ContextKeys.ProjectPath)).IsEqualTo(specsDir);
     }
 
     [Test]
     public async Task ExecuteAsync_FileExists_SetsProjectPathToDirectory()
     {
         var phase = new PathResolutionPhase();
-        var fs = new MockFileSystem().AddFile("/specs/test.spec.csx");
-        var context = CreateContext("/specs/test.spec.csx", fs);
+        var specFile = TestPaths.Spec("test.spec.csx");
+        var fs = new MockFileSystem().AddFile(specFile);
+        var context = CreateContext(specFile, fs);
 
         await phase.ExecuteAsync(
             context,
             (_, _) => Task.FromResult(0),
             CancellationToken.None);
 
-        await Assert.That(context.Get<string>(ContextKeys.ProjectPath)).IsEqualTo("/specs");
+        await Assert.That(context.Get<string>(ContextKeys.ProjectPath)).IsEqualTo(TestPaths.SpecsDir);
     }
 
     [Test]
@@ -105,8 +108,9 @@ public class PathResolutionPhaseTests
     public async Task ExecuteAsync_PropagatesPipelineReturnValue()
     {
         var phase = new PathResolutionPhase();
-        var fs = new MockFileSystem().AddDirectory("/specs");
-        var context = CreateContext("/specs", fs);
+        var specsDir = TestPaths.SpecsDir;
+        var fs = new MockFileSystem().AddDirectory(specsDir);
+        var context = CreateContext(specsDir, fs);
 
         var result = await phase.ExecuteAsync(
             context,

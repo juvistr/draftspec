@@ -8,6 +8,7 @@ namespace DraftSpec.Tests.Infrastructure.Mocks;
 public class MockStaticSpecParserFactory : IStaticSpecParserFactory
 {
     private readonly MockStaticSpecParser _mockParser;
+    private Exception? _createException;
 
     /// <summary>
     /// Tracks calls to <see cref="Create"/>.
@@ -35,10 +36,25 @@ public class MockStaticSpecParserFactory : IStaticSpecParserFactory
     /// </summary>
     public MockStaticSpecParser Parser => _mockParser;
 
+    /// <summary>
+    /// Configure the factory to throw an exception when <see cref="Create"/> is called.
+    /// </summary>
+    public MockStaticSpecParserFactory WithCreateException(Exception exception)
+    {
+        _createException = exception;
+        return this;
+    }
+
     /// <inheritdoc />
     public IStaticSpecParser Create(string baseDirectory, bool useCache = true)
     {
         CreateCalls.Add((baseDirectory, useCache));
+
+        if (_createException != null)
+        {
+            throw _createException;
+        }
+
         return _mockParser;
     }
 }

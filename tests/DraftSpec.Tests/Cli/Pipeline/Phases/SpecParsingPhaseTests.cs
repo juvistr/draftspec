@@ -207,6 +207,61 @@ public class SpecParsingPhaseTests
         await Assert.That(pipelineCalled).IsFalse();
     }
 
+    [Test]
+    public async Task ExecuteAsync_FactoryThrowsException_ReturnsError()
+    {
+        var factory = new MockStaticSpecParserFactory()
+            .WithCreateException(new InvalidOperationException("Failed to initialize parser"));
+        var phase = new SpecParsingPhase(factory);
+        var console = new MockConsole();
+        var context = CreateContextWithSpecFiles("/specs", "/specs/test.spec.csx", console);
+
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(console.Errors).Contains("Failed to create parser");
+        await Assert.That(console.Errors).Contains("Failed to initialize parser");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_FactoryThrowsException_DoesNotCallPipeline()
+    {
+        var factory = new MockStaticSpecParserFactory()
+            .WithCreateException(new Exception("Boom"));
+        var phase = new SpecParsingPhase(factory);
+        var context = CreateContextWithSpecFiles("/specs", "/specs/test.spec.csx");
+        var pipelineCalled = false;
+
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => { pipelineCalled = true; return Task.FromResult(0); },
+            CancellationToken.None);
+
+        await Assert.That(pipelineCalled).IsFalse();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_EmptySpecFilesList_ReturnsError()
+    {
+        var factory = new MockStaticSpecParserFactory();
+        var phase = new SpecParsingPhase(factory);
+        var console = new MockConsole();
+        var context = CreateContext(console);
+        context.Set<string>(ContextKeys.ProjectPath, "/specs");
+        context.Set<IReadOnlyList<string>>(ContextKeys.SpecFiles, Array.Empty<string>());
+
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(console.Errors).Contains("SpecFiles not set");
+    }
+
     #endregion
 
     #region Helper Methods

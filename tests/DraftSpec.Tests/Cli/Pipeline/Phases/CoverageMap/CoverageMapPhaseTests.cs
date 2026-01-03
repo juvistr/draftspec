@@ -95,6 +95,25 @@ public class CoverageMapPhaseTests
         await Assert.That(call.SourcePath).IsNull();
     }
 
+    [Test]
+    public async Task ExecuteAsync_SpecPathProvided_ResolvesToFullPath()
+    {
+        var coverageService = new MockCoverageMapService()
+            .WithMethods(CreateMethodCoverage("Test", CoverageConfidence.High));
+        var specFinder = new MockSpecFinder(TestPaths.Project("test.spec.csx"));
+        var phase = new CoverageMapPhase(coverageService, specFinder);
+        var context = CreateContextWithSourceFiles();
+        context.Set(ContextKeys.SpecPath, "./specs");
+
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        // The phase should have resolved the spec path to a full path
+        await Assert.That(coverageService.ComputeCoverageAsyncCalls).Count().IsEqualTo(1);
+    }
+
     #endregion
 
     #region No Spec Files Tests
@@ -117,12 +136,50 @@ public class CoverageMapPhaseTests
         await Assert.That(console.Errors).Contains("No spec files found");
     }
 
+    [Test]
+    public async Task ExecuteAsync_SpecFinderThrowsArgumentException_ReturnsError()
+    {
+        var coverageService = new MockCoverageMapService();
+        var specFinder = new MockSpecFinder()
+            .Throws(new ArgumentException("Invalid spec path"));
+        var phase = new CoverageMapPhase(coverageService, specFinder);
+        var console = new MockConsole();
+        var context = CreateContextWithSourceFiles(console: console);
+
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(console.Errors).Contains("Invalid spec path");
+    }
+
     #endregion
 
     #region No Methods Found Tests
 
     [Test]
-    public async Task ExecuteAsync_NoMethodsAfterFiltering_ReturnsZeroWithMessage()
+    public async Task ExecuteAsync_NoMethodsWithoutFilter_ReturnsZeroWithMessage()
+    {
+        var coverageService = new MockCoverageMapService(); // Returns empty result
+        var specFinder = new MockSpecFinder(TestPaths.Project("test.spec.csx"));
+        var phase = new CoverageMapPhase(coverageService, specFinder);
+        var console = new MockConsole();
+        var context = CreateContextWithSourceFiles(console: console);
+        // Don't set NamespaceFilter
+
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(99), // Should not be called
+            CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(console.Output).Contains("No public methods found in source files");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_NoMethodsWithFilter_ReturnsZeroWithFilterMessage()
     {
         var coverageService = new MockCoverageMapService(); // Returns empty result
         var specFinder = new MockSpecFinder(TestPaths.Project("test.spec.csx"));

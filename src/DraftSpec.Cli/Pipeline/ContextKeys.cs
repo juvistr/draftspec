@@ -310,5 +310,47 @@ public static class ContextKeys
     /// </summary>
     public const string NoCache = nameof(NoCache);
 
+    /// <summary>
+    /// Whether interactive mode is enabled.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string Interactive = nameof(Interactive);
+
+    /// <summary>
+    /// Partition options for distributed execution.
+    /// Type: <c>PartitionOptions</c>
+    /// </summary>
+    public const string Partition = nameof(Partition);
+
+    /// <summary>
+    /// Whether to skip history recording.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string NoHistory = nameof(NoHistory);
+
+    /// <summary>
+    /// Output format for run results.
+    /// Type: <see cref="string"/> (e.g., "console", "json", "html", "markdown")
+    /// </summary>
+    public const string OutputFormat = nameof(OutputFormat);
+
+    /// <summary>
+    /// Whether to run specs in parallel.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string Parallel = nameof(Parallel);
+
+    /// <summary>
+    /// Whether to show only statistics without spec details.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string StatsOnly = nameof(StatsOnly);
+
+    /// <summary>
+    /// Whether to hide statistics.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string NoStats = nameof(NoStats);
+
     #endregion
 }

@@ -2,6 +2,7 @@ using DraftSpec.Cli.History;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Pipeline.Phases.Run;
+using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Pipeline.Phases.Run;
@@ -95,7 +96,7 @@ public class QuarantinePhaseTests
     {
         _historyService.WithHistory(SpecHistory.Empty);
         var phase = new QuarantinePhase(_historyService);
-        var context = CreateContext(quarantine: true, projectPath: "/project");
+        var context = CreateContext(quarantine: true);
 
         await phase.ExecuteAsync(
             context,
@@ -103,7 +104,7 @@ public class QuarantinePhaseTests
             CancellationToken.None);
 
         await Assert.That(_historyService.LoadAsyncCalls).Count().IsEqualTo(1);
-        await Assert.That(_historyService.LoadAsyncCalls[0]).IsEqualTo("/project");
+        await Assert.That(_historyService.LoadAsyncCalls[0]).IsEqualTo(TestPaths.ProjectDir);
     }
 
     #endregion
@@ -364,7 +365,7 @@ public class QuarantinePhaseTests
 
     #region Helper Methods
 
-    private CommandContext CreateContext(bool quarantine, string projectPath = "/project/path")
+    private CommandContext CreateContext(bool quarantine, string? projectPath = null)
     {
         var context = new CommandContext
         {
@@ -373,7 +374,7 @@ public class QuarantinePhaseTests
             FileSystem = _fileSystem
         };
         context.Set(ContextKeys.Quarantine, quarantine);
-        context.Set(ContextKeys.ProjectPath, projectPath);
+        context.Set(ContextKeys.ProjectPath, projectPath ?? TestPaths.ProjectDir);
         return context;
     }
 

@@ -2,6 +2,7 @@ using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Pipeline.Phases.Run;
 using DraftSpec.TestingPlatform;
+using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Pipeline.Phases.Run;
@@ -113,7 +114,7 @@ public class LineFilterPhaseTests
     [Test]
     public async Task ExecuteAsync_LineMatchesSpec_AddsFilterPattern()
     {
-        var specFile = "/project/specs/test.spec.csx";
+        var specFile = TestPaths.Project("specs/test.spec.csx");
         _fileSystem.AddFile(specFile, "");
         _mockParser.WithSpecs(specFile,
             new StaticSpec
@@ -145,7 +146,7 @@ public class LineFilterPhaseTests
     [Test]
     public async Task ExecuteAsync_LineNearSpec_IncludesNearbySpec()
     {
-        var specFile = "/project/specs/test.spec.csx";
+        var specFile = TestPaths.Project("specs/test.spec.csx");
         _fileSystem.AddFile(specFile, "");
         _mockParser.WithSpecs(specFile,
             new StaticSpec
@@ -178,7 +179,7 @@ public class LineFilterPhaseTests
     [Test]
     public async Task ExecuteAsync_MultipleSpecs_BuildsOrPattern()
     {
-        var specFile = "/project/specs/test.spec.csx";
+        var specFile = TestPaths.Project("specs/test.spec.csx");
         _fileSystem.AddFile(specFile, "");
         _mockParser.WithSpecs(specFile,
             new StaticSpec
@@ -217,7 +218,7 @@ public class LineFilterPhaseTests
     [Test]
     public async Task ExecuteAsync_NoSpecsAtLines_ReturnsError()
     {
-        var specFile = "/project/specs/test.spec.csx";
+        var specFile = TestPaths.Project("specs/test.spec.csx");
         _fileSystem.AddFile(specFile, "");
         _mockParser.WithSpecs(specFile,
             new StaticSpec
@@ -250,7 +251,7 @@ public class LineFilterPhaseTests
     [Test]
     public async Task ExecuteAsync_ExistingFilterName_MergesPatterns()
     {
-        var specFile = "/project/specs/test.spec.csx";
+        var specFile = TestPaths.Project("specs/test.spec.csx");
         _fileSystem.AddFile(specFile, "");
         _mockParser.WithSpecs(specFile,
             new StaticSpec
@@ -283,7 +284,7 @@ public class LineFilterPhaseTests
     [Test]
     public async Task ExecuteAsync_NoExistingFilter_CreatesNewFilter()
     {
-        var specFile = "/project/specs/test.spec.csx";
+        var specFile = TestPaths.Project("specs/test.spec.csx");
         _fileSystem.AddFile(specFile, "");
         _mockParser.WithSpecs(specFile,
             new StaticSpec
@@ -317,7 +318,7 @@ public class LineFilterPhaseTests
     [Test]
     public async Task ExecuteAsync_UsesCorrectCacheSetting()
     {
-        var specFile = "/project/specs/test.spec.csx";
+        var specFile = TestPaths.Project("specs/test.spec.csx");
         _fileSystem.AddFile(specFile, "");
         _mockParser.WithSpecs(specFile,
             new StaticSpec
@@ -346,7 +347,7 @@ public class LineFilterPhaseTests
     [Test]
     public async Task ExecuteAsync_CacheEnabled_ByDefault()
     {
-        var specFile = "/project/specs/test.spec.csx";
+        var specFile = TestPaths.Project("specs/test.spec.csx");
         _fileSystem.AddFile(specFile, "");
         _mockParser.WithSpecs(specFile,
             new StaticSpec
@@ -377,7 +378,7 @@ public class LineFilterPhaseTests
     [Test]
     public async Task ExecuteAsync_EmptyContextPath_UsesDescriptionOnly()
     {
-        var specFile = "/project/specs/test.spec.csx";
+        var specFile = TestPaths.Project("specs/test.spec.csx");
         _fileSystem.AddFile(specFile, "");
         _mockParser.WithSpecs(specFile,
             new StaticSpec
@@ -408,7 +409,7 @@ public class LineFilterPhaseTests
     [Test]
     public async Task ExecuteAsync_NestedContextPath_FormatsCorrectly()
     {
-        var specFile = "/project/specs/test.spec.csx";
+        var specFile = TestPaths.Project("specs/test.spec.csx");
         _fileSystem.AddFile(specFile, "");
         _mockParser.WithSpecs(specFile,
             new StaticSpec
@@ -468,7 +469,7 @@ public class LineFilterPhaseTests
 
     #region Helper Methods
 
-    private CommandContext CreateContext(string projectPath = "/project")
+    private CommandContext CreateContext(string? projectPath = null)
     {
         var context = new CommandContext
         {
@@ -476,7 +477,7 @@ public class LineFilterPhaseTests
             Console = _console,
             FileSystem = _fileSystem
         };
-        context.Set(ContextKeys.ProjectPath, projectPath);
+        context.Set(ContextKeys.ProjectPath, projectPath ?? TestPaths.ProjectDir);
         return context;
     }
 

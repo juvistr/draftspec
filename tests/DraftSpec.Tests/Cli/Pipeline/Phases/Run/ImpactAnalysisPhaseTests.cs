@@ -1,5 +1,6 @@
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Pipeline.Phases.Run;
+using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Pipeline.Phases.Run;
@@ -79,7 +80,7 @@ public class ImpactAnalysisPhaseTests
     [Test]
     public async Task ExecuteAsync_NoSpecFiles_ReturnsZero()
     {
-        _gitService.WithChangedFiles("/project/src/Service.cs");
+        _gitService.WithChangedFiles(TestPaths.Project("src/Service.cs"));
         var phase = new ImpactAnalysisPhase(_gitService, _pathComparer);
         var context = CreateContext(affectedBy: "HEAD~1", specFiles: []);
         var pipelineCalled = false;
@@ -101,7 +102,7 @@ public class ImpactAnalysisPhaseTests
     [Test]
     public async Task ExecuteAsync_NullSpecFiles_ReturnsZero()
     {
-        _gitService.WithChangedFiles("/project/src/Service.cs");
+        _gitService.WithChangedFiles(TestPaths.Project("src/Service.cs"));
         var phase = new ImpactAnalysisPhase(_gitService, _pathComparer);
         var context = CreateContext(affectedBy: "HEAD~1");
         // Don't set SpecFiles - it will be null
@@ -129,7 +130,7 @@ public class ImpactAnalysisPhaseTests
     {
         _gitService.ThrowsOnGetChangedFiles(new InvalidOperationException("Git not found"));
         var phase = new ImpactAnalysisPhase(_gitService, _pathComparer);
-        var specFiles = new List<string> { "/project/specs/test.spec.csx" };
+        var specFiles = new List<string> { TestPaths.Project("specs/test.spec.csx") };
         var context = CreateContext(affectedBy: "HEAD~1", specFiles: specFiles);
 
         var result = await phase.ExecuteAsync(
@@ -151,7 +152,7 @@ public class ImpactAnalysisPhaseTests
     {
         _gitService.WithChangedFiles(); // empty
         var phase = new ImpactAnalysisPhase(_gitService, _pathComparer);
-        var specFiles = new List<string> { "/project/specs/test.spec.csx" };
+        var specFiles = new List<string> { TestPaths.Project("specs/test.spec.csx") };
         var context = CreateContext(affectedBy: "HEAD~1", specFiles: specFiles);
         var pipelineCalled = false;
 
@@ -178,8 +179,8 @@ public class ImpactAnalysisPhaseTests
     {
         _gitService.WithChangedFiles(); // empty - avoids DependencyGraphBuilder
         var phase = new ImpactAnalysisPhase(_gitService, _pathComparer);
-        var specFiles = new List<string> { "/project/specs/test.spec.csx" };
-        var context = CreateContext(affectedBy: "staged", projectPath: "/my/project", specFiles: specFiles);
+        var specFiles = new List<string> { TestPaths.Project("specs/test.spec.csx") };
+        var context = CreateContext(affectedBy: "staged", specFiles: specFiles);
 
         await phase.ExecuteAsync(
             context,
@@ -188,7 +189,7 @@ public class ImpactAnalysisPhaseTests
 
         await Assert.That(_gitService.GetChangedFilesCalls).Count().IsEqualTo(1);
         await Assert.That(_gitService.GetChangedFilesCalls[0].Reference).IsEqualTo("staged");
-        await Assert.That(_gitService.GetChangedFilesCalls[0].WorkingDirectory).IsEqualTo("/my/project");
+        await Assert.That(_gitService.GetChangedFilesCalls[0].WorkingDirectory).IsEqualTo(TestPaths.ProjectDir);
     }
 
     #endregion
@@ -200,7 +201,7 @@ public class ImpactAnalysisPhaseTests
     {
         _gitService.WithChangedFiles(); // empty
         var phase = new ImpactAnalysisPhase(_gitService, _pathComparer);
-        var specFiles = new List<string> { "/project/specs/test.spec.csx" };
+        var specFiles = new List<string> { TestPaths.Project("specs/test.spec.csx") };
         var context = CreateContext(affectedBy: "HEAD~1", specFiles: specFiles);
 
         await phase.ExecuteAsync(
@@ -242,7 +243,7 @@ public class ImpactAnalysisPhaseTests
 
     private CommandContext CreateContext(
         string? affectedBy = null,
-        string projectPath = "/project",
+        string? projectPath = null,
         IReadOnlyList<string>? specFiles = null,
         bool dryRun = false)
     {
@@ -252,7 +253,7 @@ public class ImpactAnalysisPhaseTests
             Console = _console,
             FileSystem = _fileSystem
         };
-        context.Set(ContextKeys.ProjectPath, projectPath);
+        context.Set(ContextKeys.ProjectPath, projectPath ?? TestPaths.ProjectDir);
 
         if (affectedBy != null)
             context.Set(ContextKeys.AffectedBy, affectedBy);

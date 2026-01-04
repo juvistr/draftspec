@@ -14,19 +14,22 @@ public class WatchCommand : ICommand<WatchOptions>
     private readonly IFileWatcherFactory _watcherFactory;
     private readonly IConsole _console;
     private readonly ISpecChangeTracker _changeTracker;
+    private readonly IWatchEventProcessor _eventProcessor;
 
     public WatchCommand(
         ISpecFinder specFinder,
         IInProcessSpecRunnerFactory runnerFactory,
         IFileWatcherFactory watcherFactory,
         IConsole console,
-        ISpecChangeTracker changeTracker)
+        ISpecChangeTracker changeTracker,
+        IWatchEventProcessor eventProcessor)
     {
         _specFinder = specFinder;
         _runnerFactory = runnerFactory;
         _watcherFactory = watcherFactory;
         _console = console;
         _changeTracker = changeTracker;
+        _eventProcessor = eventProcessor;
     }
 
     public async Task<int> ExecuteAsync(WatchOptions options, CancellationToken ct = default)
@@ -123,12 +126,9 @@ public class WatchCommand : ICommand<WatchOptions>
             return lastSummary?.Success == true ? 0 : 1;
         }
 
-        // Helper to run only specific specs using filterName
-        async Task RunIncrementalSpecs(string specFile, SpecChangeSet changes)
+        // Helper to run only specific specs using filterName (for incremental mode)
+        async Task RunFilteredSpecs(string specFile, string filterPattern)
         {
-            var specsToRun = changes.SpecsToRun;
-            var filterPattern = BuildFilterPattern(specsToRun);
-
             presenter.Clear();
 
             var runner = _runnerFactory.Create(
@@ -186,69 +186,46 @@ public class WatchCommand : ICommand<WatchOptions>
             presenter.ShowWatching();
         }
 
-        // Set up watcher
+        // Set up watcher with thin orchestration - decision logic is in IWatchEventProcessor
         using var watcher = _watcherFactory.Create(path, change =>
         {
             presenter.ShowRerunning();
 
             try
             {
-                // Selective re-run: if only one spec file changed, run just that one
-                if (change.IsSpecFile && change.FilePath != null)
+                var action = _eventProcessor.ProcessChangeAsync(
+                    change,
+                    allSpecFiles ?? [],
+                    path,
+                    options.Incremental,
+                    options.NoCache,
+                    cts.Token).GetAwaiter().GetResult();
+
+                switch (action.Type)
                 {
-                    var changedSpec = allSpecFiles?.FirstOrDefault(f =>
-                        string.Equals(Path.GetFullPath(f), change.FilePath, StringComparison.OrdinalIgnoreCase));
+                    case WatchActionType.Skip:
+                        if (action.Message != null)
+                            _console.WriteLine(action.Message);
+                        presenter.ShowWatching();
+                        break;
 
-                    if (changedSpec != null)
-                    {
-                        if (options.Incremental)
-                        {
-                            // Incremental mode: parse and detect spec-level changes
-                            var projectPath = Path.GetFullPath(path);
-                            if (File.Exists(projectPath))
-                                projectPath = Path.GetDirectoryName(projectPath)!;
+                    case WatchActionType.RunAll:
+                        RunAll().GetAwaiter().GetResult();
+                        break;
 
-                            var parser = new StaticSpecParser(projectPath, useCache: !options.NoCache);
-                            var newResult = parser.ParseFileAsync(changedSpec, cts.Token).GetAwaiter().GetResult();
+                    case WatchActionType.RunFile:
+                        if (action.Message != null)
+                            _console.WriteLine(action.Message);
+                        RunSpecs([action.FilePath!], isPartialRun: true).GetAwaiter().GetResult();
+                        break;
 
-                            // Check if any dependencies (like spec_helper.csx) changed
-                            // For now, we don't track dependencies - just spec changes
-                            var dependencyChanged = false;
-
-                            var changes = _changeTracker.GetChanges(changedSpec, newResult, dependencyChanged);
-
-                            if (!changes.HasChanges)
-                            {
-                                _console.WriteLine("No spec changes detected.");
-                                presenter.ShowWatching();
-                                return;
-                            }
-
-                            if (changes.RequiresFullRun)
-                            {
-                                var reason = changes.HasDynamicSpecs ? "dynamic specs detected" : "dependency changed";
-                                _console.WriteLine($"Full run required: {reason}");
-                                RunSpecs([changedSpec], true).GetAwaiter().GetResult();
-                            }
-                            else
-                            {
-                                _console.WriteLine($"Incremental: {changes.SpecsToRun.Count} spec(s) changed");
-                                RunIncrementalSpecs(changedSpec, changes).GetAwaiter().GetResult();
-                            }
-
-                            // Record new state after successful run
-                            _changeTracker.RecordState(changedSpec, newResult);
-                            return;
-                        }
-
-                        // Non-incremental: run entire file
-                        RunSpecs([changedSpec], true).GetAwaiter().GetResult();
-                        return;
-                    }
+                    case WatchActionType.RunFiltered:
+                        _console.WriteLine(action.Message!);
+                        RunFilteredSpecs(action.FilePath!, action.FilterPattern!).GetAwaiter().GetResult();
+                        if (action.ParseResultToRecord != null)
+                            _changeTracker.RecordState(action.FilePath!, action.ParseResultToRecord);
+                        break;
                 }
-
-                // Full run: source file changed, multiple files changed, or file not in list
-                RunAll().GetAwaiter().GetResult();
             }
             catch (OperationCanceledException)
             {

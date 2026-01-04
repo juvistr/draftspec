@@ -1,6 +1,7 @@
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
+using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using DraftSpec.Tests.Infrastructure;
 using DraftSpec.Tests.Infrastructure.Mocks;
@@ -743,7 +744,8 @@ public class WatchCommandTests
             runnerFactory ?? new MockRunnerFactory(),
             watcherFactory ?? new MockFileWatcherFactory(),
             console ?? new MockConsole(),
-            NullObjects.SpecChangeTracker);
+            NullObjects.SpecChangeTracker,
+            NullObjects.WatchEventProcessor);
     }
 
     private static WatchCommand CreateCommandWithChangeTracker(
@@ -751,15 +753,26 @@ public class WatchCommandTests
         MockRunnerFactory? runnerFactory = null,
         MockFileWatcherFactory? watcherFactory = null,
         ISpecChangeTracker? changeTracker = null,
+        IWatchEventProcessor? eventProcessor = null,
         IReadOnlyList<string>? specFiles = null)
     {
         var specs = specFiles ?? [];
+        var tracker = changeTracker ?? NullObjects.SpecChangeTracker;
+
+        // If no eventProcessor is provided but a changeTracker is,
+        // create a real WatchEventProcessor with the provided tracker
+        var processor = eventProcessor ??
+            (changeTracker != null
+                ? new WatchEventProcessor(tracker, new MockStaticSpecParserFactory())
+                : NullObjects.WatchEventProcessor);
+
         return new WatchCommand(
             new MockSpecFinder(specs),
             runnerFactory ?? new MockRunnerFactory(),
             watcherFactory ?? new MockFileWatcherFactory(),
             console ?? new MockConsole(),
-            changeTracker ?? NullObjects.SpecChangeTracker);
+            tracker,
+            processor);
     }
 
     #endregion

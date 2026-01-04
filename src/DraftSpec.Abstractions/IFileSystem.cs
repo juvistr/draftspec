@@ -1,4 +1,4 @@
-namespace DraftSpec.Cli;
+namespace DraftSpec.Abstractions;
 
 /// <summary>
 /// Abstraction over file system operations for testability.

@@ -499,8 +499,8 @@ public class CliOptionsParserTests
         var options = CliOptionsParser.Parse(["run", "test.spec.csx:15"]);
 
         await Assert.That(options.Path).IsEqualTo("test.spec.csx");
-        await Assert.That(options.LineFilters).IsNotNull();
-        await Assert.That(options.LineFilters!.Count).IsEqualTo(1);
+        Assert.NotNull(options.LineFilters);
+        await Assert.That(options.LineFilters.Count).IsEqualTo(1);
         await Assert.That(options.LineFilters[0].File).IsEqualTo("test.spec.csx");
         await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 15 });
     }
@@ -511,8 +511,8 @@ public class CliOptionsParserTests
         var options = CliOptionsParser.Parse(["run", "test.spec.csx:15,20,25"]);
 
         await Assert.That(options.Path).IsEqualTo("test.spec.csx");
-        await Assert.That(options.LineFilters).IsNotNull();
-        await Assert.That(options.LineFilters!.Count).IsEqualTo(1);
+        Assert.NotNull(options.LineFilters);
+        await Assert.That(options.LineFilters.Count).IsEqualTo(1);
         await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 15, 20, 25 });
     }
 
@@ -522,7 +522,7 @@ public class CliOptionsParserTests
         var options = CliOptionsParser.Parse(["run", "test.spec.csx"]);
 
         await Assert.That(options.Path).IsEqualTo("test.spec.csx");
-        await Assert.That(options.LineFilters).IsNull();
+        Assert.Null(options.LineFilters);
     }
 
     [Test]
@@ -532,7 +532,7 @@ public class CliOptionsParserTests
         var options = CliOptionsParser.Parse(["run", "C:\\path\\test.spec.csx"]);
 
         await Assert.That(options.Path).IsEqualTo("C:\\path\\test.spec.csx");
-        await Assert.That(options.LineFilters).IsNull();
+        Assert.Null(options.LineFilters);
     }
 
     [Test]
@@ -542,8 +542,8 @@ public class CliOptionsParserTests
         var options = CliOptionsParser.Parse(["run", "C:\\path\\test.spec.csx:42"]);
 
         await Assert.That(options.Path).IsEqualTo("C:\\path\\test.spec.csx");
-        await Assert.That(options.LineFilters).IsNotNull();
-        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 42 });
+        Assert.NotNull(options.LineFilters);
+        await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 42 });
     }
 
     [Test]
@@ -553,7 +553,7 @@ public class CliOptionsParserTests
         var options = CliOptionsParser.Parse(["run", "test.spec.csx:abc"]);
 
         await Assert.That(options.Path).IsEqualTo("test.spec.csx:abc");
-        await Assert.That(options.LineFilters).IsNull();
+        Assert.Null(options.LineFilters);
     }
 
     [Test]
@@ -562,8 +562,8 @@ public class CliOptionsParserTests
         var options = CliOptionsParser.Parse(["run", "./specs/test.spec.csx:10"]);
 
         await Assert.That(options.Path).IsEqualTo("./specs/test.spec.csx");
-        await Assert.That(options.LineFilters).IsNotNull();
-        await Assert.That(options.LineFilters![0].File).IsEqualTo("./specs/test.spec.csx");
+        Assert.NotNull(options.LineFilters);
+        await Assert.That(options.LineFilters[0].File).IsEqualTo("./specs/test.spec.csx");
         await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 10 });
     }
 
@@ -573,8 +573,8 @@ public class CliOptionsParserTests
         // Line number 0 should be filtered out
         var options = CliOptionsParser.Parse(["run", "test.spec.csx:0,15"]);
 
-        await Assert.That(options.LineFilters).IsNotNull();
-        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 15 });
+        Assert.NotNull(options.LineFilters);
+        await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 15 });
     }
 
     [Test]
@@ -583,8 +583,8 @@ public class CliOptionsParserTests
         // Empty entries from consecutive commas should be ignored
         var options = CliOptionsParser.Parse(["run", "test.spec.csx:15,,20"]);
 
-        await Assert.That(options.LineFilters).IsNotNull();
-        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 15, 20 });
+        Assert.NotNull(options.LineFilters);
+        await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 15, 20 });
     }
 
     #endregion
@@ -596,8 +596,8 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "--context", "UserService/CreateAsync"]);
 
-        await Assert.That(options.FilterContext).IsNotNull();
-        await Assert.That(options.FilterContext!.Count).IsEqualTo(1);
+        Assert.NotNull(options.FilterContext);
+        await Assert.That(options.FilterContext.Count).IsEqualTo(1);
         await Assert.That(options.FilterContext[0]).IsEqualTo("UserService/CreateAsync");
     }
 
@@ -606,8 +606,8 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "-c", "UserService"]);
 
-        await Assert.That(options.FilterContext).IsNotNull();
-        await Assert.That(options.FilterContext![0]).IsEqualTo("UserService");
+        Assert.NotNull(options.FilterContext);
+        await Assert.That(options.FilterContext[0]).IsEqualTo("UserService");
     }
 
     [Test]
@@ -619,8 +619,8 @@ public class CliOptionsParserTests
             "--context", "OrderService/*"
         ]);
 
-        await Assert.That(options.FilterContext).IsNotNull();
-        await Assert.That(options.FilterContext!.Count).IsEqualTo(2);
+        Assert.NotNull(options.FilterContext);
+        await Assert.That(options.FilterContext.Count).IsEqualTo(2);
         await Assert.That(options.FilterContext).Contains("UserService/*");
         await Assert.That(options.FilterContext).Contains("OrderService/*");
     }
@@ -639,8 +639,8 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", ".", "--exclude-context", "Legacy/*"]);
 
-        await Assert.That(options.ExcludeContext).IsNotNull();
-        await Assert.That(options.ExcludeContext!.Count).IsEqualTo(1);
+        Assert.NotNull(options.ExcludeContext);
+        await Assert.That(options.ExcludeContext.Count).IsEqualTo(1);
         await Assert.That(options.ExcludeContext[0]).IsEqualTo("Legacy/*");
     }
 
@@ -653,8 +653,8 @@ public class CliOptionsParserTests
             "--exclude-context", "**/Slow"
         ]);
 
-        await Assert.That(options.ExcludeContext).IsNotNull();
-        await Assert.That(options.ExcludeContext!.Count).IsEqualTo(2);
+        Assert.NotNull(options.ExcludeContext);
+        await Assert.That(options.ExcludeContext.Count).IsEqualTo(2);
         await Assert.That(options.ExcludeContext).Contains("Legacy/*");
         await Assert.That(options.ExcludeContext).Contains("**/Slow");
     }
@@ -673,8 +673,8 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["run", "."]);
 
-        await Assert.That(options.FilterContext).IsNull();
-        await Assert.That(options.ExcludeContext).IsNull();
+        Assert.Null(options.FilterContext);
+        Assert.Null(options.ExcludeContext);
     }
 
     [Test]
@@ -686,10 +686,10 @@ public class CliOptionsParserTests
             "--exclude-context", "**/Integration"
         ]);
 
-        await Assert.That(options.FilterContext).IsNotNull();
-        await Assert.That(options.FilterContext![0]).IsEqualTo("UserService/**");
-        await Assert.That(options.ExcludeContext).IsNotNull();
-        await Assert.That(options.ExcludeContext![0]).IsEqualTo("**/Integration");
+        Assert.NotNull(options.FilterContext);
+        await Assert.That(options.FilterContext[0]).IsEqualTo("UserService/**");
+        Assert.NotNull(options.ExcludeContext);
+        await Assert.That(options.ExcludeContext[0]).IsEqualTo("**/Integration");
     }
 
     #endregion
@@ -1092,8 +1092,8 @@ public class CliOptionsParserTests
     {
         var options = CliOptionsParser.Parse(["validate", ".", "--files", "a.spec.csx,b.spec.csx"]);
 
-        await Assert.That(options.Files).IsNotNull();
-        await Assert.That(options.Files!.Count).IsEqualTo(2);
+        Assert.NotNull(options.Files);
+        await Assert.That(options.Files.Count).IsEqualTo(2);
         await Assert.That(options.Files).Contains("a.spec.csx");
         await Assert.That(options.Files).Contains("b.spec.csx");
     }

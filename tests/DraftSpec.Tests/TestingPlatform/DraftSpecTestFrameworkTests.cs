@@ -116,7 +116,7 @@ public class DraftSpecTestFrameworkTests
     {
         var result = DraftSpecTestFramework.ExtractTestIds(null);
 
-        await Assert.That(result).IsNull();
+        Assert.Null(result);
     }
 
     [Test]
@@ -126,7 +126,7 @@ public class DraftSpecTestFrameworkTests
 
         var result = DraftSpecTestFramework.ExtractTestIds(filter);
 
-        await Assert.That(result).IsNull();
+        Assert.Null(result);
     }
 
     [Test]

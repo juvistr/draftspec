@@ -34,6 +34,9 @@
         "resolved": "10.0.1",
         "contentHash": "oIy8fQxxbUsSrrOvgBqlVgOeCtDmrcynnTG+FQufcUWBrwyPfwlUkCDB2vaiBeYPyT+20u9/HeuHeBf+H4F/8g=="
       },
+      "draftspec.abstractions": {
+        "type": "Project"
+      },
       "draftspec.formatters.abstractions": {
         "type": "Project"
       }

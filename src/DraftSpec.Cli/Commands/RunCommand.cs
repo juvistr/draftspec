@@ -27,6 +27,7 @@ public class RunCommand : ICommand<RunOptions>
     private readonly IGitService _gitService;
     private readonly ISpecHistoryService _historyService;
     private readonly ISpecSelector _specSelector;
+    private readonly IPathComparer _pathComparer;
 
     public RunCommand(
         ISpecFinder specFinder,
@@ -39,7 +40,8 @@ public class RunCommand : ICommand<RunOptions>
         ISpecPartitioner partitioner,
         IGitService gitService,
         ISpecHistoryService historyService,
-        ISpecSelector specSelector)
+        ISpecSelector specSelector,
+        IPathComparer pathComparer)
     {
         _specFinder = specFinder;
         _runnerFactory = runnerFactory;
@@ -52,6 +54,7 @@ public class RunCommand : ICommand<RunOptions>
         _gitService = gitService;
         _historyService = historyService;
         _specSelector = specSelector;
+        _pathComparer = pathComparer;
     }
 
     public async Task<int> ExecuteAsync(RunOptions options, CancellationToken ct = default)
@@ -387,11 +390,7 @@ public class RunCommand : ICommand<RunOptions>
         var outputDir = Path.GetDirectoryName(outputFullPath) ?? currentDir;
         var normalizedOutput = outputDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
-        var comparison = OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
-
-        if (!normalizedOutput.StartsWith(normalizedBase, comparison))
+        if (!normalizedOutput.StartsWith(normalizedBase, _pathComparer.Comparison))
             throw new SecurityException("Output file must be within current directory");
     }
 
@@ -511,17 +510,14 @@ public class RunCommand : ICommand<RunOptions>
         }
 
         // Build dependency graph
-        var graphBuilder = new DependencyGraphBuilder();
+        var graphBuilder = new DependencyGraphBuilder(_pathComparer);
         var graph = await graphBuilder.BuildAsync(projectPath, cancellationToken: ct);
 
         // Get affected specs
         var affectedSpecs = graph.GetAffectedSpecs(changedFiles);
 
         // Filter to only specs that exist in our discovered spec files
-        var pathComparer = OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal;
-        var specFileSet = new HashSet<string>(specFiles, pathComparer);
+        var specFileSet = new HashSet<string>(specFiles, _pathComparer.Comparer);
         var filteredSpecs = affectedSpecs
             .Where(s => specFileSet.Contains(s))
             .ToList();

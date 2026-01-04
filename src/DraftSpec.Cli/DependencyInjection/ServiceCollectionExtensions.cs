@@ -1,3 +1,4 @@
+using DraftSpec.Abstractions;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Configuration;
 using DraftSpec.Cli.History;
@@ -9,6 +10,10 @@ using DraftSpec.Cli.Pipeline.Phases.Docs;
 using DraftSpec.Cli.Pipeline.Phases.List;
 using DraftSpec.Cli.Pipeline.Phases.Validate;
 using DraftSpec.Cli.Pipeline.Phases.CoverageMap;
+using DraftSpec.Cli.Pipeline.Phases.Init;
+using DraftSpec.Cli.Pipeline.Phases.NewSpec;
+using DraftSpec.Cli.Pipeline.Phases.Schema;
+using DraftSpec.Cli.Pipeline.Phases.Cache;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,9 +34,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConsole, SystemConsole>();
         services.AddSingleton<IFileSystem, FileSystem>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
-        services.AddSingleton<DraftSpec.IClock, DraftSpec.SystemClock>();
+        services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IProcessRunner, SystemProcessRunner>();
         services.AddSingleton<IUsageWriter, UsageWriter>();
+        services.AddSingleton<IOperatingSystem, SystemOperatingSystem>();
+        services.AddSingleton<IPathComparer, SystemPathComparer>();
+        services.AddSingleton<IPathValidator, PathValidator>();
 
         // Infrastructure - Build
         services.AddSingleton<IBuildCache, InMemoryBuildCache>();
@@ -60,6 +68,7 @@ public static class ServiceCollectionExtensions
 
         // Pipeline Phases - Common
         services.AddSingleton<PathResolutionPhase>();
+        services.AddSingleton<ProjectDiscoveryPhase>();
         services.AddSingleton<SpecDiscoveryPhase>();
         services.AddSingleton<SpecParsingPhase>();
 
@@ -78,6 +87,18 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SourceDiscoveryPhase>();
         services.AddSingleton<CoverageMapPhase>();
         services.AddSingleton<CoverageMapOutputPhase>();
+
+        // Pipeline Phases - Init
+        services.AddSingleton<InitOutputPhase>();
+
+        // Pipeline Phases - New
+        services.AddSingleton<NewSpecOutputPhase>();
+
+        // Pipeline Phases - Schema
+        services.AddSingleton<SchemaOutputPhase>();
+
+        // Pipeline Phases - Cache
+        services.AddSingleton<CacheOperationPhase>();
 
         // Keyed Pipelines - Singleton since phases are singletons and the delegate is stateless
         services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
@@ -116,6 +137,34 @@ public static class ServiceCollectionExtensions
                 .Use(sp.GetRequiredService<SourceDiscoveryPhase>())
                 .Use(sp.GetRequiredService<CoverageMapPhase>())
                 .Use(sp.GetRequiredService<CoverageMapOutputPhase>())
+                .Build());
+
+        services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
+            "init",
+            (sp, _) => new CommandPipelineBuilder()
+                .Use(sp.GetRequiredService<PathResolutionPhase>())
+                .Use(sp.GetRequiredService<ProjectDiscoveryPhase>())
+                .Use(sp.GetRequiredService<InitOutputPhase>())
+                .Build());
+
+        services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
+            "new",
+            (sp, _) => new CommandPipelineBuilder()
+                .Use(sp.GetRequiredService<PathResolutionPhase>())
+                .Use(sp.GetRequiredService<NewSpecOutputPhase>())
+                .Build());
+
+        services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
+            "schema",
+            (sp, _) => new CommandPipelineBuilder()
+                .Use(sp.GetRequiredService<SchemaOutputPhase>())
+                .Build());
+
+        services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
+            "cache",
+            (sp, _) => new CommandPipelineBuilder()
+                .Use(sp.GetRequiredService<PathResolutionPhase>())
+                .Use(sp.GetRequiredService<CacheOperationPhase>())
                 .Build());
 
         // Commands

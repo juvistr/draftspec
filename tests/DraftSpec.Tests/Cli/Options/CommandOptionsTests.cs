@@ -172,7 +172,7 @@ public class CommandOptionsTests
         await Assert.That(options.Static).IsFalse();
         await Assert.That(options.Strict).IsFalse();
         await Assert.That(options.Quiet).IsFalse();
-        await Assert.That(options.Files).IsNull();
+        Assert.Null(options.Files);
     }
 
     [Test]

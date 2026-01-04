@@ -77,7 +77,7 @@ public class ValidateCommandTests
 
         await command.ExecuteAsync(options);
 
-        await Assert.That(_capturedContext!.Get<List<string>>(ContextKeys.ExplicitFiles)).IsNull();
+        Assert.Null(_capturedContext!.Get<List<string>>(ContextKeys.ExplicitFiles));
     }
 
     [Test]

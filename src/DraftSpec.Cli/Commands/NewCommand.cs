@@ -1,58 +1,36 @@
 using DraftSpec.Cli.Options;
+using DraftSpec.Cli.Pipeline;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DraftSpec.Cli.Commands;
 
 public class NewCommand : ICommand<NewOptions>
 {
+    private readonly Func<CommandContext, CancellationToken, Task<int>> _pipeline;
     private readonly IConsole _console;
     private readonly IFileSystem _fileSystem;
 
-    public NewCommand(IConsole console, IFileSystem fileSystem)
+    public NewCommand(
+        [FromKeyedServices("new")] Func<CommandContext, CancellationToken, Task<int>> pipeline,
+        IConsole console,
+        IFileSystem fileSystem)
     {
+        _pipeline = pipeline;
         _console = console;
         _fileSystem = fileSystem;
     }
 
     public Task<int> ExecuteAsync(NewOptions options, CancellationToken ct = default)
     {
-        var name = options.SpecName;
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentException("Usage: draftspec new <Name>");
-
-        // Security: Validate spec name doesn't contain path separators
-        PathValidator.ValidateFileName(name);
-
-        var directory = Path.GetFullPath(options.Path);
-
-        if (!_fileSystem.DirectoryExists(directory))
-            throw new ArgumentException($"Directory not found: {directory}");
-
-        var specHelperPath = Path.Combine(directory, "spec_helper.csx");
-        if (!_fileSystem.FileExists(specHelperPath))
+        var context = new CommandContext
         {
-            _console.WriteWarning("Warning: spec_helper.csx not found. Run 'draftspec init' first.");
-        }
+            Path = options.Path,
+            Console = _console,
+            FileSystem = _fileSystem
+        };
 
-        var specPath = Path.Combine(directory, $"{name}.spec.csx");
-        if (_fileSystem.FileExists(specPath))
-            throw new ArgumentException($"{name}.spec.csx already exists");
+        context.Set(ContextKeys.SpecName, options.SpecName);
 
-        var specContent = GenerateSpec(name);
-        _fileSystem.WriteAllText(specPath, specContent);
-        _console.WriteSuccess($"Created {name}.spec.csx");
-
-        return Task.FromResult(0);
-    }
-
-    private static string GenerateSpec(string name)
-    {
-        return $$"""
-                 #load "spec_helper.csx"
-                 using static DraftSpec.Dsl;
-
-                 describe("{{name}}", () => {
-                     it("works"); // Pending spec - add implementation
-                 });
-                 """;
+        return _pipeline(context, ct);
     }
 }

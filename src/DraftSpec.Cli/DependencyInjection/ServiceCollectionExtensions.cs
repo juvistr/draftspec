@@ -119,6 +119,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<QuarantinePhase>();
         services.AddSingleton<LineFilterPhase>();
         services.AddSingleton<ImpactAnalysisPhase>();
+        services.AddSingleton<InteractiveSelectionPhase>();
+        services.AddSingleton<PartitionPhase>();
+        services.AddSingleton<SpecExecutionPhase>();
+        services.AddSingleton<HistoryRecordPhase>();
+        services.AddSingleton<RunOutputPhase>();
 
         // Keyed Pipelines - Singleton since phases are singletons and the delegate is stateless
         services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(

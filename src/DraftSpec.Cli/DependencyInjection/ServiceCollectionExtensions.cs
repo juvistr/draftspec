@@ -14,6 +14,9 @@ using DraftSpec.Cli.Pipeline.Phases.Init;
 using DraftSpec.Cli.Pipeline.Phases.NewSpec;
 using DraftSpec.Cli.Pipeline.Phases.Schema;
 using DraftSpec.Cli.Pipeline.Phases.Cache;
+using DraftSpec.Cli.Pipeline.Phases.History;
+using DraftSpec.Cli.Pipeline.Phases.Estimate;
+using DraftSpec.Cli.Pipeline.Phases.Flaky;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using Microsoft.Extensions.DependencyInjection;
@@ -100,6 +103,15 @@ public static class ServiceCollectionExtensions
         // Pipeline Phases - Cache
         services.AddSingleton<CacheOperationPhase>();
 
+        // Pipeline Phases - History (shared)
+        services.AddSingleton<HistoryLoadPhase>();
+
+        // Pipeline Phases - Estimate
+        services.AddSingleton<EstimateOutputPhase>();
+
+        // Pipeline Phases - Flaky
+        services.AddSingleton<FlakyOutputPhase>();
+
         // Keyed Pipelines - Singleton since phases are singletons and the delegate is stateless
         services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
             "list",
@@ -165,6 +177,22 @@ public static class ServiceCollectionExtensions
             (sp, _) => new CommandPipelineBuilder()
                 .Use(sp.GetRequiredService<PathResolutionPhase>())
                 .Use(sp.GetRequiredService<CacheOperationPhase>())
+                .Build());
+
+        services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
+            "estimate",
+            (sp, _) => new CommandPipelineBuilder()
+                .Use(sp.GetRequiredService<PathResolutionPhase>())
+                .Use(sp.GetRequiredService<HistoryLoadPhase>())
+                .Use(sp.GetRequiredService<EstimateOutputPhase>())
+                .Build());
+
+        services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
+            "flaky",
+            (sp, _) => new CommandPipelineBuilder()
+                .Use(sp.GetRequiredService<PathResolutionPhase>())
+                .Use(sp.GetRequiredService<HistoryLoadPhase>())
+                .Use(sp.GetRequiredService<FlakyOutputPhase>())
                 .Build());
 
         // Commands

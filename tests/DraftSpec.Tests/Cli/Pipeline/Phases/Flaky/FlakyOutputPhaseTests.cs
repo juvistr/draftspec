@@ -1,26 +1,24 @@
-using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.History;
-using DraftSpec.Cli.Options;
+using DraftSpec.Cli.Pipeline;
+using DraftSpec.Cli.Pipeline.Phases.Flaky;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
-namespace DraftSpec.Tests.Cli.Commands;
+namespace DraftSpec.Tests.Cli.Pipeline.Phases.Flaky;
 
 /// <summary>
-/// Tests for FlakyCommand which lists detected flaky specs based on execution history.
+/// Tests for <see cref="FlakyOutputPhase"/>.
 /// </summary>
-public class FlakyCommandTests
+public class FlakyOutputPhaseTests
 {
     private string _tempDir = null!;
     private MockConsole _console = null!;
-    private MockFileSystem _fileSystem = null!;
 
     [Before(Test)]
     public void SetUp()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_flaky_{Guid.NewGuid():N}");
+        _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_flaky_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
         _console = new MockConsole();
-        _fileSystem = new MockFileSystem().AddDirectory(_tempDir);
     }
 
     [After(Test)]
@@ -32,37 +30,20 @@ public class FlakyCommandTests
         }
     }
 
-    #region Directory Validation Tests
-
-    [Test]
-    public async Task ExecuteAsync_DirectoryNotFound_ThrowsArgumentException()
-    {
-        var historyService = new MockSpecHistoryService();
-        var command = CreateCommand(historyService);
-
-        var options = new FlakyOptions { Path = "/nonexistent/path" };
-
-        await Assert.ThrowsAsync<ArgumentException>(async () => await command.ExecuteAsync(options));
-    }
-
-    #endregion
-
     #region Clear Option Tests
 
     [Test]
     public async Task ExecuteAsync_ClearOption_Success_ShowsSuccessMessage()
     {
-        var historyService = new MockSpecHistoryService()
-            .WithClearSpecResult(true);
-        var command = CreateCommand(historyService);
+        var historyService = new MockSpecHistoryService().WithClearSpecResult(true);
+        var phase = new FlakyOutputPhase(historyService);
+        var context = CreateContext(SpecHistory.Empty);
+        context.Set(ContextKeys.Clear, "test.spec.csx:Context/spec1");
 
-        var options = new FlakyOptions
-        {
-            Path = _tempDir,
-            Clear = "test.spec.csx:Context/spec1"
-        };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(_console.Output).Contains("Cleared history for");
@@ -72,21 +53,36 @@ public class FlakyCommandTests
     [Test]
     public async Task ExecuteAsync_ClearOption_NotFound_ShowsWarning()
     {
-        var historyService = new MockSpecHistoryService()
-            .WithClearSpecResult(false);
-        var command = CreateCommand(historyService);
+        var historyService = new MockSpecHistoryService().WithClearSpecResult(false);
+        var phase = new FlakyOutputPhase(historyService);
+        var context = CreateContext(SpecHistory.Empty);
+        context.Set(ContextKeys.Clear, "nonexistent-spec");
 
-        var options = new FlakyOptions
-        {
-            Path = _tempDir,
-            Clear = "nonexistent-spec"
-        };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(1);
         await Assert.That(_console.Output).Contains("No history found for");
         await Assert.That(_console.Output).Contains("nonexistent-spec");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ClearOption_ShortCircuitsHistoryCheck()
+    {
+        var historyService = new MockSpecHistoryService().WithClearSpecResult(true);
+        var phase = new FlakyOutputPhase(historyService);
+        // Even with empty history, clear should succeed without "no history" message
+        var context = CreateContext(SpecHistory.Empty);
+        context.Set(ContextKeys.Clear, "test-spec");
+
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        await Assert.That(_console.Output).DoesNotContain("No test history found");
     }
 
     #endregion
@@ -96,13 +92,14 @@ public class FlakyCommandTests
     [Test]
     public async Task ExecuteAsync_NoHistory_ShowsRunSpecsFirstMessage()
     {
-        var historyService = new MockSpecHistoryService()
-            .WithHistory(SpecHistory.Empty);
-        var command = CreateCommand(historyService);
+        var historyService = new MockSpecHistoryService();
+        var phase = new FlakyOutputPhase(historyService);
+        var context = CreateContext(SpecHistory.Empty);
 
-        var options = new FlakyOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(_console.Output).Contains("No test history found");
@@ -131,14 +128,14 @@ public class FlakyCommandTests
                 }
             }
         };
-        var historyService = new MockSpecHistoryService()
-            .WithHistory(history);
-        // Don't add flaky specs, so GetFlakySpecs returns empty
-        var command = CreateCommand(historyService);
+        var historyService = new MockSpecHistoryService();
+        var phase = new FlakyOutputPhase(historyService);
+        var context = CreateContext(history);
 
-        var options = new FlakyOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(_console.Output).Contains("No flaky specs detected");
@@ -172,13 +169,14 @@ public class FlakyCommandTests
             PassRate = 0.6
         };
         var historyService = new MockSpecHistoryService()
-            .WithHistory(history)
             .WithFlakySpecs(flakySpec);
-        var command = CreateCommand(historyService);
+        var phase = new FlakyOutputPhase(historyService);
+        var context = CreateContext(history);
 
-        var options = new FlakyOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(_console.Output).Contains("Flaky Tests Detected: 1");
@@ -217,17 +215,50 @@ public class FlakyCommandTests
             PassRate = 0.5
         };
         var historyService = new MockSpecHistoryService()
-            .WithHistory(history)
             .WithFlakySpecs(mediumFlaky, highFlaky);
-        var command = CreateCommand(historyService);
+        var phase = new FlakyOutputPhase(historyService);
+        var context = CreateContext(history);
 
-        var options = new FlakyOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(_console.Output).Contains("MEDIUM");
         await Assert.That(_console.Output).Contains("HIGH");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithLowSeveritySpec_ShowsLowSeverity()
+    {
+        var history = new SpecHistory
+        {
+            Specs = new Dictionary<string, SpecHistoryEntry>
+            {
+                ["spec1"] = new SpecHistoryEntry { DisplayName = "Spec 1", Runs = [new SpecRun { Status = "passed" }] }
+            }
+        };
+        var lowFlaky = new FlakySpec
+        {
+            SpecId = "spec1",
+            DisplayName = "Low Flaky Spec",
+            StatusChanges = 1, // < 2 results in LOW severity
+            TotalRuns = 10,
+            PassRate = 0.8
+        };
+        var historyService = new MockSpecHistoryService()
+            .WithFlakySpecs(lowFlaky);
+        var phase = new FlakyOutputPhase(historyService);
+        var context = CreateContext(history);
+
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(_console.Output).Contains("LOW");
     }
 
     [Test]
@@ -249,13 +280,14 @@ public class FlakyCommandTests
             PassRate = 0.6
         };
         var historyService = new MockSpecHistoryService()
-            .WithHistory(history)
             .WithFlakySpecs(flakySpec);
-        var command = CreateCommand(historyService);
+        var phase = new FlakyOutputPhase(historyService);
+        var context = CreateContext(history);
 
-        var options = new FlakyOptions { Path = _tempDir };
-
-        await command.ExecuteAsync(options);
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(_console.Output).Contains("Recommendations");
         await Assert.That(_console.Output).Contains("--quarantine");
@@ -267,7 +299,7 @@ public class FlakyCommandTests
     #region Window Size and Min Changes Tests
 
     [Test]
-    public async Task ExecuteAsync_UsesCustomWindowSize()
+    public async Task ExecuteAsync_UsesWindowSizeFromContext()
     {
         var history = new SpecHistory
         {
@@ -285,31 +317,60 @@ public class FlakyCommandTests
             PassRate = 0.6
         };
         var historyService = new MockSpecHistoryService()
-            .WithHistory(history)
             .WithFlakySpecs(flakySpec);
-        var command = CreateCommand(historyService);
+        var phase = new FlakyOutputPhase(historyService);
+        var context = CreateContext(history);
+        context.Set(ContextKeys.WindowSize, 20);
 
-        var options = new FlakyOptions
-        {
-            Path = _tempDir,
-            WindowSize = 20
-        };
-
-        await command.ExecuteAsync(options);
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(_console.Output).Contains("last 20 runs per spec");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_UsesMinStatusChangesFromContext()
+    {
+        var history = new SpecHistory
+        {
+            Specs = new Dictionary<string, SpecHistoryEntry>
+            {
+                ["spec1"] = new SpecHistoryEntry { DisplayName = "Spec 1", Runs = [new SpecRun { Status = "passed" }] }
+            }
+        };
+        var historyService = new MockSpecHistoryService();
+        var phase = new FlakyOutputPhase(historyService);
+        var context = CreateContext(history);
+        context.Set(ContextKeys.MinStatusChanges, 5);
+
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        await Assert.That(_console.Output).Contains("5+ status changes threshold");
     }
 
     #endregion
 
     #region Helper Methods
 
-    private FlakyCommand CreateCommand(MockSpecHistoryService? historyService = null)
+    private CommandContext CreateContext(SpecHistory history)
     {
-        return new FlakyCommand(
-            historyService ?? new MockSpecHistoryService(),
-            _console,
-            _fileSystem);
+        var context = new CommandContext
+        {
+            Path = ".",
+            Console = _console,
+            FileSystem = new MockFileSystem()
+        };
+        context.Set(ContextKeys.ProjectPath, _tempDir);
+        context.Set(ContextKeys.History, history);
+        context.Set(ContextKeys.MinStatusChanges, 2);
+        context.Set(ContextKeys.WindowSize, 10);
+        context.Set<string?>(ContextKeys.Clear, null);
+        return context;
     }
 
     #endregion

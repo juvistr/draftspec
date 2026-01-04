@@ -235,4 +235,52 @@ public static class ContextKeys
     public const string CacheSubcommand = nameof(CacheSubcommand);
 
     #endregion
+
+    #region History Command Keys
+
+    /// <summary>
+    /// Loaded spec execution history.
+    /// Type: <c>SpecHistory</c>
+    /// </summary>
+    public const string History = nameof(History);
+
+    #endregion
+
+    #region Estimate Command Keys
+
+    /// <summary>
+    /// Percentile for runtime estimation (1-99).
+    /// Type: <see cref="int"/>
+    /// </summary>
+    public const string Percentile = nameof(Percentile);
+
+    /// <summary>
+    /// Whether to output seconds only (machine-readable).
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string OutputSeconds = nameof(OutputSeconds);
+
+    #endregion
+
+    #region Flaky Command Keys
+
+    /// <summary>
+    /// Minimum status changes to consider a spec flaky.
+    /// Type: <see cref="int"/>
+    /// </summary>
+    public const string MinStatusChanges = nameof(MinStatusChanges);
+
+    /// <summary>
+    /// Number of recent runs to analyze for flakiness.
+    /// Type: <see cref="int"/>
+    /// </summary>
+    public const string WindowSize = nameof(WindowSize);
+
+    /// <summary>
+    /// Spec ID to clear from history (nullable).
+    /// Type: <see cref="string"/>
+    /// </summary>
+    public const string Clear = nameof(Clear);
+
+    #endregion
 }

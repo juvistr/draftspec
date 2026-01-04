@@ -7,7 +7,7 @@ namespace DraftSpec.Cli.DependencyGraph;
 /// Extracts #load dependencies and using directives from spec files,
 /// and namespace definitions from .cs source files.
 /// </summary>
-public sealed partial class DependencyGraphBuilder
+public sealed partial class DependencyGraphBuilder : IDependencyGraphBuilder
 {
     private readonly IPathComparer _pathComparer;
 

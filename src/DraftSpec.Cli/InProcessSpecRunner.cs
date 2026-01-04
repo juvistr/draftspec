@@ -107,7 +107,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
             var runner = builder.Build();
 
             // Execute specs
-            var results = runner.Run(rootContext);
+            var results = await runner.RunAsync(rootContext, ct).ConfigureAwait(false);
 
             // Build report
             var report = SpecReportBuilder.Build(rootContext, results);

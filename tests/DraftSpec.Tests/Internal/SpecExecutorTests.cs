@@ -13,7 +13,7 @@ public class SpecExecutorTests
         var context = new SpecContext("test");
         context.AddSpec(new SpecDefinition("passes", () => { }));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         await Assert.That(report.Summary.Total).IsEqualTo(1);
         await Assert.That(report.Summary.Passed).IsEqualTo(1);
@@ -26,7 +26,7 @@ public class SpecExecutorTests
         var context = new SpecContext("test");
         context.AddSpec(new SpecDefinition("fails", () => throw new Exception("failure")));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         await Assert.That(report.Summary.Total).IsEqualTo(1);
         await Assert.That(report.Summary.Failed).IsEqualTo(1);
@@ -39,7 +39,7 @@ public class SpecExecutorTests
         var context = new SpecContext("test");
         context.AddSpec(new SpecDefinition("pending"));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         await Assert.That(report.Summary.Total).IsEqualTo(1);
         await Assert.That(report.Summary.Pending).IsEqualTo(1);
@@ -51,7 +51,7 @@ public class SpecExecutorTests
         var context = new SpecContext("test");
         context.AddSpec(new SpecDefinition("skipped", () => { }) { IsSkipped = true });
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         await Assert.That(report.Summary.Total).IsEqualTo(1);
         await Assert.That(report.Summary.Skipped).IsEqualTo(1);
@@ -65,7 +65,7 @@ public class SpecExecutorTests
         context.AddSpec(new SpecDefinition("fails", () => throw new Exception()));
         context.AddSpec(new SpecDefinition("pending"));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         await Assert.That(report.Summary.Total).IsEqualTo(3);
         await Assert.That(report.Summary.Passed).IsEqualTo(1);
@@ -82,7 +82,7 @@ public class SpecExecutorTests
         var child = new SpecContext("child", root);
         child.AddSpec(new SpecDefinition("child spec", () => { }));
 
-        var report = SpecExecutor.Execute(root);
+        var report = await SpecExecutor.ExecuteAsync(root);
 
         await Assert.That(report.Summary.Total).IsEqualTo(2);
         await Assert.That(report.Summary.Passed).IsEqualTo(2);
@@ -95,7 +95,7 @@ public class SpecExecutorTests
         context.AddSpec(new SpecDefinition("spec", () => { }));
 
         var before = DateTime.UtcNow;
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
         var after = DateTime.UtcNow;
 
         await Assert.That(report.Timestamp).IsGreaterThanOrEqualTo(before);
@@ -108,7 +108,7 @@ public class SpecExecutorTests
         var context = new SpecContext("test");
         context.AddSpec(new SpecDefinition("spec", () => Thread.Sleep(10)));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         await Assert.That(report.Summary.DurationMs).IsGreaterThan(0);
     }
@@ -119,7 +119,7 @@ public class SpecExecutorTests
         var context = new SpecContext("Calculator");
         context.AddSpec(new SpecDefinition("adds numbers", () => { }));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         await Assert.That(report.Contexts).Count().IsEqualTo(1);
         await Assert.That(report.Contexts[0].Description).IsEqualTo("Calculator");

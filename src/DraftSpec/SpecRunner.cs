@@ -95,22 +95,6 @@ public class SpecRunner : ISpecRunner
     }
 
     /// <summary>
-    /// Execute specs synchronously from a Spec entry point.
-    /// </summary>
-    public IList<SpecResult> Run(Spec spec)
-    {
-        return Run(spec.RootContext);
-    }
-
-    /// <summary>
-    /// Execute specs synchronously from a root context.
-    /// </summary>
-    public IList<SpecResult> Run(SpecContext rootContext)
-    {
-        return RunAsync(rootContext).GetAwaiter().GetResult();
-    }
-
-    /// <summary>
     /// Execute specs asynchronously from a Spec entry point.
     /// </summary>
     public Task<IList<SpecResult>> RunAsync(Spec spec, CancellationToken cancellationToken = default)

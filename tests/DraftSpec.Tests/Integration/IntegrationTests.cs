@@ -39,7 +39,7 @@ public class IntegrationTests
         }));
 
         // Act
-        var report = SpecExecutor.Execute(root);
+        var report = await SpecExecutor.ExecuteAsync(root);
 
         // Assert
         await Assert.That(report.Summary.Total).IsEqualTo(3);
@@ -125,7 +125,7 @@ public class IntegrationTests
         context.AddSpec(new SpecDefinition("passes", () => { }));
         context.AddSpec(new SpecDefinition("fails", () => throw new Exception("error")));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
         var formatter = new JsonFormatter();
         var json = formatter.Format(report);
 
@@ -145,7 +145,7 @@ public class IntegrationTests
         context.AddSpec(new SpecDefinition("passes", () => { }));
         context.AddSpec(new SpecDefinition("pending"));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
         var formatter = new JsonFormatter();
         var json = formatter.Format(report);
 
@@ -168,7 +168,7 @@ public class IntegrationTests
         child.AddSpec(new SpecDefinition("step 2", () => throw new Exception("failed")));
         child.AddSpec(new SpecDefinition("step 3"));
 
-        var report = SpecExecutor.Execute(root);
+        var report = await SpecExecutor.ExecuteAsync(root);
 
         await Assert.That(report.Summary.Total).IsEqualTo(3);
         await Assert.That(report.Summary.Passed).IsEqualTo(1);
@@ -183,7 +183,7 @@ public class IntegrationTests
         var context = new SpecContext("Serialization test");
         context.AddSpec(new SpecDefinition("test", () => { }));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
         var formatter = new JsonFormatter();
         var json = formatter.Format(report);
         var deserializedReport = SpecReport.FromJson(json);
@@ -199,13 +199,13 @@ public class IntegrationTests
         // Test with passing specs
         var passingContext = new SpecContext("passing");
         passingContext.AddSpec(new SpecDefinition("passes", () => { }));
-        var passingReport = SpecExecutor.Execute(passingContext);
+        var passingReport = await SpecExecutor.ExecuteAsync(passingContext);
         var passingExitCode = passingReport.Summary.Failed > 0 ? 1 : 0;
 
         // Test with failing specs
         var failingContext = new SpecContext("failing");
         failingContext.AddSpec(new SpecDefinition("fails", () => throw new Exception()));
-        var failingReport = SpecExecutor.Execute(failingContext);
+        var failingReport = await SpecExecutor.ExecuteAsync(failingContext);
         var failingExitCode = failingReport.Summary.Failed > 0 ? 1 : 0;
 
         await Assert.That(passingExitCode).IsEqualTo(0);

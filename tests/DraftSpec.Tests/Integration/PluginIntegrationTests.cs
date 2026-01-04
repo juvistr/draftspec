@@ -21,7 +21,7 @@ public class PluginIntegrationTests
         context.AddSpec(new SpecDefinition("passes", () => { }));
         context.AddSpec(new SpecDefinition("fails", () => throw new Exception("error")));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         var formatter = new CustomXmlFormatter();
         var output = formatter.Format(report);
@@ -37,7 +37,7 @@ public class PluginIntegrationTests
         var context = new SpecContext("Options Test");
         context.AddSpec(new SpecDefinition("spec", () => { }));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         var formatter = new CustomXmlFormatter { IncludeTimestamp = false };
         var output = formatter.Format(report);

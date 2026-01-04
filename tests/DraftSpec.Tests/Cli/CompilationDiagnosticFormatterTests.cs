@@ -18,7 +18,7 @@ public class CompilationDiagnosticFormatterTests
     [Test]
     public async Task Format_WithCompilationError_IncludesErrorCode()
     {
-        var exception = CreateCompilationError("var x = ");
+        var exception = await CreateCompilationErrorAsync("var x = ");
         var mockFileSystem = new MockFileSystem();
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
@@ -30,7 +30,7 @@ public class CompilationDiagnosticFormatterTests
     [Test]
     public async Task Format_WithCompilationError_IncludesErrorMessage()
     {
-        var exception = CreateCompilationError("var x = ");
+        var exception = await CreateCompilationErrorAsync("var x = ");
         var mockFileSystem = new MockFileSystem();
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
@@ -43,7 +43,7 @@ public class CompilationDiagnosticFormatterTests
     [Test]
     public async Task Format_WithColors_IncludesAnsiCodes()
     {
-        var exception = CreateCompilationError("var x = ");
+        var exception = await CreateCompilationErrorAsync("var x = ");
         var mockFileSystem = new MockFileSystem();
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
@@ -55,7 +55,7 @@ public class CompilationDiagnosticFormatterTests
     [Test]
     public async Task Format_WithoutColors_OmitsAnsiCodes()
     {
-        var exception = CreateCompilationError("var x = ");
+        var exception = await CreateCompilationErrorAsync("var x = ");
         var mockFileSystem = new MockFileSystem();
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
@@ -71,7 +71,7 @@ public class CompilationDiagnosticFormatterTests
     [Test]
     public async Task Format_WithCompilationError_IncludesLineNumber()
     {
-        var exception = CreateCompilationError("var x = ");
+        var exception = await CreateCompilationErrorAsync("var x = ");
         var mockFileSystem = new MockFileSystem();
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
@@ -84,7 +84,7 @@ public class CompilationDiagnosticFormatterTests
     [Test]
     public async Task Format_WithCompilationError_IncludesColumnNumber()
     {
-        var exception = CreateCompilationError("var x = ");
+        var exception = await CreateCompilationErrorAsync("var x = ");
         var mockFileSystem = new MockFileSystem();
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
@@ -99,7 +99,7 @@ public class CompilationDiagnosticFormatterTests
     {
         // When the source file isn't available (file path doesn't match filesystem),
         // the formatter should still show the error message without source context
-        var exception = CreateCompilationError("var x = ");
+        var exception = await CreateCompilationErrorAsync("var x = ");
         var mockFileSystem = new MockFileSystem(); // No files registered
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
@@ -133,7 +133,7 @@ public class CompilationDiagnosticFormatterTests
     [Test]
     public async Task Format_WithMissingSourceFile_StillFormatsError()
     {
-        var exception = CreateCompilationError("var x = ");
+        var exception = await CreateCompilationErrorAsync("var x = ");
         var mockFileSystem = new MockFileSystem(); // No files
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
@@ -146,7 +146,7 @@ public class CompilationDiagnosticFormatterTests
     [Test]
     public async Task Format_MultipleErrors_FormatsAll()
     {
-        var exception = CreateCompilationError("var x = \nvar y = ");
+        var exception = await CreateCompilationErrorAsync("var x = \nvar y = ");
         var mockFileSystem = new MockFileSystem();
         var formatter = new CompilationDiagnosticFormatter(mockFileSystem);
 
@@ -320,7 +320,7 @@ public class CompilationDiagnosticFormatterTests
 
     #region Helper Methods
 
-    private static CompilationErrorException CreateCompilationError(string code)
+    private static async Task<CompilationErrorException> CreateCompilationErrorAsync(string code)
     {
         try
         {
@@ -338,7 +338,7 @@ public class CompilationDiagnosticFormatterTests
             }
 
             // Force evaluate to get runtime compilation errors
-            script.RunAsync().GetAwaiter().GetResult();
+            await script.RunAsync();
             throw new InvalidOperationException("Expected compilation error");
         }
         catch (CompilationErrorException ex)
@@ -347,12 +347,12 @@ public class CompilationDiagnosticFormatterTests
         }
     }
 
-    private static CompilationErrorException CreateCompilationErrorFromCode(string code)
+    private static async Task<CompilationErrorException> CreateCompilationErrorFromCodeAsync(string code)
     {
         try
         {
             var script = CSharpScript.Create(code, ScriptOptions.Default);
-            script.RunAsync().GetAwaiter().GetResult();
+            await script.RunAsync();
             throw new InvalidOperationException("Expected compilation error");
         }
         catch (CompilationErrorException ex)

@@ -94,7 +94,7 @@ internal sealed class MtpSpecExecutor : IMtpSpecExecutor
 
             // Run specs
             var runner = builder.Build();
-            var results = runner.Run(rootContext);
+            var results = await runner.RunAsync(rootContext, cancellationToken).ConfigureAwait(false);
 
             // Notify reporter of completion
             var report = SpecReportBuilder.Build(rootContext, results);

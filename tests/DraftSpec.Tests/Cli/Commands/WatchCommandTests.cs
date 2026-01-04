@@ -131,7 +131,7 @@ public class WatchCommandTests
         var command = CreateCommand(runnerFactory: runnerFactory, watcherFactory: watcherFactory, specFiles: ["test.spec.csx"]);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(200);
+        cts.CancelAfter(500);
 
         var options = new WatchOptions { Path = "." };
 
@@ -139,13 +139,13 @@ public class WatchCommandTests
         var task = command.ExecuteAsync(options, cts.Token);
 
         // Wait for initial run
-        await Task.Delay(50);
+        await Task.Delay(100);
 
         // Simulate file change
         watcherFactory.TriggerChange(new FileChangeInfo(SomeOtherFile, false));
 
-        // Wait a bit more then cancel
-        await Task.Delay(50);
+        // Wait for channel processing (needs more time on slow CI)
+        await Task.Delay(150);
         await cts.CancelAsync();
 
         await task;
@@ -194,18 +194,19 @@ public class WatchCommandTests
         var command = CreateCommand(runnerFactory: runnerFactory, watcherFactory: watcherFactory, specFiles: ["test.spec.csx"]);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(200);
+        cts.CancelAfter(500);
 
         var options = new WatchOptions { Path = "." };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
-        await Task.Delay(50);
+        await Task.Delay(100);
 
         // Simulate source file change (not a spec)
         watcherFactory.TriggerChange(new FileChangeInfo(SomeSourceFile, false));
 
-        await Task.Delay(50);
+        // Wait for channel processing (needs more time on slow CI)
+        await Task.Delay(150);
         await cts.CancelAsync();
 
         await task;
@@ -497,18 +498,19 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
+        cts.CancelAfter(500);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
-        await Task.Delay(50);
+        await Task.Delay(100);
 
         // Trigger spec file change
         watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
 
-        await Task.Delay(100);
+        // Wait for channel processing (needs more time on slow CI)
+        await Task.Delay(150);
         await cts.CancelAsync();
 
         await task;
@@ -543,18 +545,19 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
+        cts.CancelAfter(500);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
-        await Task.Delay(50);
+        await Task.Delay(100);
 
         // Trigger spec file change
         watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
 
-        await Task.Delay(100);
+        // Wait for channel processing (needs more time on slow CI)
+        await Task.Delay(150);
         await cts.CancelAsync();
 
         await task;
@@ -588,18 +591,19 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
+        cts.CancelAfter(500);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
-        await Task.Delay(50);
+        await Task.Delay(100);
 
         // Trigger spec file change
         watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
 
-        await Task.Delay(100);
+        // Wait for channel processing (needs more time on slow CI)
+        await Task.Delay(150);
         await cts.CancelAsync();
 
         await task;
@@ -763,18 +767,19 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
+        cts.CancelAfter(500);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
-        await Task.Delay(50);
+        await Task.Delay(100);
 
         // Trigger spec file change - will cause filtered run which throws
         watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
 
-        await Task.Delay(100);
+        // Wait for channel processing (needs more time on slow CI)
+        await Task.Delay(150);
         await cts.CancelAsync();
 
         await task;

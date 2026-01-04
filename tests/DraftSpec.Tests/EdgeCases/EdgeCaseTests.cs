@@ -16,7 +16,7 @@ public class EdgeCaseTests
         context.AddSpec(new SpecDefinition("should not run", () => specRan = true));
 
         var runner = new SpecRunner();
-        var ex = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
 
         await Assert.That(ex!.Message).IsEqualTo("BeforeAll failed");
         await Assert.That(specRan).IsFalse();
@@ -30,7 +30,7 @@ public class EdgeCaseTests
         context.AddSpec(new SpecDefinition("should fail", () => { }));
 
         var runner = new SpecRunner();
-        var ex = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
 
         await Assert.That(ex!.Message).IsEqualTo("BeforeEach failed");
     }
@@ -44,7 +44,7 @@ public class EdgeCaseTests
         context.AddSpec(new SpecDefinition("runs but afterEach fails", () => specRan = true));
 
         var runner = new SpecRunner();
-        var ex = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
 
         await Assert.That(specRan).IsTrue();
         await Assert.That(ex!.Message).IsEqualTo("AfterEach failed");
@@ -60,7 +60,7 @@ public class EdgeCaseTests
         context.AddSpec(new SpecDefinition("second spec", () => specsRan.Add("second")));
 
         var runner = new SpecRunner();
-        var ex = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
 
         await Assert.That(ex!.Message).IsEqualTo("AfterAll failed");
         await Assert.That(specsRan).IsEquivalentTo(["first", "second"]);
@@ -82,7 +82,7 @@ public class EdgeCaseTests
         inner.AddSpec(new SpecDefinition("spec", () => { }));
 
         var runner = new SpecRunner();
-        var ex = Assert.Throws<InvalidOperationException>(() => runner.Run(outer));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(outer));
 
         await Assert.That(ex!.Message).IsEqualTo("First hook");
         await Assert.That(secondHookRan).IsFalse();
@@ -123,7 +123,7 @@ public class EdgeCaseTests
         context.AddSpec(new SpecDefinition("should not run", () => specRan = true));
 
         var runner = new SpecRunner();
-        var ex = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
 
         await Assert.That(ex!.Message).IsEqualTo("BeforeEach failed");
         await Assert.That(specRan).IsFalse();

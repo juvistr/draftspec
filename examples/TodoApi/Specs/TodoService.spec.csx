@@ -82,16 +82,16 @@ describe("TodoService", () =>
 
         context("validation", () =>
         {
-            it("throws on empty title", () =>
+            it("throws on empty title", async () =>
             {
-                expect(() => service.CreateAsync("").GetAwaiter().GetResult())
-                    .toThrow<ValidationException>();
+                await expect(async () => await service.CreateAsync(""))
+                    .toThrowAsync<ValidationException>();
             });
 
-            it("throws on whitespace-only title", () =>
+            it("throws on whitespace-only title", async () =>
             {
-                expect(() => service.CreateAsync("   ").GetAwaiter().GetResult())
-                    .toThrow<ValidationException>();
+                await expect(async () => await service.CreateAsync("   "))
+                    .toThrowAsync<ValidationException>();
             });
 
             it("trims whitespace from title", async () =>
@@ -172,10 +172,10 @@ describe("TodoService", () =>
             expect(completed.IsComplete).toBeTrue();
         });
 
-        it("throws for non-existent todo", () =>
+        it("throws for non-existent todo", async () =>
         {
-            expect(() => service.CompleteAsync(9999).GetAwaiter().GetResult())
-                .toThrow<InvalidOperationException>();
+            await expect(async () => await service.CompleteAsync(9999))
+                .toThrowAsync<InvalidOperationException>();
         });
     });
 
@@ -221,12 +221,12 @@ describe("TodoService", () =>
             expect(result.Tags).toHaveCount(1);
         });
 
-        it("throws on empty tag", () =>
+        it("throws on empty tag", async () =>
         {
-            var todo = service.CreateAsync("Bad tag").GetAwaiter().GetResult();
+            var todo = await service.CreateAsync("Bad tag");
 
-            expect(() => service.AddTagAsync(todo.Id, "").GetAwaiter().GetResult())
-                .toThrow<ValidationException>();
+            await expect(async () => await service.AddTagAsync(todo.Id, ""))
+                .toThrowAsync<ValidationException>();
         });
     });
 

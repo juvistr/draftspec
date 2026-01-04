@@ -27,36 +27,36 @@ public class SpecRunnerBenchmarks
     }
 
     [Benchmark(Baseline = true)]
-    public IList<SpecResult> SmallTree_10Specs()
+    public async Task<IList<SpecResult>> SmallTree_10Specs()
     {
-        return _runner.Run(_smallTree);
+        return await _runner.RunAsync(_smallTree);
     }
 
     [Benchmark]
-    public IList<SpecResult> MediumTree_100Specs()
+    public async Task<IList<SpecResult>> MediumTree_100Specs()
     {
-        return _runner.Run(_mediumTree);
+        return await _runner.RunAsync(_mediumTree);
     }
 
     [Benchmark]
-    public IList<SpecResult> LargeTree_1000Specs()
+    public async Task<IList<SpecResult>> LargeTree_1000Specs()
     {
-        return _runner.Run(_largeTree);
+        return await _runner.RunAsync(_largeTree);
     }
 
     [Benchmark]
-    public IList<SpecResult> DeepTree_50Levels()
+    public async Task<IList<SpecResult>> DeepTree_50Levels()
     {
-        return _runner.Run(_deepTree);
+        return await _runner.RunAsync(_deepTree);
     }
 
     [Benchmark]
     [Arguments(2)]
     [Arguments(4)]
-    public IList<SpecResult> LargeTree_Parallel(int parallelism)
+    public async Task<IList<SpecResult>> LargeTree_Parallel(int parallelism)
     {
         var runner = new SpecRunner([], null, parallelism);
-        return runner.Run(_largeTree);
+        return await runner.RunAsync(_largeTree);
     }
 
     // --- Async benchmarks to demonstrate parallelism benefit ---
@@ -77,19 +77,19 @@ public class SpecRunnerBenchmarks
     }
 
     [Benchmark]
-    public IList<SpecResult> AsyncSpecs_Sequential()
+    public async Task<IList<SpecResult>> AsyncSpecs_Sequential()
     {
         var runner = new SpecRunner([], null, 1);
-        return runner.Run(_asyncTree);
+        return await runner.RunAsync(_asyncTree);
     }
 
     [Benchmark]
     [Arguments(2)]
     [Arguments(4)]
     [Arguments(8)]
-    public IList<SpecResult> AsyncSpecs_Parallel(int parallelism)
+    public async Task<IList<SpecResult>> AsyncSpecs_Parallel(int parallelism)
     {
         var runner = new SpecRunner([], null, parallelism);
-        return runner.Run(_asyncTree);
+        return await runner.RunAsync(_asyncTree);
     }
 }

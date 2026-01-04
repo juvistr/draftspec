@@ -10,20 +10,6 @@ namespace DraftSpec;
 public interface ISpecRunner
 {
     /// <summary>
-    /// Runs all specs in the given spec class synchronously.
-    /// </summary>
-    /// <param name="spec">The spec class instance containing the spec definitions.</param>
-    /// <returns>List of results for each executed spec.</returns>
-    IList<SpecResult> Run(Spec spec);
-
-    /// <summary>
-    /// Runs all specs starting from the given root context synchronously.
-    /// </summary>
-    /// <param name="rootContext">The root context of the spec tree.</param>
-    /// <returns>List of results for each executed spec.</returns>
-    IList<SpecResult> Run(SpecContext rootContext);
-
-    /// <summary>
     /// Runs all specs in the given spec class asynchronously.
     /// </summary>
     /// <param name="spec">The spec class instance containing the spec definitions.</param>

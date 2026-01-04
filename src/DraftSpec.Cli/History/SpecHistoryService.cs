@@ -32,7 +32,7 @@ public sealed class SpecHistoryService : ISpecHistoryService
 
         try
         {
-            var json = await _fileSystem.ReadAllTextAsync(historyPath, ct);
+            var json = await _fileSystem.ReadAllTextAsync(historyPath, ct).ConfigureAwait(false);
             return JsonSerializer.Deserialize<SpecHistory>(json, JsonOptionsProvider.Secure)
                    ?? SpecHistory.Empty;
         }

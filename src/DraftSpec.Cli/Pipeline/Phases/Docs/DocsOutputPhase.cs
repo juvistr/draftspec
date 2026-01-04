@@ -83,7 +83,7 @@ public class DocsOutputPhase : ICommandPhase
 
         try
         {
-            var json = await File.ReadAllTextAsync(resultsFile, ct);
+            var json = await File.ReadAllTextAsync(resultsFile, ct).ConfigureAwait(false);
             var report = SpecReport.FromJson(json);
 
             // Flatten results to dictionary of ID -> status

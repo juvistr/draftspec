@@ -36,7 +36,7 @@ public class GitService : IGitService
         var fullReference = Path.GetFullPath(reference, workingDirectory);
         if (_fileSystem.FileExists(fullReference))
         {
-            var content = await _fileSystem.ReadAllTextAsync(fullReference, cancellationToken);
+            var content = await _fileSystem.ReadAllTextAsync(fullReference, cancellationToken).ConfigureAwait(false);
             return content
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries)
                 .Where(line => !string.IsNullOrWhiteSpace(line))
@@ -113,8 +113,8 @@ public class GitService : IGitService
 
         try
         {
-            await Task.WhenAll(outputTask, errorTask).WaitAsync(linkedCts.Token);
-            await process.WaitForExitAsync(linkedCts.Token);
+            await Task.WhenAll(outputTask, errorTask).WaitAsync(linkedCts.Token).ConfigureAwait(false);
+            await process.WaitForExitAsync(linkedCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
         {

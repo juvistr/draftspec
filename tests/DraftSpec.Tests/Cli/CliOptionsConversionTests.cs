@@ -62,8 +62,11 @@ public class CliOptionsConversionTests
         await Assert.That(runOptions.Filter.ExcludeTags).IsEqualTo("slow");
         await Assert.That(runOptions.Filter.FilterName).IsEqualTo("should pass");
         await Assert.That(runOptions.Filter.ExcludeName).IsEqualTo("integration");
+        Assert.NotNull(runOptions.Filter.FilterContext);
         await Assert.That(runOptions.Filter.FilterContext).IsEquivalentTo(["Calculator"]);
+        Assert.NotNull(runOptions.Filter.ExcludeContext);
         await Assert.That(runOptions.Filter.ExcludeContext).IsEquivalentTo(["Legacy"]);
+        Assert.NotNull(runOptions.Filter.LineFilters);
         await Assert.That(runOptions.Filter.LineFilters).Count().IsEqualTo(1);
     }
 
@@ -194,7 +197,7 @@ public class CliOptionsConversionTests
         await Assert.That(validateOptions.Static).IsTrue();
         await Assert.That(validateOptions.Strict).IsTrue();
         await Assert.That(validateOptions.Quiet).IsTrue();
-        await Assert.That(validateOptions.Files).IsEquivalentTo(["file1.spec.csx", "file2.spec.csx"]);
+        await Assert.That(validateOptions.Files!).IsEquivalentTo(["file1.spec.csx", "file2.spec.csx"]);
     }
 
     [Test]
@@ -423,7 +426,7 @@ public class CliOptionsConversionTests
         await Assert.That(flakyOptions.Clear).IsNull();
     }
 
-    #endregion
+    #endregion  
 
     #region ToEstimateOptions Tests
 

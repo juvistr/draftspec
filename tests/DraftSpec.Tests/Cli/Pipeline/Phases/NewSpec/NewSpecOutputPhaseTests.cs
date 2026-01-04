@@ -1,3 +1,4 @@
+using DraftSpec.Cli;
 using DraftSpec.Cli.Pipeline;
 using DraftSpec.Cli.Pipeline.Phases.NewSpec;
 using DraftSpec.Tests.Infrastructure;
@@ -10,13 +11,19 @@ namespace DraftSpec.Tests.Cli.Pipeline.Phases.NewSpec;
 /// </summary>
 public class NewSpecOutputPhaseTests
 {
+    private static NewSpecOutputPhase CreatePhase()
+    {
+        var pathValidator = new PathValidator(new SystemPathComparer(new SystemOperatingSystem()));
+        return new NewSpecOutputPhase(pathValidator);
+    }
+
     #region File Creation Tests
 
     [Test]
     public async Task ExecuteAsync_ValidName_CreatesSpecFile()
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "MyFeature");
 
         await phase.ExecuteAsync(
@@ -32,7 +39,7 @@ public class NewSpecOutputPhaseTests
     public async Task ExecuteAsync_ValidName_SpecFileHasCorrectContent()
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "UserService");
 
         await phase.ExecuteAsync(
@@ -52,7 +59,7 @@ public class NewSpecOutputPhaseTests
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
         var console = new MockConsole();
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "MySpec", console);
 
         await phase.ExecuteAsync(
@@ -75,7 +82,7 @@ public class NewSpecOutputPhaseTests
             .AddDirectory(TestPaths.ProjectDir)
             .AddFile(specPath, "// existing");
         var console = new MockConsole();
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "Existing", console);
 
         var result = await phase.ExecuteAsync(
@@ -94,7 +101,7 @@ public class NewSpecOutputPhaseTests
         var fileSystem = new MockFileSystem()
             .AddDirectory(TestPaths.ProjectDir)
             .AddFile(specPath, "// original content");
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "Existing");
 
         await phase.ExecuteAsync(
@@ -114,7 +121,7 @@ public class NewSpecOutputPhaseTests
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
         var console = new MockConsole();
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, null, console);
 
         var result = await phase.ExecuteAsync(
@@ -131,7 +138,7 @@ public class NewSpecOutputPhaseTests
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
         var console = new MockConsole();
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "", console);
 
         var result = await phase.ExecuteAsync(
@@ -147,7 +154,7 @@ public class NewSpecOutputPhaseTests
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
         var console = new MockConsole();
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "foo/bar", console);
 
         var result = await phase.ExecuteAsync(
@@ -164,7 +171,7 @@ public class NewSpecOutputPhaseTests
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
         var console = new MockConsole();
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "..", console);
 
         var result = await phase.ExecuteAsync(
@@ -181,7 +188,7 @@ public class NewSpecOutputPhaseTests
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
         var console = new MockConsole();
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         // Use a character that's invalid on all platforms (null char)
         var context = CreateContextWithProjectPath(fileSystem, "test\0name", console);
 
@@ -203,7 +210,7 @@ public class NewSpecOutputPhaseTests
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
         var console = new MockConsole();
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "MySpec", console);
 
         await phase.ExecuteAsync(
@@ -222,7 +229,7 @@ public class NewSpecOutputPhaseTests
             .AddDirectory(TestPaths.ProjectDir)
             .AddFile(specHelperPath, "// helper");
         var console = new MockConsole();
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "MySpec", console);
 
         await phase.ExecuteAsync(
@@ -240,7 +247,7 @@ public class NewSpecOutputPhaseTests
     [Test]
     public async Task ExecuteAsync_ProjectPathNotSet_ReturnsError()
     {
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var console = new MockConsole();
         var context = CreateContext(console: console);
         context.Set(ContextKeys.SpecName, "Test");
@@ -262,7 +269,7 @@ public class NewSpecOutputPhaseTests
     public async Task ExecuteAsync_CallsPipeline()
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "Test");
         var pipelineCalled = false;
 
@@ -282,7 +289,7 @@ public class NewSpecOutputPhaseTests
     public async Task ExecuteAsync_PropagatesPipelineResult()
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, "Test");
 
         var result = await phase.ExecuteAsync(
@@ -297,7 +304,7 @@ public class NewSpecOutputPhaseTests
     public async Task ExecuteAsync_Error_DoesNotCallPipeline()
     {
         var fileSystem = new MockFileSystem().AddDirectory(TestPaths.ProjectDir);
-        var phase = new NewSpecOutputPhase();
+        var phase = CreatePhase();
         var context = CreateContextWithProjectPath(fileSystem, null); // Invalid name
         var pipelineCalled = false;
 

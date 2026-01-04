@@ -11,11 +11,13 @@ namespace DraftSpec.Tests.Cli;
 public class PathValidationTests
 {
     private MockFileSystem _mockFs = null!;
+    private IPathComparer _pathComparer = null!;
 
     [Before(Test)]
     public void SetUp()
     {
         _mockFs = new MockFileSystem();
+        _pathComparer = new SystemPathComparer(new SystemOperatingSystem());
     }
 
     #region Output Path Validation Tests
@@ -100,7 +102,7 @@ public class PathValidationTests
     [Test]
     public async Task SpecFinder_PathOutsideBase_ThrowsSecurityException()
     {
-        var finder = new SpecFinder(_mockFs);
+        var finder = new SpecFinder(_mockFs, _pathComparer);
         var baseDir = Path.Combine(Path.GetTempPath(), "base");
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
@@ -115,7 +117,7 @@ public class PathValidationTests
     [Test]
     public async Task SpecFinder_AbsolutePathOutsideBase_ThrowsSecurityException()
     {
-        var finder = new SpecFinder(_mockFs);
+        var finder = new SpecFinder(_mockFs, _pathComparer);
         var baseDir = Path.Combine(Path.GetTempPath(), "base");
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
@@ -130,7 +132,7 @@ public class PathValidationTests
     [Test]
     public async Task SpecFinder_TraversalInPath_ThrowsSecurityException()
     {
-        var finder = new SpecFinder(_mockFs);
+        var finder = new SpecFinder(_mockFs, _pathComparer);
         var baseDir = Path.Combine(Path.GetTempPath(), "base");
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
@@ -145,7 +147,7 @@ public class PathValidationTests
     [Test]
     public async Task SpecFinder_PathWithinBase_ThrowsArgumentExceptionNotSecurity()
     {
-        var finder = new SpecFinder(_mockFs);
+        var finder = new SpecFinder(_mockFs, _pathComparer);
         var baseDir = Path.Combine(Path.GetTempPath(), "base");
         var pathWithinBase = Path.Combine(baseDir, "nonexistent.spec.csx");
 
@@ -166,7 +168,7 @@ public class PathValidationTests
     [Test]
     public async Task SecurityException_ContainsHelpfulMessage()
     {
-        var finder = new SpecFinder(_mockFs);
+        var finder = new SpecFinder(_mockFs, _pathComparer);
         var baseDir = Path.Combine(Path.GetTempPath(), "base");
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>

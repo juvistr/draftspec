@@ -21,9 +21,9 @@ public class ComposableOptionsTests
         await Assert.That(options.ExcludeTags).IsNull();
         await Assert.That(options.FilterName).IsNull();
         await Assert.That(options.ExcludeName).IsNull();
-        await Assert.That(options.FilterContext).IsNull();
-        await Assert.That(options.ExcludeContext).IsNull();
-        await Assert.That(options.LineFilters).IsNull();
+        Assert.Null(options.FilterContext);
+        Assert.Null(options.ExcludeContext);
+        Assert.Null(options.LineFilters);
     }
 
     [Test]

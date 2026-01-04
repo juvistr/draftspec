@@ -1,4 +1,5 @@
 using DraftSpec.Cli;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -46,7 +47,7 @@ public class FileWatcherTests
             Interlocked.Increment(ref callCount);
             receivedChange = change;
             tcs.TrySetResult(true);
-        }, debounceMs: 100); // Increased debounce for CI stability
+        }, new MockOperatingSystem(), debounceMs: 100); // Increased debounce for CI stability
 
         // Create a spec file
         var specFile = Path.Combine(_tempDir, "test.spec.csx");
@@ -89,7 +90,7 @@ public class FileWatcherTests
         using var watcher = new FileWatcher(_tempDir, _ =>
         {
             Interlocked.Increment(ref callCount);
-        }, debounceMs: 50);
+        }, new MockOperatingSystem(), debounceMs: 50);
 
         // Create a temporary file (dot prefix)
         var tempFile = Path.Combine(_tempDir, ".temp.spec.csx");
@@ -108,7 +109,7 @@ public class FileWatcherTests
         using var watcher = new FileWatcher(_tempDir, _ =>
         {
             Interlocked.Increment(ref callCount);
-        }, debounceMs: 50);
+        }, new MockOperatingSystem(), debounceMs: 50);
 
         // Create a backup file (tilde suffix)
         var backupFile = Path.Combine(_tempDir, "test.spec.csx~");
@@ -138,7 +139,7 @@ public class FileWatcherTests
         {
             receivedChange = change;
             tcs.TrySetResult(true);
-        }, debounceMs: 50);
+        }, new MockOperatingSystem(), debounceMs: 50);
 
         // Create a .cs source file (not a spec)
         var sourceFile = Path.Combine(_tempDir, "Program.cs");
@@ -162,7 +163,7 @@ public class FileWatcherTests
         var watcher = new FileWatcher(_tempDir, _ =>
         {
             Interlocked.Increment(ref callCount);
-        }, debounceMs: 50);
+        }, new MockOperatingSystem(), debounceMs: 50);
 
         // Dispose the watcher
         watcher.Dispose();
@@ -180,7 +181,7 @@ public class FileWatcherTests
     [Test]
     public async Task FileWatcher_DoubleDispose_DoesNotThrow()
     {
-        var watcher = new FileWatcher(_tempDir, _ => { }, debounceMs: 50);
+        var watcher = new FileWatcher(_tempDir, _ => { }, new MockOperatingSystem(), debounceMs: 50);
 
         // Should not throw on double dispose
         watcher.Dispose();

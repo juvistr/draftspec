@@ -1,4 +1,5 @@
 using DraftSpec.Cli;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli;
 
@@ -7,10 +8,12 @@ namespace DraftSpec.Tests.Cli;
 /// </summary>
 public class FileWatcherFactoryTests
 {
+    private static FileWatcherFactory CreateFactory() => new(new MockOperatingSystem());
+
     [Test]
     public async Task Create_ReturnsFileWatcher()
     {
-        var factory = new FileWatcherFactory();
+        var factory = CreateFactory();
         var tempDir = Path.GetTempPath();
 
         using var watcher = factory.Create(tempDir, _ => { });
@@ -22,7 +25,7 @@ public class FileWatcherFactoryTests
     [Test]
     public async Task Create_WithDebounceMs_ReturnsFileWatcher()
     {
-        var factory = new FileWatcherFactory();
+        var factory = CreateFactory();
         var tempDir = Path.GetTempPath();
 
         using var watcher = factory.Create(tempDir, _ => { }, debounceMs: 500);
@@ -33,7 +36,7 @@ public class FileWatcherFactoryTests
     [Test]
     public async Task Create_ReturnsNewInstanceEachTime()
     {
-        var factory = new FileWatcherFactory();
+        var factory = CreateFactory();
         var tempDir = Path.GetTempPath();
 
         using var watcher1 = factory.Create(tempDir, _ => { });
@@ -45,7 +48,7 @@ public class FileWatcherFactoryTests
     [Test]
     public async Task Create_WithDifferentPaths_ReturnsDistinctWatchers()
     {
-        var factory = new FileWatcherFactory();
+        var factory = CreateFactory();
         var tempDir1 = Path.Combine(Path.GetTempPath(), $"watcher_test_{Guid.NewGuid():N}");
         var tempDir2 = Path.Combine(Path.GetTempPath(), $"watcher_test_{Guid.NewGuid():N}");
 

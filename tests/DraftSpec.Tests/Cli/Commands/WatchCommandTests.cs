@@ -65,6 +65,7 @@ public class WatchCommandTests
         await command.ExecuteAsync(options, cts.Token);
 
         await Assert.That(runner.RunAllCalled).IsTrue();
+        Assert.NotNull(runner.LastSpecFiles);
         await Assert.That(runner.LastSpecFiles).Count().IsEqualTo(2);
     }
 
@@ -180,7 +181,7 @@ public class WatchCommandTests
 
         // Last run should be with just the changed spec (selective)
         // Note: Due to timing, we verify that selective runs happened
-        await Assert.That(runner.LastSpecFiles).IsNotNull();
+        Assert.NotNull(runner.LastSpecFiles);
     }
 
     [Test]

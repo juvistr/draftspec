@@ -1,5 +1,6 @@
 using DraftSpec.Cli.DependencyGraph;
 using DraftSpec.Tests.Infrastructure;
+using DraftSpec.Tests.Infrastructure.Mocks;
 using DepGraph = DraftSpec.Cli.DependencyGraph.DependencyGraph;
 
 namespace DraftSpec.Tests.Cli.DependencyGraph;
@@ -27,7 +28,7 @@ public class DependencyGraphTests
     [Test]
     public async Task AddSpec_StoresDependencies()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         var spec = new SpecDependency(
             TestSpec,
             [HelperFile],
@@ -42,7 +43,7 @@ public class DependencyGraphTests
     [Test]
     public async Task AddSpec_StoresNamespaces()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         var spec = new SpecDependency(
             TestSpec,
             [],
@@ -58,7 +59,7 @@ public class DependencyGraphTests
     [Test]
     public async Task SpecFiles_ReturnsAllRegisteredSpecs()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         graph.AddSpec(new SpecDependency(SpecA, [], []));
         graph.AddSpec(new SpecDependency(SpecB, [], []));
 
@@ -72,7 +73,7 @@ public class DependencyGraphTests
     [Test]
     public async Task GetAffectedSpecs_SpecFileChanged_ReturnsItself()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         graph.AddSpec(new SpecDependency(TestSpec, [], []));
 
         var affected = graph.GetAffectedSpecs([TestSpec]);
@@ -83,7 +84,7 @@ public class DependencyGraphTests
     [Test]
     public async Task GetAffectedSpecs_LoadDependencyChanged_ReturnsAffectedSpec()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         graph.AddSpec(new SpecDependency(
             TestSpec,
             [HelperFile],
@@ -97,7 +98,7 @@ public class DependencyGraphTests
     [Test]
     public async Task GetAffectedSpecs_MultipleSpecsDependOnSameFile_ReturnsAll()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         graph.AddSpec(new SpecDependency(SpecA, [HelperFile], []));
         graph.AddSpec(new SpecDependency(SpecB, [HelperFile], []));
         graph.AddSpec(new SpecDependency(SpecC, [], [])); // No dependency
@@ -112,7 +113,7 @@ public class DependencyGraphTests
     [Test]
     public async Task GetAffectedSpecs_UnrelatedFileChanged_ReturnsEmpty()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         graph.AddSpec(new SpecDependency(TestSpec, [HelperFile], []));
 
         var affected = graph.GetAffectedSpecs([TestPaths.Temp("some/other/file.txt")]);
@@ -127,7 +128,7 @@ public class DependencyGraphTests
     [Test]
     public async Task GetAffectedSpecs_SourceFileInUsedNamespace_ReturnsAffectedSpec()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         graph.AddSpec(new SpecDependency(TestSpec, [], ["MyApp.Services"]));
         graph.AddNamespaceMapping(SrcTodoService, "MyApp.Services");
 
@@ -139,7 +140,7 @@ public class DependencyGraphTests
     [Test]
     public async Task GetAffectedSpecs_SourceFileInUnusedNamespace_ReturnsEmpty()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         graph.AddSpec(new SpecDependency(TestSpec, [], ["MyApp.Services"]));
         graph.AddNamespaceMapping(SrcOtherService, "MyApp.Other");
 
@@ -151,7 +152,7 @@ public class DependencyGraphTests
     [Test]
     public async Task GetAffectedSpecs_MultipleFilesInSameNamespace_AllAffectSpec()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         graph.AddSpec(new SpecDependency(TestSpec, [], ["MyApp.Services"]));
         graph.AddNamespaceMapping(SrcServiceA, "MyApp.Services");
         graph.AddNamespaceMapping(SrcServiceB, "MyApp.Services");
@@ -170,7 +171,7 @@ public class DependencyGraphTests
     [Test]
     public async Task GetAffectedSpecs_MultipleChanges_ReturnsCombinedResults()
     {
-        var graph = new DepGraph();
+        var graph = new DepGraph(new MockPathComparer());
         graph.AddSpec(new SpecDependency(SpecA, [Helper1], []));
         graph.AddSpec(new SpecDependency(SpecB, [Helper2], []));
 

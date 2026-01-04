@@ -12,7 +12,7 @@ namespace DraftSpec.Cli;
 /// </summary>
 public class InProcessSpecRunner : IInProcessSpecRunner
 {
-    private readonly DraftSpec.IClock _clock;
+    private readonly IClock _clock;
     private readonly IProjectBuilder _projectBuilder;
     private readonly ISpecScriptExecutor _scriptExecutor;
     private readonly IDslManager _dslManager;
@@ -32,7 +32,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         string? excludeName = null,
         IReadOnlyList<string>? filterContext = null,
         IReadOnlyList<string>? excludeContext = null,
-        DraftSpec.IClock? timeProvider = null,
+        IClock? timeProvider = null,
         IProjectBuilder? projectBuilder = null,
         ISpecScriptExecutor? scriptExecutor = null,
         IDslManager? dslManager = null,
@@ -47,7 +47,7 @@ public class InProcessSpecRunner : IInProcessSpecRunner
         _excludeContext = excludeContext;
 
         // Use defaults for backward compatibility
-        _clock = timeProvider ?? new DraftSpec.SystemClock();
+        _clock = timeProvider ?? new SystemClock();
         _projectBuilder = projectBuilder ?? CreateDefaultProjectBuilder();
         _scriptExecutor = scriptExecutor ?? new RoslynSpecScriptExecutor();
         _dslManager = dslManager ?? new DslManager();

@@ -4,6 +4,9 @@ using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Security;
 
+// Note: These tests use a helper that automatically selects the correct path comparer
+// based on the actual runtime OS, since the tests check OS-specific path behavior.
+
 /// <summary>
 /// Unit tests for path traversal security (CWE-22) in SpecFinder.
 /// Uses mocked file system to test path validation logic in isolation.
@@ -28,7 +31,7 @@ public class PathTraversalSecurityTests
         var mockFs = new MockFileSystem();
         mockFs.AddFile(maliciousFile);
 
-        var finder = new SpecFinder(mockFs);
+        var finder = new SpecFinder(mockFs, new SystemPathComparer(new SystemOperatingSystem()));
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
@@ -50,7 +53,7 @@ public class PathTraversalSecurityTests
         mockFs.AddDirectory(siblingDir);
         mockFs.AddFilesInDirectory(siblingDir, ["test.spec.csx"]);
 
-        var finder = new SpecFinder(mockFs);
+        var finder = new SpecFinder(mockFs, new SystemPathComparer(new SystemOperatingSystem()));
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
@@ -76,7 +79,7 @@ public class PathTraversalSecurityTests
         var mockFs = new MockFileSystem();
         mockFs.AddDirectory(differentCaseDir);
 
-        var finder = new SpecFinder(mockFs);
+        var finder = new SpecFinder(mockFs, new SystemPathComparer(new SystemOperatingSystem()));
 
         // On Unix with case-sensitive comparison, these are different directories
         // so differentCaseDir should be rejected as outside baseDir
@@ -100,7 +103,7 @@ public class PathTraversalSecurityTests
         var mockFs = new MockFileSystem();
         mockFs.AddDirectory(upperCasePath);
 
-        var finder = new SpecFinder(mockFs);
+        var finder = new SpecFinder(mockFs, new SystemPathComparer(new SystemOperatingSystem()));
 
         // On Windows, different case should still be within base directory
         // Should return empty list (no specs), not throw SecurityException
@@ -120,7 +123,7 @@ public class PathTraversalSecurityTests
         var escapePath = Path.Combine(baseDir, "..", "..", "etc", "passwd.spec.csx");
 
         var mockFs = new MockFileSystem();
-        var finder = new SpecFinder(mockFs);
+        var finder = new SpecFinder(mockFs, new SystemPathComparer(new SystemOperatingSystem()));
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
@@ -138,7 +141,7 @@ public class PathTraversalSecurityTests
         var pathWithDot = Path.Combine(baseDir, ".", "subdir");
 
         var mockFs = new MockFileSystem();
-        var finder = new SpecFinder(mockFs);
+        var finder = new SpecFinder(mockFs, new SystemPathComparer(new SystemOperatingSystem()));
 
         // Path normalizes to within base, but doesn't exist
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
@@ -161,7 +164,7 @@ public class PathTraversalSecurityTests
         var attackPath = "/etc/passwd.spec.csx";
 
         var mockFs = new MockFileSystem();
-        var finder = new SpecFinder(mockFs);
+        var finder = new SpecFinder(mockFs, new SystemPathComparer(new SystemOperatingSystem()));
 
         var exception = await Assert.ThrowsAsync<SecurityException>(() =>
         {
@@ -187,7 +190,7 @@ public class PathTraversalSecurityTests
         var mockFs = new MockFileSystem();
         mockFs.AddFile(specFile);
 
-        var finder = new SpecFinder(mockFs);
+        var finder = new SpecFinder(mockFs, new SystemPathComparer(new SystemOperatingSystem()));
 
         var result = finder.FindSpecs(specFile, baseDir);
 
@@ -205,7 +208,7 @@ public class PathTraversalSecurityTests
         mockFs.AddDirectory(specsDir);
         mockFs.AddFilesInDirectory(specsDir, ["one.spec.csx", "two.spec.csx"]);
 
-        var finder = new SpecFinder(mockFs);
+        var finder = new SpecFinder(mockFs, new SystemPathComparer(new SystemOperatingSystem()));
 
         var result = finder.FindSpecs(specsDir, baseDir);
 
@@ -222,7 +225,7 @@ public class PathTraversalSecurityTests
         mockFs.AddDirectory(nestedDir);
         mockFs.AddFilesInDirectory(nestedDir, ["nested.spec.csx"]);
 
-        var finder = new SpecFinder(mockFs);
+        var finder = new SpecFinder(mockFs, new SystemPathComparer(new SystemOperatingSystem()));
 
         var result = finder.FindSpecs(nestedDir, baseDir);
 

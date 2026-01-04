@@ -6,9 +6,7 @@ namespace DraftSpec.Cli.DependencyGraph;
 /// </summary>
 public class DependencyGraph
 {
-    private readonly StringComparer _pathComparer = OperatingSystem.IsWindows()
-        ? StringComparer.OrdinalIgnoreCase
-        : StringComparer.Ordinal;
+    private readonly StringComparer _stringComparer;
 
     /// <summary>
     /// Maps spec file → all files it depends on (via #load, directly or transitively).
@@ -30,12 +28,13 @@ public class DependencyGraph
     /// </summary>
     private readonly Dictionary<string, HashSet<string>> _specNamespaces;
 
-    public DependencyGraph()
+    public DependencyGraph(IPathComparer pathComparer)
     {
-        _specDependencies = new Dictionary<string, HashSet<string>>(_pathComparer);
-        _reverseDependencies = new Dictionary<string, HashSet<string>>(_pathComparer);
+        _stringComparer = pathComparer.Comparer;
+        _specDependencies = new Dictionary<string, HashSet<string>>(_stringComparer);
+        _reverseDependencies = new Dictionary<string, HashSet<string>>(_stringComparer);
         _namespaceToFiles = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-        _specNamespaces = new Dictionary<string, HashSet<string>>(_pathComparer);
+        _specNamespaces = new Dictionary<string, HashSet<string>>(_stringComparer);
     }
 
     /// <summary>
@@ -48,7 +47,7 @@ public class DependencyGraph
     /// </summary>
     public IReadOnlyCollection<string> SourceFiles => _namespaceToFiles.Values
         .SelectMany(f => f)
-        .Distinct(_pathComparer)
+        .Distinct(_stringComparer)
         .ToList();
 
     /// <summary>
@@ -61,7 +60,7 @@ public class DependencyGraph
         // Initialize or get dependency set for this spec
         if (!_specDependencies.TryGetValue(specFile, out var deps))
         {
-            deps = new HashSet<string>(_pathComparer);
+            deps = new HashSet<string>(_stringComparer);
             _specDependencies[specFile] = deps;
         }
 
@@ -73,7 +72,7 @@ public class DependencyGraph
             // Add reverse mapping
             if (!_reverseDependencies.TryGetValue(loadDep, out var specs))
             {
-                specs = new HashSet<string>(_pathComparer);
+                specs = new HashSet<string>(_stringComparer);
                 _reverseDependencies[loadDep] = specs;
             }
             specs.Add(specFile);
@@ -99,7 +98,7 @@ public class DependencyGraph
     {
         if (!_namespaceToFiles.TryGetValue(@namespace, out var files))
         {
-            files = new HashSet<string>(_pathComparer);
+            files = new HashSet<string>(_stringComparer);
             _namespaceToFiles[@namespace] = files;
         }
         files.Add(sourceFile);
@@ -110,7 +109,7 @@ public class DependencyGraph
     /// </summary>
     public IReadOnlySet<string> GetAffectedSpecs(IEnumerable<string> changedFiles)
     {
-        var affected = new HashSet<string>(_pathComparer);
+        var affected = new HashSet<string>(_stringComparer);
 
         foreach (var changedFile in changedFiles)
         {
@@ -164,7 +163,7 @@ public class DependencyGraph
         {
             return deps;
         }
-        return new HashSet<string>(_pathComparer);
+        return new HashSet<string>(_stringComparer);
     }
 
     /// <summary>

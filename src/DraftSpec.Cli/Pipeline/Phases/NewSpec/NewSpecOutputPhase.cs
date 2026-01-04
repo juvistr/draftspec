@@ -10,6 +10,13 @@ namespace DraftSpec.Cli.Pipeline.Phases.NewSpec;
 /// </remarks>
 public class NewSpecOutputPhase : ICommandPhase
 {
+    private readonly IPathValidator _pathValidator;
+
+    public NewSpecOutputPhase(IPathValidator pathValidator)
+    {
+        _pathValidator = pathValidator;
+    }
+
     /// <inheritdoc />
     public Task<int> ExecuteAsync(
         CommandContext context,
@@ -33,7 +40,7 @@ public class NewSpecOutputPhase : ICommandPhase
         }
 
         // Security: Validate spec name doesn't contain path separators
-        if (!PathValidator.TryValidateFileName(name, out var error))
+        if (!_pathValidator.TryValidateFileName(name, out var error))
         {
             context.Console.WriteError(error!);
             return Task.FromResult(1);

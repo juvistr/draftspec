@@ -5,6 +5,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\DraftSpec.Abstractions\DraftSpec.Abstractions.csproj"/>
         <ProjectReference Include="..\DraftSpec.Formatters.Abstractions\DraftSpec.Formatters.Abstractions.csproj"/>
     </ItemGroup>
 

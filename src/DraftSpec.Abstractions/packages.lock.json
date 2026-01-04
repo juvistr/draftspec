@@ -8,15 +8,6 @@
         "resolved": "2.0.182",
         "contentHash": "/QgftLQfuCwP7P9neBMYjfOoUEezFAhlCXAZudO27Q9JTQZilQ2qjLzYG4UD4FBlLNz7zTON0ca6lCzzf/zO5A=="
       },
-      "Microsoft.Extensions.DependencyInjection": {
-        "type": "Direct",
-        "requested": "[10.0.1, )",
-        "resolved": "10.0.1",
-        "contentHash": "zerXV0GAR9LCSXoSIApbWn+Dq1/T+6vbXMHGduq1LoVQRHT0BXsGQEau0jeLUBUcsoF/NaUT8ADPu8b+eNcIyg==",
-        "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.1"
-        }
-      },
       "MinVer": {
         "type": "Direct",
         "requested": "[6.*, )",
@@ -28,17 +19,6 @@
         "requested": "[4.15.0, )",
         "resolved": "4.15.0",
         "contentHash": "E8fu71Y+vzhniJKy1K13Rzwm8Vjcj7CDFBpflqncKUZfc3SzuF0kMBiyMmgXNPkjWTdE3Z+30HlGgYjHONZY/Q=="
-      },
-      "Microsoft.Extensions.DependencyInjection.Abstractions": {
-        "type": "Transitive",
-        "resolved": "10.0.1",
-        "contentHash": "oIy8fQxxbUsSrrOvgBqlVgOeCtDmrcynnTG+FQufcUWBrwyPfwlUkCDB2vaiBeYPyT+20u9/HeuHeBf+H4F/8g=="
-      },
-      "draftspec.abstractions": {
-        "type": "Project"
-      },
-      "draftspec.formatters.abstractions": {
-        "type": "Project"
       }
     }
   }

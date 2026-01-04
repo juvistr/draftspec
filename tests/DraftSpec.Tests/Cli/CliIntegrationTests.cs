@@ -48,9 +48,10 @@ public class CliIntegrationTests
 
     private NewCommand CreateNewCommand()
     {
+        var pathValidator = new PathValidator(new SystemPathComparer(new SystemOperatingSystem()));
         var pipeline = new CommandPipelineBuilder()
             .Use(new PathResolutionPhase())
-            .Use(new NewSpecOutputPhase())
+            .Use(new NewSpecOutputPhase(pathValidator))
             .Build();
         return new NewCommand(pipeline, _console, _fileSystem);
     }
@@ -285,7 +286,7 @@ public class CliIntegrationTests
         var specPath = Path.Combine(_testDirectory, "test.spec.csx");
         await File.WriteAllTextAsync(specPath, "// spec");
 
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
         var specs = finder.FindSpecs(specPath, _testDirectory);
 
         await Assert.That(specs).Count().IsEqualTo(1);
@@ -299,7 +300,7 @@ public class CliIntegrationTests
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "two.spec.csx"), "// spec");
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "other.cs"), "// not a spec");
 
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
         var specs = finder.FindSpecs(_testDirectory, _testDirectory);
 
         await Assert.That(specs).Count().IsEqualTo(2);
@@ -312,7 +313,7 @@ public class CliIntegrationTests
         Directory.CreateDirectory(subDir);
         await File.WriteAllTextAsync(Path.Combine(subDir, "nested.spec.csx"), "// spec");
 
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
         var specs = finder.FindSpecs(_testDirectory, _testDirectory);
 
         await Assert.That(specs).Count().IsEqualTo(1);
@@ -326,7 +327,7 @@ public class CliIntegrationTests
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "a.spec.csx"), "// spec");
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "m.spec.csx"), "// spec");
 
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
         var specs = finder.FindSpecs(_testDirectory, _testDirectory);
 
         await Assert.That(specs[0]).Contains("a.spec.csx");
@@ -340,7 +341,7 @@ public class CliIntegrationTests
         var regularFile = Path.Combine(_testDirectory, "test.cs");
         await File.WriteAllTextAsync(regularFile, "// not a spec");
 
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
 
         await Assert.That(() => finder.FindSpecs(regularFile, _testDirectory))
             .Throws<ArgumentException>();
@@ -349,7 +350,7 @@ public class CliIntegrationTests
     [Test]
     public async Task SpecFinder_EmptyDirectory_ReturnsEmptyList()
     {
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
 
         var result = finder.FindSpecs(_testDirectory, _testDirectory);
 

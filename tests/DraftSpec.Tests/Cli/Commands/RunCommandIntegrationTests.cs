@@ -387,7 +387,8 @@ public class RunCommandIntegrationTests
             NullObjects.Partitioner,
             NullObjects.GitService,
             NullObjects.HistoryService,
-            NullObjects.SpecSelector);
+            NullObjects.SpecSelector,
+            new MockPathComparer());
     }
 
     #endregion

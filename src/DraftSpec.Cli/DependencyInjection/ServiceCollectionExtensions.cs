@@ -33,9 +33,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConsole, SystemConsole>();
         services.AddSingleton<IFileSystem, FileSystem>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
-        services.AddSingleton<DraftSpec.IClock, DraftSpec.SystemClock>();
+        services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IProcessRunner, SystemProcessRunner>();
         services.AddSingleton<IUsageWriter, UsageWriter>();
+        services.AddSingleton<IOperatingSystem, SystemOperatingSystem>();
+        services.AddSingleton<IPathComparer, SystemPathComparer>();
+        services.AddSingleton<IPathValidator, PathValidator>();
 
         // Infrastructure - Build
         services.AddSingleton<IBuildCache, InMemoryBuildCache>();

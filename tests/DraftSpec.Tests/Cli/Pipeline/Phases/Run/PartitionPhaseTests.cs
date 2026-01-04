@@ -160,6 +160,28 @@ public class PartitionPhaseTests
     }
 
     [Test]
+    public async Task ExecuteAsync_PartitionWithoutSpecCounts_OmitsSpecLine()
+    {
+        var partitionFiles = new List<string> { TestPaths.Spec("a.spec.csx") };
+        // No totalSpecs/partitionSpecs - uses file-based partitioning
+        var partitioner = new MockPartitioner(partitionFiles, 3);
+        var phase = new PartitionPhase(partitioner);
+        var context = CreateContext();
+        context.Set(ContextKeys.Partition, new PartitionOptions { Total = 3, Index = 0 });
+        context.Set<IReadOnlyList<string>>(ContextKeys.SpecFiles, [TestPaths.Spec("a.spec.csx")]);
+
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        await Assert.That(_console.Output).Contains("Partition 1/3");
+        await Assert.That(_console.Output).Contains("1 files");
+        // Should NOT contain spec count line when TotalSpecs is null
+        await Assert.That(_console.Output).DoesNotContain("Specs:");
+    }
+
+    [Test]
     public async Task ExecuteAsync_PartitionHasFiles_ContinuesPipeline()
     {
         var partitionFiles = new List<string> { TestPaths.Spec("a.spec.csx") };

@@ -302,6 +302,33 @@ public class RunOutputPhaseTests
 
     #endregion
 
+    #region ProjectPath Fallback Tests
+
+    [Test]
+    public async Task ExecuteAsync_NoProjectPath_UsesDotAsFallback()
+    {
+        var phase = new RunOutputPhase(_formatterRegistry, _pathValidator);
+        var context = new CommandContext
+        {
+            Path = ".",
+            Console = _console,
+            FileSystem = _fileSystem
+        };
+        // Don't set ProjectPath - should fallback to "."
+        context.Set(ContextKeys.RunResults, CreateSuccessfulRunSummary());
+
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        // Should succeed without error
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(_console.Output).Contains("PASS");
+    }
+
+    #endregion
+
     #region Report Merging Tests
 
     [Test]

@@ -229,9 +229,61 @@ public class InteractiveSelectionPhaseTests
         await Assert.That(_console.Output).Contains("No specs selected");
     }
 
+    [Test]
+    public async Task ExecuteAsync_SpecWithEmptyContextPath_GeneratesCorrectDisplayName()
+    {
+        var mockParser = new MockStaticSpecParser()
+            .WithSpecs(TestPaths.Spec("test.spec.csx"), new StaticSpec
+            {
+                Description = "top level spec",
+                ContextPath = [], // Empty context path
+                LineNumber = 1,
+                Type = StaticSpecType.Regular
+            });
+        var factory = new MockStaticSpecParserFactory(mockParser);
+        _selector.WithSelection("top level spec");
+        var phase = new InteractiveSelectionPhase(_selector, factory);
+        var context = CreateContext(interactive: true);
+        context.Set<IReadOnlyList<string>>(ContextKeys.SpecFiles, [TestPaths.Spec("test.spec.csx")]);
+
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        var filter = context.Get<FilterOptions>(ContextKeys.Filter);
+        // The filter pattern is regex-escaped, so spaces become "\ "
+        await Assert.That(filter!.FilterName).Contains("top");
+        await Assert.That(filter!.FilterName).Contains("level");
+        await Assert.That(filter!.FilterName).Contains("spec");
+        // Should NOT contain " > " since there's no context path
+        await Assert.That(filter!.FilterName).DoesNotContain(">");
+    }
+
     #endregion
 
     #region Filter Merging Tests
+
+    [Test]
+    public async Task ExecuteAsync_ExistingFilterWithEmptyName_SetsPatternDirectly()
+    {
+        _parserFactory.WithSpecCount(2);
+        _selector.WithSelection("Context > spec1");
+        var phase = new InteractiveSelectionPhase(_selector, _parserFactory);
+        var existingFilter = new FilterOptions { FilterName = "" }; // Empty but not null
+        var context = CreateContext(interactive: true);
+        context.Set(ContextKeys.Filter, existingFilter);
+        context.Set<IReadOnlyList<string>>(ContextKeys.SpecFiles, [TestPaths.Spec("test.spec.csx")]);
+
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        var filter = context.Get<FilterOptions>(ContextKeys.Filter);
+        // Should be set directly without combining
+        await Assert.That(filter!.FilterName).DoesNotContain("(?=");
+    }
 
     [Test]
     public async Task ExecuteAsync_ExistingFilter_MergesWithSelection()

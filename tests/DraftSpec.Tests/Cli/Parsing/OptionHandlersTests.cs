@@ -187,7 +187,119 @@ public class OptionHandlersTests
 
     #endregion
 
+    #region Coverage Handlers
+
+    [Test]
+    public async Task HandleCoverageFormat_ValidFormat_SetsFormat()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--coverage-format", "cobertura" };
+
+        var result = OptionHandlers.HandleCoverageFormat(args, 0, options);
+
+        await Assert.That(result.ConsumedArgs).IsEqualTo(2);
+        await Assert.That(options.CoverageFormat).IsEqualTo(CoverageFormat.Cobertura);
+    }
+
+    [Test]
+    public async Task HandleCoverageFormat_InvalidFormat_ReturnsError()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--coverage-format", "invalid" };
+
+        var result = OptionHandlers.HandleCoverageFormat(args, 0, options);
+
+        await Assert.That(result.Error).IsNotNull();
+        await Assert.That(result.Error).Contains("Unknown coverage format");
+    }
+
+    [Test]
+    public async Task HandleCoverageFormat_MissingValue_ReturnsError()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--coverage-format" };
+
+        var result = OptionHandlers.HandleCoverageFormat(args, 0, options);
+
+        await Assert.That(result.Error).Contains("--coverage-format requires a value");
+    }
+
+    [Test]
+    public async Task HandleCoverageReportFormats_ValidFormats_SetsFormats()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--coverage-report-formats", "html,json" };
+
+        var result = OptionHandlers.HandleCoverageReportFormats(args, 0, options);
+
+        await Assert.That(result.ConsumedArgs).IsEqualTo(2);
+        await Assert.That(options.CoverageReportFormats).IsEqualTo("html,json");
+    }
+
+    [Test]
+    public async Task HandleCoverageReportFormats_MissingValue_ReturnsError()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--coverage-report-formats" };
+
+        var result = OptionHandlers.HandleCoverageReportFormats(args, 0, options);
+
+        await Assert.That(result.Error).Contains("--coverage-report-formats requires a value");
+    }
+
+    #endregion
+
+    #region List Format Handler
+
+    [Test]
+    public async Task HandleListFormat_ValidFormat_SetsFormat()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--list-format", "tree" };
+
+        var result = OptionHandlers.HandleListFormat(args, 0, options);
+
+        await Assert.That(result.ConsumedArgs).IsEqualTo(2);
+        await Assert.That(options.ListFormat).IsEqualTo(ListFormat.Tree);
+    }
+
+    [Test]
+    public async Task HandleListFormat_InvalidFormat_ReturnsError()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--list-format", "invalid" };
+
+        var result = OptionHandlers.HandleListFormat(args, 0, options);
+
+        await Assert.That(result.Error).IsNotNull();
+        await Assert.That(result.Error).Contains("Unknown list format");
+    }
+
+    [Test]
+    public async Task HandleListFormat_MissingValue_ReturnsError()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--list-format" };
+
+        var result = OptionHandlers.HandleListFormat(args, 0, options);
+
+        await Assert.That(result.Error).Contains("--list-format requires a value");
+    }
+
+    #endregion
+
     #region Partition Handlers
+
+    [Test]
+    public async Task HandlePartition_MissingValue_ReturnsError()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--partition" };
+
+        var result = OptionHandlers.HandlePartition(args, 0, options);
+
+        await Assert.That(result.Error).Contains("--partition requires a value");
+    }
 
     [Test]
     public async Task HandlePartition_ValidValue_SetsPartition()
@@ -224,6 +336,17 @@ public class OptionHandlersTests
     }
 
     [Test]
+    public async Task HandlePartitionIndex_MissingValue_ReturnsError()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--partition-index" };
+
+        var result = OptionHandlers.HandlePartitionIndex(args, 0, options);
+
+        await Assert.That(result.Error).Contains("--partition-index requires a value");
+    }
+
+    [Test]
     public async Task HandlePartitionIndex_ValidValue_SetsPartitionIndex()
     {
         var options = new CliOptions();
@@ -244,6 +367,52 @@ public class OptionHandlersTests
         var result = OptionHandlers.HandlePartitionIndex(args, 0, options);
 
         await Assert.That(result.Error).Contains("non-negative integer");
+    }
+
+    [Test]
+    public async Task HandlePartitionIndex_NonInteger_ReturnsError()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--partition-index", "abc" };
+
+        var result = OptionHandlers.HandlePartitionIndex(args, 0, options);
+
+        await Assert.That(result.Error).Contains("non-negative integer");
+    }
+
+    [Test]
+    public async Task HandlePartitionStrategy_ValidValue_SetsStrategy()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--partition-strategy", "spec-count" };
+
+        var result = OptionHandlers.HandlePartitionStrategy(args, 0, options);
+
+        await Assert.That(result.ConsumedArgs).IsEqualTo(2);
+        await Assert.That(options.PartitionStrategy).IsEqualTo(PartitionStrategy.SpecCount);
+    }
+
+    [Test]
+    public async Task HandlePartitionStrategy_MissingValue_ReturnsError()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--partition-strategy" };
+
+        var result = OptionHandlers.HandlePartitionStrategy(args, 0, options);
+
+        await Assert.That(result.Error).Contains("--partition-strategy requires a value");
+    }
+
+    [Test]
+    public async Task HandlePartitionStrategy_InvalidValue_ReturnsError()
+    {
+        var options = new CliOptions();
+        var args = new[] { "--partition-strategy", "invalid" };
+
+        var result = OptionHandlers.HandlePartitionStrategy(args, 0, options);
+
+        await Assert.That(result.Error).IsNotNull();
+        await Assert.That(result.Error).Contains("Unknown partition strategy");
     }
 
     #endregion

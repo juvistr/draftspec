@@ -834,7 +834,7 @@ public class WatchCommandTests
         await task;
 
         // Should handle cancellation gracefully
-        await Assert.That(console.Output).Contains("Stopped watching");
+        await Assert.That(console.AllOutput).Contains("Stopped watching");
     }
 
     [Test]
@@ -878,7 +878,7 @@ public class WatchCommandTests
         await task;
 
         // Should handle cancellation in callback gracefully and show stopped message
-        await Assert.That(console.Output).Contains("Stopped watching");
+        await Assert.That(console.AllOutput).Contains("Stopped watching");
     }
 
     #endregion

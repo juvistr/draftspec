@@ -245,11 +245,14 @@ public static class NullObjects
 
     private class NullFileWatcherFactory : IFileWatcherFactory
     {
-        public IFileWatcher Create(string path, Action<FileChangeInfo> onChange, int debounceMs = 200) => new NullFileWatcher();
+        public IFileWatcher Create(string path, int debounceMs = 200) => new NullFileWatcher();
     }
 
     private class NullFileWatcher : IFileWatcher
     {
+        public IAsyncEnumerable<FileChangeInfo> WatchAsync(CancellationToken ct = default)
+            => AsyncEnumerable.Empty<FileChangeInfo>();
+
         public void Dispose() { }
     }
 
@@ -345,7 +348,12 @@ public static class NullObjects
             bool incremental,
             bool noCache,
             CancellationToken ct)
-            => Task.FromResult(WatchAction.RunAll());
+        {
+            // Return RunFile for specific spec file changes, RunAll for everything else
+            if (change.IsSpecFile && change.FilePath != null)
+                return Task.FromResult(WatchAction.RunFile(change.FilePath));
+            return Task.FromResult(WatchAction.RunAll());
+        }
     }
 
     #endregion

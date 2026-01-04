@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using System.Threading.Channels;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
@@ -187,22 +186,12 @@ public class WatchCommand : ICommand<WatchOptions>
             presenter.ShowWatching();
         }
 
-        // Use Channel<T> for async producer-consumer pattern
-        // The watcher callback just enqueues changes (non-blocking)
-        // The main loop processes changes asynchronously
-        var changeChannel = Channel.CreateUnbounded<FileChangeInfo>(
-            new UnboundedChannelOptions { SingleReader = true });
+        // Watch for file changes using async enumerable
+        using var watcher = _watcherFactory.Create(path);
 
-        using var watcher = _watcherFactory.Create(path, change =>
-        {
-            // Non-blocking enqueue - the watcher thread returns immediately
-            changeChannel.Writer.TryWrite(change);
-        });
-
-        // Process changes asynchronously
         try
         {
-            await foreach (var change in changeChannel.Reader.ReadAllAsync(cts.Token))
+            await foreach (var change in watcher.WatchAsync(cts.Token))
             {
                 presenter.ShowRerunning();
 

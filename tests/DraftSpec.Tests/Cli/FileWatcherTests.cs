@@ -38,32 +38,28 @@ public class FileWatcherTests
     [Test]
     public async Task FileWatcher_SingleChange_TriggersCallback()
     {
-        var callCount = 0;
         FileChangeInfo? receivedChange = null;
-        var tcs = new TaskCompletionSource<bool>();
 
-        using var watcher = new FileWatcher(_tempDir, change =>
+        using var watcher = new FileWatcher(_tempDir, new MockOperatingSystem(), debounceMs: 100);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        // Start watching in background
+        var watchTask = Task.Run(async () =>
         {
-            Interlocked.Increment(ref callCount);
-            receivedChange = change;
-            tcs.TrySetResult(true);
-        }, new MockOperatingSystem(), debounceMs: 100); // Increased debounce for CI stability
+            await foreach (var change in watcher.WatchAsync(cts.Token))
+            {
+                receivedChange = change;
+                return; // Got first change, exit
+            }
+        });
 
         // Create a spec file
         var specFile = Path.Combine(_tempDir, "test.spec.csx");
         await File.WriteAllTextAsync(specFile, "// spec");
 
-        // Wait for callback with extended timeout for CI environments
-        var completed = await Task.WhenAny(tcs.Task, Task.Delay(5000));
-        await Assert.That(completed == tcs.Task).IsTrue();
+        // Wait for watch task to receive the change or timeout
+        await Task.WhenAny(watchTask, Task.Delay(5000));
 
-        // Wait for debounce to fully settle (2x debounce time + buffer)
-        await Task.Delay(300);
-
-        // FileSystemWatcher may fire multiple events for a single write (Created + Changed).
-        // The debounce should coalesce them, but this is OS-dependent.
-        // We verify a callback occurred - the important thing is detection, not classification.
-        await Assert.That(callCount).IsGreaterThanOrEqualTo(1);
         await Assert.That(receivedChange).IsNotNull();
 
         // On some filesystems, atomic writes create temporary files that trigger non-spec events,
@@ -86,39 +82,55 @@ public class FileWatcherTests
     [Test]
     public async Task FileWatcher_TemporaryFilesWithDotPrefix_AreIgnored()
     {
-        var callCount = 0;
-        using var watcher = new FileWatcher(_tempDir, _ =>
+        var receivedAny = false;
+
+        using var watcher = new FileWatcher(_tempDir, new MockOperatingSystem(), debounceMs: 50);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+
+        var watchTask = Task.Run(async () =>
         {
-            Interlocked.Increment(ref callCount);
-        }, new MockOperatingSystem(), debounceMs: 50);
+            await foreach (var _ in watcher.WatchAsync(cts.Token))
+            {
+                receivedAny = true;
+                return;
+            }
+        });
 
         // Create a temporary file (dot prefix)
         var tempFile = Path.Combine(_tempDir, ".temp.spec.csx");
         await File.WriteAllTextAsync(tempFile, "// temp");
 
         // Wait for potential callback
-        await Task.Delay(200);
+        try { await watchTask; } catch (OperationCanceledException) { }
 
-        await Assert.That(callCount).IsEqualTo(0);
+        await Assert.That(receivedAny).IsFalse();
     }
 
     [Test]
     public async Task FileWatcher_TemporaryFilesWithTildeSuffix_AreIgnored()
     {
-        var callCount = 0;
-        using var watcher = new FileWatcher(_tempDir, _ =>
+        var receivedAny = false;
+
+        using var watcher = new FileWatcher(_tempDir, new MockOperatingSystem(), debounceMs: 50);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+
+        var watchTask = Task.Run(async () =>
         {
-            Interlocked.Increment(ref callCount);
-        }, new MockOperatingSystem(), debounceMs: 50);
+            await foreach (var _ in watcher.WatchAsync(cts.Token))
+            {
+                receivedAny = true;
+                return;
+            }
+        });
 
         // Create a backup file (tilde suffix)
         var backupFile = Path.Combine(_tempDir, "test.spec.csx~");
         await File.WriteAllTextAsync(backupFile, "// backup");
 
         // Wait for potential callback
-        await Task.Delay(200);
+        try { await watchTask; } catch (OperationCanceledException) { }
 
-        await Assert.That(callCount).IsEqualTo(0);
+        await Assert.That(receivedAny).IsFalse();
     }
 
     #endregion
@@ -133,20 +145,25 @@ public class FileWatcherTests
     public async Task FileWatcher_SourceFileChange_EscalatesToFullRun()
     {
         FileChangeInfo? receivedChange = null;
-        var tcs = new TaskCompletionSource<bool>();
 
-        using var watcher = new FileWatcher(_tempDir, change =>
+        using var watcher = new FileWatcher(_tempDir, new MockOperatingSystem(), debounceMs: 50);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        var watchTask = Task.Run(async () =>
         {
-            receivedChange = change;
-            tcs.TrySetResult(true);
-        }, new MockOperatingSystem(), debounceMs: 50);
+            await foreach (var change in watcher.WatchAsync(cts.Token))
+            {
+                receivedChange = change;
+                return;
+            }
+        });
 
         // Create a .cs source file (not a spec)
         var sourceFile = Path.Combine(_tempDir, "Program.cs");
         await File.WriteAllTextAsync(sourceFile, "class Program {}");
 
         // Wait for callback with extended timeout for CI environments
-        await Task.WhenAny(tcs.Task, Task.Delay(5000));
+        await Task.WhenAny(watchTask, Task.Delay(5000));
 
         await Assert.That(receivedChange).IsNotNull();
         await Assert.That(receivedChange!.IsSpecFile).IsFalse();
@@ -159,13 +176,22 @@ public class FileWatcherTests
     [Test]
     public async Task FileWatcher_Dispose_StopsWatching()
     {
-        var callCount = 0;
-        var watcher = new FileWatcher(_tempDir, _ =>
-        {
-            Interlocked.Increment(ref callCount);
-        }, new MockOperatingSystem(), debounceMs: 50);
+        var receivedAny = false;
 
-        // Dispose the watcher
+        var watcher = new FileWatcher(_tempDir, new MockOperatingSystem(), debounceMs: 50);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+
+        // Start watching
+        var watchTask = Task.Run(async () =>
+        {
+            await foreach (var _ in watcher.WatchAsync(cts.Token))
+            {
+                receivedAny = true;
+                return;
+            }
+        });
+
+        // Dispose the watcher (this completes the channel)
         watcher.Dispose();
 
         // Try to trigger changes after dispose
@@ -173,15 +199,15 @@ public class FileWatcherTests
         await File.WriteAllTextAsync(specFile, "// spec");
 
         // Wait to ensure no callbacks
-        await Task.Delay(200);
+        try { await watchTask; } catch (OperationCanceledException) { }
 
-        await Assert.That(callCount).IsEqualTo(0);
+        await Assert.That(receivedAny).IsFalse();
     }
 
     [Test]
     public async Task FileWatcher_DoubleDispose_DoesNotThrow()
     {
-        var watcher = new FileWatcher(_tempDir, _ => { }, new MockOperatingSystem(), debounceMs: 50);
+        var watcher = new FileWatcher(_tempDir, new MockOperatingSystem(), debounceMs: 50);
 
         // Should not throw on double dispose
         watcher.Dispose();
@@ -199,7 +225,7 @@ public class FileWatcherTests
     {
         // When path is a directory, it should watch that directory directly
         // (This is the existing behavior - _tempDir is a directory)
-        using var watcher = new FileWatcher(_tempDir, _ => { }, new MockOperatingSystem(), debounceMs: 50);
+        using var watcher = new FileWatcher(_tempDir, new MockOperatingSystem(), debounceMs: 50);
 
         // If we got here without exception, the directory path was used correctly
         await Assert.That(true).IsTrue();
@@ -212,17 +238,25 @@ public class FileWatcherTests
         var specFile = Path.Combine(_tempDir, "test.spec.csx");
         await File.WriteAllTextAsync(specFile, "// spec");
 
-        var tcs = new TaskCompletionSource<bool>();
-        using var watcher = new FileWatcher(specFile, change =>
+        FileChangeInfo? receivedChange = null;
+
+        using var watcher = new FileWatcher(specFile, new MockOperatingSystem(), debounceMs: 50);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        var watchTask = Task.Run(async () =>
         {
-            tcs.TrySetResult(true);
-        }, new MockOperatingSystem(), debounceMs: 50);
+            await foreach (var change in watcher.WatchAsync(cts.Token))
+            {
+                receivedChange = change;
+                return;
+            }
+        });
 
         // Modify the file to verify the watcher is working on the parent directory
         await File.WriteAllTextAsync(specFile, "// updated spec");
 
-        var completed = await Task.WhenAny(tcs.Task, Task.Delay(5000));
-        await Assert.That(completed == tcs.Task).IsTrue();
+        var completed = await Task.WhenAny(watchTask, Task.Delay(5000));
+        await Assert.That(receivedChange).IsNotNull();
     }
 
     #endregion
@@ -233,7 +267,7 @@ public class FileWatcherTests
     public async Task NormalizePath_OnMacOS_NormalizesVarPath()
     {
         var os = new MockOperatingSystem().WithMacOS();
-        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+        using var watcher = new FileWatcher(_tempDir, os, debounceMs: 50);
 
         var result = watcher.NormalizePath("/var/folders/test/file.txt");
 
@@ -244,7 +278,7 @@ public class FileWatcherTests
     public async Task NormalizePath_OnMacOS_NormalizesTmpPath()
     {
         var os = new MockOperatingSystem().WithMacOS();
-        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+        using var watcher = new FileWatcher(_tempDir, os, debounceMs: 50);
 
         var result = watcher.NormalizePath("/tmp/test/file.txt");
 
@@ -255,7 +289,7 @@ public class FileWatcherTests
     public async Task NormalizePath_OnMacOS_NormalizesEtcPath()
     {
         var os = new MockOperatingSystem().WithMacOS();
-        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+        using var watcher = new FileWatcher(_tempDir, os, debounceMs: 50);
 
         var result = watcher.NormalizePath("/etc/hosts");
 
@@ -266,7 +300,7 @@ public class FileWatcherTests
     public async Task NormalizePath_OnMacOS_DoesNotNormalizeOtherPaths()
     {
         var os = new MockOperatingSystem().WithMacOS();
-        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+        using var watcher = new FileWatcher(_tempDir, os, debounceMs: 50);
 
         var result = watcher.NormalizePath("/Users/test/file.txt");
 
@@ -277,7 +311,7 @@ public class FileWatcherTests
     public async Task NormalizePath_OnNonMacOS_DoesNotNormalize()
     {
         var os = new MockOperatingSystem(); // Default is not macOS
-        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+        using var watcher = new FileWatcher(_tempDir, os, debounceMs: 50);
 
         var result = watcher.NormalizePath("/var/folders/test/file.txt");
 
@@ -288,7 +322,7 @@ public class FileWatcherTests
     public async Task NormalizePath_OnLinux_DoesNotNormalize()
     {
         var os = new MockOperatingSystem().WithLinux();
-        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+        using var watcher = new FileWatcher(_tempDir, os, debounceMs: 50);
 
         var result = watcher.NormalizePath("/var/log/test.log");
 

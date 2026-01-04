@@ -16,7 +16,7 @@ public class FileWatcherFactoryTests
         var factory = CreateFactory();
         var tempDir = Path.GetTempPath();
 
-        using var watcher = factory.Create(tempDir, _ => { });
+        using var watcher = factory.Create(tempDir);
 
         await Assert.That(watcher).IsNotNull();
         await Assert.That(watcher).IsAssignableTo<IFileWatcher>();
@@ -28,7 +28,7 @@ public class FileWatcherFactoryTests
         var factory = CreateFactory();
         var tempDir = Path.GetTempPath();
 
-        using var watcher = factory.Create(tempDir, _ => { }, debounceMs: 500);
+        using var watcher = factory.Create(tempDir, debounceMs: 500);
 
         await Assert.That(watcher).IsNotNull();
     }
@@ -39,8 +39,8 @@ public class FileWatcherFactoryTests
         var factory = CreateFactory();
         var tempDir = Path.GetTempPath();
 
-        using var watcher1 = factory.Create(tempDir, _ => { });
-        using var watcher2 = factory.Create(tempDir, _ => { });
+        using var watcher1 = factory.Create(tempDir);
+        using var watcher2 = factory.Create(tempDir);
 
         await Assert.That(watcher1).IsNotSameReferenceAs(watcher2);
     }
@@ -57,8 +57,8 @@ public class FileWatcherFactoryTests
 
         try
         {
-            using var watcher1 = factory.Create(tempDir1, _ => { });
-            using var watcher2 = factory.Create(tempDir2, _ => { });
+            using var watcher1 = factory.Create(tempDir1);
+            using var watcher2 = factory.Create(tempDir2);
 
             await Assert.That(watcher1).IsNotSameReferenceAs(watcher2);
         }

@@ -1,394 +1,249 @@
-using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
-using DraftSpec.Cli.Services;
-using DraftSpec.Tests.Infrastructure;
+using DraftSpec.Cli.Options.Enums;
+using DraftSpec.Cli.Pipeline;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
-/// Integration tests for RunCommand that use real file I/O operations.
-/// These tests verify line filter functionality with actual spec files.
+/// Integration tests for RunCommand with full pipeline execution.
+/// These tests verify end-to-end behavior using mock infrastructure.
+/// For unit tests of individual phases, see the respective *PhaseTests.cs files.
 /// </summary>
 public class RunCommandIntegrationTests
 {
-    #region Test Setup
-
-    private string _tempDir = null!;
+    private MockConsole _console = null!;
+    private MockFileSystem _fileSystem = null!;
+    private CommandContext? _capturedContext;
 
     [Before(Test)]
-    public void SetupTempDir()
+    public void SetUp()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_run_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
+        _console = new MockConsole();
+        _fileSystem = new MockFileSystem();
+        _capturedContext = null;
     }
 
-    [After(Test)]
-    public void CleanupTempDir()
+    private RunCommand CreateCommand(int pipelineReturnValue = 0)
     {
-        if (Directory.Exists(_tempDir))
+        return new RunCommand(MockPipeline, _console, _fileSystem);
+
+        Task<int> MockPipeline(CommandContext context, CancellationToken ct)
         {
-            Directory.Delete(_tempDir, recursive: true);
+            _capturedContext = context;
+            return Task.FromResult(pipelineReturnValue);
         }
     }
 
-    #endregion
-
-    #region Line Filter Tests
+    #region Coverage Options Wiring
 
     [Test]
-    public async Task ExecuteAsync_LineFilter_FindsExactLineMatch()
+    public async Task ExecuteAsync_SetsCoverageOptions()
     {
-        // Create a spec file
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        await File.WriteAllTextAsync(specPath, """
-            using static DraftSpec.Dsl;
-            describe("Calculator", () =>
-            {
-                it("adds numbers", () => { });
-                it("subtracts numbers", () => { });
-            });
-            """);
-
-        var console = new MockConsole();
-        var runnerFactory = new MockRunnerFactory();
-        var command = CreateCommand(
-            console: console,
-            runnerFactory: runnerFactory,
-            specFiles: [specPath],
-            fileSystem: new RealFileSystem());
-
-        // Line 4 should match "adds numbers"
-        var options = new RunOptions
+        var command = CreateCommand();
+        var coverage = new CoverageOptions
         {
-            Path = _tempDir,
-            Filter = new FilterOptions
-            {
-                LineFilters = [new LineFilter("test.spec.csx", [4])]
-            }
+            Enabled = true,
+            Output = "./coverage",
+            Format = CoverageFormat.Cobertura
         };
+        var options = new RunOptions { Coverage = coverage };
 
         await command.ExecuteAsync(options);
 
-        // The filter should contain the spec description (escaped for regex)
-        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
-        // Regex.Escape converts spaces to "\ "
-        await Assert.That(runnerFactory.LastFilterName!).Contains(@"adds\ numbers");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_LineFilter_FindsNearbySpec()
-    {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        await File.WriteAllTextAsync(specPath, """
-            using static DraftSpec.Dsl;
-            describe("Calculator", () =>
-            {
-                it("adds numbers", () => { });
-            });
-            """);
-
-        var console = new MockConsole();
-        var runnerFactory = new MockRunnerFactory();
-        var command = CreateCommand(
-            console: console,
-            runnerFactory: runnerFactory,
-            specFiles: [specPath],
-            fileSystem: new RealFileSystem());
-
-        // Line 5 is within 1 line of "adds numbers" (line 4)
-        var options = new RunOptions
-        {
-            Path = _tempDir,
-            Filter = new FilterOptions
-            {
-                LineFilters = [new LineFilter("test.spec.csx", [5])]
-            }
-        };
-
-        await command.ExecuteAsync(options);
-
-        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
-        await Assert.That(runnerFactory.LastFilterName!).Contains(@"adds\ numbers");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_LineFilter_FileNotFound_ShowsWarning()
-    {
-        var console = new MockConsole();
-        var command = CreateCommand(
-            console: console,
-            specFiles: [],
-            fileSystem: new RealFileSystem());
-
-        var options = new RunOptions
-        {
-            Path = _tempDir,
-            Filter = new FilterOptions
-            {
-                LineFilters = [new LineFilter("nonexistent.spec.csx", [1])]
-            }
-        };
-
-        await command.ExecuteAsync(options);
-
-        await Assert.That(console.Output).Contains("File not found");
-        await Assert.That(console.Output).Contains("nonexistent.spec.csx");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_LineFilter_MultipleLines_CombinesPattern()
-    {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        await File.WriteAllTextAsync(specPath, """
-            using static DraftSpec.Dsl;
-            describe("Calculator", () =>
-            {
-                it("adds numbers", () => { });
-                it("subtracts numbers", () => { });
-            });
-            """);
-
-        var console = new MockConsole();
-        var runnerFactory = new MockRunnerFactory();
-        var command = CreateCommand(
-            console: console,
-            runnerFactory: runnerFactory,
-            specFiles: [specPath],
-            fileSystem: new RealFileSystem());
-
-        // Lines 4 and 5 should match both specs
-        var options = new RunOptions
-        {
-            Path = _tempDir,
-            Filter = new FilterOptions
-            {
-                LineFilters = [new LineFilter("test.spec.csx", [4, 5])]
-            }
-        };
-
-        await command.ExecuteAsync(options);
-
-        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
-        await Assert.That(runnerFactory.LastFilterName!).Contains(@"adds\ numbers");
-        await Assert.That(runnerFactory.LastFilterName!).Contains(@"subtracts\ numbers");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_LineFilter_MergesWithExistingFilterName()
-    {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        await File.WriteAllTextAsync(specPath, """
-            using static DraftSpec.Dsl;
-            describe("Calculator", () =>
-            {
-                it("adds numbers", () => { });
-            });
-            """);
-
-        var console = new MockConsole();
-        var runnerFactory = new MockRunnerFactory();
-        var command = CreateCommand(
-            console: console,
-            runnerFactory: runnerFactory,
-            specFiles: [specPath],
-            fileSystem: new RealFileSystem());
-
-        var options = new RunOptions
-        {
-            Path = _tempDir,
-            Filter = new FilterOptions
-            {
-                FilterName = "existing",
-                LineFilters = [new LineFilter("test.spec.csx", [4])]
-            }
-        };
-
-        await command.ExecuteAsync(options);
-
-        // Should combine both filters with OR
-        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
-        await Assert.That(runnerFactory.LastFilterName!).Contains("existing");
-        await Assert.That(runnerFactory.LastFilterName!).Contains(@"adds\ numbers");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_LineFilter_IncludesContextPath()
-    {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        await File.WriteAllTextAsync(specPath, """
-            using static DraftSpec.Dsl;
-            describe("Calculator", () =>
-            {
-                describe("addition", () =>
-                {
-                    it("handles positive numbers", () => { });
-                });
-            });
-            """);
-
-        var console = new MockConsole();
-        var runnerFactory = new MockRunnerFactory();
-        var command = CreateCommand(
-            console: console,
-            runnerFactory: runnerFactory,
-            specFiles: [specPath],
-            fileSystem: new RealFileSystem());
-
-        var options = new RunOptions
-        {
-            Path = _tempDir,
-            Filter = new FilterOptions
-            {
-                LineFilters = [new LineFilter("test.spec.csx", [6])]
-            }
-        };
-
-        await command.ExecuteAsync(options);
-
-        // Should include full display name with context path (escaped for regex)
-        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
-        await Assert.That(runnerFactory.LastFilterName!).Contains("Calculator");
-        await Assert.That(runnerFactory.LastFilterName!).Contains("addition");
-        await Assert.That(runnerFactory.LastFilterName!).Contains(@"handles\ positive\ numbers");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_LineFilter_NoSpecsAtLine_ShowsError()
-    {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        await File.WriteAllTextAsync(specPath, """
-            using static DraftSpec.Dsl;
-            describe("Calculator", () =>
-            {
-                it("adds numbers", () => { });
-            });
-            """);
-
-        var console = new MockConsole();
-        var command = CreateCommand(
-            console: console,
-            specFiles: [specPath],
-            fileSystem: new RealFileSystem());
-
-        // Line 100 is way past the end of the file - no specs there
-        var options = new RunOptions
-        {
-            Path = _tempDir,
-            Filter = new FilterOptions
-            {
-                LineFilters = [new LineFilter("test.spec.csx", [100])]
-            }
-        };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(1);
-        await Assert.That(console.Output).Contains("No specs found at the specified line numbers");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_LineFilter_DuplicateSpecs_Deduplicated()
-    {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        await File.WriteAllTextAsync(specPath, """
-            using static DraftSpec.Dsl;
-            describe("Calculator", () =>
-            {
-                it("adds numbers", () => { });
-            });
-            """);
-
-        var console = new MockConsole();
-        var runnerFactory = new MockRunnerFactory();
-        var command = CreateCommand(
-            console: console,
-            runnerFactory: runnerFactory,
-            specFiles: [specPath],
-            fileSystem: new RealFileSystem());
-
-        // Lines 4 and 5 both match the same spec "adds numbers"
-        // The filter should deduplicate
-        var options = new RunOptions
-        {
-            Path = _tempDir,
-            Filter = new FilterOptions
-            {
-                LineFilters = [new LineFilter("test.spec.csx", [4, 5])]
-            }
-        };
-
-        await command.ExecuteAsync(options);
-
-        // The filter name should only have the spec once (not duplicated)
-        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
-        // Count occurrences of "adds numbers" - should be 1
-        var filterName = runnerFactory.LastFilterName!;
-        var count = System.Text.RegularExpressions.Regex.Matches(filterName, @"adds\\ numbers").Count;
-        await Assert.That(count).IsEqualTo(1);
-    }
-
-    [Test]
-    public async Task ExecuteAsync_LineFilter_SpecWithNoContext_UsesDescriptionOnly()
-    {
-        var specPath = Path.Combine(_tempDir, "test.spec.csx");
-        // Top-level spec with no describe block
-        await File.WriteAllTextAsync(specPath, """
-            using static DraftSpec.Dsl;
-            it("standalone test", () => { });
-            """);
-
-        var console = new MockConsole();
-        var runnerFactory = new MockRunnerFactory();
-        var command = CreateCommand(
-            console: console,
-            runnerFactory: runnerFactory,
-            specFiles: [specPath],
-            fileSystem: new RealFileSystem());
-
-        var options = new RunOptions
-        {
-            Path = _tempDir,
-            Filter = new FilterOptions
-            {
-                LineFilters = [new LineFilter("test.spec.csx", [2])]
-            }
-        };
-
-        await command.ExecuteAsync(options);
-
-        await Assert.That(runnerFactory.LastFilterName).IsNotNull();
-        await Assert.That(runnerFactory.LastFilterName!).Contains(@"standalone\ test");
-        // Should not contain context separator when there's no context
-        await Assert.That(runnerFactory.LastFilterName!).DoesNotContain(">");
+        var capturedCoverage = _capturedContext!.Get<CoverageOptions>(ContextKeys.Coverage);
+        await Assert.That(capturedCoverage).IsNotNull();
+        await Assert.That(capturedCoverage!.Enabled).IsTrue();
+        await Assert.That(capturedCoverage.OutputDirectory).IsEqualTo("./coverage");
+        await Assert.That(capturedCoverage.Format).IsEqualTo(CoverageFormat.Cobertura);
     }
 
     #endregion
 
-    #region Helper Methods
+    #region Output Format Variations
 
-    private static RunCommand CreateCommand(
-        MockConsole? console = null,
-        IInProcessSpecRunnerFactory? runnerFactory = null,
-        IReadOnlyList<string>? specFiles = null,
-        IFileSystem? fileSystem = null,
-        IEnvironment? environment = null)
+    [Test]
+    public async Task ExecuteAsync_SetsOutputFormat_Html()
     {
-        var specs = specFiles ?? [];
-        return new RunCommand(
-            new MockSpecFinder(specs),
-            runnerFactory ?? NullObjects.RunnerFactory,
-            console ?? new MockConsole(),
-            NullObjects.FormatterRegistry,
-            fileSystem ?? NullObjects.FileSystem,
-            environment ?? NullObjects.Environment,
-            NullObjects.StatsCollector,
-            NullObjects.Partitioner,
-            NullObjects.GitService,
-            NullObjects.HistoryService,
-            NullObjects.SpecSelector,
-            new MockPathComparer());
+        var command = CreateCommand();
+        var options = new RunOptions { Format = OutputFormat.Html };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.OutputFormat))
+            .IsEqualTo("html");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsOutputFormat_Markdown()
+    {
+        var command = CreateCommand();
+        var options = new RunOptions { Format = OutputFormat.Markdown };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.OutputFormat))
+            .IsEqualTo("markdown");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsOutputFormat_JUnit()
+    {
+        var command = CreateCommand();
+        var options = new RunOptions { Format = OutputFormat.JUnit };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.OutputFormat))
+            .IsEqualTo("junit");
+    }
+
+    #endregion
+
+    #region Filter Combinations
+
+    [Test]
+    public async Task ExecuteAsync_SetsFilter_WithAllFields()
+    {
+        var command = CreateCommand();
+        var filter = new FilterOptions
+        {
+            FilterTags = "smoke,unit",
+            ExcludeTags = "slow",
+            FilterName = "pattern",
+            ExcludeName = "exclude",
+            FilterContext = ["Context1", "Context2"],
+            ExcludeContext = ["Excluded"]
+        };
+        var options = new RunOptions { Filter = filter };
+
+        await command.ExecuteAsync(options);
+
+        var capturedFilter = _capturedContext!.Get<FilterOptions>(ContextKeys.Filter);
+        await Assert.That(capturedFilter!.FilterTags).IsEqualTo("smoke,unit");
+        await Assert.That(capturedFilter.ExcludeTags).IsEqualTo("slow");
+        await Assert.That(capturedFilter.FilterName).IsEqualTo("pattern");
+        await Assert.That(capturedFilter.ExcludeName).IsEqualTo("exclude");
+        var filterContext = capturedFilter.FilterContext;
+        var excludeContext = capturedFilter.ExcludeContext;
+        await Assert.That(filterContext).IsNotNull();
+        await Assert.That(filterContext!).Contains("Context1");
+        await Assert.That(filterContext).Contains("Context2");
+        await Assert.That(excludeContext).IsNotNull();
+        await Assert.That(excludeContext!).Contains("Excluded");
+    }
+
+    #endregion
+
+    #region Partition Variations
+
+    [Test]
+    public async Task ExecuteAsync_SetsPartition_NotEnabled()
+    {
+        var command = CreateCommand();
+        var partition = new PartitionOptions();
+        var options = new RunOptions { Partition = partition };
+
+        await command.ExecuteAsync(options);
+
+        var capturedPartition = _capturedContext!.Get<PartitionOptions>(ContextKeys.Partition);
+        await Assert.That(capturedPartition!.IsEnabled).IsFalse();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsPartition_Enabled()
+    {
+        var command = CreateCommand();
+        var partition = new PartitionOptions
+        {
+            Total = 10,
+            Index = 5,
+            Strategy = PartitionStrategy.SpecCount
+        };
+        var options = new RunOptions { Partition = partition };
+
+        await command.ExecuteAsync(options);
+
+        var capturedPartition = _capturedContext!.Get<PartitionOptions>(ContextKeys.Partition);
+        await Assert.That(capturedPartition!.IsEnabled).IsTrue();
+        await Assert.That(capturedPartition.Total).IsEqualTo(10);
+        await Assert.That(capturedPartition.Index).IsEqualTo(5);
+        await Assert.That(capturedPartition.Strategy).IsEqualTo(PartitionStrategy.SpecCount);
+    }
+
+    #endregion
+
+    #region Impact Analysis Variations
+
+    [Test]
+    public async Task ExecuteAsync_SetsAffectedBy_Staged()
+    {
+        var command = CreateCommand();
+        var options = new RunOptions { AffectedBy = "staged" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.AffectedBy))
+            .IsEqualTo("staged");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsAffectedBy_WithDryRun()
+    {
+        var command = CreateCommand();
+        var options = new RunOptions
+        {
+            AffectedBy = "main",
+            DryRun = true
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.AffectedBy))
+            .IsEqualTo("main");
+        await Assert.That(_capturedContext!.Get<bool>(ContextKeys.DryRun)).IsTrue();
+    }
+
+    #endregion
+
+    #region All Options Combined
+
+    [Test]
+    public async Task ExecuteAsync_SetsAllOptions()
+    {
+        var command = CreateCommand();
+        var options = new RunOptions
+        {
+            Path = "/test/specs",
+            Format = OutputFormat.Json,
+            OutputFile = "results.json",
+            CssUrl = "style.css",
+            Parallel = true,
+            NoCache = true,
+            NoStats = false,
+            StatsOnly = false,
+            Filter = new FilterOptions { FilterTags = "smoke" },
+            Coverage = new CoverageOptions { Enabled = true },
+            Partition = new PartitionOptions { Total = 2, Index = 1 },
+            AffectedBy = "HEAD",
+            DryRun = false,
+            Quarantine = true,
+            NoHistory = true,
+            Interactive = false
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Path).IsEqualTo("/test/specs");
+        await Assert.That(_capturedContext.Get<string>(ContextKeys.OutputFormat)).IsEqualTo("json");
+        await Assert.That(_capturedContext.Get<string>(ContextKeys.OutputFile)).IsEqualTo("results.json");
+        await Assert.That(_capturedContext.Get<string>(ContextKeys.CssUrl)).IsEqualTo("style.css");
+        await Assert.That(_capturedContext.Get<bool>(ContextKeys.Parallel)).IsTrue();
+        await Assert.That(_capturedContext.Get<bool>(ContextKeys.NoCache)).IsTrue();
+        await Assert.That(_capturedContext.Get<bool>(ContextKeys.Quarantine)).IsTrue();
+        await Assert.That(_capturedContext.Get<bool>(ContextKeys.NoHistory)).IsTrue();
+        await Assert.That(_capturedContext.Get<string>(ContextKeys.AffectedBy)).IsEqualTo("HEAD");
     }
 
     #endregion

@@ -122,6 +122,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ImpactAnalysisPhase>();
         services.AddSingleton<InteractiveSelectionPhase>();
         services.AddSingleton<PartitionPhase>();
+        services.AddSingleton<PreRunStatsPhase>();
         services.AddSingleton<SpecExecutionPhase>();
         services.AddSingleton<HistoryRecordPhase>();
         services.AddSingleton<RunOutputPhase>();
@@ -207,6 +208,22 @@ public static class ServiceCollectionExtensions
                 .Use(sp.GetRequiredService<PathResolutionPhase>())
                 .Use(sp.GetRequiredService<HistoryLoadPhase>())
                 .Use(sp.GetRequiredService<FlakyOutputPhase>())
+                .Build());
+
+        services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(
+            "run",
+            (sp, _) => new CommandPipelineBuilder()
+                .Use(sp.GetRequiredService<PathResolutionPhase>())
+                .Use(sp.GetRequiredService<QuarantinePhase>())
+                .Use(sp.GetRequiredService<SpecDiscoveryPhase>())
+                .Use(sp.GetRequiredService<LineFilterPhase>())
+                .Use(sp.GetRequiredService<ImpactAnalysisPhase>())
+                .Use(sp.GetRequiredService<InteractiveSelectionPhase>())
+                .Use(sp.GetRequiredService<PartitionPhase>())
+                .Use(sp.GetRequiredService<PreRunStatsPhase>())
+                .Use(sp.GetRequiredService<SpecExecutionPhase>())
+                .Use(sp.GetRequiredService<RunOutputPhase>())
+                .Use(sp.GetRequiredService<HistoryRecordPhase>())
                 .Build());
 
         // Commands

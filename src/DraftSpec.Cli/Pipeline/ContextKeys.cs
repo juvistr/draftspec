@@ -352,5 +352,17 @@ public static class ContextKeys
     /// </summary>
     public const string NoStats = nameof(NoStats);
 
+    /// <summary>
+    /// Custom CSS URL for HTML output.
+    /// Type: <see cref="string"/>
+    /// </summary>
+    public const string CssUrl = nameof(CssUrl);
+
+    /// <summary>
+    /// Coverage options for code coverage collection.
+    /// Type: <c>CoverageOptions</c>
+    /// </summary>
+    public const string Coverage = nameof(Coverage);
+
     #endregion
 }

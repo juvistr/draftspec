@@ -17,11 +17,16 @@ public class ImpactAnalysisPhase : ICommandPhase
 {
     private readonly IGitService _gitService;
     private readonly IPathComparer _pathComparer;
+    private readonly IDependencyGraphBuilder _graphBuilder;
 
-    public ImpactAnalysisPhase(IGitService gitService, IPathComparer pathComparer)
+    public ImpactAnalysisPhase(
+        IGitService gitService,
+        IPathComparer pathComparer,
+        IDependencyGraphBuilder graphBuilder)
     {
         _gitService = gitService;
         _pathComparer = pathComparer;
+        _graphBuilder = graphBuilder;
     }
 
     public async Task<int> ExecuteAsync(
@@ -73,8 +78,7 @@ public class ImpactAnalysisPhase : ICommandPhase
         }
 
         // Build dependency graph
-        var graphBuilder = new DependencyGraphBuilder(_pathComparer);
-        var graph = await graphBuilder.BuildAsync(projectPath, cancellationToken: ct);
+        var graph = await _graphBuilder.BuildAsync(projectPath, cancellationToken: ct);
 
         // Get affected specs
         var affectedSpecs = graph.GetAffectedSpecs(changedFiles);

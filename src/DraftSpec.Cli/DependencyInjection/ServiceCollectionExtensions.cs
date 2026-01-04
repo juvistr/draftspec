@@ -18,6 +18,7 @@ using DraftSpec.Cli.Pipeline.Phases.History;
 using DraftSpec.Cli.Pipeline.Phases.Estimate;
 using DraftSpec.Cli.Pipeline.Phases.Flaky;
 using DraftSpec.Cli.Pipeline.Phases.Run;
+using DraftSpec.Cli.DependencyGraph;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +70,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISpecSelector, InteractiveSpecSelector>();
         services.AddSingleton<IStaticSpecParserFactory, StaticSpecParserFactory>();
         services.AddSingleton<ICoverageMapService, CoverageMapService>();
+        services.AddSingleton<IDependencyGraphBuilder, DependencyGraphBuilder>();
 
         // Pipeline Phases - Common
         services.AddSingleton<PathResolutionPhase>();

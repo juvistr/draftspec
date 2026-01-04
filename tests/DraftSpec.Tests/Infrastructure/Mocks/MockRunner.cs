@@ -19,6 +19,7 @@ public class MockRunner : IInProcessSpecRunner
     private readonly int _skippedCount;
     private readonly int _delayMs;
     private readonly bool _throwArgumentException;
+    private readonly bool _throwOperationCanceledException;
     private readonly bool _includeContexts;
 
     /// <summary>
@@ -32,6 +33,7 @@ public class MockRunner : IInProcessSpecRunner
         int skippedCount = 0,
         int delayMs = 0,
         bool throwArgumentException = false,
+        bool throwOperationCanceledException = false,
         bool includeContexts = false)
     {
         _success = success;
@@ -41,6 +43,7 @@ public class MockRunner : IInProcessSpecRunner
         _skippedCount = skippedCount;
         _delayMs = delayMs;
         _throwArgumentException = throwArgumentException;
+        _throwOperationCanceledException = throwOperationCanceledException;
         _includeContexts = includeContexts;
     }
 
@@ -91,6 +94,9 @@ public class MockRunner : IInProcessSpecRunner
     {
         if (_throwArgumentException)
             throw new ArgumentException("Test exception from MockRunner");
+
+        if (_throwOperationCanceledException)
+            throw new OperationCanceledException("Test cancellation from MockRunner");
 
         RunAllCalled = true;
         RunAllCallCount++;

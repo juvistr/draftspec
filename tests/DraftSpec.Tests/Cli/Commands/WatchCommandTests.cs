@@ -728,6 +728,159 @@ public class WatchCommandTests
         // The command catches ArgumentException and shows error via presenter
     }
 
+    [Test]
+    public async Task ExecuteAsync_RunFilteredSpecs_ArgumentException_ShowsError()
+    {
+        var console = new MockConsole();
+        var watcherFactory = new MockFileWatcherFactory();
+
+        // First runner succeeds (for initial run), second throws ArgumentException (for filtered run)
+        var callCount = 0;
+        var runnerFactory = new MockRunnerFactory(() =>
+        {
+            callCount++;
+            // First call is initial run, second is the filtered run
+            return callCount == 1
+                ? new MockRunner()
+                : new MockRunner(throwArgumentException: true);
+        });
+
+        var changes = new List<SpecChange>
+        {
+            new("test-spec", ["Context"], SpecChangeType.Added)
+        };
+        var changeTracker = new ConfigurableSpecChangeTracker(
+            hasChanges: true,
+            hasDynamicSpecs: false,
+            changes: changes);
+
+        var specFiles = new[] { TestSpec };
+        var command = CreateCommandWithChangeTracker(
+            console: console,
+            runnerFactory: runnerFactory,
+            watcherFactory: watcherFactory,
+            changeTracker: changeTracker,
+            specFiles: specFiles);
+
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(300);
+
+        var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
+
+        var task = command.ExecuteAsync(options, cts.Token);
+
+        await Task.Delay(50);
+
+        // Trigger spec file change - will cause filtered run which throws
+        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
+
+        await Task.Delay(100);
+        await cts.CancelAsync();
+
+        await task;
+
+        // Should handle error gracefully and continue watching
+        await Assert.That(console.AllOutput).Contains("Test exception from MockRunner");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_RunFilteredSpecs_OperationCanceled_RethrowsAndStops()
+    {
+        var console = new MockConsole();
+        var watcherFactory = new MockFileWatcherFactory();
+
+        // First runner succeeds (for initial run), second throws OperationCanceledException
+        var callCount = 0;
+        var runnerFactory = new MockRunnerFactory(() =>
+        {
+            callCount++;
+            return callCount == 1
+                ? new MockRunner()
+                : new MockRunner(throwOperationCanceledException: true);
+        });
+
+        var changes = new List<SpecChange>
+        {
+            new("test-spec", ["Context"], SpecChangeType.Added)
+        };
+        var changeTracker = new ConfigurableSpecChangeTracker(
+            hasChanges: true,
+            hasDynamicSpecs: false,
+            changes: changes);
+
+        var specFiles = new[] { TestSpec };
+        var command = CreateCommandWithChangeTracker(
+            console: console,
+            runnerFactory: runnerFactory,
+            watcherFactory: watcherFactory,
+            changeTracker: changeTracker,
+            specFiles: specFiles);
+
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(300);
+
+        var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
+
+        var task = command.ExecuteAsync(options, cts.Token);
+
+        await Task.Delay(50);
+
+        // Trigger spec file change - will cause filtered run which throws OperationCanceledException
+        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
+
+        await Task.Delay(100);
+        await cts.CancelAsync();
+
+        await task;
+
+        // Should handle cancellation gracefully
+        await Assert.That(console.Output).Contains("Stopped watching");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WatcherCallback_OperationCanceled_ContinuesGracefully()
+    {
+        var console = new MockConsole();
+        var watcherFactory = new MockFileWatcherFactory();
+
+        // Runner throws OperationCanceledException on all calls after initial
+        var callCount = 0;
+        var runnerFactory = new MockRunnerFactory(() =>
+        {
+            callCount++;
+            return callCount == 1
+                ? new MockRunner()
+                : new MockRunner(throwOperationCanceledException: true);
+        });
+
+        var command = CreateCommand(
+            console: console,
+            runnerFactory: runnerFactory,
+            watcherFactory: watcherFactory,
+            specFiles: ["test.spec.csx"]);
+
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(300);
+
+        var options = new WatchOptions { Path = "." };
+
+        var task = command.ExecuteAsync(options, cts.Token);
+
+        await Task.Delay(50);
+
+        // Trigger file change - will cause RunAll which throws OperationCanceledException
+        // The callback catches this and continues
+        watcherFactory.TriggerChange(new FileChangeInfo(SomeOtherFile, false));
+
+        await Task.Delay(100);
+        await cts.CancelAsync();
+
+        await task;
+
+        // Should handle cancellation in callback gracefully and show stopped message
+        await Assert.That(console.Output).Contains("Stopped watching");
+    }
+
     #endregion
 
     #region Helper Methods

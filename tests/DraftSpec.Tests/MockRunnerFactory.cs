@@ -13,8 +13,15 @@ namespace DraftSpec.Tests.Infrastructure.Mocks;
 public class MockRunnerFactory : IInProcessSpecRunnerFactory
 {
     private readonly MockRunner? _runner;
+    private readonly Func<MockRunner>? _factory;
 
     public MockRunnerFactory(MockRunner? runner = null) => _runner = runner;
+
+    /// <summary>
+    /// Creates a factory that uses the provided function to create runners.
+    /// Useful for tests that need different runner behavior on each call.
+    /// </summary>
+    public MockRunnerFactory(Func<MockRunner> factory) => _factory = factory;
 
     // Captured filter parameters
     public string? LastFilterTags { get; private set; }
@@ -38,6 +45,10 @@ public class MockRunnerFactory : IInProcessSpecRunnerFactory
         LastExcludeName = excludeName;
         LastFilterContext = filterContext;
         LastExcludeContext = excludeContext;
+
+        if (_factory != null)
+            return _factory();
+
         return _runner ?? new MockRunner();
     }
 }

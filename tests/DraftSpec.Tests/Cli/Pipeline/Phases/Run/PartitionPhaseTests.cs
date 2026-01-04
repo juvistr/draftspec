@@ -111,6 +111,24 @@ public class PartitionPhaseTests
         await Assert.That(_console.Output).Contains("No spec files");
     }
 
+    [Test]
+    public async Task ExecuteAsync_NullSpecFiles_ReturnsZero()
+    {
+        var partitioner = new MockPartitioner([], 0);
+        var phase = new PartitionPhase(partitioner);
+        var context = CreateContext();
+        context.Set(ContextKeys.Partition, new PartitionOptions { Total = 2, Index = 0 });
+        // Don't set SpecFiles - it will be null
+
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(0);
+        await Assert.That(_console.Output).Contains("No spec files");
+    }
+
     #endregion
 
     #region Partition Success Tests

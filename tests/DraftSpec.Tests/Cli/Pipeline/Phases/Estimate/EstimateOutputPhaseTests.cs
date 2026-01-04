@@ -1,52 +1,22 @@
-using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.History;
-using DraftSpec.Cli.Options;
+using DraftSpec.Cli.Pipeline;
+using DraftSpec.Cli.Pipeline.Phases.Estimate;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
-namespace DraftSpec.Tests.Cli.Commands;
+namespace DraftSpec.Tests.Cli.Pipeline.Phases.Estimate;
 
 /// <summary>
-/// Tests for EstimateCommand which shows runtime estimates based on historical data.
+/// Tests for <see cref="EstimateOutputPhase"/>.
 /// </summary>
-public class EstimateCommandTests
+public class EstimateOutputPhaseTests
 {
-    private string _tempDir = null!;
     private MockConsole _console = null!;
-    private MockFileSystem _fileSystem = null!;
 
     [Before(Test)]
     public void SetUp()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_estimate_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
         _console = new MockConsole();
-        _fileSystem = new MockFileSystem().AddDirectory(_tempDir);
     }
-
-    [After(Test)]
-    public void TearDown()
-    {
-        if (Directory.Exists(_tempDir))
-        {
-            Directory.Delete(_tempDir, recursive: true);
-        }
-    }
-
-    #region Directory Validation Tests
-
-    [Test]
-    public async Task ExecuteAsync_DirectoryNotFound_ThrowsArgumentException()
-    {
-        var estimator = new MockRuntimeEstimator();
-        var historyService = new MockSpecHistoryService();
-        var command = CreateCommand(estimator, historyService);
-
-        var options = new EstimateOptions { Path = "/nonexistent/path" };
-
-        await Assert.ThrowsAsync<ArgumentException>(async () => await command.ExecuteAsync(options));
-    }
-
-    #endregion
 
     #region Empty History Tests
 
@@ -54,13 +24,13 @@ public class EstimateCommandTests
     public async Task ExecuteAsync_NoHistory_ShowsRunSpecsFirstMessage()
     {
         var estimator = new MockRuntimeEstimator();
-        var historyService = new MockSpecHistoryService()
-            .WithHistory(SpecHistory.Empty);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(SpecHistory.Empty);
 
-        var options = new EstimateOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(_console.Output).Contains("No test history found");
@@ -90,12 +60,13 @@ public class EstimateCommandTests
             SlowestSpecs = []
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
 
-        var options = new EstimateOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(_console.Output).Contains("No timing data available");
@@ -108,17 +79,7 @@ public class EstimateCommandTests
     [Test]
     public async Task ExecuteAsync_WithEstimate_ShowsRuntimeEstimate()
     {
-        var history = new SpecHistory
-        {
-            Specs = new Dictionary<string, SpecHistoryEntry>
-            {
-                ["test:spec1"] = new SpecHistoryEntry
-                {
-                    DisplayName = "spec1",
-                    Runs = [new SpecRun { Status = "passed", DurationMs = 1000 }]
-                }
-            }
-        };
+        var history = CreateHistoryWithSpec();
         var estimate = new RuntimeEstimate
         {
             P50Ms = 135000,  // 2m 15s
@@ -131,12 +92,13 @@ public class EstimateCommandTests
             SlowestSpecs = []
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
 
-        var options = new EstimateOptions { Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(_console.Output).Contains("Runtime Estimate (based on 47 historical runs)");
@@ -151,17 +113,7 @@ public class EstimateCommandTests
     [Test]
     public async Task ExecuteAsync_WithSlowestSpecs_ShowsSlowestSpecs()
     {
-        var history = new SpecHistory
-        {
-            Specs = new Dictionary<string, SpecHistoryEntry>
-            {
-                ["test:spec1"] = new SpecHistoryEntry
-                {
-                    DisplayName = "spec1",
-                    Runs = [new SpecRun { Status = "passed", DurationMs = 1000 }]
-                }
-            }
-        };
+        var history = CreateHistoryWithSpec();
         var estimate = new RuntimeEstimate
         {
             P50Ms = 10000,
@@ -190,12 +142,13 @@ public class EstimateCommandTests
             ]
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
 
-        var options = new EstimateOptions { Path = _tempDir, Percentile = 50 };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(0);
         await Assert.That(_console.Output).Contains("Slowest specs (P50):");
@@ -209,17 +162,7 @@ public class EstimateCommandTests
     [Test]
     public async Task ExecuteAsync_ShowsRecommendedCiTimeout()
     {
-        var history = new SpecHistory
-        {
-            Specs = new Dictionary<string, SpecHistoryEntry>
-            {
-                ["test:spec1"] = new SpecHistoryEntry
-                {
-                    DisplayName = "spec1",
-                    Runs = [new SpecRun { Status = "passed", DurationMs = 1000 }]
-                }
-            }
-        };
+        var history = CreateHistoryWithSpec();
         var estimate = new RuntimeEstimate
         {
             P50Ms = 10000,
@@ -232,12 +175,13 @@ public class EstimateCommandTests
             SlowestSpecs = []
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
 
-        var options = new EstimateOptions { Path = _tempDir };
-
-        await command.ExecuteAsync(options);
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         // 2x P95 = 4 minutes
         await Assert.That(_console.Output).Contains("Recommended CI timeout:");
@@ -252,17 +196,7 @@ public class EstimateCommandTests
     [Test]
     public async Task ExecuteAsync_OutputSeconds_ReturnsSecondsOnly()
     {
-        var history = new SpecHistory
-        {
-            Specs = new Dictionary<string, SpecHistoryEntry>
-            {
-                ["test:spec1"] = new SpecHistoryEntry
-                {
-                    DisplayName = "spec1",
-                    Runs = [new SpecRun { Status = "passed", DurationMs = 1000 }]
-                }
-            }
-        };
+        var history = CreateHistoryWithSpec();
         var estimate = new RuntimeEstimate
         {
             P50Ms = 135500, // 135.5 seconds
@@ -275,32 +209,23 @@ public class EstimateCommandTests
             SlowestSpecs = []
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
+        context.Set(ContextKeys.OutputSeconds, true);
 
-        var options = new EstimateOptions { Path = _tempDir, OutputSeconds = true };
-
-        var result = await command.ExecuteAsync(options);
+        var result = await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(0);
-        // Should only output the seconds value
         await Assert.That(_console.Output.Trim()).IsEqualTo("135.5");
     }
 
     [Test]
     public async Task ExecuteAsync_OutputSeconds_DoesNotShowHumanReadableOutput()
     {
-        var history = new SpecHistory
-        {
-            Specs = new Dictionary<string, SpecHistoryEntry>
-            {
-                ["test:spec1"] = new SpecHistoryEntry
-                {
-                    DisplayName = "spec1",
-                    Runs = [new SpecRun { Status = "passed", DurationMs = 1000 }]
-                }
-            }
-        };
+        var history = CreateHistoryWithSpec();
         var estimate = new RuntimeEstimate
         {
             P50Ms = 60000,
@@ -313,12 +238,14 @@ public class EstimateCommandTests
             SlowestSpecs = []
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
+        context.Set(ContextKeys.OutputSeconds, true);
 
-        var options = new EstimateOptions { Path = _tempDir, OutputSeconds = true };
-
-        await command.ExecuteAsync(options);
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(_console.Output).DoesNotContain("Runtime Estimate");
         await Assert.That(_console.Output).DoesNotContain("P50");
@@ -331,19 +258,9 @@ public class EstimateCommandTests
     #region Percentile Option Tests
 
     [Test]
-    public async Task ExecuteAsync_UsesCustomPercentile()
+    public async Task ExecuteAsync_UsesPercentileFromContext()
     {
-        var history = new SpecHistory
-        {
-            Specs = new Dictionary<string, SpecHistoryEntry>
-            {
-                ["test:spec1"] = new SpecHistoryEntry
-                {
-                    DisplayName = "spec1",
-                    Runs = [new SpecRun { Status = "passed", DurationMs = 1000 }]
-                }
-            }
-        };
+        var history = CreateHistoryWithSpec();
         var estimate = new RuntimeEstimate
         {
             P50Ms = 60000,
@@ -365,14 +282,15 @@ public class EstimateCommandTests
             ]
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
+        context.Set(ContextKeys.Percentile, 95);
 
-        var options = new EstimateOptions { Path = _tempDir, Percentile = 95 };
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
-        await command.ExecuteAsync(options);
-
-        // Verify the estimator was called with the right percentile
         await Assert.That(estimator.LastPercentile).IsEqualTo(95);
         await Assert.That(_console.Output).Contains("Slowest specs (P95):");
     }
@@ -384,17 +302,7 @@ public class EstimateCommandTests
     [Test]
     public async Task ExecuteAsync_FormatsDurationInMilliseconds()
     {
-        var history = new SpecHistory
-        {
-            Specs = new Dictionary<string, SpecHistoryEntry>
-            {
-                ["test:spec1"] = new SpecHistoryEntry
-                {
-                    DisplayName = "spec1",
-                    Runs = [new SpecRun { Status = "passed", DurationMs = 100 }]
-                }
-            }
-        };
+        var history = CreateHistoryWithSpec();
         var estimate = new RuntimeEstimate
         {
             P50Ms = 500,
@@ -407,12 +315,13 @@ public class EstimateCommandTests
             SlowestSpecs = []
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
 
-        var options = new EstimateOptions { Path = _tempDir };
-
-        await command.ExecuteAsync(options);
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(_console.Output).Contains("500ms");
         await Assert.That(_console.Output).Contains("800ms");
@@ -421,17 +330,7 @@ public class EstimateCommandTests
     [Test]
     public async Task ExecuteAsync_FormatsDurationInSeconds()
     {
-        var history = new SpecHistory
-        {
-            Specs = new Dictionary<string, SpecHistoryEntry>
-            {
-                ["test:spec1"] = new SpecHistoryEntry
-                {
-                    DisplayName = "spec1",
-                    Runs = [new SpecRun { Status = "passed", DurationMs = 1000 }]
-                }
-            }
-        };
+        var history = CreateHistoryWithSpec();
         var estimate = new RuntimeEstimate
         {
             P50Ms = 5500,  // 5.5 seconds
@@ -444,12 +343,13 @@ public class EstimateCommandTests
             SlowestSpecs = []
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
 
-        var options = new EstimateOptions { Path = _tempDir };
-
-        await command.ExecuteAsync(options);
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(_console.Output).Contains("5.5s");
     }
@@ -457,17 +357,7 @@ public class EstimateCommandTests
     [Test]
     public async Task ExecuteAsync_FormatsDurationInMinutes()
     {
-        var history = new SpecHistory
-        {
-            Specs = new Dictionary<string, SpecHistoryEntry>
-            {
-                ["test:spec1"] = new SpecHistoryEntry
-                {
-                    DisplayName = "spec1",
-                    Runs = [new SpecRun { Status = "passed", DurationMs = 1000 }]
-                }
-            }
-        };
+        var history = CreateHistoryWithSpec();
         var estimate = new RuntimeEstimate
         {
             P50Ms = 135000, // 2m 15s
@@ -480,12 +370,13 @@ public class EstimateCommandTests
             SlowestSpecs = []
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
 
-        var options = new EstimateOptions { Path = _tempDir };
-
-        await command.ExecuteAsync(options);
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(_console.Output).Contains("2m 15s");
     }
@@ -493,17 +384,7 @@ public class EstimateCommandTests
     [Test]
     public async Task ExecuteAsync_FormatsDurationInHours()
     {
-        var history = new SpecHistory
-        {
-            Specs = new Dictionary<string, SpecHistoryEntry>
-            {
-                ["test:spec1"] = new SpecHistoryEntry
-                {
-                    DisplayName = "spec1",
-                    Runs = [new SpecRun { Status = "passed", DurationMs = 1000 }]
-                }
-            }
-        };
+        var history = CreateHistoryWithSpec();
         var estimate = new RuntimeEstimate
         {
             P50Ms = 3723000, // 1h 02m 03s
@@ -516,27 +397,80 @@ public class EstimateCommandTests
             SlowestSpecs = []
         };
         var estimator = new MockRuntimeEstimator().WithEstimate(estimate);
-        var historyService = new MockSpecHistoryService().WithHistory(history);
-        var command = CreateCommand(estimator, historyService);
+        var phase = new EstimateOutputPhase(estimator);
+        var context = CreateContext(history);
 
-        var options = new EstimateOptions { Path = _tempDir };
-
-        await command.ExecuteAsync(options);
+        await phase.ExecuteAsync(
+            context,
+            (_, _) => Task.FromResult(0),
+            CancellationToken.None);
 
         await Assert.That(_console.Output).Contains("1h 02m 03s");
     }
 
     #endregion
 
+    #region FormatDuration Unit Tests
+
+    [Test]
+    public async Task FormatDuration_LessThanSecond_ReturnsMilliseconds()
+    {
+        var result = EstimateOutputPhase.FormatDuration(500);
+        await Assert.That(result).IsEqualTo("500ms");
+    }
+
+    [Test]
+    public async Task FormatDuration_BetweenSecondsAndMinutes_ReturnsSeconds()
+    {
+        var result = EstimateOutputPhase.FormatDuration(5500);
+        await Assert.That(result).IsEqualTo("5.5s");
+    }
+
+    [Test]
+    public async Task FormatDuration_BetweenMinutesAndHours_ReturnsMinutesAndSeconds()
+    {
+        var result = EstimateOutputPhase.FormatDuration(135000);
+        await Assert.That(result).IsEqualTo("2m 15s");
+    }
+
+    [Test]
+    public async Task FormatDuration_OverAnHour_ReturnsHoursMinutesSeconds()
+    {
+        var result = EstimateOutputPhase.FormatDuration(3723000);
+        await Assert.That(result).IsEqualTo("1h 02m 03s");
+    }
+
+    #endregion
+
     #region Helper Methods
 
-    private EstimateCommand CreateCommand(MockRuntimeEstimator? estimator = null, MockSpecHistoryService? historyService = null)
+    private CommandContext CreateContext(SpecHistory history)
     {
-        return new EstimateCommand(
-            estimator ?? new MockRuntimeEstimator(),
-            historyService ?? new MockSpecHistoryService(),
-            _console,
-            _fileSystem);
+        var context = new CommandContext
+        {
+            Path = ".",
+            Console = _console,
+            FileSystem = new MockFileSystem()
+        };
+        context.Set(ContextKeys.History, history);
+        context.Set(ContextKeys.Percentile, 50);
+        context.Set(ContextKeys.OutputSeconds, false);
+        return context;
+    }
+
+    private static SpecHistory CreateHistoryWithSpec()
+    {
+        return new SpecHistory
+        {
+            Specs = new Dictionary<string, SpecHistoryEntry>
+            {
+                ["test:spec1"] = new SpecHistoryEntry
+                {
+                    DisplayName = "spec1",
+                    Runs = [new SpecRun { Status = "passed", DurationMs = 1000 }]
+                }
+            }
+        };
     }
 
     #endregion

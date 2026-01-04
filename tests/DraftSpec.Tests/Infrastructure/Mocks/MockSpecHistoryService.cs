@@ -19,9 +19,14 @@ public class MockSpecHistoryService : ISpecHistoryService
     public IReadOnlyList<SpecRunRecord> RecordedResults => _recordedResults;
 
     /// <summary>
-    /// Gets how many times LoadAsync was called.
+    /// Gets the project paths passed to LoadAsync.
     /// </summary>
-    public int LoadAsyncCalls { get; private set; }
+    public List<string> LoadAsyncCalls { get; } = [];
+
+    /// <summary>
+    /// Gets the cancellation tokens passed to LoadAsync.
+    /// </summary>
+    public List<CancellationToken> LoadAsyncCancellationTokens { get; } = [];
 
     /// <summary>
     /// Gets how many times SaveAsync was called.
@@ -72,7 +77,8 @@ public class MockSpecHistoryService : ISpecHistoryService
 
     public Task<SpecHistory> LoadAsync(string projectPath, CancellationToken ct = default)
     {
-        LoadAsyncCalls++;
+        LoadAsyncCalls.Add(projectPath);
+        LoadAsyncCancellationTokens.Add(ct);
         return Task.FromResult(_history);
     }
 

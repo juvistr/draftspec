@@ -1,158 +1,142 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
+using DraftSpec.Cli.Pipeline;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
-/// Tests for CacheCommand which manages cached compilation and parse results.
+/// Tests for CacheCommand option-to-context wiring.
+/// Phase logic is tested in CacheOperationPhaseTests.
 /// </summary>
 public class CacheCommandTests
 {
-    private string _tempDir = null!;
     private MockConsole _console = null!;
+    private MockFileSystem _fileSystem = null!;
+    private CommandContext? _capturedContext;
 
     [Before(Test)]
     public void SetUp()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_cache_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
         _console = new MockConsole();
+        _fileSystem = new MockFileSystem();
+        _capturedContext = null;
     }
 
-    [After(Test)]
-    public void TearDown()
+    private CacheCommand CreateCommand(int pipelineReturnValue = 0)
     {
-        if (Directory.Exists(_tempDir))
+        return new CacheCommand(MockPipeline, _console, _fileSystem);
+
+        Task<int> MockPipeline(CommandContext context, CancellationToken ct)
         {
-            Directory.Delete(_tempDir, recursive: true);
+            _capturedContext = context;
+            return Task.FromResult(pipelineReturnValue);
         }
     }
 
-    #region Stats Subcommand Tests
+    #region Context Wiring Tests
 
     [Test]
-    public async Task ExecuteAsync_Stats_ShowsCacheStatistics()
+    public async Task ExecuteAsync_SetsPathInContext()
     {
-        var command = new CacheCommand(_console);
-        var options = new CacheOptions { Subcommand = "stats", Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("Cache Statistics:");
-        await Assert.That(_console.Output).Contains("Script Compilation Cache:");
-        await Assert.That(_console.Output).Contains("Parse Result Cache:");
-        await Assert.That(_console.Output).Contains("Entries:");
-        await Assert.That(_console.Output).Contains("Size:");
-        await Assert.That(_console.Output).Contains("Total:");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_Stats_ShowsLocationPath()
-    {
-        var command = new CacheCommand(_console);
-        var options = new CacheOptions { Subcommand = "stats", Path = _tempDir };
+        var command = CreateCommand();
+        var options = new CacheOptions { Path = "/some/path", Subcommand = "stats" };
 
         await command.ExecuteAsync(options);
 
-        await Assert.That(_console.Output).Contains("Location:");
-        await Assert.That(_console.Output).Contains(".draftspec");
-        await Assert.That(_console.Output).Contains("cache");
+        await Assert.That(_capturedContext!.Path).IsEqualTo("/some/path");
     }
 
     [Test]
-    public async Task ExecuteAsync_Stats_EmptyCache_ShowsZeroCounts()
+    public async Task ExecuteAsync_SetsSubcommandInContext_Stats()
     {
-        var command = new CacheCommand(_console);
-        var options = new CacheOptions { Subcommand = "stats", Path = _tempDir };
+        var command = CreateCommand();
+        var options = new CacheOptions { Path = ".", Subcommand = "stats" };
 
         await command.ExecuteAsync(options);
 
-        // Both caches should show 0 entries for empty cache
-        await Assert.That(_console.Output).Contains("Entries: 0");
-        await Assert.That(_console.Output).Contains("Total: 0 entries");
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.CacheSubcommand)).IsEqualTo("stats");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsSubcommandInContext_Clear()
+    {
+        var command = CreateCommand();
+        var options = new CacheOptions { Path = ".", Subcommand = "clear" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.CacheSubcommand)).IsEqualTo("clear");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_DefaultSubcommand_SetsStatsInContext()
+    {
+        var command = CreateCommand();
+        var options = new CacheOptions { Path = "." }; // Default Subcommand is "stats"
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<string>(ContextKeys.CacheSubcommand)).IsEqualTo("stats");
     }
 
     #endregion
 
-    #region Clear Subcommand Tests
+    #region Pipeline Execution Tests
 
     [Test]
-    public async Task ExecuteAsync_Clear_EmptyCache_ShowsAlreadyEmpty()
+    public async Task ExecuteAsync_CallsPipeline()
     {
-        var command = new CacheCommand(_console);
-        var options = new CacheOptions { Subcommand = "clear", Path = _tempDir };
+        var command = CreateCommand();
+        var options = new CacheOptions { Path = ".", Subcommand = "stats" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext).IsNotNull();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_Zero()
+    {
+        var command = CreateCommand(pipelineReturnValue: 0);
+        var options = new CacheOptions { Path = ".", Subcommand = "stats" };
 
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("Cache is already empty");
     }
 
     [Test]
-    public async Task ExecuteAsync_Clear_WithCacheEntries_ClearsAndShowsCount()
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_NonZero()
     {
-        // Create a cache directory with some files
-        var cacheDir = Path.Combine(_tempDir, ".draftspec", "cache", "parsing");
-        Directory.CreateDirectory(cacheDir);
-        await File.WriteAllTextAsync(Path.Combine(cacheDir, "test.meta.json"), "{}");
-        await File.WriteAllTextAsync(Path.Combine(cacheDir, "test.result.json"), "{}");
-
-        var command = new CacheCommand(_console);
-        var options = new CacheOptions { Subcommand = "clear", Path = _tempDir };
-
-        var result = await command.ExecuteAsync(options);
-
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_console.Output).Contains("Cleared");
-        await Assert.That(_console.Output).Contains("cache entries");
-    }
-
-    #endregion
-
-    #region Unknown Subcommand Tests
-
-    [Test]
-    public async Task ExecuteAsync_UnknownSubcommand_ShowsError()
-    {
-        var command = new CacheCommand(_console);
-        var options = new CacheOptions { Subcommand = "unknown", Path = _tempDir };
+        var command = CreateCommand(pipelineReturnValue: 1);
+        var options = new CacheOptions { Path = ".", Subcommand = "stats" };
 
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(1);
-        await Assert.That(_console.Output).Contains("Unknown cache subcommand: unknown");
     }
 
     [Test]
-    public async Task ExecuteAsync_UnknownSubcommand_ShowsUsage()
+    public async Task ExecuteAsync_SetsConsoleInContext()
     {
-        var command = new CacheCommand(_console);
-        var options = new CacheOptions { Subcommand = "invalid", Path = _tempDir };
+        var command = CreateCommand();
+        var options = new CacheOptions { Path = ".", Subcommand = "stats" };
 
         await command.ExecuteAsync(options);
 
-        await Assert.That(_console.Output).Contains("Usage:");
-        await Assert.That(_console.Output).Contains("draftspec cache <subcommand>");
-        await Assert.That(_console.Output).Contains("stats");
-        await Assert.That(_console.Output).Contains("clear");
+        await Assert.That(_capturedContext!.Console).IsSameReferenceAs(_console);
     }
 
-    #endregion
-
-    #region Size Formatting Tests
-
     [Test]
-    public async Task ExecuteAsync_Stats_FormatsSmallSizes()
+    public async Task ExecuteAsync_SetsFileSystemInContext()
     {
-        var command = new CacheCommand(_console);
-        var options = new CacheOptions { Subcommand = "stats", Path = _tempDir };
+        var command = CreateCommand();
+        var options = new CacheOptions { Path = ".", Subcommand = "stats" };
 
         await command.ExecuteAsync(options);
 
-        // Empty cache should show 0 B
-        await Assert.That(_console.Output).Contains("0 B");
+        await Assert.That(_capturedContext!.FileSystem).IsSameReferenceAs(_fileSystem);
     }
 
     #endregion

@@ -1,4 +1,5 @@
 using DraftSpec.Cli.DependencyGraph;
+using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.DependencyGraph;
 
@@ -8,12 +9,15 @@ namespace DraftSpec.Tests.Cli.DependencyGraph;
 public class DependencyGraphBuilderTests : IDisposable
 {
     private readonly string _tempDir;
+    private readonly MockPathComparer _pathComparer = new();
 
     public DependencyGraphBuilderTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
     }
+
+    private DependencyGraphBuilder CreateBuilder() => new(_pathComparer);
 
     public void Dispose()
     {
@@ -29,7 +33,7 @@ public class DependencyGraphBuilderTests : IDisposable
     [Test]
     public async Task BuildAsync_EmptyDirectory_ReturnsEmptyGraph()
     {
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
 
         var graph = await builder.BuildAsync(_tempDir);
 
@@ -43,7 +47,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir);
 
         await Assert.That(graph.SpecFiles).Count().IsEqualTo(1);
@@ -55,7 +59,7 @@ public class DependencyGraphBuilderTests : IDisposable
         await CreateFileAsync("a.spec.csx", "describe(\"A\", () => { });");
         await CreateFileAsync("b.spec.csx", "describe(\"B\", () => { });");
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir);
 
         await Assert.That(graph.SpecFiles).Count().IsEqualTo(2);
@@ -74,7 +78,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir);
 
         var specPath = Path.Combine(_tempDir, "test.spec.csx");
@@ -97,7 +101,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir);
 
         var specPath = Path.Combine(_tempDir, "test.spec.csx");
@@ -125,7 +129,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
 
         // Should not throw or infinite loop
         var graph = await builder.BuildAsync(_tempDir);
@@ -146,7 +150,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir);
 
         var specPath = Path.Combine(_tempDir, "test.spec.csx");
@@ -164,7 +168,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir);
 
         var specPath = Path.Combine(_tempDir, "test.spec.csx");
@@ -184,7 +188,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir);
 
         var specPath = Path.Combine(_tempDir, "test.spec.csx");
@@ -215,7 +219,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir, srcDir);
 
         var specPath = Path.Combine(_tempDir, "test.spec.csx");
@@ -243,7 +247,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir, srcDir);
 
         var specPath = Path.Combine(_tempDir, "test.spec.csx");
@@ -268,7 +272,7 @@ public class DependencyGraphBuilderTests : IDisposable
             public class Designer { }
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir, srcDir);
 
         // Generated files should not be in source files
@@ -289,7 +293,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(_tempDir);
 
         await Assert.That(graph.SpecFiles).Count().IsEqualTo(1);
@@ -317,7 +321,7 @@ public class DependencyGraphBuilderTests : IDisposable
             public class TodoService { }
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(specsDir); // No explicit sourceDirectory
 
         var specPath = Path.Combine(specsDir, "test.spec.csx");
@@ -346,7 +350,7 @@ public class DependencyGraphBuilderTests : IDisposable
             public class TodoService { }
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(specsDir); // No explicit sourceDirectory
 
         var specPath = Path.Combine(specsDir, "test.spec.csx");
@@ -373,7 +377,7 @@ public class DependencyGraphBuilderTests : IDisposable
             public class TodoService { }
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(specsDir); // No explicit sourceDirectory
 
         var specPath = Path.Combine(specsDir, "test.spec.csx");
@@ -401,7 +405,7 @@ public class DependencyGraphBuilderTests : IDisposable
             public class TodoService { }
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(specsDir, customSrcDir); // Explicit sourceDirectory
 
         var specPath = Path.Combine(specsDir, "test.spec.csx");
@@ -423,7 +427,7 @@ public class DependencyGraphBuilderTests : IDisposable
             describe("Test", () => { });
             """);
 
-        var builder = new DependencyGraphBuilder();
+        var builder = CreateBuilder();
         var graph = await builder.BuildAsync(specsDir); // No explicit sourceDirectory
 
         // Should still work, just without namespace mappings

@@ -9,6 +9,12 @@ namespace DraftSpec.Cli.DependencyGraph;
 /// </summary>
 public sealed partial class DependencyGraphBuilder
 {
+    private readonly IPathComparer _pathComparer;
+
+    public DependencyGraphBuilder(IPathComparer pathComparer)
+    {
+        _pathComparer = pathComparer;
+    }
     /// <summary>
     /// Regex to match #load directives in CSX files.
     /// Captures the file path in group 1.
@@ -42,7 +48,7 @@ public sealed partial class DependencyGraphBuilder
         string? sourceDirectory = null,
         CancellationToken cancellationToken = default)
     {
-        var graph = new DependencyGraph();
+        var graph = new DependencyGraph(_pathComparer);
         var baseDirectory = Path.GetFullPath(specDirectory);
 
         // Find all spec files
@@ -78,9 +84,7 @@ public sealed partial class DependencyGraphBuilder
         var fileDirectory = Path.GetDirectoryName(specFilePath)!;
 
         // Collect all #load dependencies (including transitive)
-        var loadDependencies = new HashSet<string>(OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal);
+        var loadDependencies = new HashSet<string>(_pathComparer.Comparer);
         var visitedFiles = new HashSet<string>(loadDependencies.Comparer);
 
         await CollectLoadDependenciesAsync(specFilePath, loadDependencies, visitedFiles, cancellationToken);

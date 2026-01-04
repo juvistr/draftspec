@@ -106,9 +106,13 @@
       "draftspec": {
         "type": "Project",
         "dependencies": {
+          "DraftSpec.Abstractions": "[1.0.0, )",
           "DraftSpec.Formatters.Abstractions": "[1.0.0, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.1, )"
         }
+      },
+      "draftspec.abstractions": {
+        "type": "Project"
       },
       "draftspec.formatters.abstractions": {
         "type": "Project"

@@ -1,5 +1,6 @@
 using System.Security;
 using DraftSpec.Cli;
+using DraftSpec.Tests.Infrastructure.Mocks;
 using FsCheck;
 using FsCheck.Fluent;
 
@@ -11,9 +12,18 @@ namespace DraftSpec.Tests.Properties;
 /// </summary>
 public class PathValidatorPropertyTests
 {
+    private static PathValidator CreateValidator()
+    {
+        var os = new MockOperatingSystem();
+        var pathComparer = new SystemPathComparer(os);
+        return new PathValidator(pathComparer);
+    }
+
     [Test]
     public void ValidateFileName_RejectsEmptyOrWhitespace()
     {
+        var validator = CreateValidator();
+
         // Property: Empty or whitespace-only names are always rejected
         var invalidNames = new[] { "", " ", "  ", "\t", "\n", "   " };
 
@@ -21,7 +31,7 @@ public class PathValidatorPropertyTests
         {
             try
             {
-                PathValidator.ValidateFileName(name);
+                validator.ValidateFileName(name);
                 Assert.Fail($"Expected ArgumentException for name: '{name}'");
             }
             catch (ArgumentException)
@@ -34,6 +44,8 @@ public class PathValidatorPropertyTests
     [Test]
     public void ValidateFileName_RejectsPathSeparators()
     {
+        var validator = CreateValidator();
+
         // Property: Names containing path separators are always rejected
         Prop.ForAll<NonNull<string>, NonNull<string>>((prefix, suffix) =>
         {
@@ -44,7 +56,7 @@ public class PathValidatorPropertyTests
                 var name = prefix.Get + sep + suffix.Get;
                 try
                 {
-                    PathValidator.ValidateFileName(name);
+                    validator.ValidateFileName(name);
                     return false; // Should have thrown
                 }
                 catch (ArgumentException)
@@ -59,6 +71,8 @@ public class PathValidatorPropertyTests
     [Test]
     public void ValidateFileName_RejectsParentDirectoryReferences()
     {
+        var validator = CreateValidator();
+
         // Property: Parent directory references are always rejected
         var parentRefs = new[] { "..", ".", "..foo", "../test" };
 
@@ -66,7 +80,7 @@ public class PathValidatorPropertyTests
         {
             try
             {
-                PathValidator.ValidateFileName(name);
+                validator.ValidateFileName(name);
                 Assert.Fail($"Expected ArgumentException for name: '{name}'");
             }
             catch (ArgumentException)
@@ -79,6 +93,8 @@ public class PathValidatorPropertyTests
     [Test]
     public void ValidateFileName_AcceptsValidNames()
     {
+        var validator = CreateValidator();
+
         // Property: Simple alphanumeric names with extensions are valid
         Prop.ForAll(
             Gen.Elements("test", "spec", "file", "data", "report")
@@ -88,7 +104,7 @@ public class PathValidatorPropertyTests
                .ToArbitrary(),
             name =>
             {
-                PathValidator.ValidateFileName(name);
+                validator.ValidateFileName(name);
                 return true;
             }).QuickCheckThrowOnFailure();
     }
@@ -96,6 +112,8 @@ public class PathValidatorPropertyTests
     [Test]
     public void ValidatePathWithinBase_AcceptsChildPaths()
     {
+        var validator = CreateValidator();
+
         // Property: A direct child path is always valid within its parent
         var tempDir = Path.GetTempPath();
         var baseDir = Path.Combine(tempDir, $"test_base_{Guid.NewGuid():N}");
@@ -112,7 +130,7 @@ public class PathValidatorPropertyTests
                 childName =>
                 {
                     var childPath = Path.Combine(baseDir, childName);
-                    PathValidator.ValidatePathWithinBase(childPath, baseDir);
+                    validator.ValidatePathWithinBase(childPath, baseDir);
                     return true;
                 }).QuickCheckThrowOnFailure();
         }
@@ -126,6 +144,8 @@ public class PathValidatorPropertyTests
     [Test]
     public void ValidatePathWithinBase_RejectsTraversalAttempts()
     {
+        var validator = CreateValidator();
+
         // Property: Paths attempting to escape via .. are rejected
         var tempDir = Path.GetTempPath();
         var baseDir = Path.Combine(tempDir, $"test_base_{Guid.NewGuid():N}");
@@ -145,7 +165,7 @@ public class PathValidatorPropertyTests
             {
                 try
                 {
-                    PathValidator.ValidatePathWithinBase(path, baseDir);
+                    validator.ValidatePathWithinBase(path, baseDir);
                     Assert.Fail($"Expected SecurityException for path: {path}");
                 }
                 catch (SecurityException)
@@ -164,6 +184,8 @@ public class PathValidatorPropertyTests
     [Test]
     public void ValidatePathWithinBase_RejectsPrefixAttacks()
     {
+        var validator = CreateValidator();
+
         // Property: /base/evil should NOT pass for base /base
         // This tests the trailing separator protection
         var tempDir = Path.GetTempPath();
@@ -179,7 +201,7 @@ public class PathValidatorPropertyTests
             // The evil path should NOT be within baseDir
             try
             {
-                PathValidator.ValidatePathWithinBase(evilDir, baseDir);
+                validator.ValidatePathWithinBase(evilDir, baseDir);
                 Assert.Fail("Expected SecurityException for prefix attack");
             }
             catch (SecurityException)
@@ -199,6 +221,8 @@ public class PathValidatorPropertyTests
     [Test]
     public void ValidatePathWithinBase_SamePathIsValid()
     {
+        var validator = CreateValidator();
+
         // Property: A path is always within itself
         var tempDir = Path.GetTempPath();
         var testDir = Path.Combine(tempDir, $"test_{Guid.NewGuid():N}");
@@ -206,7 +230,7 @@ public class PathValidatorPropertyTests
         try
         {
             Directory.CreateDirectory(testDir);
-            PathValidator.ValidatePathWithinBase(testDir, testDir);
+            validator.ValidatePathWithinBase(testDir, testDir);
         }
         finally
         {
@@ -218,6 +242,8 @@ public class PathValidatorPropertyTests
     [Test]
     public void ValidatePathWithinBase_NestedPathsAreValid()
     {
+        var validator = CreateValidator();
+
         // Property: Deeply nested paths within base are valid
         var tempDir = Path.GetTempPath();
         var baseDir = Path.Combine(tempDir, $"test_base_{Guid.NewGuid():N}");
@@ -231,7 +257,7 @@ public class PathValidatorPropertyTests
                 var parts = Enumerable.Range(0, depth).Select(i => $"level{i}").ToArray();
                 var nestedPath = Path.Combine(new[] { baseDir }.Concat(parts).ToArray());
 
-                PathValidator.ValidatePathWithinBase(nestedPath, baseDir);
+                validator.ValidatePathWithinBase(nestedPath, baseDir);
                 return true;
             }).QuickCheckThrowOnFailure();
         }

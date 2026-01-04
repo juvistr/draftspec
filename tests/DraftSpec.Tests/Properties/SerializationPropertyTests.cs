@@ -178,9 +178,9 @@ public class SerializationPropertyTests
         var json = JsonSerializer.Serialize(original, Options);
         var restored = JsonSerializer.Deserialize<DraftSpecProjectConfig>(json, Options)!;
 
-        await Assert.That(restored.Reporters).IsNotNull();
-        await Assert.That(restored.Reporters!.Count).IsEqualTo(3);
-        await Assert.That(restored.Reporters![0]).IsEqualTo("console");
+        Assert.NotNull(restored.Reporters);
+        await Assert.That(restored.Reporters.Count).IsEqualTo(3);
+        await Assert.That(restored.Reporters[0]).IsEqualTo("console");
         await Assert.That(restored.Reporters[1]).IsEqualTo("json");
         await Assert.That(restored.Reporters[2]).IsEqualTo("html");
     }

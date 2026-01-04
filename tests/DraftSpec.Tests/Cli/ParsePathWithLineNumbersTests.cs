@@ -16,7 +16,7 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers(@"C:\Users\test\specs\test.spec.csx", options);
 
         await Assert.That(result).IsEqualTo(@"C:\Users\test\specs\test.spec.csx");
-        await Assert.That(options.LineFilters).IsNull();
+        Assert.Null(options.LineFilters);
     }
 
     [Test]
@@ -26,8 +26,8 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers(@"C:\Users\test\specs\test.spec.csx:42", options);
 
         await Assert.That(result).IsEqualTo(@"C:\Users\test\specs\test.spec.csx");
-        await Assert.That(options.LineFilters).IsNotNull();
-        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 42 });
+        Assert.NotNull(options.LineFilters);
+        await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 42 });
     }
 
     [Test]
@@ -47,7 +47,7 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers("test.spec.csx", options);
 
         await Assert.That(result).IsEqualTo("test.spec.csx");
-        await Assert.That(options.LineFilters).IsNull();
+        Assert.Null(options.LineFilters);
     }
 
     [Test]
@@ -58,7 +58,7 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers("test.spec.csx:abc", options);
 
         await Assert.That(result).IsEqualTo("test.spec.csx:abc");
-        await Assert.That(options.LineFilters).IsNull();
+        Assert.Null(options.LineFilters);
     }
 
     [Test]
@@ -90,7 +90,7 @@ public class ParsePathWithLineNumbersTests
 
         // Empty string after colon is not digits, so return original
         await Assert.That(result).IsEqualTo("test.spec.csx:");
-        await Assert.That(options.LineFilters).IsNull();
+        Assert.Null(options.LineFilters);
     }
 
     [Test]
@@ -101,7 +101,7 @@ public class ParsePathWithLineNumbersTests
 
         // "15abc" contains non-digits, so not treated as line number
         await Assert.That(result).IsEqualTo("test.spec.csx:15abc");
-        await Assert.That(options.LineFilters).IsNull();
+        Assert.Null(options.LineFilters);
     }
 
     [Test]
@@ -113,7 +113,7 @@ public class ParsePathWithLineNumbersTests
         await Assert.That(result).IsEqualTo("test.spec.csx");
         // All zeros are filtered, so no LineFilters should be added (empty array case)
         // Based on code: if (lineNumbers.Length > 0) adds filter, so no filter added
-        await Assert.That(options.LineFilters).IsNull();
+        Assert.Null(options.LineFilters);
     }
 
     [Test]

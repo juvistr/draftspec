@@ -1,7 +1,12 @@
+using DraftSpec.Abstractions;
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
 using DraftSpec.Cli.Options.Enums;
+using DraftSpec.Cli.Pipeline;
+using DraftSpec.Cli.Pipeline.Phases.Common;
+using DraftSpec.Cli.Pipeline.Phases.Init;
+using DraftSpec.Cli.Pipeline.Phases.NewSpec;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli;
@@ -32,8 +37,25 @@ public class CliIntegrationTests
         if (Directory.Exists(_testDirectory)) Directory.Delete(_testDirectory, true);
     }
 
-    private InitCommand CreateInitCommand() => new(_console, _fileSystem, _projectResolver);
-    private NewCommand CreateNewCommand() => new(_console, _fileSystem);
+    private InitCommand CreateInitCommand()
+    {
+        var pipeline = new CommandPipelineBuilder()
+            .Use(new PathResolutionPhase())
+            .Use(new ProjectDiscoveryPhase(_projectResolver))
+            .Use(new InitOutputPhase())
+            .Build();
+        return new InitCommand(pipeline, _console, _fileSystem);
+    }
+
+    private NewCommand CreateNewCommand()
+    {
+        var pathValidator = new PathValidator(new SystemPathComparer(new SystemOperatingSystem()));
+        var pipeline = new CommandPipelineBuilder()
+            .Use(new PathResolutionPhase())
+            .Use(new NewSpecOutputPhase(pathValidator))
+            .Build();
+        return new NewCommand(pipeline, _console, _fileSystem);
+    }
 
     #region InitCommand Tests
 
@@ -115,13 +137,15 @@ public class CliIntegrationTests
     }
 
     [Test]
-    public async Task InitCommand_InvalidDirectory_ThrowsArgumentException()
+    public async Task InitCommand_InvalidDirectory_ReturnsError()
     {
         var command = CreateInitCommand();
         var options = new InitOptions { Path = "/nonexistent/path" };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("not found");
     }
 
     #endregion
@@ -154,45 +178,51 @@ public class CliIntegrationTests
     }
 
     [Test]
-    public async Task NewCommand_NoName_ThrowsArgumentException()
+    public async Task NewCommand_NoName_ReturnsError()
     {
         var command = CreateNewCommand();
         var options = new NewOptions { Path = _testDirectory, SpecName = null };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
     }
 
     [Test]
-    public async Task NewCommand_EmptyName_ThrowsArgumentException()
+    public async Task NewCommand_EmptyName_ReturnsError()
     {
         var command = CreateNewCommand();
         var options = new NewOptions { Path = _testDirectory, SpecName = "" };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
     }
 
     [Test]
-    public async Task NewCommand_FileExists_ThrowsArgumentException()
+    public async Task NewCommand_FileExists_ReturnsError()
     {
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "Existing.spec.csx"), "// existing");
 
         var command = CreateNewCommand();
         var options = new NewOptions { Path = _testDirectory, SpecName = "Existing" };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("already exists");
     }
 
     [Test]
-    public async Task NewCommand_InvalidDirectory_ThrowsArgumentException()
+    public async Task NewCommand_InvalidDirectory_ReturnsError()
     {
         var command = CreateNewCommand();
         var options = new NewOptions { Path = "/nonexistent/path", SpecName = "Test" };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("not found");
     }
 
     #endregion
@@ -200,43 +230,51 @@ public class CliIntegrationTests
     #region Security Tests - Path Traversal Prevention
 
     [Test]
-    public async Task NewCommand_NameWithPathSeparator_ThrowsArgumentException()
+    public async Task NewCommand_NameWithPathSeparator_ReturnsError()
     {
         var command = CreateNewCommand();
         var options = new NewOptions { Path = _testDirectory, SpecName = "../../../etc/malicious" };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("path separator");
     }
 
     [Test]
-    public async Task NewCommand_NameWithBackslash_ThrowsArgumentException()
+    public async Task NewCommand_NameWithBackslash_ReturnsError()
     {
         var command = CreateNewCommand();
         var options = new NewOptions { Path = _testDirectory, SpecName = "..\\..\\malicious" };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("path separator");
     }
 
     [Test]
-    public async Task NewCommand_NameWithDoubleDot_ThrowsArgumentException()
+    public async Task NewCommand_NameWithDoubleDot_ReturnsError()
     {
         var command = CreateNewCommand();
         var options = new NewOptions { Path = _testDirectory, SpecName = ".." };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("relative path reference");
     }
 
     [Test]
-    public async Task NewCommand_NameStartingWithDoubleDot_ThrowsArgumentException()
+    public async Task NewCommand_NameStartingWithDoubleDot_ReturnsError()
     {
         var command = CreateNewCommand();
         var options = new NewOptions { Path = _testDirectory, SpecName = "..foo" };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        var result = await command.ExecuteAsync(options);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(_console.Errors).Contains("relative path reference");
     }
 
     #endregion
@@ -249,7 +287,7 @@ public class CliIntegrationTests
         var specPath = Path.Combine(_testDirectory, "test.spec.csx");
         await File.WriteAllTextAsync(specPath, "// spec");
 
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
         var specs = finder.FindSpecs(specPath, _testDirectory);
 
         await Assert.That(specs).Count().IsEqualTo(1);
@@ -263,7 +301,7 @@ public class CliIntegrationTests
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "two.spec.csx"), "// spec");
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "other.cs"), "// not a spec");
 
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
         var specs = finder.FindSpecs(_testDirectory, _testDirectory);
 
         await Assert.That(specs).Count().IsEqualTo(2);
@@ -276,7 +314,7 @@ public class CliIntegrationTests
         Directory.CreateDirectory(subDir);
         await File.WriteAllTextAsync(Path.Combine(subDir, "nested.spec.csx"), "// spec");
 
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
         var specs = finder.FindSpecs(_testDirectory, _testDirectory);
 
         await Assert.That(specs).Count().IsEqualTo(1);
@@ -290,7 +328,7 @@ public class CliIntegrationTests
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "a.spec.csx"), "// spec");
         await File.WriteAllTextAsync(Path.Combine(_testDirectory, "m.spec.csx"), "// spec");
 
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
         var specs = finder.FindSpecs(_testDirectory, _testDirectory);
 
         await Assert.That(specs[0]).Contains("a.spec.csx");
@@ -304,7 +342,7 @@ public class CliIntegrationTests
         var regularFile = Path.Combine(_testDirectory, "test.cs");
         await File.WriteAllTextAsync(regularFile, "// not a spec");
 
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
 
         await Assert.That(() => finder.FindSpecs(regularFile, _testDirectory))
             .Throws<ArgumentException>();
@@ -313,7 +351,7 @@ public class CliIntegrationTests
     [Test]
     public async Task SpecFinder_EmptyDirectory_ReturnsEmptyList()
     {
-        var finder = new SpecFinder(new FileSystem());
+        var finder = new SpecFinder(new FileSystem(), new SystemPathComparer(new SystemOperatingSystem()));
 
         var result = finder.FindSpecs(_testDirectory, _testDirectory);
 

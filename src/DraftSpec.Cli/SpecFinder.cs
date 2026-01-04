@@ -5,13 +5,15 @@ namespace DraftSpec.Cli;
 public class SpecFinder : ISpecFinder
 {
     private readonly IFileSystem _fileSystem;
+    private readonly IPathComparer _pathComparer;
 
     /// <summary>
-    /// Creates a SpecFinder with the given file system abstraction.
+    /// Creates a SpecFinder with the given file system and path comparer abstractions.
     /// </summary>
-    public SpecFinder(IFileSystem fileSystem)
+    public SpecFinder(IFileSystem fileSystem, IPathComparer pathComparer)
     {
         _fileSystem = fileSystem;
+        _pathComparer = pathComparer;
     }
 
     /// <summary>
@@ -33,12 +35,7 @@ public class SpecFinder : ISpecFinder
         var normalizedBase = basePath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         var normalizedPath = fullPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
-        // Use platform-appropriate case sensitivity
-        var comparison = OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
-
-        if (!normalizedPath.StartsWith(normalizedBase, comparison))
+        if (!normalizedPath.StartsWith(normalizedBase, _pathComparer.Comparison))
             // Generic error message to avoid leaking internal paths
             throw new SecurityException("Path must be within the base directory");
 

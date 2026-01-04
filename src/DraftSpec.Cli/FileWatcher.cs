@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace DraftSpec.Cli;
 
 public class FileWatcher : IFileWatcher
@@ -7,14 +5,16 @@ public class FileWatcher : IFileWatcher
     private readonly List<FileSystemWatcher> _watchers = [];
     private readonly Action<FileChangeInfo> _onChange;
     private readonly int _debounceMs;
+    private readonly IOperatingSystem _os;
     private Timer? _debounceTimer;
     private readonly Lock _lock = new();
     private FileChangeInfo? _pendingChange;
 
-    public FileWatcher(string path, Action<FileChangeInfo> onChange, int debounceMs = 200)
+    public FileWatcher(string path, Action<FileChangeInfo> onChange, IOperatingSystem os, int debounceMs = 200)
     {
         _onChange = onChange;
         _debounceMs = debounceMs;
+        _os = os;
 
         var fullPath = Path.GetFullPath(path);
         var watchPath = Directory.Exists(fullPath) ? fullPath : Path.GetDirectoryName(fullPath)!;
@@ -98,7 +98,7 @@ public class FileWatcher : IFileWatcher
     /// Compares two paths for equality, handling symlinks.
     /// Uses case-insensitive comparison to safely detect same-file events.
     /// </summary>
-    private static bool PathsAreEqual(string path1, string path2)
+    private bool PathsAreEqual(string path1, string path2)
     {
         // Normalize paths to handle common symlink patterns (e.g., /var -> /private/var on macOS)
         var normalized1 = NormalizePath(path1);
@@ -109,14 +109,12 @@ public class FileWatcher : IFileWatcher
 
     /// <summary>
     /// Normalizes a path by resolving common system symlinks.
-    /// Excluded from coverage: platform-specific code only runs on macOS.
     /// </summary>
-    [ExcludeFromCodeCoverage]
-    private static string NormalizePath(string path)
+    internal string NormalizePath(string path)
     {
         // On macOS, /var is a symlink to /private/var, /tmp to /private/tmp, etc.
         // FileSystemWatcher events may use either form inconsistently.
-        if (OperatingSystem.IsMacOS())
+        if (_os.IsMacOS)
         {
             if (path.StartsWith("/var/", StringComparison.Ordinal))
                 return "/private" + path;

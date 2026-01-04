@@ -1,208 +1,139 @@
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;
+using DraftSpec.Cli.Pipeline;
 using DraftSpec.Tests.Infrastructure.Mocks;
 
 namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
-/// Tests for InitCommand.
-/// These tests modify the file system, so they run sequentially.
+/// Tests for InitCommand option-to-context wiring.
+/// Phase logic is tested in InitOutputPhaseTests and ProjectDiscoveryPhaseTests.
 /// </summary>
-[NotInParallel]
 public class InitCommandTests
 {
-    private string _tempDir = null!;
     private MockConsole _console = null!;
     private MockFileSystem _fileSystem = null!;
-    private MockProjectResolver _projectResolver = null!;
+    private CommandContext? _capturedContext;
 
     [Before(Test)]
     public void SetUp()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"draftspec_test_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-
         _console = new MockConsole();
         _fileSystem = new MockFileSystem();
-        _projectResolver = new MockProjectResolver();
+        _capturedContext = null;
     }
 
-    [After(Test)]
-    public void TearDown()
+    private InitCommand CreateCommand(int pipelineReturnValue = 0)
     {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, recursive: true);
+        return new InitCommand(MockPipeline, _console, _fileSystem);
+
+        Task<int> MockPipeline(CommandContext context, CancellationToken ct)
+        {
+            _capturedContext = context;
+            return Task.FromResult(pipelineReturnValue);
+        }
     }
 
-    private InitCommand CreateCommand() => new(_console, _fileSystem, _projectResolver);
-
-    #region Directory Validation
+    #region Context Wiring Tests
 
     [Test]
-    public async Task ExecuteAsync_NonexistentDirectory_ThrowsArgumentException()
+    public async Task ExecuteAsync_SetsPathInContext()
     {
-        // Don't add the directory - it won't exist
         var command = CreateCommand();
-        var options = new InitOptions { Path = "/nonexistent/directory" };
+        var options = new InitOptions { Path = "/test/path" };
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await command.ExecuteAsync(options));
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Path).IsEqualTo("/test/path");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsForceInContext_True()
+    {
+        var command = CreateCommand();
+        var options = new InitOptions
+        {
+            Path = "/test",
+            Force = true
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<bool>(ContextKeys.Force)).IsTrue();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SetsForceInContext_False()
+    {
+        var command = CreateCommand();
+        var options = new InitOptions
+        {
+            Path = "/test",
+            Force = false
+        };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext!.Get<bool>(ContextKeys.Force)).IsFalse();
     }
 
     #endregion
 
-    #region File Creation
+    #region Pipeline Execution Tests
 
     [Test]
-    public async Task ExecuteAsync_EmptyDirectory_CreatesSpecHelper()
+    public async Task ExecuteAsync_CallsPipeline()
     {
-        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new InitOptions { Path = _tempDir };
+        var options = new InitOptions { Path = "/test" };
+
+        await command.ExecuteAsync(options);
+
+        await Assert.That(_capturedContext).IsNotNull();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_Zero()
+    {
+        var command = CreateCommand(pipelineReturnValue: 0);
+        var options = new InitOptions { Path = "/test" };
 
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_fileSystem.WrittenFiles.ContainsKey(Path.Combine(_tempDir, "spec_helper.csx"))).IsTrue();
     }
 
     [Test]
-    public async Task ExecuteAsync_EmptyDirectory_CreatesOmnisharp()
+    public async Task ExecuteAsync_PropagatesPipelineReturnValue_NonZero()
     {
-        _fileSystem.AddDirectory(_tempDir);
-        var command = CreateCommand();
-        var options = new InitOptions { Path = _tempDir };
+        var command = CreateCommand(pipelineReturnValue: 1);
+        var options = new InitOptions { Path = "/test" };
 
         var result = await command.ExecuteAsync(options);
 
-        await Assert.That(result).IsEqualTo(0);
-        await Assert.That(_fileSystem.WrittenFiles.ContainsKey(Path.Combine(_tempDir, "omnisharp.json"))).IsTrue();
+        await Assert.That(result).IsEqualTo(1);
     }
 
     [Test]
-    public async Task ExecuteAsync_EmptyDirectory_SpecHelperHasDraftSpecReference()
+    public async Task ExecuteAsync_SetsConsoleInContext()
     {
-        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new InitOptions { Path = _tempDir };
+        var options = new InitOptions { Path = "/test" };
 
         await command.ExecuteAsync(options);
 
-        var specHelperPath = Path.Combine(_tempDir, "spec_helper.csx");
-        var content = _fileSystem.WrittenFiles[specHelperPath];
-        await Assert.That(content).Contains("#r \"nuget: DraftSpec, *\"");
-        await Assert.That(content).Contains("using static DraftSpec.Dsl;");
+        await Assert.That(_capturedContext!.Console).IsSameReferenceAs(_console);
     }
 
     [Test]
-    public async Task ExecuteAsync_EmptyDirectory_OmnisharpHasScriptConfig()
+    public async Task ExecuteAsync_SetsFileSystemInContext()
     {
-        _fileSystem.AddDirectory(_tempDir);
         var command = CreateCommand();
-        var options = new InitOptions { Path = _tempDir };
+        var options = new InitOptions { Path = "/test" };
 
         await command.ExecuteAsync(options);
 
-        var omnisharpPath = Path.Combine(_tempDir, "omnisharp.json");
-        var content = _fileSystem.WrittenFiles[omnisharpPath];
-        await Assert.That(content).Contains("enableScriptNuGetReferences");
-        await Assert.That(content).Contains("defaultTargetFramework");
-    }
-
-    #endregion
-
-    #region Existing Files
-
-    [Test]
-    public async Task ExecuteAsync_ExistingSpecHelper_DoesNotOverwrite()
-    {
-        var specHelperPath = Path.Combine(_tempDir, "spec_helper.csx");
-        _fileSystem.AddDirectory(_tempDir);
-        _fileSystem.AddFile(specHelperPath, "// original content");
-        var command = CreateCommand();
-        var options = new InitOptions { Path = _tempDir };
-
-        await command.ExecuteAsync(options);
-
-        // File should still have original content, not overwritten
-        await Assert.That(_fileSystem.WrittenFiles[specHelperPath]).IsEqualTo("// original content");
-        await Assert.That(_console.Output).Contains("already exists");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_ExistingSpecHelper_WithForce_Overwrites()
-    {
-        var specHelperPath = Path.Combine(_tempDir, "spec_helper.csx");
-        _fileSystem.AddDirectory(_tempDir);
-        _fileSystem.AddFile(specHelperPath, "// original content");
-        var command = CreateCommand();
-        var options = new InitOptions { Path = _tempDir, Force = true };
-
-        await command.ExecuteAsync(options);
-
-        await Assert.That(_fileSystem.WrittenFiles.ContainsKey(specHelperPath)).IsTrue();
-        await Assert.That(_fileSystem.WrittenFiles[specHelperPath]).Contains("#r \"nuget: DraftSpec, *\"");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_ExistingOmnisharp_DoesNotOverwrite()
-    {
-        var omnisharpPath = Path.Combine(_tempDir, "omnisharp.json");
-        _fileSystem.AddDirectory(_tempDir);
-        _fileSystem.AddFile(omnisharpPath, "{ \"original\": true }");
-        var command = CreateCommand();
-        var options = new InitOptions { Path = _tempDir };
-
-        await command.ExecuteAsync(options);
-
-        // File should still have original content, not overwritten
-        await Assert.That(_fileSystem.WrittenFiles[omnisharpPath]).IsEqualTo("{ \"original\": true }");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_ExistingOmnisharp_WithForce_Overwrites()
-    {
-        var omnisharpPath = Path.Combine(_tempDir, "omnisharp.json");
-        _fileSystem.AddDirectory(_tempDir);
-        _fileSystem.AddFile(omnisharpPath, "{ \"original\": true }");
-        var command = CreateCommand();
-        var options = new InitOptions { Path = _tempDir, Force = true };
-
-        await command.ExecuteAsync(options);
-
-        await Assert.That(_fileSystem.WrittenFiles.ContainsKey(omnisharpPath)).IsTrue();
-        await Assert.That(_fileSystem.WrittenFiles[omnisharpPath]).Contains("enableScriptNuGetReferences");
-    }
-
-    #endregion
-
-    #region Console Output
-
-    [Test]
-    public async Task ExecuteAsync_Success_ShowsSuccessMessages()
-    {
-        _fileSystem.AddDirectory(_tempDir);
-        var command = CreateCommand();
-        var options = new InitOptions { Path = _tempDir };
-
-        await command.ExecuteAsync(options);
-
-        var output = _console.Output;
-        await Assert.That(output).Contains("Created spec_helper.csx");
-        await Assert.That(output).Contains("Created omnisharp.json");
-    }
-
-    [Test]
-    public async Task ExecuteAsync_NoCsproj_ShowsWarning()
-    {
-        _fileSystem.AddDirectory(_tempDir);
-        var command = CreateCommand();
-        var options = new InitOptions { Path = _tempDir };
-
-        await command.ExecuteAsync(options);
-
-        var output = _console.Output;
-        await Assert.That(output).Contains("No .csproj found");
+        await Assert.That(_capturedContext!.FileSystem).IsSameReferenceAs(_fileSystem);
     }
 
     #endregion

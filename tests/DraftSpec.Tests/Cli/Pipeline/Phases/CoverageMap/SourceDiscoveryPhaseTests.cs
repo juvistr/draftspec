@@ -187,8 +187,9 @@ public class SourceDiscoveryPhaseTests
             },
             CancellationToken.None);
 
+        Assert.NotNull(sourceFiles);
         await Assert.That(sourceFiles).Count().IsEqualTo(1);
-        await Assert.That(sourceFiles![0]).Contains("Service.cs");
+        await Assert.That(sourceFiles[0]).Contains("Service.cs");
         await Assert.That(sourceFiles[0]).DoesNotContain(".g.cs");
     }
 

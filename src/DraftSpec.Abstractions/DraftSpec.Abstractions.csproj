@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <!-- NuGet Package Configuration -->
+        <PackageId>DraftSpec.Abstractions</PackageId>
+        <Description>Shared infrastructure abstractions for DraftSpec - interfaces for OS detection, file system, console, and time operations.</Description>
+        <PackageTags>testing;bdd;abstractions;infrastructure</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="DraftSpec.Tests"/>
+    </ItemGroup>
+
+</Project>

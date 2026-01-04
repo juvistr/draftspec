@@ -51,6 +51,7 @@ public class RunCommandTests
         var result = await command.ExecuteAsync(options);
 
         await Assert.That(runner.RunAllCalled).IsTrue();
+        Assert.NotNull(runner.LastSpecFiles);
         await Assert.That(runner.LastSpecFiles).Count().IsEqualTo(2);
     }
 
@@ -750,6 +751,7 @@ public class RunCommandTests
         await command.ExecuteAsync(options);
 
         // Runner should receive only the partitioned files
+        Assert.NotNull(runner.LastSpecFiles);
         await Assert.That(runner.LastSpecFiles).Count().IsEqualTo(2);
     }
 
@@ -860,6 +862,7 @@ public class RunCommandTests
         await command.ExecuteAsync(options);
 
         // All files should be passed to runner
+        Assert.NotNull(runner.LastSpecFiles);
         await Assert.That(runner.LastSpecFiles).Count().IsEqualTo(3);
     }
 
@@ -1241,7 +1244,8 @@ public class RunCommandTests
             partitioner ?? NullObjects.Partitioner,
             gitService ?? NullObjects.GitService,
             historyService ?? new MockSpecHistoryService(),
-            specSelector ?? new MockSpecSelector());
+            specSelector ?? new MockSpecSelector(),
+            new MockPathComparer());
     }
 
     #endregion

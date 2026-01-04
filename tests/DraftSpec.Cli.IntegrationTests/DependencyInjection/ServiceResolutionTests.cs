@@ -30,8 +30,10 @@ public class ServiceResolutionTests
             typeof(IConsole),
             typeof(IFileSystem),
             typeof(IEnvironment),
-            typeof(DraftSpec.IClock), // Explicit namespace to avoid System.TimeProvider ambiguity
+            typeof(IClock), // From DraftSpec.Abstractions
             typeof(IProcessRunner),
+            typeof(IOperatingSystem),
+            typeof(IPathComparer),
         };
 
         foreach (var type in coreTypes)
@@ -191,8 +193,10 @@ public class ServiceResolutionTests
             typeof(IConsole),
             typeof(IFileSystem),
             typeof(IEnvironment),
-            typeof(DraftSpec.IClock), // Explicit namespace to avoid System.TimeProvider ambiguity
+            typeof(IClock), // From DraftSpec.Abstractions
             typeof(IProcessRunner),
+            typeof(IOperatingSystem),
+            typeof(IPathComparer),
 
             // Infrastructure - Build
             typeof(IBuildCache),

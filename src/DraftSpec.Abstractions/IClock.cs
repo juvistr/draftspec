@@ -1,4 +1,4 @@
-namespace DraftSpec;
+namespace DraftSpec.Abstractions;
 
 /// <summary>
 /// Abstraction for time-related operations, enabling deterministic testing.

@@ -1,4 +1,4 @@
-namespace DraftSpec.Cli;
+namespace DraftSpec.Abstractions;
 
 /// <summary>
 /// Abstraction for environment-related operations.

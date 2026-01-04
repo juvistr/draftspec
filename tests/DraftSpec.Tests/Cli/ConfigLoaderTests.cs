@@ -96,10 +96,14 @@ public class ConfigLoaderTests
         await Assert.That(config.Timeout).IsEqualTo(10000);
         await Assert.That(config.Parallel).IsEqualTo(true);
         await Assert.That(config.MaxParallelism).IsEqualTo(4);
+        Assert.NotNull(config.Reporters);
         await Assert.That(config.Reporters).Contains("console");
         await Assert.That(config.Reporters).Contains("json");
         await Assert.That(config.OutputDirectory).IsEqualTo("./test-results");
-        await Assert.That(config.Tags!.Include).Contains("unit");
+        Assert.NotNull(config.Tags);
+        Assert.NotNull(config.Tags.Include);
+        await Assert.That(config.Tags.Include).Contains("unit");
+        Assert.NotNull(config.Tags.Exclude);
         await Assert.That(config.Tags.Exclude).Contains("slow");
         await Assert.That(config.Bail).IsEqualTo(true);
         await Assert.That(config.NoCache).IsEqualTo(true);

@@ -80,7 +80,7 @@ public sealed partial class DependencyGraphBuilder : IDependencyGraphBuilder
         string specFilePath,
         CancellationToken cancellationToken)
     {
-        var content = await File.ReadAllTextAsync(specFilePath, cancellationToken);
+        var content = await File.ReadAllTextAsync(specFilePath, cancellationToken).ConfigureAwait(false);
         var fileDirectory = Path.GetDirectoryName(specFilePath)!;
 
         // Collect all #load dependencies (including transitive)
@@ -115,7 +115,7 @@ public sealed partial class DependencyGraphBuilder : IDependencyGraphBuilder
         if (!File.Exists(absolutePath))
             return;
 
-        var content = await File.ReadAllTextAsync(absolutePath, cancellationToken);
+        var content = await File.ReadAllTextAsync(absolutePath, cancellationToken).ConfigureAwait(false);
         var fileDirectory = Path.GetDirectoryName(absolutePath)!;
 
         var loadMatches = LoadDirectiveRegex().Matches(content);
@@ -176,7 +176,7 @@ public sealed partial class DependencyGraphBuilder : IDependencyGraphBuilder
                 continue;
             }
 
-            var content = await File.ReadAllTextAsync(csFile, cancellationToken);
+            var content = await File.ReadAllTextAsync(csFile, cancellationToken).ConfigureAwait(false);
             var matches = NamespaceDeclarationRegex().Matches(content);
 
             foreach (Match match in matches)

@@ -317,12 +317,8 @@ public class LetTests
 
         describe("test", () =>
         {
-            // Factory can call async methods internally
-            let("asyncValue", () =>
-            {
-                // Simulate async work
-                return Task.Run(() => 42).Result;
-            });
+            // Factory returns synchronous value
+            let("asyncValue", () => 42);
 
             it("gets async value", () =>
             {

@@ -48,7 +48,7 @@ public sealed class CoverageMapService : ICoverageMapService
         {
             ct.ThrowIfCancellationRequested();
 
-            var sourceText = await File.ReadAllTextAsync(sourceFile, ct);
+            var sourceText = await File.ReadAllTextAsync(sourceFile, ct).ConfigureAwait(false);
             var syntaxTree = CSharpSyntaxTree.ParseText(sourceText, cancellationToken: ct);
             var root = await syntaxTree.GetRootAsync(ct);
 
@@ -72,7 +72,7 @@ public sealed class CoverageMapService : ICoverageMapService
         {
             ct.ThrowIfCancellationRequested();
 
-            var sourceText = await File.ReadAllTextAsync(specFile, ct);
+            var sourceText = await File.ReadAllTextAsync(specFile, ct).ConfigureAwait(false);
 
             // Strip #load and #r directives for parsing (they're not valid C# syntax)
             sourceText = StripDirectives(sourceText);

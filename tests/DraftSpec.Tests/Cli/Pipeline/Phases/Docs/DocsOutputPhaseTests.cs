@@ -232,17 +232,121 @@ public class DocsOutputPhaseTests
         await Assert.That(console.Errors).Contains("--with-results requires --results-file");
     }
 
+    [Test]
+    public async Task ExecuteAsync_WithResultsFileNotFound_ShowsError()
+    {
+        var phase = new DocsOutputPhase();
+        var console = new MockConsole();
+        var fileSystem = new MockFileSystem(); // File doesn't exist
+        var context = CreateContextWithSpecs(console, fileSystem, CreateSpec("spec", "Context"));
+        context.Set(ContextKeys.ProjectPath, "/test/project");
+        context.Set(ContextKeys.WithResults, true);
+        context.Set(ContextKeys.ResultsFile, "/missing/results.json");
+
+        await phase.ExecuteAsync(context, (_, _) => Task.FromResult(0), CancellationToken.None);
+
+        await Assert.That(console.Errors).Contains("Results file not found");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithResultsMalformedJson_ShowsError()
+    {
+        var phase = new DocsOutputPhase();
+        var console = new MockConsole();
+        var fileSystem = new MockFileSystem()
+            .AddFile("/results.json", "{ invalid json }");
+        var context = CreateContextWithSpecs(console, fileSystem, CreateSpec("spec", "Context"));
+        context.Set(ContextKeys.ProjectPath, "/test/project");
+        context.Set(ContextKeys.WithResults, true);
+        context.Set(ContextKeys.ResultsFile, "/results.json");
+
+        await phase.ExecuteAsync(context, (_, _) => Task.FromResult(0), CancellationToken.None);
+
+        await Assert.That(console.Errors).Contains("Failed to parse results file");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithResultsValidJson_ShowsCheckedBoxForPassedSpec()
+    {
+        var phase = new DocsOutputPhase();
+        var console = new MockConsole();
+        var resultsJson = """
+            {
+                "timestamp": "2024-01-01T00:00:00Z",
+                "summary": { "total": 1, "passed": 1 },
+                "contexts": [{
+                    "description": "Context",
+                    "specs": [{ "description": "spec", "status": "passed" }],
+                    "contexts": []
+                }]
+            }
+            """;
+        var fileSystem = new MockFileSystem()
+            .AddFile("/results.json", resultsJson);
+        var context = CreateContextWithSpecs(console, fileSystem, CreateSpec("spec", "Context"));
+        context.Set(ContextKeys.ProjectPath, "/test/project");
+        context.Set(ContextKeys.DocsFormat, DocsFormat.Markdown);
+        context.Set(ContextKeys.WithResults, true);
+        context.Set(ContextKeys.ResultsFile, "/results.json");
+
+        await phase.ExecuteAsync(context, (_, _) => Task.FromResult(0), CancellationToken.None);
+
+        // Should have checked checkbox for passed spec
+        await Assert.That(console.Output).Contains("- [x]");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithResultsNestedContexts_FlattensCorrectly()
+    {
+        var phase = new DocsOutputPhase();
+        var console = new MockConsole();
+        var resultsJson = """
+            {
+                "timestamp": "2024-01-01T00:00:00Z",
+                "summary": { "total": 2, "passed": 1, "failed": 1 },
+                "contexts": [{
+                    "description": "Parent",
+                    "specs": [],
+                    "contexts": [{
+                        "description": "Child",
+                        "specs": [
+                            { "description": "passes", "status": "passed" },
+                            { "description": "fails", "status": "failed" }
+                        ],
+                        "contexts": []
+                    }]
+                }]
+            }
+            """;
+        var fileSystem = new MockFileSystem()
+            .AddFile("/results.json", resultsJson);
+        // Create specs matching the nested structure
+        var context = CreateContextWithSpecs(console, fileSystem,
+            CreateNestedSpec("passes", ["Parent", "Child"]),
+            CreateNestedSpec("fails", ["Parent", "Child"]));
+        context.Set(ContextKeys.ProjectPath, "/test/project");
+        context.Set(ContextKeys.DocsFormat, DocsFormat.Markdown);
+        context.Set(ContextKeys.WithResults, true);
+        context.Set(ContextKeys.ResultsFile, "/results.json");
+
+        await phase.ExecuteAsync(context, (_, _) => Task.FromResult(0), CancellationToken.None);
+
+        // Should have both passed and failed specs with appropriate markers
+        await Assert.That(console.Output).Contains("- [x] passes"); // passed
+        await Assert.That(console.Output).Contains("**FAILED**"); // failed marker
+    }
+
     #endregion
 
     #region Helper Methods
 
-    private static CommandContext CreateContext(MockConsole? console = null)
+    private static CommandContext CreateContext(MockConsole? console = null, MockFileSystem? fileSystem = null)
     {
         return new CommandContext
         {
             Path = "/test",
             Console = console ?? new MockConsole(),
-            FileSystem = new MockFileSystem()
+            FileSystem = fileSystem ?? new MockFileSystem()
         };
     }
 
@@ -255,6 +359,16 @@ public class DocsOutputPhaseTests
         return context;
     }
 
+    private static CommandContext CreateContextWithSpecs(
+        MockConsole console,
+        MockFileSystem fileSystem,
+        params DiscoveredSpec[] specs)
+    {
+        var context = CreateContext(console, fileSystem);
+        context.Set<IReadOnlyList<DiscoveredSpec>>(ContextKeys.FilteredSpecs, specs);
+        return context;
+    }
+
     private static DiscoveredSpec CreateSpec(
         string description,
         string contextName,
@@ -262,12 +376,38 @@ public class DocsOutputPhaseTests
         bool isSkipped = false,
         bool isFocused = false)
     {
+        // ID format matches FlattenResults: ":{contextPath}/{description}"
         return new DiscoveredSpec
         {
-            Id = $"test.spec.csx:{contextName}/{description}",
+            Id = $":{contextName}/{description}",
             Description = description,
             DisplayName = $"{contextName} > {description}",
             ContextPath = [contextName],
+            SourceFile = "/specs/test.spec.csx",
+            RelativeSourceFile = "test.spec.csx",
+            LineNumber = 1,
+            IsPending = isPending,
+            IsSkipped = isSkipped,
+            IsFocused = isFocused,
+            Tags = []
+        };
+    }
+
+    private static DiscoveredSpec CreateNestedSpec(
+        string description,
+        string[] contextPath,
+        bool isPending = false,
+        bool isSkipped = false,
+        bool isFocused = false)
+    {
+        // ID format matches FlattenResults: ":{contextPath}/{description}"
+        var contextPathString = string.Join("/", contextPath);
+        return new DiscoveredSpec
+        {
+            Id = $":{contextPathString}/{description}",
+            Description = description,
+            DisplayName = $"{contextPathString} > {description}",
+            ContextPath = contextPath,
             SourceFile = "/specs/test.spec.csx",
             RelativeSourceFile = "test.spec.csx",
             LineNumber = 1,

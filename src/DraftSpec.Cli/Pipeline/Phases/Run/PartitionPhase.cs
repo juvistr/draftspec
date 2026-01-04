@@ -55,7 +55,7 @@ public class PartitionPhase : ICommandPhase
 
         // Display partition info
         context.Console.ForegroundColor = ConsoleColor.DarkGray;
-        context.Console.WriteLine($"Partition {partition.Index + 1}/{partition.Total}: {result.Files.Count} files");
+        context.Console.WriteLine($"Partition {partition.Index!.Value + 1}/{partition.Total!.Value}: {result.Files.Count} files");
         if (result.TotalSpecs.HasValue)
             context.Console.WriteLine($"  Specs: {result.PartitionSpecs}/{result.TotalSpecs}");
         context.Console.ResetColor();

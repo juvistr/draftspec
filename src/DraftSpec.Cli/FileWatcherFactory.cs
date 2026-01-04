@@ -12,8 +12,8 @@ public class FileWatcherFactory : IFileWatcherFactory
         _os = os;
     }
 
-    public IFileWatcher Create(string path, Action<FileChangeInfo> onChange, int debounceMs = 200)
+    public IFileWatcher Create(string path, int debounceMs = 200)
     {
-        return new FileWatcher(path, onChange, _os, debounceMs);
+        return new FileWatcher(path, _os, debounceMs);
     }
 }

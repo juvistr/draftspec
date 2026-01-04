@@ -20,16 +20,16 @@ public class StaticDslTests
     {
         var results = new System.Collections.Concurrent.ConcurrentBag<string>();
 
-        var task1 = Task.Run(() =>
+        var task1 = Task.Run(async () =>
         {
             describe("task1", () => { it("spec1", () => results.Add("task1")); });
-            new SpecRunner().Run(RootContext!);
+            await new SpecRunner().RunAsync(RootContext!);
         });
 
-        var task2 = Task.Run(() =>
+        var task2 = Task.Run(async () =>
         {
             describe("task2", () => { it("spec2", () => results.Add("task2")); });
-            new SpecRunner().Run(RootContext!);
+            await new SpecRunner().RunAsync(RootContext!);
         });
 
         await Task.WhenAll(task1, task2);

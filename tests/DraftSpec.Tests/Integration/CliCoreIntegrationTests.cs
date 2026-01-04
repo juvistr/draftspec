@@ -52,7 +52,7 @@ public class CliCoreIntegrationTests
         }));
 
         // Act - Execute through the full pipeline
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
         var formatter = new JsonFormatter();
         var output = formatter.Format(report);
 
@@ -73,7 +73,7 @@ public class CliCoreIntegrationTests
         context.AddSpec(new SpecDefinition("fails with exception", () =>
             throw new InvalidOperationException("Something went wrong")));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         await Assert.That(report.Summary.Total).IsEqualTo(3);
         await Assert.That(report.Summary.Passed).IsEqualTo(1);
@@ -99,7 +99,7 @@ public class CliCoreIntegrationTests
         var adminContext = new SpecContext("Admin", root);
         adminContext.AddSpec(new SpecDefinition("can manage users", () => { }));
 
-        var report = SpecExecutor.Execute(root);
+        var report = await SpecExecutor.ExecuteAsync(root);
 
         await Assert.That(report.Summary.Total).IsEqualTo(3);
         await Assert.That(report.Contexts[0].Contexts).Count().IsEqualTo(2);
@@ -205,7 +205,7 @@ public class CliCoreIntegrationTests
         context.AddSpec(new SpecDefinition("spec1", () => specsRun.Add("spec1")));
         context.AddSpec(new SpecDefinition("spec2", () => specsRun.Add("spec2")));
 
-        var ex = Assert.Throws<InvalidOperationException>(() => new SpecRunner().Run(context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => new SpecRunner().RunAsync(context));
 
         await Assert.That(ex!.Message).IsEqualTo("Setup failed");
         await Assert.That(specsRun).IsEmpty();
@@ -255,7 +255,7 @@ public class CliCoreIntegrationTests
         context.AddSpec(new SpecDefinition("fails", () => throw new Exception("error")));
         context.AddSpec(new SpecDefinition("pending")); // No body
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
 
         // Test JSON formatter
         var jsonFormatter = new JsonFormatter();
@@ -274,7 +274,7 @@ public class CliCoreIntegrationTests
         context.AddSpec(new SpecDefinition("failing spec", () =>
             throw new Exception("Error with unicode: 中文")));
 
-        var report = SpecExecutor.Execute(context);
+        var report = await SpecExecutor.ExecuteAsync(context);
         var formatter = new JsonFormatter();
         var json = formatter.Format(report);
 

@@ -23,7 +23,7 @@ public class OutputTests
     {
         describe("test", () => { it("passes", () => { }); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
 
         await Assert.That(report.Contexts[0].Specs[0].Status).IsEqualTo("passed");
     }
@@ -33,7 +33,7 @@ public class OutputTests
     {
         describe("test", () => { it("fails", () => throw new Exception("error")); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
 
         await Assert.That(report.Contexts[0].Specs[0].Status).IsEqualTo("failed");
     }
@@ -43,7 +43,7 @@ public class OutputTests
     {
         describe("test", () => { it("pending"); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
 
         await Assert.That(report.Contexts[0].Specs[0].Status).IsEqualTo("pending");
     }
@@ -53,7 +53,7 @@ public class OutputTests
     {
         describe("test", () => { xit("skipped", () => { }); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
 
         await Assert.That(report.Contexts[0].Specs[0].Status).IsEqualTo("skipped");
     }
@@ -63,7 +63,7 @@ public class OutputTests
     {
         describe("Calculator", () => { it("adds numbers", () => { }); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
 
         await Assert.That(report.Contexts[0].Description).IsEqualTo("Calculator");
     }
@@ -73,7 +73,7 @@ public class OutputTests
     {
         describe("Calculator", () => { describe("add method", () => { it("returns sum", () => { }); }); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
 
         await Assert.That(report.Contexts[0].Description).IsEqualTo("Calculator");
         await Assert.That(report.Contexts[0].Contexts[0].Description).IsEqualTo("add method");
@@ -88,7 +88,7 @@ public class OutputTests
             it("pending");
         });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
 
         await Assert.That(report.Summary.Total).IsEqualTo(2);
         await Assert.That(report.Summary.Passed).IsEqualTo(1);
@@ -100,7 +100,7 @@ public class OutputTests
     {
         describe("test", () => { it("fails", () => throw new InvalidOperationException("specific error message")); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
 
         await Assert.That(report.Contexts[0].Specs[0].Error).Contains("specific error message");
     }
@@ -114,7 +114,7 @@ public class OutputTests
     {
         describe("test", () => { it("spec", () => { }); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
         var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
 
@@ -130,7 +130,7 @@ public class OutputTests
             it("pending");
         });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
         var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var summary = doc.RootElement.GetProperty("summary");
@@ -145,7 +145,7 @@ public class OutputTests
     {
         describe("Calculator", () => { it("works", () => { }); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
         var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var contexts = doc.RootElement.GetProperty("contexts");
@@ -159,7 +159,7 @@ public class OutputTests
     {
         describe("test", () => { it("spec description", () => { }); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
         var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var specs = doc.RootElement.GetProperty("contexts")[0].GetProperty("specs");
@@ -174,7 +174,7 @@ public class OutputTests
     {
         describe("test", () => { it("spec", () => Thread.Sleep(5)); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
         var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var spec = doc.RootElement.GetProperty("contexts")[0].GetProperty("specs")[0];
@@ -188,7 +188,7 @@ public class OutputTests
     {
         describe("test", () => { it("fails", () => throw new Exception("json error")); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
         var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var spec = doc.RootElement.GetProperty("contexts")[0].GetProperty("specs")[0];
@@ -202,7 +202,7 @@ public class OutputTests
     {
         describe("outer", () => { describe("inner", () => { it("spec", () => { }); }); });
 
-        var report = SpecExecutor.Execute(RootContext!);
+        var report = await SpecExecutor.ExecuteAsync(RootContext!);
         var json = report.ToJson();
         var doc = JsonDocument.Parse(json);
         var outer = doc.RootElement.GetProperty("contexts")[0];

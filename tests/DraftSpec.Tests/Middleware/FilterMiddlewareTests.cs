@@ -133,8 +133,7 @@ public class FilterMiddlewareTests
             .Build();
 
         // The regex should timeout and throw RegexMatchTimeoutException
-        var action = () => runner.Run(context);
-        await Assert.That(action).Throws<RegexMatchTimeoutException>();
+        await Assert.ThrowsAsync<RegexMatchTimeoutException>(() => runner.RunAsync(context));
     }
 
     [Test]
@@ -151,8 +150,7 @@ public class FilterMiddlewareTests
             .WithNameExcludeFilter(evilPattern)
             .Build();
 
-        var action = () => runner.Run(context);
-        await Assert.That(action).Throws<RegexMatchTimeoutException>();
+        await Assert.ThrowsAsync<RegexMatchTimeoutException>(() => runner.RunAsync(context));
     }
 
     #endregion

@@ -4,32 +4,52 @@ namespace DraftSpec.Tests.Infrastructure.Mocks;
 
 /// <summary>
 /// Mock file watcher factory for unit testing watch mode.
-/// Allows tests to trigger file change events programmatically.
+/// Creates and returns a pre-configured MockFileWatcher instance.
 /// </summary>
 public class MockFileWatcherFactory : IFileWatcherFactory
 {
-    private Action<FileChangeInfo>? _onChange;
+    private readonly MockFileWatcher _watcher;
 
     public bool CreateCalled { get; private set; }
     public string? LastPath { get; private set; }
     public int LastDebounceMs { get; private set; }
-    public bool OnChangeCallbackInvoked { get; private set; }
 
-    public IFileWatcher Create(string path, Action<FileChangeInfo> onChange, int debounceMs = 200)
+    public MockFileWatcherFactory() : this(new MockFileWatcher())
+    {
+    }
+
+    public MockFileWatcherFactory(MockFileWatcher watcher)
+    {
+        _watcher = watcher;
+    }
+
+    /// <summary>
+    /// Gets the mock watcher that was/will be returned by Create.
+    /// Use this to trigger changes in tests.
+    /// </summary>
+    public MockFileWatcher Watcher => _watcher;
+
+    public IFileWatcher Create(string path, int debounceMs = 200)
     {
         CreateCalled = true;
         LastPath = path;
         LastDebounceMs = debounceMs;
-        _onChange = onChange;
-        return new MockFileWatcher();
+        return _watcher;
     }
 
     /// <summary>
-    /// Triggers a file change event for testing.
+    /// Convenience method to trigger a change on the watcher.
     /// </summary>
     public void TriggerChange(FileChangeInfo change)
     {
-        OnChangeCallbackInvoked = true;
-        _onChange?.Invoke(change);
+        _watcher.TriggerChange(change);
+    }
+
+    /// <summary>
+    /// Convenience method to trigger a change and wait for processing.
+    /// </summary>
+    public Task TriggerChangeAndWaitAsync(FileChangeInfo change, TimeSpan? timeout = null)
+    {
+        return _watcher.TriggerChangeAndWaitAsync(change, timeout);
     }
 }

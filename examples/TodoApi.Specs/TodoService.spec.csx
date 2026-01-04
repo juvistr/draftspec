@@ -56,10 +56,10 @@ describe("TodoService", () =>
 
         context("validation", () =>
         {
-            it("throws on empty title", () =>
+            it("throws on empty title", async () =>
             {
-                expect(() => service.CreateAsync("").GetAwaiter().GetResult())
-                    .toThrow<ValidationException>();
+                await expect(async () => await service.CreateAsync(""))
+                    .toThrowAsync<ValidationException>();
             });
 
             it("trims whitespace from title", async () =>
@@ -103,10 +103,10 @@ describe("TodoService", () =>
             expect(completed.IsComplete).toBeTrue();
         });
 
-        it("throws for non-existent todo", () =>
+        it("throws for non-existent todo", async () =>
         {
-            expect(() => service.CompleteAsync(9999).GetAwaiter().GetResult())
-                .toThrow<InvalidOperationException>();
+            await expect(async () => await service.CompleteAsync(9999))
+                .toThrowAsync<InvalidOperationException>();
         });
     });
 

@@ -180,8 +180,8 @@ public class PipelineTests
             .Use(new ThrowingMiddleware(new InvalidOperationException("middleware failed"), throwBeforePipeline: true))
             .Build();
 
-        var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
-        await Assert.That(exception.Message).IsEqualTo("middleware failed");
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
+        await Assert.That(exception!.Message).IsEqualTo("middleware failed");
     }
 
     [Test]
@@ -195,8 +195,8 @@ public class PipelineTests
             .Use(new ThrowingMiddleware(new InvalidOperationException("cleanup failed"), throwBeforePipeline: false))
             .Build();
 
-        var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
-        await Assert.That(exception.Message).IsEqualTo("cleanup failed");
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
+        await Assert.That(exception!.Message).IsEqualTo("cleanup failed");
         await Assert.That(specExecuted).IsTrue(); // Spec should have run before exception
     }
 
@@ -214,7 +214,7 @@ public class PipelineTests
             .Use(new ThrowingMiddleware(new InvalidOperationException("inner failed"), throwBeforePipeline: true))
             .Build();
 
-        Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
         await Assert.That(outerCleanupRan).IsTrue();
     }
 
@@ -249,7 +249,7 @@ public class PipelineTests
             .Use(new TestMiddleware(() => secondMiddlewareRan = true))
             .Build();
 
-        Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
         await Assert.That(secondMiddlewareRan).IsFalse();
     }
 
@@ -270,7 +270,7 @@ public class PipelineTests
             .Use(new ThrowingMiddleware(new InvalidOperationException("inner failed"), throwBeforePipeline: true))
             .Build();
 
-        Assert.Throws<InvalidOperationException>(() => runner.Run(context));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
 
         // Cleanup should run in reverse order (inner to outer)
         await Assert.That(cleanupOrder).Count().IsEqualTo(2);
@@ -288,8 +288,8 @@ public class PipelineTests
             .Use(new AsyncThrowingMiddleware())
             .Build();
 
-        var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
-        await Assert.That(exception.Message).IsEqualTo("async middleware failed");
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
+        await Assert.That(exception!.Message).IsEqualTo("async middleware failed");
     }
 
     #endregion

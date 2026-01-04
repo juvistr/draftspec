@@ -86,13 +86,13 @@ describe("Async Patterns", () =>
 
     describe("Async Exception Testing", () =>
     {
-        it("can test async methods that throw", () =>
+        it("can test async methods that throw", async () =>
         {
             var service = CreateService();
 
-            // For async exceptions, need to unwrap
-            expect(() => service.CreateAsync("").GetAwaiter().GetResult())
-                .toThrow<ValidationException>();
+            // Use toThrowAsync for async exception testing
+            await expect(async () => await service.CreateAsync(""))
+                .toThrowAsync<ValidationException>();
         });
 
         it("can test async success with awaited result", async () =>

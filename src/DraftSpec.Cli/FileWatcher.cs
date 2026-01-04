@@ -1,20 +1,28 @@
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
+
 namespace DraftSpec.Cli;
 
+/// <summary>
+/// Watches for file changes using FileSystemWatcher and exposes changes as an async enumerable.
+/// Uses Channel&lt;T&gt; internally for async producer-consumer pattern.
+/// </summary>
 public class FileWatcher : IFileWatcher
 {
     private readonly List<FileSystemWatcher> _watchers = [];
-    private readonly Action<FileChangeInfo> _onChange;
+    private readonly Channel<FileChangeInfo> _channel;
     private readonly int _debounceMs;
     private readonly IOperatingSystem _os;
     private Timer? _debounceTimer;
     private readonly Lock _lock = new();
     private FileChangeInfo? _pendingChange;
 
-    public FileWatcher(string path, Action<FileChangeInfo> onChange, IOperatingSystem os, int debounceMs = 200)
+    public FileWatcher(string path, IOperatingSystem os, int debounceMs = 200)
     {
-        _onChange = onChange;
         _debounceMs = debounceMs;
         _os = os;
+        _channel = Channel.CreateUnbounded<FileChangeInfo>(
+            new UnboundedChannelOptions { SingleReader = true });
 
         var fullPath = Path.GetFullPath(path);
         var watchPath = Directory.Exists(fullPath) ? fullPath : Path.GetDirectoryName(fullPath)!;
@@ -26,6 +34,12 @@ public class FileWatcher : IFileWatcher
         // Watch .cs files (source changes)
         var csWatcher = CreateWatcher(watchPath, "*.cs");
         _watchers.Add(csWatcher);
+    }
+
+    /// <inheritdoc />
+    public IAsyncEnumerable<FileChangeInfo> WatchAsync(CancellationToken ct = default)
+    {
+        return _channel.Reader.ReadAllAsync(ct);
     }
 
     private FileSystemWatcher CreateWatcher(string path, string filter)
@@ -91,7 +105,8 @@ public class FileWatcher : IFileWatcher
             _pendingChange = null;
         }
 
-        _onChange(change);
+        // Non-blocking write to channel
+        _channel.Writer.TryWrite(change);
     }
 
     /// <summary>
@@ -136,6 +151,7 @@ public class FileWatcher : IFileWatcher
         }
 
         _debounceTimer?.Dispose();
+        _channel.Writer.TryComplete();
         GC.SuppressFinalize(this);
     }
 }

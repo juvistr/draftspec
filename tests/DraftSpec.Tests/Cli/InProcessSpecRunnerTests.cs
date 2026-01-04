@@ -112,7 +112,7 @@ public class InProcessSpecRunnerTests
         var fileSystem = new MockFileSystem();
 
         // Create a real CompilationErrorException
-        var compilationException = CreateCompilationError("var x = ");
+        var compilationException = await CreateCompilationErrorAsync("var x = ");
         scriptExecutor.SetException(compilationException);
 
         var runner = new InProcessSpecRunner(
@@ -139,7 +139,7 @@ public class InProcessSpecRunnerTests
     /// <summary>
     /// Creates a real CompilationErrorException from invalid code.
     /// </summary>
-    private static CompilationErrorException CreateCompilationError(string code)
+    private static async Task<CompilationErrorException> CreateCompilationErrorAsync(string code)
     {
         try
         {
@@ -157,7 +157,7 @@ public class InProcessSpecRunnerTests
             }
 
             // Force evaluate to get runtime compilation errors
-            script.RunAsync().GetAwaiter().GetResult();
+            await script.RunAsync();
             throw new InvalidOperationException("Expected compilation error");
         }
         catch (CompilationErrorException ex)

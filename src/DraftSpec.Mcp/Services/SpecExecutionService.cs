@@ -38,7 +38,7 @@ public partial class SpecExecutionService : ISpecExecutionService
                                         if (RootContext != null)
                                         {{
                                             var runner = new DraftSpec.SpecRunner();
-                                            var results = runner.Run(RootContext);
+                                            var results = await runner.RunAsync(RootContext);
                                             var report = DraftSpec.SpecReportBuilder.Build(RootContext, results);
                                             Console.WriteLine(report.ToJson());
                                         }}

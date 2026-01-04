@@ -10,6 +10,7 @@ namespace DraftSpec.Tests.Cli.Commands;
 
 /// <summary>
 /// Tests for WatchCommand with mocked dependencies.
+/// Uses TriggerChangeAndWaitAsync for deterministic testing without timing delays.
 /// </summary>
 public class WatchCommandTests
 {
@@ -131,27 +132,23 @@ public class WatchCommandTests
         var command = CreateCommand(runnerFactory: runnerFactory, watcherFactory: watcherFactory, specFiles: ["test.spec.csx"]);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(200);
 
         var options = new WatchOptions { Path = "." };
 
         // Start the command in background
         var task = command.ExecuteAsync(options, cts.Token);
 
-        // Wait for initial run
+        // Wait for initial run to complete
         await Task.Delay(50);
 
-        // Simulate file change
-        watcherFactory.TriggerChange(new FileChangeInfo(SomeOtherFile, false));
+        // Trigger file change and wait for processing - deterministic, no race condition
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(SomeOtherFile, false));
 
-        // Wait a bit more then cancel
-        await Task.Delay(50);
         await cts.CancelAsync();
-
         await task;
 
         // Should have called RunAll twice (initial + rerun)
-        await Assert.That(runner.RunAllCallCount).IsGreaterThanOrEqualTo(2);
+        await Assert.That(runner.RunAllCallCount).IsEqualTo(2);
     }
 
     [Test]
@@ -164,7 +161,6 @@ public class WatchCommandTests
         var command = CreateCommand(runnerFactory: runnerFactory, watcherFactory: watcherFactory, specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(200);
 
         var options = new WatchOptions { Path = SomeSpecPath };
 
@@ -172,17 +168,16 @@ public class WatchCommandTests
 
         await Task.Delay(50);
 
-        // Simulate spec file change
-        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec1, true));
+        // Trigger spec file change and wait for processing
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(TestSpec1, true));
 
-        await Task.Delay(50);
         await cts.CancelAsync();
-
         await task;
 
         // Last run should be with just the changed spec (selective)
-        // Note: Due to timing, we verify that selective runs happened
         Assert.NotNull(runner.LastSpecFiles);
+        await Assert.That(runner.LastSpecFiles).Count().IsEqualTo(1);
+        await Assert.That(runner.LastSpecFiles![0]).IsEqualTo(TestSpec1);
     }
 
     [Test]
@@ -194,7 +189,6 @@ public class WatchCommandTests
         var command = CreateCommand(runnerFactory: runnerFactory, watcherFactory: watcherFactory, specFiles: ["test.spec.csx"]);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(200);
 
         var options = new WatchOptions { Path = "." };
 
@@ -202,16 +196,14 @@ public class WatchCommandTests
 
         await Task.Delay(50);
 
-        // Simulate source file change (not a spec)
-        watcherFactory.TriggerChange(new FileChangeInfo(SomeSourceFile, false));
+        // Trigger source file change and wait for processing
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(SomeSourceFile, false));
 
-        await Task.Delay(50);
         await cts.CancelAsync();
-
         await task;
 
         // Should have run all specs on source file change
-        await Assert.That(runner.RunAllCallCount).IsGreaterThanOrEqualTo(2);
+        await Assert.That(runner.RunAllCallCount).IsEqualTo(2);
     }
 
     #endregion
@@ -241,23 +233,20 @@ public class WatchCommandTests
         var command = CreateCommand(console: console, watcherFactory: watcherFactory, specFiles: ["test.spec.csx"]);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(200);
 
         var options = new WatchOptions { Path = "." };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
         await Task.Delay(50);
-        watcherFactory.TriggerChange(new FileChangeInfo(SomeOtherFile, false));
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(SomeOtherFile, false));
 
-        await Task.Delay(50);
         await cts.CancelAsync();
-
         await task;
 
-        // ConsolePresenter.ShowRerunning should have been called
-        // This is called through the presenter, so we verify the callback was invoked
-        await Assert.That(watcherFactory.OnChangeCallbackInvoked).IsTrue();
+        // The console should have received output during the rerun
+        // Verify the watcher was created and used
+        await Assert.That(watcherFactory.CreateCalled).IsTrue();
     }
 
     [Test]
@@ -268,18 +257,15 @@ public class WatchCommandTests
         var command = CreateCommand(console: console, watcherFactory: watcherFactory, specFiles: ["test.spec.csx"]);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(200);
 
         var options = new WatchOptions { Path = "." };
 
         var task = command.ExecuteAsync(options, cts.Token);
 
         await Task.Delay(50);
-        watcherFactory.TriggerChange(new FileChangeInfo(AnotherFile, false));
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(AnotherFile, false));
 
-        await Task.Delay(50);
         await cts.CancelAsync();
-
         await task;
 
         // Console.Clear() should have been called (tracked in MockConsole)
@@ -354,7 +340,7 @@ public class WatchCommandTests
         var options = new WatchOptions { Path = "." };
         var result = await command.ExecuteAsync(options, cts.Token);
 
-        // Returns based on lastSummary state (may be null → 1, or success → 0)
+        // Returns based on lastSummary state (may be null -> 1, or success -> 0)
         await Assert.That(result).IsGreaterThanOrEqualTo(0);
         await Assert.That(result).IsLessThanOrEqualTo(1);
     }
@@ -403,7 +389,6 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
@@ -411,12 +396,10 @@ public class WatchCommandTests
 
         await Task.Delay(50);
 
-        // Trigger spec file change - since changeTracker returns no changes, should skip
-        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
+        // Trigger spec file change and wait - since changeTracker returns no changes, should skip
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(TestSpec, true));
 
-        await Task.Delay(100);
         await cts.CancelAsync();
-
         await task;
 
         // Should show "No spec changes detected" message
@@ -447,7 +430,6 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
@@ -455,12 +437,10 @@ public class WatchCommandTests
 
         await Task.Delay(50);
 
-        // Trigger spec file change
-        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
+        // Trigger spec file change and wait
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(TestSpec, true));
 
-        await Task.Delay(100);
         await cts.CancelAsync();
-
         await task;
 
         // Should show message about dynamic specs requiring full run
@@ -497,7 +477,6 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
@@ -505,12 +484,10 @@ public class WatchCommandTests
 
         await Task.Delay(50);
 
-        // Trigger spec file change
-        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
+        // Trigger spec file change and wait
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(TestSpec, true));
 
-        await Task.Delay(100);
         await cts.CancelAsync();
-
         await task;
 
         // Should show incremental run message
@@ -543,7 +520,6 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
@@ -551,12 +527,10 @@ public class WatchCommandTests
 
         await Task.Delay(50);
 
-        // Trigger spec file change
-        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
+        // Trigger spec file change and wait
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(TestSpec, true));
 
-        await Task.Delay(100);
         await cts.CancelAsync();
-
         await task;
 
         // State should be recorded after the run
@@ -588,7 +562,6 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
@@ -596,12 +569,10 @@ public class WatchCommandTests
 
         await Task.Delay(50);
 
-        // Trigger spec file change
-        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
+        // Trigger spec file change and wait
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(TestSpec, true));
 
-        await Task.Delay(100);
         await cts.CancelAsync();
-
         await task;
 
         // FilterName should contain the escaped spec description pattern
@@ -763,7 +734,6 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
@@ -771,12 +741,10 @@ public class WatchCommandTests
 
         await Task.Delay(50);
 
-        // Trigger spec file change - will cause filtered run which throws
-        watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
+        // Trigger spec file change and wait - will cause filtered run which throws
+        await watcherFactory.TriggerChangeAndWaitAsync(new FileChangeInfo(TestSpec, true));
 
-        await Task.Delay(100);
         await cts.CancelAsync();
-
         await task;
 
         // Should handle error gracefully and continue watching
@@ -817,7 +785,6 @@ public class WatchCommandTests
             specFiles: specFiles);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
 
         var options = new WatchOptions { Path = SomeSpecPath, Incremental = true };
 
@@ -826,6 +793,7 @@ public class WatchCommandTests
         await Task.Delay(50);
 
         // Trigger spec file change - will cause filtered run which throws OperationCanceledException
+        // Don't wait since OperationCanceledException will cause early exit
         watcherFactory.TriggerChange(new FileChangeInfo(TestSpec, true));
 
         await Task.Delay(100);
@@ -860,7 +828,6 @@ public class WatchCommandTests
             specFiles: ["test.spec.csx"]);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
 
         var options = new WatchOptions { Path = "." };
 
@@ -869,7 +836,7 @@ public class WatchCommandTests
         await Task.Delay(50);
 
         // Trigger file change - will cause RunAll which throws OperationCanceledException
-        // The callback catches this and continues
+        // Don't wait since OperationCanceledException will cause early exit
         watcherFactory.TriggerChange(new FileChangeInfo(SomeOtherFile, false));
 
         await Task.Delay(100);

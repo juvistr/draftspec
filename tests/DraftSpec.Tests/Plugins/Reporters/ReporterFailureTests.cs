@@ -28,8 +28,8 @@ public class ReporterFailureTests
             .Build();
 
         // Act & Assert - Exception should propagate
-        var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
-        await Assert.That(exception.Message).IsEqualTo("Reporter failed in OnRunStarting");
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
+        await Assert.That(exception!.Message).IsEqualTo("Reporter failed in OnRunStarting");
     }
 
     [Test]
@@ -48,8 +48,8 @@ public class ReporterFailureTests
             .Build();
 
         // Act & Assert - Exception should propagate
-        var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
-        await Assert.That(exception.Message).IsEqualTo("Reporter failed in OnSpecCompleted");
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
+        await Assert.That(exception!.Message).IsEqualTo("Reporter failed in OnSpecCompleted");
     }
 
     [Test]
@@ -73,8 +73,8 @@ public class ReporterFailureTests
             .Build();
 
         // Act & Assert - Exception should propagate
-        var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
-        await Assert.That(exception.Message).IsEqualTo("Reporter failed in OnSpecsBatchCompleted");
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
+        await Assert.That(exception!.Message).IsEqualTo("Reporter failed in OnSpecsBatchCompleted");
     }
 
     #endregion
@@ -227,8 +227,8 @@ public class ReporterFailureTests
             .Build();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => runner.Run(context));
-        await Assert.That(exception.Message).IsEqualTo("Async reporter failed");
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(context));
+        await Assert.That(exception!.Message).IsEqualTo("Async reporter failed");
     }
 
     #endregion

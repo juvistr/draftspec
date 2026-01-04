@@ -85,8 +85,8 @@ Adopt a **staged breaking changes policy** based on version:
 
 ### Breaking Changes
 
-- `SpecRunner.Run()` now returns `Task<List<SpecResult>>` instead of `List<SpecResult>`
-  - Migration: Add `.GetAwaiter().GetResult()` for sync code, or use `await`
+- `SpecRunner.Run()` removed in favor of async-only `RunAsync()`
+  - Migration: Use `await runner.RunAsync()` (async-only API)
 
 ### Added
 

@@ -121,7 +121,7 @@ public class ExecutionModelBenchmarks
     /// overhead is process startup vs actual spec execution.
     /// </summary>
     [Benchmark]
-    public int InProcess()
+    public async Task<int> InProcess()
     {
         var context = new SpecContext("Minimal");
         context.AddSpec(new SpecDefinition("passes", () =>
@@ -130,7 +130,7 @@ public class ExecutionModelBenchmarks
         }));
 
         var runner = new SpecRunner();
-        var results = runner.Run(context);
+        var results = await runner.RunAsync(context);
 
         return results.Count(r => r.Status == SpecStatus.Passed);
     }

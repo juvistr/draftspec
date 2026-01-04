@@ -186,20 +186,22 @@ public class WatchCommand : ICommand<WatchOptions>
             presenter.ShowWatching();
         }
 
-        // Set up watcher with thin orchestration - decision logic is in IWatchEventProcessor
-        using var watcher = _watcherFactory.Create(path, change =>
-        {
-            presenter.ShowRerunning();
+        // Watch for file changes using async enumerable
+        using var watcher = _watcherFactory.Create(path);
 
-            try
+        try
+        {
+            await foreach (var change in watcher.WatchAsync(cts.Token))
             {
-                var action = _eventProcessor.ProcessChangeAsync(
+                presenter.ShowRerunning();
+
+                var action = await _eventProcessor.ProcessChangeAsync(
                     change,
                     allSpecFiles ?? [],
                     path,
                     options.Incremental,
                     options.NoCache,
-                    cts.Token).GetAwaiter().GetResult();
+                    cts.Token);
 
                 switch (action.Type)
                 {
@@ -210,35 +212,25 @@ public class WatchCommand : ICommand<WatchOptions>
                         break;
 
                     case WatchActionType.RunAll:
-                        RunAll().GetAwaiter().GetResult();
+                        await RunAll();
                         break;
 
                     case WatchActionType.RunFile:
                         if (action.Message != null)
                             _console.WriteLine(action.Message);
-                        RunSpecs([action.FilePath!], isPartialRun: true).GetAwaiter().GetResult();
+                        await RunSpecs([action.FilePath!], isPartialRun: true);
                         break;
 
                     case WatchActionType.RunFiltered:
                         _console.WriteLine(action.Message!);
-                        RunFilteredSpecs(action.FilePath!, action.FilterPattern!).GetAwaiter().GetResult();
+                        await RunFilteredSpecs(action.FilePath!, action.FilterPattern!);
                         if (action.ParseResultToRecord != null)
                             _changeTracker.RecordState(action.FilePath!, action.ParseResultToRecord);
                         break;
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // Ignore - watcher will stop
-            }
-        });
-
-        // Wait for cancellation
-        try
-        {
-            await Task.Delay(Timeout.Infinite, cts.Token);
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException)
         {
             // Normal exit via Ctrl+C
         }

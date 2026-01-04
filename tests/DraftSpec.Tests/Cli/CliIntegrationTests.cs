@@ -1,3 +1,4 @@
+using DraftSpec.Abstractions;
 using DraftSpec.Cli;
 using DraftSpec.Cli.Commands;
 using DraftSpec.Cli.Options;

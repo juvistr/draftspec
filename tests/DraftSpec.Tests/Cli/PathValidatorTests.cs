@@ -240,6 +240,86 @@ public class PathValidatorTests
 
     #endregion
 
+    #region TryValidatePathWithinBase Tests
+
+    [Test]
+    public async Task TryValidatePathWithinBase_ValidPath_ReturnsTrue()
+    {
+        var validator = CreateValidator();
+        var baseDir = Path.GetTempPath();
+        var validPath = Path.Combine(baseDir, "subdir", "file.txt");
+
+        var result = validator.TryValidatePathWithinBase(validPath, baseDir, out var errorMessage);
+
+        await Assert.That(result).IsTrue();
+        await Assert.That(errorMessage).IsNull();
+    }
+
+    [Test]
+    public async Task TryValidatePathWithinBase_PathOutsideBase_ReturnsFalseWithMessage()
+    {
+        var validator = CreateValidator();
+        var baseDir = Path.Combine(Path.GetTempPath(), "sandbox");
+        var outsidePath = Path.Combine(baseDir, "..", "escaped.txt");
+
+        var result = validator.TryValidatePathWithinBase(outsidePath, baseDir, out var errorMessage);
+
+        await Assert.That(result).IsFalse();
+        await Assert.That(errorMessage).IsEqualTo("Path must be within the working directory");
+    }
+
+    [Test]
+    public async Task TryValidatePathWithinBase_InvalidPath_ReturnsFalseWithInvalidPathMessage()
+    {
+        var validator = CreateValidator();
+        // Use null character which causes Path.GetFullPath to throw
+        var invalidPath = "valid\0invalid";
+
+        var result = validator.TryValidatePathWithinBase(invalidPath, Path.GetTempPath(), out var errorMessage);
+
+        await Assert.That(result).IsFalse();
+        await Assert.That(errorMessage).IsEqualTo("Invalid path");
+    }
+
+    #endregion
+
+    #region TryValidateFileName Tests
+
+    [Test]
+    public async Task TryValidateFileName_ValidName_ReturnsTrue()
+    {
+        var validator = CreateValidator();
+
+        var result = validator.TryValidateFileName("MySpec", out var errorMessage);
+
+        await Assert.That(result).IsTrue();
+        await Assert.That(errorMessage).IsNull();
+    }
+
+    [Test]
+    public async Task TryValidateFileName_InvalidName_ReturnsFalseWithMessage()
+    {
+        var validator = CreateValidator();
+
+        var result = validator.TryValidateFileName("../malicious", out var errorMessage);
+
+        await Assert.That(result).IsFalse();
+        await Assert.That(errorMessage).Contains("path separator");
+    }
+
+    [Test]
+    public async Task TryValidateFileName_EmptyName_ReturnsFalse()
+    {
+        var validator = CreateValidator();
+
+        var result = validator.TryValidateFileName("", out var errorMessage);
+
+        await Assert.That(result).IsFalse();
+        await Assert.That(errorMessage).IsNotNull();
+    }
+
+    #endregion
+
     #region OS-Specific Tests
 
     [Test]

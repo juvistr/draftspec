@@ -110,7 +110,7 @@ public class FileWatcher : IFileWatcher
     /// <summary>
     /// Normalizes a path by resolving common system symlinks.
     /// </summary>
-    private string NormalizePath(string path)
+    internal string NormalizePath(string path)
     {
         // On macOS, /var is a symlink to /private/var, /tmp to /private/tmp, etc.
         // FileSystemWatcher events may use either form inconsistently.

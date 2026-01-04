@@ -1,3 +1,5 @@
+using DraftSpec.Abstractions;
+
 namespace DraftSpec.Mcp.Services;
 
 /// <summary>
@@ -17,7 +19,7 @@ public class SystemUnixPermissionSetter : IUnixPermissionSetter
     /// </summary>
     public SystemUnixPermissionSetter(IOperatingSystem? os = null)
     {
-        _os = os ?? CurrentOperatingSystem.Instance;
+        _os = os ?? new SystemOperatingSystem();
     }
 
     /// <inheritdoc />

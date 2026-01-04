@@ -66,6 +66,38 @@ public class DependencyGraphTests
         await Assert.That(graph.SpecFiles).Count().IsEqualTo(2);
     }
 
+    [Test]
+    public async Task SourceFiles_ReturnsAllUniqueSourceFiles()
+    {
+        var graph = new DepGraph(new MockPathComparer());
+
+        // Add source files to different namespaces
+        graph.AddNamespaceMapping(SrcTodoService, "MyApp.Services");
+        graph.AddNamespaceMapping(SrcOtherService, "MyApp.Other");
+
+        // Add the same file to multiple namespaces (should be deduplicated)
+        graph.AddNamespaceMapping(SrcServiceA, "MyApp.Services");
+        graph.AddNamespaceMapping(SrcServiceA, "MyApp.Shared");
+
+        var sourceFiles = graph.SourceFiles;
+
+        // Should have 3 unique files (SrcTodoService, SrcOtherService, SrcServiceA)
+        await Assert.That(sourceFiles).Count().IsEqualTo(3);
+        await Assert.That(sourceFiles).Contains(SrcTodoService);
+        await Assert.That(sourceFiles).Contains(SrcOtherService);
+        await Assert.That(sourceFiles).Contains(SrcServiceA);
+    }
+
+    [Test]
+    public async Task SourceFiles_EmptyWhenNoMappings_ReturnsEmpty()
+    {
+        var graph = new DepGraph(new MockPathComparer());
+
+        var sourceFiles = graph.SourceFiles;
+
+        await Assert.That(sourceFiles).IsEmpty();
+    }
+
     #endregion
 
     #region GetAffectedSpecs - Direct Dependencies

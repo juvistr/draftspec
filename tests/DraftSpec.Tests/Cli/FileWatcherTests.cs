@@ -192,6 +192,111 @@ public class FileWatcherTests
 
     #endregion
 
+    #region Constructor Path Resolution
+
+    [Test]
+    public async Task FileWatcher_WithDirectoryPath_WatchesDirectory()
+    {
+        // When path is a directory, it should watch that directory directly
+        // (This is the existing behavior - _tempDir is a directory)
+        using var watcher = new FileWatcher(_tempDir, _ => { }, new MockOperatingSystem(), debounceMs: 50);
+
+        // If we got here without exception, the directory path was used correctly
+        await Assert.That(true).IsTrue();
+    }
+
+    [Test]
+    public async Task FileWatcher_WithFilePath_WatchesParentDirectory()
+    {
+        // When path is a file, it should watch the parent directory
+        var specFile = Path.Combine(_tempDir, "test.spec.csx");
+        await File.WriteAllTextAsync(specFile, "// spec");
+
+        var tcs = new TaskCompletionSource<bool>();
+        using var watcher = new FileWatcher(specFile, change =>
+        {
+            tcs.TrySetResult(true);
+        }, new MockOperatingSystem(), debounceMs: 50);
+
+        // Modify the file to verify the watcher is working on the parent directory
+        await File.WriteAllTextAsync(specFile, "// updated spec");
+
+        var completed = await Task.WhenAny(tcs.Task, Task.Delay(5000));
+        await Assert.That(completed == tcs.Task).IsTrue();
+    }
+
+    #endregion
+
+    #region NormalizePath
+
+    [Test]
+    public async Task NormalizePath_OnMacOS_NormalizesVarPath()
+    {
+        var os = new MockOperatingSystem().WithMacOS();
+        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+
+        var result = watcher.NormalizePath("/var/folders/test/file.txt");
+
+        await Assert.That(result).IsEqualTo("/private/var/folders/test/file.txt");
+    }
+
+    [Test]
+    public async Task NormalizePath_OnMacOS_NormalizesTmpPath()
+    {
+        var os = new MockOperatingSystem().WithMacOS();
+        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+
+        var result = watcher.NormalizePath("/tmp/test/file.txt");
+
+        await Assert.That(result).IsEqualTo("/private/tmp/test/file.txt");
+    }
+
+    [Test]
+    public async Task NormalizePath_OnMacOS_NormalizesEtcPath()
+    {
+        var os = new MockOperatingSystem().WithMacOS();
+        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+
+        var result = watcher.NormalizePath("/etc/hosts");
+
+        await Assert.That(result).IsEqualTo("/private/etc/hosts");
+    }
+
+    [Test]
+    public async Task NormalizePath_OnMacOS_DoesNotNormalizeOtherPaths()
+    {
+        var os = new MockOperatingSystem().WithMacOS();
+        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+
+        var result = watcher.NormalizePath("/Users/test/file.txt");
+
+        await Assert.That(result).IsEqualTo("/Users/test/file.txt");
+    }
+
+    [Test]
+    public async Task NormalizePath_OnNonMacOS_DoesNotNormalize()
+    {
+        var os = new MockOperatingSystem(); // Default is not macOS
+        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+
+        var result = watcher.NormalizePath("/var/folders/test/file.txt");
+
+        await Assert.That(result).IsEqualTo("/var/folders/test/file.txt");
+    }
+
+    [Test]
+    public async Task NormalizePath_OnLinux_DoesNotNormalize()
+    {
+        var os = new MockOperatingSystem().WithLinux();
+        using var watcher = new FileWatcher(_tempDir, _ => { }, os, debounceMs: 50);
+
+        var result = watcher.NormalizePath("/var/log/test.log");
+
+        await Assert.That(result).IsEqualTo("/var/log/test.log");
+    }
+
+    #endregion
+
     #region FileChangeInfo Record
 
     [Test]

@@ -1,4 +1,4 @@
-using DraftSpec.Cli;
+using DraftSpec.Abstractions;
 
 namespace DraftSpec.Tests.Cli;
 

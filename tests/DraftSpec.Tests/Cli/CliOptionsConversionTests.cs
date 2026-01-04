@@ -426,7 +426,7 @@ public class CliOptionsConversionTests
         await Assert.That(flakyOptions.Clear).IsNull();
     }
 
-    #endregion  
+    #endregion
 
     #region ToEstimateOptions Tests
 

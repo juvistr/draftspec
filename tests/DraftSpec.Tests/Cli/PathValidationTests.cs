@@ -1,4 +1,5 @@
 using System.Security;
+using DraftSpec.Abstractions;
 using DraftSpec.Cli;
 using DraftSpec.Tests.Infrastructure.Mocks;
 

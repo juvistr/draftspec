@@ -98,6 +98,26 @@ public class DependencyGraphTests
         await Assert.That(sourceFiles).IsEmpty();
     }
 
+    [Test]
+    public async Task GetDependencies_UnknownSpec_ReturnsEmpty()
+    {
+        var graph = new DepGraph(new MockPathComparer());
+
+        var deps = graph.GetDependencies(TestPaths.Spec("unknown.spec.csx"));
+
+        await Assert.That(deps).IsEmpty();
+    }
+
+    [Test]
+    public async Task GetNamespaces_UnknownSpec_ReturnsEmpty()
+    {
+        var graph = new DepGraph(new MockPathComparer());
+
+        var namespaces = graph.GetNamespaces(TestPaths.Spec("unknown.spec.csx"));
+
+        await Assert.That(namespaces).IsEmpty();
+    }
+
     #endregion
 
     #region GetAffectedSpecs - Direct Dependencies

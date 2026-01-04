@@ -17,6 +17,7 @@ using DraftSpec.Cli.Pipeline.Phases.Cache;
 using DraftSpec.Cli.Pipeline.Phases.History;
 using DraftSpec.Cli.Pipeline.Phases.Estimate;
 using DraftSpec.Cli.Pipeline.Phases.Flaky;
+using DraftSpec.Cli.Pipeline.Phases.Run;
 using DraftSpec.Cli.Services;
 using DraftSpec.Cli.Watch;
 using Microsoft.Extensions.DependencyInjection;
@@ -111,6 +112,11 @@ public static class ServiceCollectionExtensions
 
         // Pipeline Phases - Flaky
         services.AddSingleton<FlakyOutputPhase>();
+
+        // Pipeline Phases - Run
+        services.AddSingleton<QuarantinePhase>();
+        services.AddSingleton<LineFilterPhase>();
+        services.AddSingleton<ImpactAnalysisPhase>();
 
         // Keyed Pipelines - Singleton since phases are singletons and the delegate is stateless
         services.AddKeyedSingleton<Func<CommandContext, CancellationToken, Task<int>>>(

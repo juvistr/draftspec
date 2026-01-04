@@ -283,4 +283,32 @@ public static class ContextKeys
     public const string Clear = nameof(Clear);
 
     #endregion
+
+    #region Run Command Keys
+
+    /// <summary>
+    /// Line filters for selecting specs at specific lines.
+    /// Type: <c>IReadOnlyList&lt;LineFilter&gt;</c>
+    /// </summary>
+    public const string LineFilters = nameof(LineFilters);
+
+    /// <summary>
+    /// Git reference for impact analysis (e.g., "HEAD~1", "staged").
+    /// Type: <see cref="string"/>
+    /// </summary>
+    public const string AffectedBy = nameof(AffectedBy);
+
+    /// <summary>
+    /// Whether to run in dry-run mode (show what would run).
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string DryRun = nameof(DryRun);
+
+    /// <summary>
+    /// Whether to skip cache during parsing.
+    /// Type: <see cref="bool"/>
+    /// </summary>
+    public const string NoCache = nameof(NoCache);
+
+    #endregion
 }

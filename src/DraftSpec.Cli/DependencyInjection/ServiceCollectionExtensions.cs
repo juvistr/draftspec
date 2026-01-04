@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISpecStatsCollector, SpecStatsCollector>();
         services.AddSingleton<ISpecPartitioner, SpecPartitioner>();
         services.AddSingleton<ISpecChangeTracker, SpecChangeTracker>();
+        services.AddSingleton<IWatchEventProcessor, WatchEventProcessor>();
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<ISpecHistoryService, SpecHistoryService>();
         services.AddSingleton<IRuntimeEstimator, RuntimeEstimator>();

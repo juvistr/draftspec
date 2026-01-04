@@ -110,6 +110,11 @@ public static class NullObjects
     /// </summary>
     public static ISpecSelector SpecSelector { get; } = new NullSpecSelector();
 
+    /// <summary>
+    /// A no-op watch event processor that always returns RunAll.
+    /// </summary>
+    public static IWatchEventProcessor WatchEventProcessor { get; } = new NullWatchEventProcessor();
+
     #region Null Object Implementations
 
     private class NullConsole : IConsole
@@ -329,6 +334,18 @@ public static class NullObjects
             IReadOnlyList<DiscoveredSpec> specs,
             CancellationToken ct = default)
             => Task.FromResult(SpecSelectionResult.Success([], [], 0));
+    }
+
+    private class NullWatchEventProcessor : IWatchEventProcessor
+    {
+        public Task<WatchAction> ProcessChangeAsync(
+            FileChangeInfo change,
+            IReadOnlyList<string> allSpecFiles,
+            string basePath,
+            bool incremental,
+            bool noCache,
+            CancellationToken ct)
+            => Task.FromResult(WatchAction.RunAll());
     }
 
     #endregion

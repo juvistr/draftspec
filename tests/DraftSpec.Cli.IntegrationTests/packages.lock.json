@@ -4,9 +4,9 @@
     "net10.0": {
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.182, )",
-        "resolved": "2.0.182",
-        "contentHash": "/QgftLQfuCwP7P9neBMYjfOoUEezFAhlCXAZudO27Q9JTQZilQ2qjLzYG4UD4FBlLNz7zTON0ca6lCzzf/zO5A=="
+        "requested": "[2.0.267, )",
+        "resolved": "2.0.267",
+        "contentHash": "pi5P3z7xa87qI/QfyJcc4EA/jf1BHCuJsdkzLUuCEtcSfHckQGx8NamuPot8hS5K1exfJ384NoJpbggXhDvybA=="
       },
       "Roslynator.Analyzers": {
         "type": "Direct",

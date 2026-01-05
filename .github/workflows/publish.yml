@@ -75,7 +75,7 @@ jobs:
           find src -name "*.nupkg" -type f | grep -v obj
 
       - name: Upload packages as artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v4
         with:
           name: nuget-packages
           path: src/*/bin/Release/*.nupkg
@@ -93,7 +93,7 @@ jobs:
 
     steps:
       - name: Download packages
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v4
         with:
           name: nuget-packages
           path: packages
@@ -105,7 +105,7 @@ jobs:
 
       - name: Generate provenance attestation
         if: github.event_name == 'push' && !inputs.dry_run
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        uses: actions/attest-build-provenance@00014ed6ed5efc5b1ab7f7f34a39eb55d41aa4f8 # v2
         with:
           subject-path: 'packages/**/*.nupkg'
 

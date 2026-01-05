@@ -16,7 +16,7 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers(@"C:\Users\test\specs\test.spec.csx", options);
 
         await Assert.That(result).IsEqualTo(@"C:\Users\test\specs\test.spec.csx");
-        Assert.Null(options.LineFilters);
+        Assert.Null(options.Filter.LineFilters);
     }
 
     [Test]
@@ -26,8 +26,8 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers(@"C:\Users\test\specs\test.spec.csx:42", options);
 
         await Assert.That(result).IsEqualTo(@"C:\Users\test\specs\test.spec.csx");
-        Assert.NotNull(options.LineFilters);
-        await Assert.That(options.LineFilters[0].Lines).IsEquivalentTo(new[] { 42 });
+        Assert.NotNull(options.Filter.LineFilters);
+        await Assert.That(options.Filter.LineFilters[0].Lines).IsEquivalentTo(new[] { 42 });
     }
 
     [Test]
@@ -37,7 +37,7 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers("/home/user/specs/test.spec.csx:15,20", options);
 
         await Assert.That(result).IsEqualTo("/home/user/specs/test.spec.csx");
-        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 15, 20 });
+        await Assert.That(options.Filter.LineFilters![0].Lines).IsEquivalentTo(new[] { 15, 20 });
     }
 
     [Test]
@@ -47,7 +47,7 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers("test.spec.csx", options);
 
         await Assert.That(result).IsEqualTo("test.spec.csx");
-        Assert.Null(options.LineFilters);
+        Assert.Null(options.Filter.LineFilters);
     }
 
     [Test]
@@ -58,7 +58,7 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers("test.spec.csx:abc", options);
 
         await Assert.That(result).IsEqualTo("test.spec.csx:abc");
-        Assert.Null(options.LineFilters);
+        Assert.Null(options.Filter.LineFilters);
     }
 
     [Test]
@@ -68,7 +68,7 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers("test.spec.csx:10,20,30,40", options);
 
         await Assert.That(result).IsEqualTo("test.spec.csx");
-        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 10, 20, 30, 40 });
+        await Assert.That(options.Filter.LineFilters![0].Lines).IsEquivalentTo(new[] { 10, 20, 30, 40 });
     }
 
     [Test]
@@ -79,7 +79,7 @@ public class ParsePathWithLineNumbersTests
 
         await Assert.That(result).IsEqualTo("test.spec.csx");
         // Zero should be filtered out
-        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 15, 20 });
+        await Assert.That(options.Filter.LineFilters![0].Lines).IsEquivalentTo(new[] { 15, 20 });
     }
 
     [Test]
@@ -90,7 +90,7 @@ public class ParsePathWithLineNumbersTests
 
         // Empty string after colon is not digits, so return original
         await Assert.That(result).IsEqualTo("test.spec.csx:");
-        Assert.Null(options.LineFilters);
+        Assert.Null(options.Filter.LineFilters);
     }
 
     [Test]
@@ -101,7 +101,7 @@ public class ParsePathWithLineNumbersTests
 
         // "15abc" contains non-digits, so not treated as line number
         await Assert.That(result).IsEqualTo("test.spec.csx:15abc");
-        Assert.Null(options.LineFilters);
+        Assert.Null(options.Filter.LineFilters);
     }
 
     [Test]
@@ -113,7 +113,7 @@ public class ParsePathWithLineNumbersTests
         await Assert.That(result).IsEqualTo("test.spec.csx");
         // All zeros are filtered, so no LineFilters should be added (empty array case)
         // Based on code: if (lineNumbers.Length > 0) adds filter, so no filter added
-        Assert.Null(options.LineFilters);
+        Assert.Null(options.Filter.LineFilters);
     }
 
     [Test]
@@ -123,7 +123,7 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers("test.spec.csx:15,20,", options);
 
         await Assert.That(result).IsEqualTo("test.spec.csx");
-        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 15, 20 });
+        await Assert.That(options.Filter.LineFilters![0].Lines).IsEquivalentTo(new[] { 15, 20 });
     }
 
     [Test]
@@ -133,6 +133,6 @@ public class ParsePathWithLineNumbersTests
         var result = CliOptionsParser.ParsePathWithLineNumbers("test.spec.csx:,15,20", options);
 
         await Assert.That(result).IsEqualTo("test.spec.csx");
-        await Assert.That(options.LineFilters![0].Lines).IsEquivalentTo(new[] { 15, 20 });
+        await Assert.That(options.Filter.LineFilters![0].Lines).IsEquivalentTo(new[] { 15, 20 });
     }
 }

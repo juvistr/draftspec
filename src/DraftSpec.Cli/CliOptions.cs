@@ -12,6 +12,8 @@ public class CliOptions
     /// </summary>
     public HashSet<string> ExplicitlySet { get; } = [];
 
+    #region Core Options
+
     public string Command { get; set; } = "";
     public string Path { get; set; } = ".";
     public OutputFormat Format { get; set; } = OutputFormat.Console;
@@ -40,69 +42,29 @@ public class CliOptions
     /// </summary>
     public bool Bail { get; set; }
 
-    /// <summary>
-    /// Comma-separated list of tags to include.
-    /// Only specs with any of these tags will run.
-    /// </summary>
-    public string? FilterTags { get; set; }
+    #endregion
+
+    #region Composed Option Groups
 
     /// <summary>
-    /// Comma-separated list of tags to exclude.
-    /// Specs with any of these tags will be skipped.
+    /// Filter options for selecting which specs to run.
+    /// Used by run, list, watch, and docs commands.
     /// </summary>
-    public string? ExcludeTags { get; set; }
+    public FilterOptions Filter { get; } = new();
 
     /// <summary>
-    /// Regex pattern to match spec names (context path + description).
-    /// Only specs matching this pattern will run.
+    /// Coverage options for code coverage collection.
+    /// Used by run command.
     /// </summary>
-    public string? FilterName { get; set; }
+    public CoverageOptions Coverage { get; } = new();
 
     /// <summary>
-    /// Regex pattern to exclude spec names (context path + description).
-    /// Specs matching this pattern will be skipped.
+    /// Partition options for CI parallelism.
+    /// Used by run command.
     /// </summary>
-    public string? ExcludeName { get; set; }
+    public PartitionOptions Partition { get; } = new();
 
-    /// <summary>
-    /// Context patterns to include (glob-style with / separator).
-    /// Only specs within matching contexts will run.
-    /// Supports * (single segment) and ** (multiple segments).
-    /// Example: "UserService/CreateAsync", "*/CreateAsync", "Integration/**"
-    /// </summary>
-    public List<string>? FilterContext { get; set; }
-
-    /// <summary>
-    /// Context patterns to exclude (glob-style with / separator).
-    /// Specs within matching contexts will be skipped.
-    /// Supports * (single segment) and ** (multiple segments).
-    /// Example: "Legacy/*", "**/Slow"
-    /// </summary>
-    public List<string>? ExcludeContext { get; set; }
-
-    /// <summary>
-    /// Enable code coverage collection via dotnet-coverage.
-    /// </summary>
-    public bool Coverage { get; set; }
-
-    /// <summary>
-    /// Output directory for coverage reports.
-    /// Default: ./coverage
-    /// </summary>
-    public string? CoverageOutput { get; set; }
-
-    /// <summary>
-    /// Coverage output format: cobertura, xml, or coverage.
-    /// Default: cobertura
-    /// </summary>
-    public CoverageFormat CoverageFormat { get; set; } = CoverageFormat.Cobertura;
-
-    /// <summary>
-    /// Additional coverage report formats to generate (comma-separated).
-    /// Options: html, json
-    /// Example: "html,json" generates both HTML and JSON reports.
-    /// </summary>
-    public string? CoverageReportFormats { get; set; }
+    #endregion
 
     // List command options
 
@@ -159,14 +121,6 @@ public class CliOptions
     /// </summary>
     public List<string>? Files { get; set; }
 
-    // Run command line filtering
-
-    /// <summary>
-    /// Line number filters parsed from file:line syntax.
-    /// Used to run specific specs by line number (e.g., "file.spec.csx:15,23").
-    /// </summary>
-    public List<LineFilter>? LineFilters { get; set; }
-
     // Run command statistics options
 
     /// <summary>
@@ -180,26 +134,6 @@ public class CliOptions
     /// Displays discovered spec counts and exits.
     /// </summary>
     public bool StatsOnly { get; set; }
-
-    // Partitioning options for CI parallelism
-
-    /// <summary>
-    /// Total number of partitions to divide specs into.
-    /// Used with --partition-index for CI parallel execution.
-    /// </summary>
-    public int? Partition { get; set; }
-
-    /// <summary>
-    /// Zero-based index of this partition (0 to Partition-1).
-    /// </summary>
-    public int? PartitionIndex { get; set; }
-
-    /// <summary>
-    /// Strategy for partitioning: "file" (default) or "spec-count".
-    /// - file: Round-robin by sorted file path (fast, deterministic)
-    /// - spec-count: Balance by spec count per file (requires parsing)
-    /// </summary>
-    public PartitionStrategy PartitionStrategy { get; set; } = PartitionStrategy.File;
 
     // Watch command options
 
@@ -352,16 +286,18 @@ public class CliOptions
             (string s, out OutputFormat r) => s.TryParseOutputFormat(out r));
 
         ExplicitlySet.ApplyIfNotEmpty(nameof(OutputFile), v => OutputFile = v, config.OutputDirectory);
-        ExplicitlySet.ApplyIfNotEmpty(nameof(FilterTags), v => FilterTags = v, config.Tags?.Include);
-        ExplicitlySet.ApplyIfNotEmpty(nameof(ExcludeTags), v => ExcludeTags = v, config.Tags?.Exclude);
         ExplicitlySet.ApplyIfNotEmpty(nameof(Reporters), v => Reporters = v, config.Reporters);
 
+        // Filter configuration
+        ExplicitlySet.ApplyIfNotEmpty(nameof(Filter.FilterTags), v => Filter.FilterTags = v, config.Tags?.Include);
+        ExplicitlySet.ApplyIfNotEmpty(nameof(Filter.ExcludeTags), v => Filter.ExcludeTags = v, config.Tags?.Exclude);
+
         // Coverage configuration
-        ExplicitlySet.ApplyIfTrue(nameof(Coverage), v => Coverage = v, config.Coverage?.Enabled);
-        ExplicitlySet.ApplyIfNotEmpty(nameof(CoverageOutput), v => CoverageOutput = v, config.Coverage?.Output);
-        ExplicitlySet.ApplyIfValid<CoverageFormat>(nameof(CoverageFormat), v => CoverageFormat = v,
+        ExplicitlySet.ApplyIfTrue(nameof(Coverage.Enabled), v => Coverage.Enabled = v, config.Coverage?.Enabled);
+        ExplicitlySet.ApplyIfNotEmpty(nameof(Coverage.Output), v => Coverage.Output = v, config.Coverage?.Output);
+        ExplicitlySet.ApplyIfValid<CoverageFormat>(nameof(Coverage.Format), v => Coverage.Format = v,
             config.Coverage?.Format, (string s, out CoverageFormat r) => s.TryParseCoverageFormat(out r));
-        ExplicitlySet.ApplyIfNotEmpty(nameof(CoverageReportFormats), v => CoverageReportFormats = v,
+        ExplicitlySet.ApplyIfNotEmpty(nameof(Coverage.ReportFormats), v => Coverage.ReportFormats = v,
             config.Coverage?.ReportFormats);
     }
 
@@ -370,41 +306,55 @@ public class CliOptions
     /// <summary>
     /// Converts to RunOptions for the run command.
     /// </summary>
-    public RunOptions ToRunOptions() => new()
+    public RunOptions ToRunOptions()
     {
-        Path = Path,
-        Format = Format,
-        OutputFile = OutputFile,
-        CssUrl = CssUrl,
-        Parallel = Parallel,
-        NoCache = NoCache,
-        Bail = Bail,
-        NoStats = NoStats,
-        StatsOnly = StatsOnly,
-        Reporters = Reporters,
-        Filter = ToFilterOptions(),
-        Coverage = ToCoverageOptions(),
-        Partition = ToPartitionOptions(),
-        AffectedBy = AffectedBy,
-        DryRun = DryRun,
-        Quarantine = Quarantine,
-        NoHistory = NoHistory,
-        Interactive = Interactive
-    };
+        // Copy SpecName to Filter if set (for run/list commands)
+        if (!string.IsNullOrEmpty(SpecName))
+            Filter.SpecName = SpecName;
+
+        return new RunOptions
+        {
+            Path = Path,
+            Format = Format,
+            OutputFile = OutputFile,
+            CssUrl = CssUrl,
+            Parallel = Parallel,
+            NoCache = NoCache,
+            Bail = Bail,
+            NoStats = NoStats,
+            StatsOnly = StatsOnly,
+            Reporters = Reporters,
+            Filter = Filter,
+            Coverage = Coverage,
+            Partition = Partition,
+            AffectedBy = AffectedBy,
+            DryRun = DryRun,
+            Quarantine = Quarantine,
+            NoHistory = NoHistory,
+            Interactive = Interactive
+        };
+    }
 
     /// <summary>
     /// Converts to ListOptions for the list command.
     /// </summary>
-    public ListOptions ToListOptions() => new()
+    public ListOptions ToListOptions()
     {
-        Path = Path,
-        Format = ListFormat,
-        ShowLineNumbers = ShowLineNumbers,
-        FocusedOnly = FocusedOnly,
-        PendingOnly = PendingOnly,
-        SkippedOnly = SkippedOnly,
-        Filter = ToFilterOptions()
-    };
+        // Copy SpecName to Filter if set (for run/list commands)
+        if (!string.IsNullOrEmpty(SpecName))
+            Filter.SpecName = SpecName;
+
+        return new ListOptions
+        {
+            Path = Path,
+            Format = ListFormat,
+            ShowLineNumbers = ShowLineNumbers,
+            FocusedOnly = FocusedOnly,
+            PendingOnly = PendingOnly,
+            SkippedOnly = SkippedOnly,
+            Filter = Filter
+        };
+    }
 
     /// <summary>
     /// Converts to ValidateOptions for the validate command.
@@ -429,43 +379,7 @@ public class CliOptions
         Parallel = Parallel,
         NoCache = NoCache,
         Bail = Bail,
-        Filter = ToFilterOptions()
-    };
-
-    /// <summary>
-    /// Creates FilterOptions from filter-related properties.
-    /// </summary>
-    private FilterOptions ToFilterOptions() => new()
-    {
-        SpecName = SpecName,
-        FilterTags = FilterTags,
-        ExcludeTags = ExcludeTags,
-        FilterName = FilterName,
-        ExcludeName = ExcludeName,
-        FilterContext = FilterContext,
-        ExcludeContext = ExcludeContext,
-        LineFilters = LineFilters
-    };
-
-    /// <summary>
-    /// Creates CoverageOptions from coverage-related properties.
-    /// </summary>
-    private CoverageOptions ToCoverageOptions() => new()
-    {
-        Enabled = Coverage,
-        Output = CoverageOutput,
-        Format = CoverageFormat,
-        ReportFormats = CoverageReportFormats
-    };
-
-    /// <summary>
-    /// Creates PartitionOptions from partitioning-related properties.
-    /// </summary>
-    private PartitionOptions ToPartitionOptions() => new()
-    {
-        Total = Partition,
-        Index = PartitionIndex,
-        Strategy = PartitionStrategy
+        Filter = Filter
     };
 
     /// <summary>
@@ -534,7 +448,7 @@ public class CliOptions
         Context = DocsContext,
         WithResults = WithResults,
         ResultsFile = ResultsFile,
-        Filter = ToFilterOptions()
+        Filter = Filter
     };
 
     public CoverageMapOptions ToCoverageMapOptions() => new()

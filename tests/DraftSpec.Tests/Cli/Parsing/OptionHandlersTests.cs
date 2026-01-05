@@ -154,7 +154,7 @@ public class OptionHandlersTests
         var result = OptionHandlers.HandleFilterTags(args, 0, options);
 
         await Assert.That(result.ConsumedArgs).IsEqualTo(2);
-        await Assert.That(options.FilterTags).IsEqualTo("smoke,unit");
+        await Assert.That(options.Filter.FilterTags).IsEqualTo("smoke,unit");
     }
 
     [Test]
@@ -166,7 +166,7 @@ public class OptionHandlersTests
         var result = OptionHandlers.HandleContext(args, 0, options);
 
         await Assert.That(result.ConsumedArgs).IsEqualTo(2);
-        var filterContext = options.FilterContext;
+        var filterContext = options.Filter.FilterContext;
         await Assert.That(filterContext).IsNotNull();
         await Assert.That(filterContext!).Contains("Feature/Login");
     }
@@ -179,7 +179,7 @@ public class OptionHandlersTests
         OptionHandlers.HandleContext(["--context", "Context1"], 0, options);
         OptionHandlers.HandleContext(["--context", "Context2"], 0, options);
 
-        var filterContext = options.FilterContext;
+        var filterContext = options.Filter.FilterContext;
         await Assert.That(filterContext).IsNotNull();
         await Assert.That(filterContext!).Contains("Context1");
         await Assert.That(filterContext!).Contains("Context2");
@@ -198,7 +198,7 @@ public class OptionHandlersTests
         var result = OptionHandlers.HandleCoverageFormat(args, 0, options);
 
         await Assert.That(result.ConsumedArgs).IsEqualTo(2);
-        await Assert.That(options.CoverageFormat).IsEqualTo(CoverageFormat.Cobertura);
+        await Assert.That(options.Coverage.Format).IsEqualTo(CoverageFormat.Cobertura);
     }
 
     [Test]
@@ -233,7 +233,7 @@ public class OptionHandlersTests
         var result = OptionHandlers.HandleCoverageReportFormats(args, 0, options);
 
         await Assert.That(result.ConsumedArgs).IsEqualTo(2);
-        await Assert.That(options.CoverageReportFormats).IsEqualTo("html,json");
+        await Assert.That(options.Coverage.ReportFormats).IsEqualTo("html,json");
     }
 
     [Test]
@@ -310,7 +310,7 @@ public class OptionHandlersTests
         var result = OptionHandlers.HandlePartition(args, 0, options);
 
         await Assert.That(result.ConsumedArgs).IsEqualTo(2);
-        await Assert.That(options.Partition).IsEqualTo(4);
+        await Assert.That(options.Partition.Total).IsEqualTo(4);
     }
 
     [Test]
@@ -355,7 +355,7 @@ public class OptionHandlersTests
         var result = OptionHandlers.HandlePartitionIndex(args, 0, options);
 
         await Assert.That(result.ConsumedArgs).IsEqualTo(2);
-        await Assert.That(options.PartitionIndex).IsEqualTo(2);
+        await Assert.That(options.Partition.Index).IsEqualTo(2);
     }
 
     [Test]
@@ -389,7 +389,7 @@ public class OptionHandlersTests
         var result = OptionHandlers.HandlePartitionStrategy(args, 0, options);
 
         await Assert.That(result.ConsumedArgs).IsEqualTo(2);
-        await Assert.That(options.PartitionStrategy).IsEqualTo(PartitionStrategy.SpecCount);
+        await Assert.That(options.Partition.Strategy).IsEqualTo(PartitionStrategy.SpecCount);
     }
 
     [Test]

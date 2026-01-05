@@ -65,17 +65,11 @@ public static class CliOptionsParser
         if (positional.Count > 2 && options.Command is "cache")
             options.Path = positional[2];
 
-        // Cross-validate partition options: both must be specified together
-        if (options.Partition.HasValue != options.PartitionIndex.HasValue)
+        // Validate partition options using PartitionOptions.Validate()
+        var partitionError = options.Partition.Validate();
+        if (partitionError != null)
         {
-            options.Error = "--partition and --partition-index must be used together";
-            return options;
-        }
-
-        // Validate partition-index is within valid range
-        if (options.Partition.HasValue && options.PartitionIndex >= options.Partition)
-        {
-            options.Error = $"--partition-index ({options.PartitionIndex}) must be less than --partition ({options.Partition})";
+            options.Error = partitionError;
             return options;
         }
 
@@ -111,8 +105,8 @@ public static class CliOptionsParser
 
         if (lineNumbers.Length > 0)
         {
-            options.LineFilters ??= [];
-            options.LineFilters.Add(new LineFilter(filePath, lineNumbers));
+            options.Filter.LineFilters ??= [];
+            options.Filter.LineFilters.Add(new LineFilter(filePath, lineNumbers));
         }
 
         return filePath;

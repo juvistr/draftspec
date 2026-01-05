@@ -45,16 +45,14 @@ public class CliOptionsConversionTests
     [Test]
     public async Task ToRunOptions_MapsFilterOptions()
     {
-        var cliOptions = new CliOptions
-        {
-            FilterTags = "unit",
-            ExcludeTags = "slow",
-            FilterName = "should pass",
-            ExcludeName = "integration",
-            FilterContext = ["Calculator"],
-            ExcludeContext = ["Legacy"],
-            LineFilters = [new LineFilter("test.spec.csx", [1, 2, 3])]
-        };
+        var cliOptions = new CliOptions();
+        cliOptions.Filter.FilterTags = "unit";
+        cliOptions.Filter.ExcludeTags = "slow";
+        cliOptions.Filter.FilterName = "should pass";
+        cliOptions.Filter.ExcludeName = "integration";
+        cliOptions.Filter.FilterContext = ["Calculator"];
+        cliOptions.Filter.ExcludeContext = ["Legacy"];
+        cliOptions.Filter.LineFilters = [new LineFilter("test.spec.csx", [1, 2, 3])];
 
         var runOptions = cliOptions.ToRunOptions();
 
@@ -73,13 +71,11 @@ public class CliOptionsConversionTests
     [Test]
     public async Task ToRunOptions_MapsCoverageOptions()
     {
-        var cliOptions = new CliOptions
-        {
-            Coverage = true,
-            CoverageOutput = "coverage.xml",
-            CoverageFormat = CoverageFormat.Cobertura,
-            CoverageReportFormats = "html,json"
-        };
+        var cliOptions = new CliOptions();
+        cliOptions.Coverage.Enabled = true;
+        cliOptions.Coverage.Output = "coverage.xml";
+        cliOptions.Coverage.Format = CoverageFormat.Cobertura;
+        cliOptions.Coverage.ReportFormats = "html,json";
 
         var runOptions = cliOptions.ToRunOptions();
 
@@ -92,12 +88,10 @@ public class CliOptionsConversionTests
     [Test]
     public async Task ToRunOptions_MapsPartitionOptions()
     {
-        var cliOptions = new CliOptions
-        {
-            Partition = 4,
-            PartitionIndex = 2,
-            PartitionStrategy = PartitionStrategy.SpecCount
-        };
+        var cliOptions = new CliOptions();
+        cliOptions.Partition.Total = 4;
+        cliOptions.Partition.Index = 2;
+        cliOptions.Partition.Strategy = PartitionStrategy.SpecCount;
 
         var runOptions = cliOptions.ToRunOptions();
 
@@ -150,11 +144,9 @@ public class CliOptionsConversionTests
     [Test]
     public async Task ToListOptions_MapsFilterOptions()
     {
-        var cliOptions = new CliOptions
-        {
-            FilterTags = "smoke",
-            FilterName = "calculator"
-        };
+        var cliOptions = new CliOptions();
+        cliOptions.Filter.FilterTags = "smoke";
+        cliOptions.Filter.FilterName = "calculator";
 
         var listOptions = cliOptions.ToListOptions();
 
@@ -244,11 +236,9 @@ public class CliOptionsConversionTests
     [Test]
     public async Task ToWatchOptions_MapsFilterOptions()
     {
-        var cliOptions = new CliOptions
-        {
-            FilterTags = "unit",
-            FilterName = "quick"
-        };
+        var cliOptions = new CliOptions();
+        cliOptions.Filter.FilterTags = "unit";
+        cliOptions.Filter.FilterName = "quick";
 
         var watchOptions = cliOptions.ToWatchOptions();
 
@@ -519,12 +509,10 @@ public class CliOptionsConversionTests
     [Test]
     public async Task ToDocsOptions_MapsFilterOptions()
     {
-        var cliOptions = new CliOptions
-        {
-            FilterName = "Calculator",
-            FilterTags = "unit",
-            ExcludeName = "legacy"
-        };
+        var cliOptions = new CliOptions();
+        cliOptions.Filter.FilterName = "Calculator";
+        cliOptions.Filter.FilterTags = "unit";
+        cliOptions.Filter.ExcludeName = "legacy";
 
         var docsOptions = cliOptions.ToDocsOptions();
 

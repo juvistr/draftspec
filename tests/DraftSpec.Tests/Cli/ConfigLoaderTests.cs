@@ -310,8 +310,8 @@ public class ConfigLoaderTests
 
         options.ApplyDefaults(config);
 
-        await Assert.That(options.FilterTags).IsEqualTo("unit,fast");
-        await Assert.That(options.ExcludeTags).IsEqualTo("slow");
+        await Assert.That(options.Filter.FilterTags).IsEqualTo("unit,fast");
+        await Assert.That(options.Filter.ExcludeTags).IsEqualTo("slow");
     }
 
     [Test]
@@ -350,7 +350,7 @@ public class ConfigLoaderTests
 
         options.ApplyDefaults(config);
 
-        await Assert.That(options.Coverage).IsTrue();
+        await Assert.That(options.Coverage.Enabled).IsTrue();
     }
 
     [Test]
@@ -364,7 +364,7 @@ public class ConfigLoaderTests
 
         options.ApplyDefaults(config);
 
-        await Assert.That(options.CoverageOutput).IsEqualTo("./my-coverage");
+        await Assert.That(options.Coverage.Output).IsEqualTo("./my-coverage");
     }
 
     [Test]
@@ -378,7 +378,7 @@ public class ConfigLoaderTests
 
         options.ApplyDefaults(config);
 
-        await Assert.That(options.CoverageFormat).IsEqualTo(CoverageFormat.Xml);
+        await Assert.That(options.Coverage.Format).IsEqualTo(CoverageFormat.Xml);
     }
 
     [Test]
@@ -392,14 +392,15 @@ public class ConfigLoaderTests
 
         options.ApplyDefaults(config);
 
-        await Assert.That(options.CoverageReportFormats).IsEqualTo("html,json");
+        await Assert.That(options.Coverage.ReportFormats).IsEqualTo("html,json");
     }
 
     [Test]
     public async Task ApplyDefaults_DoesNotOverrideExplicitCoverageOptions()
     {
-        var options = new CliOptions { Coverage = false };
-        options.ExplicitlySet.Add(nameof(CliOptions.Coverage));
+        var options = new CliOptions();
+        options.Coverage.Enabled = false;
+        options.ExplicitlySet.Add("Enabled");
 
         var config = new DraftSpecProjectConfig
         {
@@ -408,7 +409,7 @@ public class ConfigLoaderTests
 
         options.ApplyDefaults(config);
 
-        await Assert.That(options.Coverage).IsFalse();
+        await Assert.That(options.Coverage.Enabled).IsFalse();
     }
 
     [Test]
@@ -422,7 +423,7 @@ public class ConfigLoaderTests
 
         options.ApplyDefaults(config);
 
-        await Assert.That(options.Coverage).IsFalse();
+        await Assert.That(options.Coverage.Enabled).IsFalse();
     }
 
     #endregion

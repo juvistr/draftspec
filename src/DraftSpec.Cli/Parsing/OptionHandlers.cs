@@ -93,8 +93,8 @@ public static class OptionHandlers
         if (i + 1 >= args.Length)
             return OptionHandlerResult.Failed("--filter-tags requires a value (comma-separated tags)");
 
-        options.FilterTags = args[i + 1];
-        options.ExplicitlySet.Add(nameof(CliOptions.FilterTags));
+        options.Filter.FilterTags = args[i + 1];
+        options.ExplicitlySet.Add(nameof(options.Filter.FilterTags));
         return OptionHandlerResult.Value();
     }
 
@@ -103,8 +103,8 @@ public static class OptionHandlers
         if (i + 1 >= args.Length)
             return OptionHandlerResult.Failed("--exclude-tags requires a value (comma-separated tags)");
 
-        options.ExcludeTags = args[i + 1];
-        options.ExplicitlySet.Add(nameof(CliOptions.ExcludeTags));
+        options.Filter.ExcludeTags = args[i + 1];
+        options.ExplicitlySet.Add(nameof(options.Filter.ExcludeTags));
         return OptionHandlerResult.Value();
     }
 
@@ -113,8 +113,8 @@ public static class OptionHandlers
         if (i + 1 >= args.Length)
             return OptionHandlerResult.Failed("--filter-name requires a value (regex pattern)");
 
-        options.FilterName = args[i + 1];
-        options.ExplicitlySet.Add(nameof(CliOptions.FilterName));
+        options.Filter.FilterName = args[i + 1];
+        options.ExplicitlySet.Add(nameof(options.Filter.FilterName));
         return OptionHandlerResult.Value();
     }
 
@@ -123,8 +123,8 @@ public static class OptionHandlers
         if (i + 1 >= args.Length)
             return OptionHandlerResult.Failed("--exclude-name requires a value (regex pattern)");
 
-        options.ExcludeName = args[i + 1];
-        options.ExplicitlySet.Add(nameof(CliOptions.ExcludeName));
+        options.Filter.ExcludeName = args[i + 1];
+        options.ExplicitlySet.Add(nameof(options.Filter.ExcludeName));
         return OptionHandlerResult.Value();
     }
 
@@ -133,9 +133,9 @@ public static class OptionHandlers
         if (i + 1 >= args.Length)
             return OptionHandlerResult.Failed("--context requires a value (context pattern with / separator)");
 
-        options.FilterContext ??= [];
-        options.FilterContext.Add(args[i + 1]);
-        options.ExplicitlySet.Add(nameof(CliOptions.FilterContext));
+        options.Filter.FilterContext ??= [];
+        options.Filter.FilterContext.Add(args[i + 1]);
+        options.ExplicitlySet.Add(nameof(options.Filter.FilterContext));
         return OptionHandlerResult.Value();
     }
 
@@ -144,9 +144,9 @@ public static class OptionHandlers
         if (i + 1 >= args.Length)
             return OptionHandlerResult.Failed("--exclude-context requires a value (context pattern with / separator)");
 
-        options.ExcludeContext ??= [];
-        options.ExcludeContext.Add(args[i + 1]);
-        options.ExplicitlySet.Add(nameof(CliOptions.ExcludeContext));
+        options.Filter.ExcludeContext ??= [];
+        options.Filter.ExcludeContext.Add(args[i + 1]);
+        options.ExplicitlySet.Add(nameof(options.Filter.ExcludeContext));
         return OptionHandlerResult.Value();
     }
 
@@ -156,8 +156,8 @@ public static class OptionHandlers
 
     public static OptionHandlerResult HandleCoverage(string[] args, int i, CliOptions options)
     {
-        options.Coverage = true;
-        options.ExplicitlySet.Add(nameof(CliOptions.Coverage));
+        options.Coverage.Enabled = true;
+        options.ExplicitlySet.Add(nameof(options.Coverage.Enabled));
         return OptionHandlerResult.Flag();
     }
 
@@ -166,8 +166,8 @@ public static class OptionHandlers
         if (i + 1 >= args.Length)
             return OptionHandlerResult.Failed("--coverage-output requires a directory path");
 
-        options.CoverageOutput = args[i + 1];
-        options.ExplicitlySet.Add(nameof(CliOptions.CoverageOutput));
+        options.Coverage.Output = args[i + 1];
+        options.ExplicitlySet.Add(nameof(options.Coverage.Output));
         return OptionHandlerResult.Value();
     }
 
@@ -180,8 +180,8 @@ public static class OptionHandlers
         if (!coverageFormatValue.TryParseCoverageFormat(out var coverageFormat))
             return OptionHandlerResult.Failed($"Unknown coverage format: '{coverageFormatValue}'. Valid options: cobertura, xml, coverage");
 
-        options.CoverageFormat = coverageFormat;
-        options.ExplicitlySet.Add(nameof(CliOptions.CoverageFormat));
+        options.Coverage.Format = coverageFormat;
+        options.ExplicitlySet.Add(nameof(options.Coverage.Format));
         return OptionHandlerResult.Value();
     }
 
@@ -190,8 +190,8 @@ public static class OptionHandlers
         if (i + 1 >= args.Length)
             return OptionHandlerResult.Failed("--coverage-report-formats requires a value (comma-separated: html, json)");
 
-        options.CoverageReportFormats = args[i + 1].ToLowerInvariant();
-        options.ExplicitlySet.Add(nameof(CliOptions.CoverageReportFormats));
+        options.Coverage.ReportFormats = args[i + 1].ToLowerInvariant();
+        options.ExplicitlySet.Add(nameof(options.Coverage.ReportFormats));
         return OptionHandlerResult.Value();
     }
 
@@ -316,8 +316,8 @@ public static class OptionHandlers
         if (!int.TryParse(args[i + 1], out var partition) || partition < 1)
             return OptionHandlerResult.Failed("--partition must be a positive integer");
 
-        options.Partition = partition;
-        options.ExplicitlySet.Add(nameof(CliOptions.Partition));
+        options.Partition.Total = partition;
+        options.ExplicitlySet.Add(nameof(options.Partition.Total));
         return OptionHandlerResult.Value();
     }
 
@@ -329,8 +329,8 @@ public static class OptionHandlers
         if (!int.TryParse(args[i + 1], out var index) || index < 0)
             return OptionHandlerResult.Failed("--partition-index must be a non-negative integer");
 
-        options.PartitionIndex = index;
-        options.ExplicitlySet.Add(nameof(CliOptions.PartitionIndex));
+        options.Partition.Index = index;
+        options.ExplicitlySet.Add(nameof(options.Partition.Index));
         return OptionHandlerResult.Value();
     }
 
@@ -343,8 +343,8 @@ public static class OptionHandlers
         if (!strategyValue.TryParsePartitionStrategy(out var strategy))
             return OptionHandlerResult.Failed($"Unknown partition strategy: '{strategyValue}'. Valid options: file, spec-count");
 
-        options.PartitionStrategy = strategy;
-        options.ExplicitlySet.Add(nameof(CliOptions.PartitionStrategy));
+        options.Partition.Strategy = strategy;
+        options.ExplicitlySet.Add(nameof(options.Partition.Strategy));
         return OptionHandlerResult.Value();
     }
 

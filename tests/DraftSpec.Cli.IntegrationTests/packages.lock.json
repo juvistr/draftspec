@@ -236,7 +236,7 @@
       },
       "Microsoft.Testing.Extensions.CodeCoverage": {
         "type": "CentralTransitive",
-        "requested": "[18.*, )",
+        "requested": "[18.1.0, )",
         "resolved": "18.1.0",
         "contentHash": "FJUCocHSPSjbeoGE/OojOhVUXwDng3VdNlwqzif9hMS2eFcG0f8RdjLM537aBsjP7zLHvGnWXbnUnc61v/EFCA==",
         "dependencies": {

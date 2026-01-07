@@ -22,9 +22,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.182, )",
-        "resolved": "2.0.182",
-        "contentHash": "/QgftLQfuCwP7P9neBMYjfOoUEezFAhlCXAZudO27Q9JTQZilQ2qjLzYG4UD4FBlLNz7zTON0ca6lCzzf/zO5A=="
+        "requested": "[2.0.267, )",
+        "resolved": "2.0.267",
+        "contentHash": "pi5P3z7xa87qI/QfyJcc4EA/jf1BHCuJsdkzLUuCEtcSfHckQGx8NamuPot8hS5K1exfJ384NoJpbggXhDvybA=="
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
@@ -208,7 +208,7 @@
       },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[10.0.0, )",
+        "requested": "[10.0.1, )",
         "resolved": "6.0.0",
         "contentHash": "/HggWBbTwy8TgebGSX5DBZ24ndhzi93sHUBDvP1IxbZD7FDokYzdAr6+vbWGjw2XAfR2EJ1sfKUotpjHnFWPxA=="
       }

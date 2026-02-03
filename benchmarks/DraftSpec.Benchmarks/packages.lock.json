@@ -22,9 +22,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.283, )",
-        "resolved": "2.0.283",
-        "contentHash": "Z18QNFDMAMcqEQh9+VzmN9Pv1QkaE3//QlMxausDG2MLwXOn9XayzOUxlb2yh+l2gEEzsTleF9UOAgSPLM+vlw=="
+        "requested": "[2.0.295, )",
+        "resolved": "2.0.295",
+        "contentHash": "9qOg7wSpHnzW8lXisVBraIrKrdnkRcSt5Xj4Uz588RJdEL2YjToeMKOJAo98IP3oof94eaqKYAhOItu3qp1WWQ=="
       },
       "Roslynator.Analyzers": {
         "type": "Direct",

@@ -7,7 +7,7 @@
     <ItemGroup>
         <!-- Analyzers (PrivateAssets in Directory.Build.props) -->
         <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-        <PackageVersion Include="Meziantou.Analyzer" Version="2.0.283" />
+        <PackageVersion Include="Meziantou.Analyzer" Version="2.0.295" />
 
         <!-- Microsoft.Extensions -->
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />

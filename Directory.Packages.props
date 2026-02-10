@@ -7,7 +7,7 @@
     <ItemGroup>
         <!-- Analyzers (PrivateAssets in Directory.Build.props) -->
         <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-        <PackageVersion Include="Meziantou.Analyzer" Version="2.0.283" />
+        <PackageVersion Include="Meziantou.Analyzer" Version="2.0.298" />
 
         <!-- Microsoft.Extensions -->
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
@@ -15,10 +15,10 @@
         <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
 
         <!-- Microsoft Testing Platform -->
-        <PackageVersion Include="Microsoft.Testing.Platform" Version="2.0.2" />
-        <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.0.2" />
-        <PackageVersion Include="Microsoft.Testing.Extensions.VSTestBridge" Version="2.0.2" />
-        <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.3.2" />
+        <PackageVersion Include="Microsoft.Testing.Platform" Version="2.1.0" />
+        <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.1.0" />
+        <PackageVersion Include="Microsoft.Testing.Extensions.VSTestBridge" Version="2.1.0" />
+        <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.4.1" />
 
         <!-- Roslyn / Scripting -->
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.14.0" />

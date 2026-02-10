@@ -123,7 +123,7 @@
           "DraftSpec.Scripting": "[1.0.0, )",
           "Microsoft.Testing.Extensions.VSTestBridge": "[2.1.0, )",
           "Microsoft.Testing.Platform": "[2.1.0, )",
-          "Microsoft.Testing.Platform.MSBuild": "[2.0.2, )"
+          "Microsoft.Testing.Platform.MSBuild": "[2.1.0, )"
         }
       },
       "todoapi": {
@@ -161,11 +161,11 @@
       },
       "Microsoft.Testing.Platform.MSBuild": {
         "type": "CentralTransitive",
-        "requested": "[2.0.2, )",
-        "resolved": "2.0.2",
-        "contentHash": "2zKkQKaUoaKgb/3AekboWOdLMh4upCo1nLWQnjGzp8r9YjiNOZRrzTsJQ3A4U03AcbH0evlIvFDKYSUqmTVuug==",
+        "requested": "[2.1.0, )",
+        "resolved": "2.1.0",
+        "contentHash": "UpfPebXQtHGrWz21+YLHmJSm+5zsuPE9U9pfdCtoB+67g75fDmWlNgpkH2ZmdVhSwkjNIed9Icg8Iu63z2ei5Q==",
         "dependencies": {
-          "Microsoft.Testing.Platform": "2.0.2"
+          "Microsoft.Testing.Platform": "2.1.0"
         }
       }
     }

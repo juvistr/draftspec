@@ -213,11 +213,11 @@ public class PluginIntegrationTests
         var sharedState = new SharedState();
         var context = new SpecContext("Shared State");
 
-        context.BeforeEach = () =>
+        context.AddBeforeEach(() =>
         {
             sharedState.Counter++;
             return Task.CompletedTask;
-        };
+        });
 
         context.AddSpec(new SpecDefinition("spec1", () => { }));
         context.AddSpec(new SpecDefinition("spec2", () => { }));

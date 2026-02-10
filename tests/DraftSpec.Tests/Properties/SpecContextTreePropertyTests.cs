@@ -102,9 +102,9 @@ public class SpecContextTreePropertyTests
         var child = new SpecContext("child", root);
         var grandchild = new SpecContext("grandchild", child);
 
-        root.BeforeEach = () => { executionOrder.Add("root"); return Task.CompletedTask; };
-        child.BeforeEach = () => { executionOrder.Add("child"); return Task.CompletedTask; };
-        grandchild.BeforeEach = () => { executionOrder.Add("grandchild"); return Task.CompletedTask; };
+        root.AddBeforeEach(() => { executionOrder.Add("root"); return Task.CompletedTask; });
+        child.AddBeforeEach(() => { executionOrder.Add("child"); return Task.CompletedTask; });
+        grandchild.AddBeforeEach(() => { executionOrder.Add("grandchild"); return Task.CompletedTask; });
 
         // Get the chain and execute
         var chain = grandchild.GetBeforeEachChain();
@@ -127,9 +127,9 @@ public class SpecContextTreePropertyTests
         var child = new SpecContext("child", root);
         var grandchild = new SpecContext("grandchild", child);
 
-        root.AfterEach = () => { executionOrder.Add("root"); return Task.CompletedTask; };
-        child.AfterEach = () => { executionOrder.Add("child"); return Task.CompletedTask; };
-        grandchild.AfterEach = () => { executionOrder.Add("grandchild"); return Task.CompletedTask; };
+        root.AddAfterEach(() => { executionOrder.Add("root"); return Task.CompletedTask; });
+        child.AddAfterEach(() => { executionOrder.Add("child"); return Task.CompletedTask; });
+        grandchild.AddAfterEach(() => { executionOrder.Add("grandchild"); return Task.CompletedTask; });
 
         // Get the chain and execute
         var chain = grandchild.GetAfterEachChain();
@@ -151,13 +151,13 @@ public class SpecContextTreePropertyTests
             var normalizedDepth = Math.Abs(depth % 5) + 1; // 1-5 depth
 
             var root = new SpecContext("root");
-            root.BeforeEach = () => Task.CompletedTask;
+            root.AddBeforeEach(() => Task.CompletedTask);
 
             var current = root;
             for (var i = 0; i < normalizedDepth; i++)
             {
                 var child = new SpecContext($"level_{i}", current);
-                child.BeforeEach = () => Task.CompletedTask;
+                child.AddBeforeEach(() => Task.CompletedTask);
                 current = child;
             }
 
@@ -188,10 +188,10 @@ public class SpecContextTreePropertyTests
     {
         // Property: Multiple calls to GetBeforeEachChain return same reference
         var root = new SpecContext("root");
-        root.BeforeEach = () => Task.CompletedTask;
+        root.AddBeforeEach(() => Task.CompletedTask);
 
         var child = new SpecContext("child", root);
-        child.BeforeEach = () => Task.CompletedTask;
+        child.AddBeforeEach(() => Task.CompletedTask);
 
         var chain1 = child.GetBeforeEachChain();
         var chain2 = child.GetBeforeEachChain();

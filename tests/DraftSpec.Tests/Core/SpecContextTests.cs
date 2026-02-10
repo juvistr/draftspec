@@ -74,8 +74,10 @@ public class SpecContextTests
     [Test]
     public async Task GetBeforeEachChain_WithHooks_ReturnsNewList()
     {
-        var context1 = new SpecContext("context1") { BeforeEach = () => Task.CompletedTask };
-        var context2 = new SpecContext("context2") { BeforeEach = () => Task.CompletedTask };
+        var context1 = new SpecContext("context1");
+        context1.AddBeforeEach(() => Task.CompletedTask);
+        var context2 = new SpecContext("context2");
+        context2.AddBeforeEach(() => Task.CompletedTask);
 
         var chain1 = context1.GetBeforeEachChain();
         var chain2 = context2.GetBeforeEachChain();
@@ -90,8 +92,10 @@ public class SpecContextTests
     [Test]
     public async Task GetAfterEachChain_WithHooks_ReturnsNewList()
     {
-        var context1 = new SpecContext("context1") { AfterEach = () => Task.CompletedTask };
-        var context2 = new SpecContext("context2") { AfterEach = () => Task.CompletedTask };
+        var context1 = new SpecContext("context1");
+        context1.AddAfterEach(() => Task.CompletedTask);
+        var context2 = new SpecContext("context2");
+        context2.AddAfterEach(() => Task.CompletedTask);
 
         var chain1 = context1.GetAfterEachChain();
         var chain2 = context2.GetAfterEachChain();
@@ -106,7 +110,8 @@ public class SpecContextTests
     [Test]
     public async Task GetBeforeEachChain_ChildWithoutHooks_ParentWithHook_ReturnsNewList()
     {
-        var parent = new SpecContext("parent") { BeforeEach = () => Task.CompletedTask };
+        var parent = new SpecContext("parent");
+        parent.AddBeforeEach(() => Task.CompletedTask);
         var child = new SpecContext("child", parent);
 
         var childChain = child.GetBeforeEachChain();
@@ -118,7 +123,8 @@ public class SpecContextTests
     [Test]
     public async Task GetAfterEachChain_ChildWithoutHooks_ParentWithHook_ReturnsNewList()
     {
-        var parent = new SpecContext("parent") { AfterEach = () => Task.CompletedTask };
+        var parent = new SpecContext("parent");
+        parent.AddAfterEach(() => Task.CompletedTask);
         var child = new SpecContext("child", parent);
 
         var childChain = child.GetAfterEachChain();
@@ -134,7 +140,8 @@ public class SpecContextTests
     [Test]
     public async Task GetBeforeEachChain_CalledMultipleTimes_ReturnsCachedInstance()
     {
-        var context = new SpecContext("test") { BeforeEach = () => Task.CompletedTask };
+        var context = new SpecContext("test");
+        context.AddBeforeEach(() => Task.CompletedTask);
 
         var chain1 = context.GetBeforeEachChain();
         var chain2 = context.GetBeforeEachChain();
@@ -145,7 +152,8 @@ public class SpecContextTests
     [Test]
     public async Task GetAfterEachChain_CalledMultipleTimes_ReturnsCachedInstance()
     {
-        var context = new SpecContext("test") { AfterEach = () => Task.CompletedTask };
+        var context = new SpecContext("test");
+        context.AddAfterEach(() => Task.CompletedTask);
 
         var chain1 = context.GetAfterEachChain();
         var chain2 = context.GetAfterEachChain();
@@ -160,7 +168,8 @@ public class SpecContextTests
     [Test]
     public async Task GetBeforeEachChain_ConcurrentAccess_ReturnsSameInstance()
     {
-        var context = new SpecContext("test") { BeforeEach = () => Task.CompletedTask };
+        var context = new SpecContext("test");
+        context.AddBeforeEach(() => Task.CompletedTask);
         var results = new IReadOnlyList<Func<Task>>[100];
 
         // Access the chain from multiple threads concurrently
@@ -181,7 +190,8 @@ public class SpecContextTests
     [Test]
     public async Task GetAfterEachChain_ConcurrentAccess_ReturnsSameInstance()
     {
-        var context = new SpecContext("test") { AfterEach = () => Task.CompletedTask };
+        var context = new SpecContext("test");
+        context.AddAfterEach(() => Task.CompletedTask);
         var results = new IReadOnlyList<Func<Task>>[100];
 
         // Access the chain from multiple threads concurrently
@@ -208,14 +218,10 @@ public class SpecContextTests
     {
         var executionOrder = new List<string>();
 
-        var parent = new SpecContext("parent")
-        {
-            BeforeEach = () => { executionOrder.Add("parent"); return Task.CompletedTask; }
-        };
-        var child = new SpecContext("child", parent)
-        {
-            BeforeEach = () => { executionOrder.Add("child"); return Task.CompletedTask; }
-        };
+        var parent = new SpecContext("parent");
+        parent.AddBeforeEach(() => { executionOrder.Add("parent"); return Task.CompletedTask; });
+        var child = new SpecContext("child", parent);
+        child.AddBeforeEach(() => { executionOrder.Add("child"); return Task.CompletedTask; });
 
         var chain = child.GetBeforeEachChain();
         foreach (var hook in chain)
@@ -231,14 +237,10 @@ public class SpecContextTests
     {
         var executionOrder = new List<string>();
 
-        var parent = new SpecContext("parent")
-        {
-            AfterEach = () => { executionOrder.Add("parent"); return Task.CompletedTask; }
-        };
-        var child = new SpecContext("child", parent)
-        {
-            AfterEach = () => { executionOrder.Add("child"); return Task.CompletedTask; }
-        };
+        var parent = new SpecContext("parent");
+        parent.AddAfterEach(() => { executionOrder.Add("parent"); return Task.CompletedTask; });
+        var child = new SpecContext("child", parent);
+        child.AddAfterEach(() => { executionOrder.Add("child"); return Task.CompletedTask; });
 
         var chain = child.GetAfterEachChain();
         foreach (var hook in chain)

@@ -9,7 +9,7 @@ public static partial class Dsl
     /// </summary>
     public static void before(Action hook)
     {
-        ContextBuilder.SetBeforeEach(CurrentContext, hook);
+        ContextBuilder.AddBeforeEach(CurrentContext, hook);
     }
 
     /// <summary>
@@ -17,7 +17,7 @@ public static partial class Dsl
     /// </summary>
     public static void before(Func<Task> hook)
     {
-        ContextBuilder.SetBeforeEach(CurrentContext, hook);
+        ContextBuilder.AddBeforeEach(CurrentContext, hook);
     }
 
     /// <summary>
@@ -25,7 +25,7 @@ public static partial class Dsl
     /// </summary>
     public static void after(Action hook)
     {
-        ContextBuilder.SetAfterEach(CurrentContext, hook);
+        ContextBuilder.AddAfterEach(CurrentContext, hook);
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ public static partial class Dsl
     /// </summary>
     public static void after(Func<Task> hook)
     {
-        ContextBuilder.SetAfterEach(CurrentContext, hook);
+        ContextBuilder.AddAfterEach(CurrentContext, hook);
     }
 
     /// <summary>
@@ -41,7 +41,7 @@ public static partial class Dsl
     /// </summary>
     public static void beforeAll(Action hook)
     {
-        ContextBuilder.SetBeforeAll(CurrentContext, hook);
+        ContextBuilder.AddBeforeAll(CurrentContext, hook);
     }
 
     /// <summary>
@@ -49,7 +49,7 @@ public static partial class Dsl
     /// </summary>
     public static void beforeAll(Func<Task> hook)
     {
-        ContextBuilder.SetBeforeAll(CurrentContext, hook);
+        ContextBuilder.AddBeforeAll(CurrentContext, hook);
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public static partial class Dsl
     /// </summary>
     public static void afterAll(Action hook)
     {
-        ContextBuilder.SetAfterAll(CurrentContext, hook);
+        ContextBuilder.AddAfterAll(CurrentContext, hook);
     }
 
     /// <summary>
@@ -65,6 +65,6 @@ public static partial class Dsl
     /// </summary>
     public static void afterAll(Func<Task> hook)
     {
-        ContextBuilder.SetAfterAll(CurrentContext, hook);
+        ContextBuilder.AddAfterAll(CurrentContext, hook);
     }
 }

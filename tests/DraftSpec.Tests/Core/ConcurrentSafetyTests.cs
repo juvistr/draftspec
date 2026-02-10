@@ -16,10 +16,10 @@ public class ConcurrentSafetyTests
     {
         // Arrange
         var parent = new SpecContext("parent");
-        parent.BeforeEach = () => Task.CompletedTask;
+        parent.AddBeforeEach(() => Task.CompletedTask);
 
         var child = new SpecContext("child", parent);
-        child.BeforeEach = () => Task.CompletedTask;
+        child.AddBeforeEach(() => Task.CompletedTask);
 
         var exceptions = new List<Exception>();
         var results = new List<IReadOnlyList<Func<Task>>>();
@@ -60,10 +60,10 @@ public class ConcurrentSafetyTests
     {
         // Arrange
         var parent = new SpecContext("parent");
-        parent.AfterEach = () => Task.CompletedTask;
+        parent.AddAfterEach(() => Task.CompletedTask);
 
         var child = new SpecContext("child", parent);
-        child.AfterEach = () => Task.CompletedTask;
+        child.AddAfterEach(() => Task.CompletedTask);
 
         var exceptions = new List<Exception>();
         var tasks = new List<Task>();

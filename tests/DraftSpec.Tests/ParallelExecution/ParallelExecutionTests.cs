@@ -180,11 +180,11 @@ public class ParallelExecutionTests
     {
         var beforeAllCount = 0;
         var context = new SpecContext("hooks");
-        context.BeforeAll = () =>
+        context.AddBeforeAll(() =>
         {
             Interlocked.Increment(ref beforeAllCount);
             return Task.CompletedTask;
-        };
+        });
 
         for (var i = 0; i < 10; i++) context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
 
@@ -202,11 +202,11 @@ public class ParallelExecutionTests
     {
         var afterAllCount = 0;
         var context = new SpecContext("hooks");
-        context.AfterAll = () =>
+        context.AddAfterAll(() =>
         {
             Interlocked.Increment(ref afterAllCount);
             return Task.CompletedTask;
-        };
+        });
 
         for (var i = 0; i < 10; i++) context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
 
@@ -224,11 +224,11 @@ public class ParallelExecutionTests
     {
         var beforeEachCount = 0;
         var context = new SpecContext("hooks");
-        context.BeforeEach = () =>
+        context.AddBeforeEach(() =>
         {
             Interlocked.Increment(ref beforeEachCount);
             return Task.CompletedTask;
-        };
+        });
 
         for (var i = 0; i < 10; i++) context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
 
@@ -246,11 +246,11 @@ public class ParallelExecutionTests
     {
         var afterEachCount = 0;
         var context = new SpecContext("hooks");
-        context.AfterEach = () =>
+        context.AddAfterEach(() =>
         {
             Interlocked.Increment(ref afterEachCount);
             return Task.CompletedTask;
-        };
+        });
 
         for (var i = 0; i < 10; i++) context.AddSpec(new SpecDefinition($"spec-{i}", () => { }));
 

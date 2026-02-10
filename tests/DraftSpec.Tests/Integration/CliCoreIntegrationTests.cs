@@ -201,7 +201,7 @@ public class CliCoreIntegrationTests
         var specsRun = new List<string>();
 
         var context = new SpecContext("Hook Failure");
-        context.BeforeEach = () => throw new InvalidOperationException("Setup failed");
+        context.AddBeforeEach(() => throw new InvalidOperationException("Setup failed"));
         context.AddSpec(new SpecDefinition("spec1", () => specsRun.Add("spec1")));
         context.AddSpec(new SpecDefinition("spec2", () => specsRun.Add("spec2")));
 

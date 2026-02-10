@@ -12,7 +12,7 @@ public class EdgeCaseTests
     {
         var specRan = false;
         var context = new SpecContext("context");
-        context.BeforeAll = () => throw new InvalidOperationException("BeforeAll failed");
+        context.AddBeforeAll(() => throw new InvalidOperationException("BeforeAll failed"));
         context.AddSpec(new SpecDefinition("should not run", () => specRan = true));
 
         var runner = new SpecRunner();
@@ -26,7 +26,7 @@ public class EdgeCaseTests
     public async Task BeforeEach_exception_propagates()
     {
         var context = new SpecContext("context");
-        context.BeforeEach = () => throw new InvalidOperationException("BeforeEach failed");
+        context.AddBeforeEach(() => throw new InvalidOperationException("BeforeEach failed"));
         context.AddSpec(new SpecDefinition("should fail", () => { }));
 
         var runner = new SpecRunner();
@@ -40,7 +40,7 @@ public class EdgeCaseTests
     {
         var specRan = false;
         var context = new SpecContext("context");
-        context.AfterEach = () => throw new InvalidOperationException("AfterEach failed");
+        context.AddAfterEach(() => throw new InvalidOperationException("AfterEach failed"));
         context.AddSpec(new SpecDefinition("runs but afterEach fails", () => specRan = true));
 
         var runner = new SpecRunner();
@@ -55,7 +55,7 @@ public class EdgeCaseTests
     {
         var specsRan = new List<string>();
         var context = new SpecContext("context");
-        context.AfterAll = () => throw new InvalidOperationException("AfterAll failed");
+        context.AddAfterAll(() => throw new InvalidOperationException("AfterAll failed"));
         context.AddSpec(new SpecDefinition("first spec", () => specsRan.Add("first")));
         context.AddSpec(new SpecDefinition("second spec", () => specsRan.Add("second")));
 
@@ -71,14 +71,14 @@ public class EdgeCaseTests
     {
         var secondHookRan = false;
         var outer = new SpecContext("outer");
-        outer.BeforeEach = () => throw new InvalidOperationException("First hook");
+        outer.AddBeforeEach(() => throw new InvalidOperationException("First hook"));
 
         var inner = new SpecContext("inner", outer);
-        inner.BeforeEach = () =>
+        inner.AddBeforeEach(() =>
         {
             secondHookRan = true;
             return Task.CompletedTask;
-        };
+        });
         inner.AddSpec(new SpecDefinition("spec", () => { }));
 
         var runner = new SpecRunner();
@@ -93,11 +93,11 @@ public class EdgeCaseTests
     {
         var afterEachRan = false;
         var context = new SpecContext("context");
-        context.AfterEach = () =>
+        context.AddAfterEach(() =>
         {
             afterEachRan = true;
             return Task.CompletedTask;
-        };
+        });
         context.AddSpec(new SpecDefinition("throws", () => throw new InvalidOperationException("Spec failed")));
 
         var runner = new SpecRunner();
@@ -114,12 +114,12 @@ public class EdgeCaseTests
         var afterEachRan = false;
         var specRan = false;
         var context = new SpecContext("context");
-        context.BeforeEach = () => throw new InvalidOperationException("BeforeEach failed");
-        context.AfterEach = () =>
+        context.AddBeforeEach(() => throw new InvalidOperationException("BeforeEach failed"));
+        context.AddAfterEach(() =>
         {
             afterEachRan = true;
             return Task.CompletedTask;
-        };
+        });
         context.AddSpec(new SpecDefinition("should not run", () => specRan = true));
 
         var runner = new SpecRunner();
@@ -137,18 +137,18 @@ public class EdgeCaseTests
         var hookOrder = new List<string>();
 
         var parent = new SpecContext("parent");
-        parent.AfterEach = () =>
+        parent.AddAfterEach(() =>
         {
             hookOrder.Add("after-parent");
             return Task.CompletedTask;
-        };
+        });
 
         var child = new SpecContext("child", parent);
-        child.AfterEach = () =>
+        child.AddAfterEach(() =>
         {
             hookOrder.Add("after-child");
             return Task.CompletedTask;
-        };
+        });
         child.AddSpec(new SpecDefinition("spec", () => hookOrder.Add("spec")));
 
         var runner = new SpecRunner();
@@ -201,25 +201,25 @@ public class EdgeCaseTests
         var hookOrder = new List<string>();
 
         var l1 = new SpecContext("L1");
-        l1.BeforeEach = () =>
+        l1.AddBeforeEach(() =>
         {
             hookOrder.Add("before-L1");
             return Task.CompletedTask;
-        };
+        });
 
         var l2 = new SpecContext("L2", l1);
-        l2.BeforeEach = () =>
+        l2.AddBeforeEach(() =>
         {
             hookOrder.Add("before-L2");
             return Task.CompletedTask;
-        };
+        });
 
         var l3 = new SpecContext("L3", l2);
-        l3.BeforeEach = () =>
+        l3.AddBeforeEach(() =>
         {
             hookOrder.Add("before-L3");
             return Task.CompletedTask;
-        };
+        });
         l3.AddSpec(new SpecDefinition("spec", () => hookOrder.Add("spec")));
 
         var runner = new SpecRunner();

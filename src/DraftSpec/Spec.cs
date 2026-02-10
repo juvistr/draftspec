@@ -156,66 +156,66 @@ public abstract class Spec
     }
 
     /// <summary>
-    /// Sets a synchronous hook that runs once before any spec in the current context.
+    /// Adds a synchronous hook that runs once before any spec in the current context.
     /// </summary>
     protected Action beforeAll
     {
-        set => ContextBuilder.SetBeforeAll(CurrentContext, value);
+        set => ContextBuilder.AddBeforeAll(CurrentContext, value);
     }
 
     /// <summary>
-    /// Sets an asynchronous hook that runs once before any spec in the current context.
+    /// Adds an asynchronous hook that runs once before any spec in the current context.
     /// </summary>
     protected void beforeAllAsync(Func<Task> hook)
     {
-        ContextBuilder.SetBeforeAll(CurrentContext, hook);
+        ContextBuilder.AddBeforeAll(CurrentContext, hook);
     }
 
     /// <summary>
-    /// Sets a synchronous hook that runs once after all specs in the current context.
+    /// Adds a synchronous hook that runs once after all specs in the current context.
     /// </summary>
     protected Action afterAll
     {
-        set => ContextBuilder.SetAfterAll(CurrentContext, value);
+        set => ContextBuilder.AddAfterAll(CurrentContext, value);
     }
 
     /// <summary>
-    /// Sets an asynchronous hook that runs once after all specs in the current context.
+    /// Adds an asynchronous hook that runs once after all specs in the current context.
     /// </summary>
     protected void afterAllAsync(Func<Task> hook)
     {
-        ContextBuilder.SetAfterAll(CurrentContext, hook);
+        ContextBuilder.AddAfterAll(CurrentContext, hook);
     }
 
     /// <summary>
-    /// Sets a synchronous hook that runs before each spec in the current context.
+    /// Adds a synchronous hook that runs before each spec in the current context.
     /// </summary>
     protected Action before
     {
-        set => ContextBuilder.SetBeforeEach(CurrentContext, value);
+        set => ContextBuilder.AddBeforeEach(CurrentContext, value);
     }
 
     /// <summary>
-    /// Sets an asynchronous hook that runs before each spec in the current context.
+    /// Adds an asynchronous hook that runs before each spec in the current context.
     /// </summary>
     protected void beforeAsync(Func<Task> hook)
     {
-        ContextBuilder.SetBeforeEach(CurrentContext, hook);
+        ContextBuilder.AddBeforeEach(CurrentContext, hook);
     }
 
     /// <summary>
-    /// Sets a synchronous hook that runs after each spec in the current context.
+    /// Adds a synchronous hook that runs after each spec in the current context.
     /// </summary>
     protected Action after
     {
-        set => ContextBuilder.SetAfterEach(CurrentContext, value);
+        set => ContextBuilder.AddAfterEach(CurrentContext, value);
     }
 
     /// <summary>
-    /// Sets an asynchronous hook that runs after each spec in the current context.
+    /// Adds an asynchronous hook that runs after each spec in the current context.
     /// </summary>
     protected void afterAsync(Func<Task> hook)
     {
-        ContextBuilder.SetAfterEach(CurrentContext, hook);
+        ContextBuilder.AddAfterEach(CurrentContext, hook);
     }
 }

@@ -194,9 +194,9 @@ public class SpecRunner : ISpecRunner
             pushed = true;
         }
 
-        // Run beforeAll (always sequential)
-        if (context.BeforeAll != null)
-            await context.BeforeAll().ConfigureAwait(false);
+        // Run beforeAll hooks (FIFO order, always sequential)
+        foreach (var hook in context.BeforeAllHooks)
+            await hook().ConfigureAwait(false);
 
         try
         {
@@ -242,9 +242,10 @@ public class SpecRunner : ISpecRunner
             if (pushed)
                 contextPath.RemoveAt(contextPath.Count - 1);
 
-            // Run afterAll (always sequential)
-            if (context.AfterAll != null)
-                await context.AfterAll().ConfigureAwait(false);
+            // Run afterAll hooks (LIFO order, always sequential)
+            var afterAllHooks = context.AfterAllHooks;
+            for (var i = afterAllHooks.Count - 1; i >= 0; i--)
+                await afterAllHooks[i]().ConfigureAwait(false);
         }
     }
 

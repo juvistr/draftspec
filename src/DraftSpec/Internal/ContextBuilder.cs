@@ -95,75 +95,75 @@ internal static class ContextBuilder
     }
 
     /// <summary>
-    /// Set the beforeEach hook on a context with validation (sync version).
+    /// Add a beforeEach hook to a context with validation (sync version).
     /// </summary>
-    public static void SetBeforeEach(SpecContext? context, Action hook)
+    public static void AddBeforeEach(SpecContext? context, Action hook)
     {
         EnsureContext(context);
-        context!.BeforeEach = WrapSync(hook);
+        context!.AddBeforeEach(WrapSync(hook));
     }
 
     /// <summary>
-    /// Set the beforeEach hook on a context with validation (async version).
+    /// Add a beforeEach hook to a context with validation (async version).
     /// </summary>
-    public static void SetBeforeEach(SpecContext? context, Func<Task> hook)
+    public static void AddBeforeEach(SpecContext? context, Func<Task> hook)
     {
         EnsureContext(context);
-        context!.BeforeEach = hook;
+        context!.AddBeforeEach(hook);
     }
 
     /// <summary>
-    /// Set the afterEach hook on a context with validation (sync version).
+    /// Add an afterEach hook to a context with validation (sync version).
     /// </summary>
-    public static void SetAfterEach(SpecContext? context, Action hook)
+    public static void AddAfterEach(SpecContext? context, Action hook)
     {
         EnsureContext(context);
-        context!.AfterEach = WrapSync(hook);
+        context!.AddAfterEach(WrapSync(hook));
     }
 
     /// <summary>
-    /// Set the afterEach hook on a context with validation (async version).
+    /// Add an afterEach hook to a context with validation (async version).
     /// </summary>
-    public static void SetAfterEach(SpecContext? context, Func<Task> hook)
+    public static void AddAfterEach(SpecContext? context, Func<Task> hook)
     {
         EnsureContext(context);
-        context!.AfterEach = hook;
+        context!.AddAfterEach(hook);
     }
 
     /// <summary>
-    /// Set the beforeAll hook on a context with validation (sync version).
+    /// Add a beforeAll hook to a context with validation (sync version).
     /// </summary>
-    public static void SetBeforeAll(SpecContext? context, Action hook)
+    public static void AddBeforeAll(SpecContext? context, Action hook)
     {
         EnsureContext(context);
-        context!.BeforeAll = WrapSync(hook);
+        context!.AddBeforeAll(WrapSync(hook));
     }
 
     /// <summary>
-    /// Set the beforeAll hook on a context with validation (async version).
+    /// Add a beforeAll hook to a context with validation (async version).
     /// </summary>
-    public static void SetBeforeAll(SpecContext? context, Func<Task> hook)
+    public static void AddBeforeAll(SpecContext? context, Func<Task> hook)
     {
         EnsureContext(context);
-        context!.BeforeAll = hook;
+        context!.AddBeforeAll(hook);
     }
 
     /// <summary>
-    /// Set the afterAll hook on a context with validation (sync version).
+    /// Add an afterAll hook to a context with validation (sync version).
     /// </summary>
-    public static void SetAfterAll(SpecContext? context, Action hook)
+    public static void AddAfterAll(SpecContext? context, Action hook)
     {
         EnsureContext(context);
-        context!.AfterAll = WrapSync(hook);
+        context!.AddAfterAll(WrapSync(hook));
     }
 
     /// <summary>
-    /// Set the afterAll hook on a context with validation (async version).
+    /// Add an afterAll hook to a context with validation (async version).
     /// </summary>
-    public static void SetAfterAll(SpecContext? context, Func<Task> hook)
+    public static void AddAfterAll(SpecContext? context, Func<Task> hook)
     {
         EnsureContext(context);
-        context!.AfterAll = hook;
+        context!.AddAfterAll(hook);
     }
 
     /// <summary>

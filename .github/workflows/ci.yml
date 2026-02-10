@@ -20,7 +20,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         id: filter
@@ -45,7 +45,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0  # Full history for MinVer
 
@@ -55,7 +55,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Cache NuGet packages
-        uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v4
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
@@ -82,7 +82,7 @@ jobs:
       - name: Scan for secrets
         # Only scan on PRs - on pushes to main, base and HEAD are the same commit
         if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
-        uses: trufflesecurity/trufflehog@116e7171542d2f1dad8810f00dcfacbe0b809183 # v3.92.5
+        uses: trufflesecurity/trufflehog@7635b24fd512a2e817dd3e9dd661caaf035a079d # v3.93.1
         with:
           path: ./
           base: ${{ github.event.repository.default_branch }}
@@ -193,7 +193,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0  # Full history for git-dependent tests
 
@@ -203,7 +203,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Cache NuGet packages
-        uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v4
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}

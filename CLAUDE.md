@@ -105,6 +105,7 @@ Expected todo.Title to be "Buy milk", but was "Buy bread"
 ## Key Behaviors
 
 - **Hook order**: beforeAll → before (parent→child) → spec → after (child→parent) → afterAll
+- **Multiple hooks**: Each context supports multiple hooks via `context.AddBeforeEach()`, `AddAfterEach()`, `AddBeforeAll()`, `AddAfterAll()`. Before hooks run FIFO, after hooks run LIFO.
 - **Focus mode**: Any `fit` causes all non-focused specs to skip
 - **Pending**: `it("description")` without body marks spec as pending
 
@@ -188,6 +189,10 @@ dotnet format                     # Auto-format code
 1. Check if existing code already solves the problem
 2. Consider if a simple implementation is preferable to a dependency
 3. Discuss with the user before adding new packages
+
+### DSL References in Tests
+
+Tests in `DraftSpec.Tests.*` namespaces that reference `Dsl` will resolve to `DraftSpec.Tests.Dsl` (a test folder namespace), not `DraftSpec.Dsl`. Use `using static DraftSpec.Dsl;` to import the static DSL methods directly.
 
 ### Testing Patterns
 

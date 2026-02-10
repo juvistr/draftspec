@@ -105,16 +105,16 @@ public class PerformanceTests
         for (var i = 0; i < 10; i++)
         {
             var ctx = i == 0 ? root : new SpecContext($"level-{i}", current);
-            ctx.BeforeEach = () =>
+            ctx.AddBeforeEach(() =>
             {
                 hookCallCount++;
                 return Task.CompletedTask;
-            };
-            ctx.AfterEach = () =>
+            });
+            ctx.AddAfterEach(() =>
             {
                 hookCallCount++;
                 return Task.CompletedTask;
-            };
+            });
             current = ctx;
         }
 
@@ -137,10 +137,10 @@ public class PerformanceTests
     public async Task HookChain_CachesHookChain_ForPerformance()
     {
         var root = new SpecContext("root");
-        root.BeforeEach = () => Task.CompletedTask;
+        root.AddBeforeEach(() => Task.CompletedTask);
 
         var child = new SpecContext("child", root);
-        child.BeforeEach = () => Task.CompletedTask;
+        child.AddBeforeEach(() => Task.CompletedTask);
 
         // Add many specs to same context
         for (var i = 0; i < 100; i++) child.AddSpec(new SpecDefinition($"spec {i}", () => { }));
@@ -160,14 +160,14 @@ public class PerformanceTests
         // With 100 levels, O(n²) would be ~10,000 operations, O(n) is ~200
 
         var root = new SpecContext("level-0");
-        root.BeforeEach = () => Task.CompletedTask;
+        root.AddBeforeEach(() => Task.CompletedTask);
         var current = root;
 
         // Create 100 levels of nesting, each with a beforeEach hook
         for (var i = 1; i < 100; i++)
         {
             current = new SpecContext($"level-{i}", current);
-            current.BeforeEach = () => Task.CompletedTask;
+            current.AddBeforeEach(() => Task.CompletedTask);
         }
 
         current.AddSpec(new SpecDefinition("deep spec", () => { }));
@@ -191,25 +191,25 @@ public class PerformanceTests
         var executionOrder = new List<int>();
 
         var root = new SpecContext("level-0");
-        root.BeforeEach = () =>
+        root.AddBeforeEach(() =>
         {
             executionOrder.Add(0);
             return Task.CompletedTask;
-        };
+        });
 
         var level1 = new SpecContext("level-1", root);
-        level1.BeforeEach = () =>
+        level1.AddBeforeEach(() =>
         {
             executionOrder.Add(1);
             return Task.CompletedTask;
-        };
+        });
 
         var level2 = new SpecContext("level-2", level1);
-        level2.BeforeEach = () =>
+        level2.AddBeforeEach(() =>
         {
             executionOrder.Add(2);
             return Task.CompletedTask;
-        };
+        });
 
         level2.AddSpec(new SpecDefinition("spec", () => { }));
 
@@ -333,8 +333,8 @@ public class PerformanceTests
     public async Task TimingInstrumentation_CapturesHookDurations()
     {
         var context = new SpecContext("root");
-        context.BeforeEach = async () => await Task.Delay(10);
-        context.AfterEach = async () => await Task.Delay(10);
+        context.AddBeforeEach(async () => await Task.Delay(10));
+        context.AddAfterEach(async () => await Task.Delay(10));
         context.AddSpec(new SpecDefinition("spec", async () => await Task.Delay(10)));
 
         var runner = new SpecRunner();
@@ -355,10 +355,10 @@ public class PerformanceTests
     public async Task TimingInstrumentation_NestedHooks_AccumulatesDurations()
     {
         var root = new SpecContext("root");
-        root.BeforeEach = async () => await Task.Delay(5);
+        root.AddBeforeEach(async () => await Task.Delay(5));
 
         var child = new SpecContext("child", root);
-        child.BeforeEach = async () => await Task.Delay(5);
+        child.AddBeforeEach(async () => await Task.Delay(5));
         child.AddSpec(new SpecDefinition("spec", () => { }));
 
         var runner = new SpecRunner();

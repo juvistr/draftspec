@@ -211,11 +211,11 @@ public class BailTests
     {
         var afterAllRan = false;
         var context = new SpecContext("test");
-        context.AfterAll = () =>
+        context.AddAfterAll(() =>
         {
             afterAllRan = true;
             return Task.CompletedTask;
-        };
+        });
         context.AddSpec(new SpecDefinition("fails", () => throw new Exception()));
         context.AddSpec(new SpecDefinition("skipped", () => { }));
 
@@ -233,11 +233,11 @@ public class BailTests
         root.AddSpec(new SpecDefinition("fails", () => throw new Exception()));
 
         var child = new SpecContext("child", root);
-        child.BeforeAll = () =>
+        child.AddBeforeAll(() =>
         {
             childBeforeAllRan = true;
             return Task.CompletedTask;
-        };
+        });
         child.AddSpec(new SpecDefinition("skipped", () => { }));
 
         var runner = SpecRunner.Create().WithBail().Build();

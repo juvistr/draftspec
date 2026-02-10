@@ -65,25 +65,28 @@ public class SpecContext
     /// </summary>
     public IReadOnlyList<SpecDefinition> Specs => _specs;
 
-    /// <summary>
-    /// Hook that runs once before any spec in this context. Runs after parent's BeforeAll.
-    /// </summary>
-    public Func<Task>? BeforeAll { get; internal set; }
+    private List<Func<Task>>? _beforeAllHooks;
+    private List<Func<Task>>? _afterAllHooks;
+    private List<Func<Task>>? _beforeEachHooks;
+    private List<Func<Task>>? _afterEachHooks;
 
     /// <summary>
-    /// Hook that runs once after all specs in this context. Runs before parent's AfterAll.
+    /// Hooks that run once before any spec in this context, in declaration order.
     /// </summary>
-    public Func<Task>? AfterAll { get; internal set; }
+    internal IReadOnlyList<Func<Task>> BeforeAllHooks =>
+        _beforeAllHooks ?? (IReadOnlyList<Func<Task>>)Array.Empty<Func<Task>>();
 
     /// <summary>
-    /// Hook that runs before each spec. Runs after parent's BeforeEach.
+    /// Hooks that run once after all specs in this context.
+    /// Runner executes these in reverse (LIFO) order.
     /// </summary>
-    public Func<Task>? BeforeEach { get; internal set; }
+    internal IReadOnlyList<Func<Task>> AfterAllHooks =>
+        _afterAllHooks ?? (IReadOnlyList<Func<Task>>)Array.Empty<Func<Task>>();
 
-    /// <summary>
-    /// Hook that runs after each spec. Runs before parent's AfterEach.
-    /// </summary>
-    public Func<Task>? AfterEach { get; internal set; }
+    internal void AddBeforeAll(Func<Task> hook) => (_beforeAllHooks ??= []).Add(hook);
+    internal void AddAfterAll(Func<Task> hook) => (_afterAllHooks ??= []).Add(hook);
+    internal void AddBeforeEach(Func<Task> hook) { (_beforeEachHooks ??= []).Add(hook); _beforeEachChain = null; }
+    internal void AddAfterEach(Func<Task> hook) { (_afterEachHooks ??= []).Add(hook); _afterEachChain = null; }
 
     // Cached hook chains for performance (computed lazily)
     // Uses IReadOnlyList to allow either List<T> or Array.Empty<T> singleton
@@ -177,14 +180,17 @@ public class SpecContext
         }
         else
         {
-            // Build in child-to-parent order (O(1) per Add), then reverse once (O(n))
-            // This is O(n) total instead of O(n²) from Insert(0, ...) per item
+            // Build in child-to-parent order with each context's hooks reversed,
+            // then reverse the whole list once. This yields parent-FIFO → child-FIFO order.
             var list = new List<Func<Task>>();
             var current = this;
             while (current != null)
             {
-                if (current.BeforeEach != null)
-                    list.Add(current.BeforeEach);
+                if (current._beforeEachHooks != null)
+                {
+                    for (var i = current._beforeEachHooks.Count - 1; i >= 0; i--)
+                        list.Add(current._beforeEachHooks[i]);
+                }
                 current = current.Parent;
             }
 
@@ -205,7 +211,7 @@ public class SpecContext
         var current = this;
         while (current != null)
         {
-            if (current.BeforeEach != null)
+            if (current._beforeEachHooks is { Count: > 0 })
                 return true;
             current = current.Parent;
         }
@@ -231,12 +237,16 @@ public class SpecContext
         }
         else
         {
+            // Child-first, LIFO within each context: child hooks reversed, then parent hooks reversed
             var list = new List<Func<Task>>();
             var current = this;
             while (current != null)
             {
-                if (current.AfterEach != null)
-                    list.Add(current.AfterEach);
+                if (current._afterEachHooks != null)
+                {
+                    for (var i = current._afterEachHooks.Count - 1; i >= 0; i--)
+                        list.Add(current._afterEachHooks[i]);
+                }
                 current = current.Parent;
             }
             chain = list;
@@ -255,7 +265,7 @@ public class SpecContext
         var current = this;
         while (current != null)
         {
-            if (current.AfterEach != null)
+            if (current._afterEachHooks is { Count: > 0 })
                 return true;
             current = current.Parent;
         }

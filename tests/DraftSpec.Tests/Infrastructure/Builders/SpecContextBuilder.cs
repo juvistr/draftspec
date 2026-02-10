@@ -50,10 +50,10 @@ public class SpecContextBuilder
     private string _description = "test";
     private SpecContext? _parent;
     private int _lineNumber;
-    private Func<Task>? _beforeAll;
-    private Func<Task>? _afterAll;
-    private Func<Task>? _beforeEach;
-    private Func<Task>? _afterEach;
+    private readonly List<Func<Task>> _beforeAllHooks = [];
+    private readonly List<Func<Task>> _afterAllHooks = [];
+    private readonly List<Func<Task>> _beforeEachHooks = [];
+    private readonly List<Func<Task>> _afterEachHooks = [];
     private readonly List<SpecDefinition> _specs = [];
     private readonly List<Action<SpecContextBuilder>> _childBuilders = [];
 
@@ -324,22 +324,22 @@ public class SpecContextBuilder
     /// <returns>The builder for method chaining.</returns>
     public SpecContextBuilder WithBeforeAll(Func<Task> hook)
     {
-        _beforeAll = hook;
+        _beforeAllHooks.Add(hook);
         return this;
     }
 
     /// <summary>
-    /// Sets the beforeAll hook for the context using a synchronous action.
+    /// Adds a beforeAll hook for the context using a synchronous action.
     /// </summary>
     /// <param name="hook">The sync hook to run once before all specs.</param>
     /// <returns>The builder for method chaining.</returns>
     public SpecContextBuilder WithBeforeAll(Action hook)
     {
-        _beforeAll = () =>
+        _beforeAllHooks.Add(() =>
         {
             hook();
             return Task.CompletedTask;
-        };
+        });
         return this;
     }
 
@@ -350,22 +350,22 @@ public class SpecContextBuilder
     /// <returns>The builder for method chaining.</returns>
     public SpecContextBuilder WithAfterAll(Func<Task> hook)
     {
-        _afterAll = hook;
+        _afterAllHooks.Add(hook);
         return this;
     }
 
     /// <summary>
-    /// Sets the afterAll hook for the context using a synchronous action.
+    /// Adds an afterAll hook for the context using a synchronous action.
     /// </summary>
     /// <param name="hook">The sync hook to run once after all specs.</param>
     /// <returns>The builder for method chaining.</returns>
     public SpecContextBuilder WithAfterAll(Action hook)
     {
-        _afterAll = () =>
+        _afterAllHooks.Add(() =>
         {
             hook();
             return Task.CompletedTask;
-        };
+        });
         return this;
     }
 
@@ -376,22 +376,22 @@ public class SpecContextBuilder
     /// <returns>The builder for method chaining.</returns>
     public SpecContextBuilder WithBeforeEach(Func<Task> hook)
     {
-        _beforeEach = hook;
+        _beforeEachHooks.Add(hook);
         return this;
     }
 
     /// <summary>
-    /// Sets the beforeEach hook for the context using a synchronous action.
+    /// Adds a beforeEach hook for the context using a synchronous action.
     /// </summary>
     /// <param name="hook">The sync hook to run before each spec.</param>
     /// <returns>The builder for method chaining.</returns>
     public SpecContextBuilder WithBeforeEach(Action hook)
     {
-        _beforeEach = () =>
+        _beforeEachHooks.Add(() =>
         {
             hook();
             return Task.CompletedTask;
-        };
+        });
         return this;
     }
 
@@ -402,22 +402,22 @@ public class SpecContextBuilder
     /// <returns>The builder for method chaining.</returns>
     public SpecContextBuilder WithAfterEach(Func<Task> hook)
     {
-        _afterEach = hook;
+        _afterEachHooks.Add(hook);
         return this;
     }
 
     /// <summary>
-    /// Sets the afterEach hook for the context using a synchronous action.
+    /// Adds an afterEach hook for the context using a synchronous action.
     /// </summary>
     /// <param name="hook">The sync hook to run after each spec.</param>
     /// <returns>The builder for method chaining.</returns>
     public SpecContextBuilder WithAfterEach(Action hook)
     {
-        _afterEach = () =>
+        _afterEachHooks.Add(() =>
         {
             hook();
             return Task.CompletedTask;
-        };
+        });
         return this;
     }
 
@@ -536,11 +536,11 @@ public class SpecContextBuilder
             LineNumber = _lineNumber
         };
 
-        // Set hooks
-        context.BeforeAll = _beforeAll;
-        context.AfterAll = _afterAll;
-        context.BeforeEach = _beforeEach;
-        context.AfterEach = _afterEach;
+        // Add hooks
+        foreach (var hook in _beforeAllHooks) context.AddBeforeAll(hook);
+        foreach (var hook in _afterAllHooks) context.AddAfterAll(hook);
+        foreach (var hook in _beforeEachHooks) context.AddBeforeEach(hook);
+        foreach (var hook in _afterEachHooks) context.AddAfterEach(hook);
 
         // Add specs
         foreach (var spec in _specs)

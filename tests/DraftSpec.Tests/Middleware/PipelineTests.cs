@@ -142,16 +142,16 @@ public class PipelineTests
     {
         var context = new SpecContext("test");
         var order = new List<string>();
-        context.BeforeEach = () =>
+        context.AddBeforeEach(() =>
         {
             order.Add("before");
             return Task.CompletedTask;
-        };
-        context.AfterEach = () =>
+        });
+        context.AddAfterEach(() =>
         {
             order.Add("after");
             return Task.CompletedTask;
-        };
+        });
         context.AddSpec(new SpecDefinition("test", () => order.Add("spec")));
 
         var runner = new SpecRunnerBuilder()

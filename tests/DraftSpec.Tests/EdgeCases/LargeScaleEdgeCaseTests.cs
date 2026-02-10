@@ -117,19 +117,19 @@ public class LargeScaleEdgeCaseTests
         var context = new SpecContext("hooks");
         var hookLog = new ConcurrentDictionary<string, List<string>>();
 
-        context.BeforeEach = () =>
+        context.AddBeforeEach(() =>
         {
             var specId = Environment.CurrentManagedThreadId.ToString();
             hookLog.GetOrAdd(specId, _ => []).Add("before");
             return Task.CompletedTask;
-        };
+        });
 
-        context.AfterEach = () =>
+        context.AddAfterEach(() =>
         {
             var specId = Environment.CurrentManagedThreadId.ToString();
             hookLog.GetOrAdd(specId, _ => []).Add("after");
             return Task.CompletedTask;
-        };
+        });
 
         for (var i = 0; i < 20; i++)
         {
@@ -311,22 +311,22 @@ public class LargeScaleEdgeCaseTests
         var lockObj = new Lock();
 
         var root = new SpecContext("level-0");
-        root.BeforeEach = () =>
+        root.AddBeforeEach(() =>
         {
             lock (lockObj) hookOrder.Add("before-0");
             return Task.CompletedTask;
-        };
+        });
 
         var current = root;
         for (var i = 1; i <= 20; i++)
         {
             var level = i;
             current = new SpecContext($"level-{level}", current);
-            current.BeforeEach = () =>
+            current.AddBeforeEach(() =>
             {
                 lock (lockObj) hookOrder.Add($"before-{level}");
                 return Task.CompletedTask;
-            };
+            });
         }
 
         current.AddSpec(new SpecDefinition("deepest spec", () =>

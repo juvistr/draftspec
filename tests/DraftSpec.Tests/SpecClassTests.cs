@@ -121,72 +121,64 @@ public class SpecClassTests
     public async Task Spec_BeforeAll_SetsHook()
     {
         var spec = new BeforeAllSpec();
-        var hook = spec.RootContext.Children[0].BeforeAll;
 
-        await Assert.That(hook is not null).IsTrue();
+        await Assert.That(spec.RootContext.Children[0].BeforeAllHooks).Count().IsEqualTo(1);
     }
 
     [Test]
     public async Task Spec_BeforeAllAsync_SetsAsyncHook()
     {
         var spec = new BeforeAllAsyncSpec();
-        var hook = spec.RootContext.Children[0].BeforeAll;
 
-        await Assert.That(hook is not null).IsTrue();
+        await Assert.That(spec.RootContext.Children[0].BeforeAllHooks).Count().IsEqualTo(1);
     }
 
     [Test]
     public async Task Spec_AfterAll_SetsHook()
     {
         var spec = new AfterAllSpec();
-        var hook = spec.RootContext.Children[0].AfterAll;
 
-        await Assert.That(hook is not null).IsTrue();
+        await Assert.That(spec.RootContext.Children[0].AfterAllHooks).Count().IsEqualTo(1);
     }
 
     [Test]
     public async Task Spec_AfterAllAsync_SetsAsyncHook()
     {
         var spec = new AfterAllAsyncSpec();
-        var hook = spec.RootContext.Children[0].AfterAll;
 
-        await Assert.That(hook is not null).IsTrue();
+        await Assert.That(spec.RootContext.Children[0].AfterAllHooks).Count().IsEqualTo(1);
     }
 
     [Test]
     public async Task Spec_Before_SetsBeforeEachHook()
     {
         var spec = new BeforeSpec();
-        var hook = spec.RootContext.Children[0].BeforeEach;
 
-        await Assert.That(hook is not null).IsTrue();
+        await Assert.That(spec.RootContext.Children[0].GetBeforeEachChain()).Count().IsEqualTo(1);
     }
 
     [Test]
     public async Task Spec_BeforeAsync_SetsAsyncBeforeEachHook()
     {
         var spec = new BeforeAsyncSpec();
-        var hook = spec.RootContext.Children[0].BeforeEach;
 
-        await Assert.That(hook is not null).IsTrue();
+        await Assert.That(spec.RootContext.Children[0].GetBeforeEachChain()).Count().IsEqualTo(1);
     }
 
     [Test]
     public async Task Spec_After_SetsAfterEachHook()
     {
         var spec = new AfterSpec();
-        var hook = spec.RootContext.Children[0].AfterEach;
 
-        await Assert.That(hook is not null).IsTrue();
+        await Assert.That(spec.RootContext.Children[0].GetAfterEachChain()).Count().IsEqualTo(1);
     }
 
     [Test]
     public async Task Spec_AfterAsync_SetsAsyncAfterEachHook()
     {
         var spec = new AfterAsyncSpec();
-        var hook = spec.RootContext.Children[0].AfterEach;
 
-        await Assert.That(hook is not null).IsTrue();
+        await Assert.That(spec.RootContext.Children[0].GetAfterEachChain()).Count().IsEqualTo(1);
     }
 
     #endregion

@@ -88,13 +88,13 @@ public class ContextBuilderTests
     }
 
     [Test]
-    public async Task SetBeforeEach_WithValidContext_SetsHook()
+    public async Task AddBeforeEach_WithValidContext_AddsHook()
     {
         var context = new SpecContext("test");
         var called = false;
         Action hook = () => called = true;
 
-        ContextBuilder.SetBeforeEach(context, hook);
+        ContextBuilder.AddBeforeEach(context, hook);
 
         // Verify hook was set by checking it's in the hook chain
         var chain = context.GetBeforeEachChain();
@@ -105,21 +105,21 @@ public class ContextBuilderTests
     }
 
     [Test]
-    public async Task SetBeforeEach_WithNullContext_ThrowsInvalidOperationException()
+    public async Task AddBeforeEach_WithNullContext_ThrowsInvalidOperationException()
     {
-        await Assert.That(() => ContextBuilder.SetBeforeEach(null, () => { }))
+        await Assert.That(() => ContextBuilder.AddBeforeEach(null, () => { }))
             .Throws<InvalidOperationException>()
             .WithMessage("Must be called inside a describe() block");
     }
 
     [Test]
-    public async Task SetAfterEach_WithValidContext_SetsHook()
+    public async Task AddAfterEach_WithValidContext_AddsHook()
     {
         var context = new SpecContext("test");
         var called = false;
         Action hook = () => called = true;
 
-        ContextBuilder.SetAfterEach(context, hook);
+        ContextBuilder.AddAfterEach(context, hook);
 
         // Verify hook was set by checking it's in the hook chain
         var chain = context.GetAfterEachChain();
@@ -130,53 +130,55 @@ public class ContextBuilderTests
     }
 
     [Test]
-    public async Task SetAfterEach_WithNullContext_ThrowsInvalidOperationException()
+    public async Task AddAfterEach_WithNullContext_ThrowsInvalidOperationException()
     {
-        await Assert.That(() => ContextBuilder.SetAfterEach(null, () => { }))
+        await Assert.That(() => ContextBuilder.AddAfterEach(null, () => { }))
             .Throws<InvalidOperationException>()
             .WithMessage("Must be called inside a describe() block");
     }
 
     [Test]
-    public async Task SetBeforeAll_WithValidContext_SetsHook()
+    public async Task AddBeforeAll_WithValidContext_AddsHook()
     {
         var context = new SpecContext("test");
         var called = false;
         Action hook = () => called = true;
 
-        ContextBuilder.SetBeforeAll(context, hook);
+        ContextBuilder.AddBeforeAll(context, hook);
 
         // Call the hook directly from the context
-        await context.BeforeAll!();
+        await Assert.That(context.BeforeAllHooks).Count().IsEqualTo(1);
+        await context.BeforeAllHooks[0]();
         await Assert.That(called).IsTrue();
     }
 
     [Test]
-    public async Task SetBeforeAll_WithNullContext_ThrowsInvalidOperationException()
+    public async Task AddBeforeAll_WithNullContext_ThrowsInvalidOperationException()
     {
-        await Assert.That(() => ContextBuilder.SetBeforeAll(null, () => { }))
+        await Assert.That(() => ContextBuilder.AddBeforeAll(null, () => { }))
             .Throws<InvalidOperationException>()
             .WithMessage("Must be called inside a describe() block");
     }
 
     [Test]
-    public async Task SetAfterAll_WithValidContext_SetsHook()
+    public async Task AddAfterAll_WithValidContext_AddsHook()
     {
         var context = new SpecContext("test");
         var called = false;
         Action hook = () => called = true;
 
-        ContextBuilder.SetAfterAll(context, hook);
+        ContextBuilder.AddAfterAll(context, hook);
 
         // Call the hook directly from the context
-        await context.AfterAll!();
+        await Assert.That(context.AfterAllHooks).Count().IsEqualTo(1);
+        await context.AfterAllHooks[0]();
         await Assert.That(called).IsTrue();
     }
 
     [Test]
-    public async Task SetAfterAll_WithNullContext_ThrowsInvalidOperationException()
+    public async Task AddAfterAll_WithNullContext_ThrowsInvalidOperationException()
     {
-        await Assert.That(() => ContextBuilder.SetAfterAll(null, () => { }))
+        await Assert.That(() => ContextBuilder.AddAfterAll(null, () => { }))
             .Throws<InvalidOperationException>()
             .WithMessage("Must be called inside a describe() block");
     }

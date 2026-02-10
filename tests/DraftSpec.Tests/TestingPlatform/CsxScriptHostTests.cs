@@ -704,10 +704,10 @@ public class CsxScriptHostTests
 
         // Assert
         await Assert.That(rootContext).IsNotNull();
-        await Assert.That(rootContext!.BeforeEach is not null).IsTrue();
-        await Assert.That(rootContext.AfterEach is not null).IsTrue();
-        await Assert.That(rootContext.BeforeAll is not null).IsTrue();
-        await Assert.That(rootContext.AfterAll is not null).IsTrue();
+        await Assert.That(rootContext!.GetBeforeEachChain()).Count().IsGreaterThan(0);
+        await Assert.That(rootContext.GetAfterEachChain()).Count().IsGreaterThan(0);
+        await Assert.That(rootContext.BeforeAllHooks).Count().IsGreaterThan(0);
+        await Assert.That(rootContext.AfterAllHooks).Count().IsGreaterThan(0);
     }
 
     [Test]

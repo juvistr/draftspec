@@ -7,8 +7,8 @@ namespace DraftSpec.Tests.Infrastructure;
 /// <example>
 /// <code>
 /// var tracker = new ExecutionTracker();
-/// context.BeforeEach = tracker.CreateTracker("beforeEach");
-/// context.AfterEach = tracker.CreateTracker("afterEach");
+/// context.AddBeforeEach(tracker.CreateAsyncTracker("beforeEach"));
+/// context.AddAfterEach(tracker.CreateAsyncTracker("afterEach"));
 /// context.AddSpec(new SpecDefinition("spec", tracker.CreateTracker("spec")));
 ///
 /// await runner.RunAsync(context);

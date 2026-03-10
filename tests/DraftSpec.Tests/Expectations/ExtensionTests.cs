@@ -45,7 +45,7 @@ public class ExtensionTests
     {
         var exp = new BoolExpectation(true, "myBool");
 
-        await Assert.That(exp.Actual).IsEqualTo(true);
+        await Assert.That(exp.Actual).IsTrue();
     }
 
     [Test]

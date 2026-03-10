@@ -59,6 +59,7 @@ dotnet_diagnostic.CA1822.severity = suggestion  # Mark members as static
 dotnet_diagnostic.CA1848.severity = suggestion  # Use LoggerMessage delegates
 dotnet_diagnostic.CA1859.severity = suggestion  # Use concrete types
 dotnet_diagnostic.CA1863.severity = suggestion  # Use CompositeFormat
+dotnet_diagnostic.CA1873.severity = suggestion  # Guard logging calls - args are trivial in this codebase
 dotnet_diagnostic.CA1866.severity = suggestion  # Use char overload
 dotnet_diagnostic.CA1869.severity = suggestion  # Cache JsonSerializerOptions
 dotnet_diagnostic.RCS1075.severity = suggestion # Empty catch clause - valid for cleanup patterns

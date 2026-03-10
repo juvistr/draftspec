@@ -232,8 +232,8 @@ public static partial class SpecResources
 
             // Count describe/it blocks for a quick overview
             var content = File.ReadAllText(fullPath);
-            var describeCount = DescribeBlockRegex().Matches(content).Count;
-            var itCount = ItBlockRegex().Matches(content).Count;
+            var describeCount = DescribeBlockRegex().Count(content);
+            var itCount = ItBlockRegex().Count(content);
 
             return JsonSerializer.Serialize(new
             {

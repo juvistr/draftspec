@@ -50,7 +50,7 @@ jobs:
           fetch-depth: 0  # Full history for MinVer
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5
         with:
           dotnet-version: '10.0.x'
 
@@ -82,7 +82,7 @@ jobs:
       - name: Scan for secrets
         # Only scan on PRs - on pushes to main, base and HEAD are the same commit
         if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
-        uses: trufflesecurity/trufflehog@7635b24fd512a2e817dd3e9dd661caaf035a079d # v3.93.1
+        uses: trufflesecurity/trufflehog@6c05c4a00b91aa542267d8e32a8254774799d68d # v3.93.8
         with:
           path: ./
           base: ${{ github.event.repository.default_branch }}
@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload test results on failure
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: test-results-${{ matrix.os }}
           path: |
@@ -166,7 +166,7 @@ jobs:
 
       - name: Upload coverage report artifact
         if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: coverage-report
           path: ./coverage-report
@@ -178,7 +178,7 @@ jobs:
 
       - name: Upload packages
         if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: nuget-packages
           path: |
@@ -198,7 +198,7 @@ jobs:
           fetch-depth: 0  # Full history for git-dependent tests
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5
         with:
           dotnet-version: '10.0.x'
 

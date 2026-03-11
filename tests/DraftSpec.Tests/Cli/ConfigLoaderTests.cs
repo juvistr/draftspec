@@ -61,8 +61,8 @@ public class ConfigLoaderTests
 
         await Assert.That(result.Success).IsTrue();
         await Assert.That(result.Config).IsNotNull();
-        await Assert.That(result.Config!.Parallel).IsEqualTo(true);
-        await Assert.That(result.Config.Bail).IsEqualTo(true);
+        await Assert.That(result.Config!.Parallel).IsTrue();
+        await Assert.That(result.Config.Bail).IsTrue();
         await Assert.That(result.Config.Timeout).IsEqualTo(5000);
     }
 
@@ -94,7 +94,7 @@ public class ConfigLoaderTests
         var config = result.Config!;
         await Assert.That(config.SpecPattern).IsEqualTo("**/*.spec.csx");
         await Assert.That(config.Timeout).IsEqualTo(10000);
-        await Assert.That(config.Parallel).IsEqualTo(true);
+        await Assert.That(config.Parallel).IsTrue();
         await Assert.That(config.MaxParallelism).IsEqualTo(4);
         Assert.NotNull(config.Reporters);
         await Assert.That(config.Reporters).Contains("console");
@@ -105,8 +105,8 @@ public class ConfigLoaderTests
         await Assert.That(config.Tags.Include).Contains("unit");
         Assert.NotNull(config.Tags.Exclude);
         await Assert.That(config.Tags.Exclude).Contains("slow");
-        await Assert.That(config.Bail).IsEqualTo(true);
-        await Assert.That(config.NoCache).IsEqualTo(true);
+        await Assert.That(config.Bail).IsTrue();
+        await Assert.That(config.NoCache).IsTrue();
         await Assert.That(config.Format).IsEqualTo("json");
     }
 
@@ -163,7 +163,7 @@ public class ConfigLoaderTests
         var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsTrue();
-        await Assert.That(result.Config!.Parallel).IsEqualTo(true);
+        await Assert.That(result.Config!.Parallel).IsTrue();
     }
 
     [Test]
@@ -181,9 +181,9 @@ public class ConfigLoaderTests
         var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsTrue();
-        await Assert.That(result.Config!.Parallel).IsEqualTo(true);
-        await Assert.That(result.Config.Bail).IsEqualTo(true);
-        await Assert.That(result.Config.NoCache).IsEqualTo(true);
+        await Assert.That(result.Config!.Parallel).IsTrue();
+        await Assert.That(result.Config.Bail).IsTrue();
+        await Assert.That(result.Config.NoCache).IsTrue();
     }
 
     [Test]
@@ -202,7 +202,7 @@ public class ConfigLoaderTests
         var result = _loader.Load(_tempDir);
 
         await Assert.That(result.Success).IsTrue();
-        await Assert.That(result.Config!.Parallel).IsEqualTo(true);
+        await Assert.That(result.Config!.Parallel).IsTrue();
     }
 
     [Test]

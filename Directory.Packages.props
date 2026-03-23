@@ -38,6 +38,6 @@
         <PackageVersion Include="Spectre.Console.Testing" Version="0.54.0" />
 
         <!-- Build tooling -->
-        <PackageVersion Include="MinVer" Version="6.*" />
+        <PackageVersion Include="MinVer" Version="7.*" />
     </ItemGroup>
 </Project>
